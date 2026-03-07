@@ -1,0 +1,56 @@
+<Window x:Class="FluxRoute.Views.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="О проекте FluxRoute"
+        Height="560" Width="620"
+        WindowStartupLocation="CenterOwner"
+        Background="#1E1E1E"
+        ResizeMode="CanMinimize"
+        ShowInTaskbar="False">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="52"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#252526">
+            <Grid Margin="16,0">
+                <TextBlock Text="ℹ️ О проекте FluxRoute" FontSize="16" FontWeight="SemiBold"
+                           Foreground="White" VerticalAlignment="Center"/>
+                <Button Content="✕" Width="30" Height="30" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Foreground="#AAAAAA" Background="Transparent" BorderThickness="0"
+                        FontSize="16" Cursor="Hand" Click="CloseButton_Click"/>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="20,16">
+                <TextBlock Text="Для чего создан проект" Foreground="#4FC3F7" FontWeight="SemiBold" FontSize="14"/>
+                <TextBlock Margin="0,8,0,0" Foreground="#DDDDDD" TextWrapping="Wrap" FontSize="13"
+                           Text="FluxRoute создан как удобный desktop-интерфейс для управления сетевыми профилями и сценариями обхода ограничений. Главная цель — упростить запуск и переключение стратегий без ручного редактирования bat-файлов и служебных настроек."/>
+
+                <Rectangle Height="1" Fill="#3E3E42" Margin="0,14,0,14"/>
+
+                <TextBlock Text="Как работает" Foreground="#4FC3F7" FontWeight="SemiBold" FontSize="14"/>
+                <TextBlock Margin="0,8,0,0" Foreground="#DDDDDD" TextWrapping="Wrap" FontSize="13"
+                           Text="Приложение загружает профили из каталога engine, запускает выбранный сценарий, отслеживает статус процесса и базовую диагностику. Внутри есть оркестратор, который анализирует доступность выбранных целей и помогает переключать профиль на более стабильный."/>
+
+                <Rectangle Height="1" Fill="#3E3E42" Margin="0,14,0,14"/>
+
+                <TextBlock Text="Благодарности разработчикам" Foreground="#4FC3F7" FontWeight="SemiBold" FontSize="14"/>
+                <TextBlock Margin="0,8,0,0" Foreground="#DDDDDD" TextWrapping="Wrap" FontSize="13"
+                           Text="Спасибо всем, кто участвует в развитии проекта: автору идеи, разработчикам ядра и GUI, тестировщикам, а также участникам сообщества, которые делятся обратной связью, логами и проверяют профили в реальных условиях."/>
+
+                <Rectangle Height="1" Fill="#3E3E42" Margin="0,14,0,14"/>
+
+                <TextBlock Text="Что изучалось и источники" Foreground="#4FC3F7" FontWeight="SemiBold" FontSize="14"/>
+                <TextBlock Margin="0,8,0,0" Foreground="#DDDDDD" TextWrapping="Wrap" FontSize="13"
+                           Text="При разработке использовались материалы и документация по WPF/.NET, MVVM-подходу, сетевой диагностике, а также открытые технические обсуждения по настройке маршрутизации и работе сетевых фильтров в Windows."/>
+
+                <TextBlock Margin="0,18,0,0" Foreground="#AAAAAA" FontSize="12" TextWrapping="Wrap"
+                           Text="Если хотите, можно дополнительно указать персональные ники/ссылки разработчиков и точный список источников — я добавлю это в отдельный блок."/>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>
