@@ -52,6 +52,7 @@ public partial class MainViewModel : ObservableObject
 
     // ── События ──
     public event EventHandler? OpenSettingsRequested;
+    public event EventHandler? OpenAboutRequested;
 
     // ── Профиль ──
     public string SelectedScriptName => SelectedProfile?.FileName ?? "—";
@@ -170,6 +171,12 @@ public partial class MainViewModel : ObservableObject
     private void ToggleSettings()
     {
         OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void OpenAbout()
+    {
+        OpenAboutRequested?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand]

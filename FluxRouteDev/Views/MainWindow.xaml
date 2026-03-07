@@ -24,9 +24,9 @@
                 <TextBlock Text="🔷 FluxRoute" FontSize="22" FontWeight="Bold"
                            Foreground="White" VerticalAlignment="Center"/>
                 <Button Width="35" Height="35" HorizontalAlignment="Right" VerticalAlignment="Center"
-                        Command="{Binding ToggleSettingsCommand}"
+                        Command="{Binding OpenAboutCommand}"
                         Background="Transparent" BorderBrush="Transparent"
-                        Foreground="White" FontSize="18" Cursor="Hand" Content="⚙️">
+                        Foreground="White" FontSize="18" Cursor="Hand" Content="ℹ️">
                     <Button.Style>
                         <Style TargetType="Button">
                             <Setter Property="Template">
