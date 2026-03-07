@@ -1,9 +1,14 @@
+# Запуск в PowerShell: .\run-dev.ps1 (или .\run-dev.cmd)
+# Без префикса .\ PowerShell может не найти скрипт в текущей папке.
+
 # run-dev.ps1
 param(
     [string]$Branch = "main",           # Ветка по умолчанию
-    [string]$ProjectPath = "FluxRoute.App/FluxRoute.App.csproj",
+    [string]$ProjectPath = "FluxRouteDev/FluxRouteDev.csproj",
     [switch]$NoPull                     # Если true — не делать pull
 )
+
+$needStashPop = $false
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  🔷 FluxRoute — Dev Runner" -ForegroundColor Cyan
