@@ -2,20 +2,9 @@
 # Без префикса .\ PowerShell может не найти скрипт в текущей папке.
 
 # run-dev.ps1
-[CmdletBinding()]
 param(
     [string]$Branch = "main",           # Ветка по умолчанию
     [string]$ProjectPath = "FluxRouteDev/FluxRouteDev.csproj",
-    [switch]$NoPull                      # Если true — не делать pull
-)
-
-$ErrorActionPreference = "Stop"
-$needStashPop = $false
-
-# Всегда работаем из папки скрипта (важно при запуске из другой директории)
-Set-Location -Path $PSScriptRoot
-
-=======
     [switch]$NoPull                     # Если true — не делать pull
 )
 
@@ -29,62 +18,37 @@ Write-Host ""
 # 1️⃣ Проверка Git
 if (-not (Test-Path ".git")) {
     Write-Host "✗ Это не Git-репозиторий!" -ForegroundColor Red
-    Write-Host "  Запускайте скрипт из корня репозитория." -ForegroundColor Yellow
-    exit 1
-}
-
-if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-    Write-Host "✗ Команда 'git' не найдена в PATH." -ForegroundColor Red
-    exit 1
-}
-
-if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
-    Write-Host "✗ Команда 'dotnet' не найдена в PATH." -ForegroundColor Red
-    exit 1
-}
-
-if (-not (Test-Path $ProjectPath)) {
-    Write-Host "✗ Не найден файл проекта: $ProjectPath" -ForegroundColor Red
+    Write-Host "  Выполните: git init" -ForegroundColor Yellow
     exit 1
 }
 
 # 2️⃣ Pull изменений (если не указан флаг -NoPull)
 if (-not $NoPull) {
     Write-Host "📥 Получение изменений из ветки '$Branch'..." -ForegroundColor Cyan
-
+    
     # Сохраняем текущие изменения (если есть)
     $uncommitted = git status --porcelain
     if ($uncommitted) {
         Write-Host "⚠ Найдены несохранённые изменения. Делаем stash..." -ForegroundColor Yellow
         git stash push -m "Auto-stash before pull"
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "✗ Не удалось выполнить git stash." -ForegroundColor Red
-            exit 1
-        }
         $needStashPop = $true
     }
-
+    
     # Pull
     git pull origin $Branch --rebase
-
+    
     if ($LASTEXITCODE -ne 0) {
         Write-Host "✗ Ошибка pull! Проверьте подключение к репозиторию." -ForegroundColor Red
-        if ($needStashPop) {
-            git stash pop
-        }
+        if ($needStashPop) { git stash pop }
         exit 1
     }
-
+    
     # Возвращаем stash если был
     if ($needStashPop) {
         Write-Host "📦 Восстанавливаем локальные изменения..." -ForegroundColor Cyan
         git stash pop
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "⚠ Возник конфликт при git stash pop. Разрешите конфликт вручную." -ForegroundColor Yellow
-            exit 1
-        }
     }
-
+    
     Write-Host "✓ Файлы обновлены" -ForegroundColor Green
     Write-Host ""
 }
@@ -107,6 +71,3 @@ Write-Host "  (Нажмите Ctrl+C для остановки)" -ForegroundColo
 Write-Host ""
 
 dotnet run --project $ProjectPath --no-build
-
-exit $LASTEXITCODE
-=======
