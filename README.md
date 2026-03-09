@@ -14,7 +14,23 @@
 
 ---
 
-## 🚀 Установка и запуск
+## 📸 Скриншоты
+
+| Главное окно | Запущено |
+|:---:|:---:|
+| ![Главное окно](screenshots/FluxRouteDev_MainMenu.png) | ![Запущено](screenshots/FluxRouteDev_Started.png) |
+
+| Профиль | Оркестратор |
+|:---:|:---:|
+| ![Профиль](screenshots/FluxRouteDev_Profile.png) | ![Оркестратор](screenshots/FluxRouteDev_AutoSelectedProfile.png) |
+
+| Обновления |
+|:---:|
+| ![Обновления](screenshots/FluxRouteDev_Update.png) |
+
+---
+
+
 
 ### Требования
 - Windows 10/11 x64
@@ -97,4 +113,4 @@ dotnet build
 
 ## 📄 Лицензия
 
-GNU General Public License v3.0 — см. [LICENSE](LICENSE.txt)
+GNU General Public License v3.0 — см. [LICENSE](LICENSE)
