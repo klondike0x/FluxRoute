@@ -75,4 +75,4 @@ dotnet build
 
 ## 📄 Лицензия
 
-MIT — см. [LICENSE](LICENSE)
+GNU General Public License v3.0 — см. [LICENSE](LICENSE.txt)
