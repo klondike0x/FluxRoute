@@ -1,5 +1,10 @@
 # FluxRoute Desktop
 
+[![.NET Version](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
+[![GitHub all releases](https://img.shields.io/github/downloads/klondike0x/FluxRouteDev/total)](https://github.com/klondike0x/FluxRouteDev/releases)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/klondike0x/FluxRouteDev)](https://github.com/klondike0x/FluxRouteDev/releases/latest)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+
 > GUI-оболочка для управления скриптами [Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube) — красиво, быстро и без ручного запуска BAT-файлов.
 
 ---
