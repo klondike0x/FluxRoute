@@ -10,9 +10,12 @@ using System.Security.Principal;
 using System.Text;
 using System.Windows;
 using System.Windows.Threading;
+using Application = System.Windows.Application;
+using Clipboard = System.Windows.Clipboard;
 
 using FluxRoute.Core.Models;
 using FluxRoute.Core.Services;
+using FluxRoute.Services;
 using FluxRoute.Updater.Services;
 
 namespace FluxRoute.ViewModels;
@@ -53,11 +56,17 @@ public partial class MainViewModel : ObservableObject
     // ── События ──
     public event EventHandler? OpenSettingsRequested;
     public event EventHandler? OpenAboutRequested;
+    public event EventHandler<string>? ProfileSwitchNotification;
 
     // ── Профиль ──
     public string SelectedScriptName => SelectedProfile?.FileName ?? "—";
     [ObservableProperty] private ProfileItem? selectedProfile;
-    partial void OnSelectedProfileChanged(ProfileItem? value) { OnPropertyChanged(nameof(SelectedScriptName)); RunningScriptName = value?.FileName ?? "—"; }
+    partial void OnSelectedProfileChanged(ProfileItem? value)
+    {
+        OnPropertyChanged(nameof(SelectedScriptName));
+        RunningScriptName = value?.FileName ?? "—";
+        SaveSettings();
+    }
 
     // ── Статус ──
     [ObservableProperty] private string statusText = "Не запущено";
@@ -100,6 +109,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string orchestratorStatus = "Не запущен";
     [ObservableProperty] private string orchestratorNextCheck = "—";
     [ObservableProperty] private string orchestratorInterval = "1";
+    partial void OnOrchestratorIntervalChanged(string value) => SaveSettings();
     [ObservableProperty] private bool isScanning;
     [ObservableProperty] private string scanProgressText = "";
     public string OrchestratorToggleLabel => OrchestratorRunning ? "Остановить оркестратор" : "Запустить оркестратор";
@@ -107,10 +117,15 @@ public partial class MainViewModel : ObservableObject
 
     // ── Настройки сайтов ──
     [ObservableProperty] private bool siteYouTube = true;
+    partial void OnSiteYouTubeChanged(bool value) => SaveSettings();
     [ObservableProperty] private bool siteDiscord = true;
+    partial void OnSiteDiscordChanged(bool value) => SaveSettings();
     [ObservableProperty] private bool siteGoogle = true;
+    partial void OnSiteGoogleChanged(bool value) => SaveSettings();
     [ObservableProperty] private bool siteTwitch = true;
+    partial void OnSiteTwitchChanged(bool value) => SaveSettings();
     [ObservableProperty] private bool siteInstagram = true;
+    partial void OnSiteInstagramChanged(bool value) => SaveSettings();
 
     private readonly OrchestratorService _orchestrator;
     private readonly DispatcherTimer _orchestratorUiTimer = new() { Interval = TimeSpan.FromSeconds(5) };
@@ -130,9 +145,22 @@ public partial class MainViewModel : ObservableObject
     private string EngineDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "engine");
 
     private readonly UpdaterService _updater = new();
+    private readonly SettingsService _settingsService = new();
+    private bool _settingsLoaded = false;
 
     // ── Обновления ──
     [ObservableProperty] private bool autoUpdateEnabled = false;
+    partial void OnAutoUpdateEnabledChanged(bool value) => SaveSettings();
+
+    // ── Системные ──
+    [ObservableProperty] private bool autoStartEnabled = false;
+    partial void OnAutoStartEnabledChanged(bool value)
+    {
+        AutoStartService.SetEnabled(value);
+        SaveSettings();
+    }
+    [ObservableProperty] private bool minimizeToTray = true;
+    partial void OnMinimizeToTrayChanged(bool value) => SaveSettings();
     [ObservableProperty] private string updateStatus = "Не проверялось";
     [ObservableProperty] private string currentEngineVersion = "—";
     [ObservableProperty] private bool isUpdating;
@@ -142,7 +170,38 @@ public partial class MainViewModel : ObservableObject
     {
         Logs.Add("Приложение запущено.");
         AddToRecentLogs("🚀 Приложение запущено");
+
+        // Загружаем настройки ДО загрузки профилей
+        var settings = _settingsService.Load();
+        ApplySettings(settings);
+
         LoadProfiles();
+
+        // Восстанавливаем последний профиль
+        if (settings.LastProfileFileName is not null)
+        {
+            var last = Profiles.FirstOrDefault(p => p.FileName == settings.LastProfileFileName);
+            if (last is not null) SelectedProfile = last;
+        }
+
+        // Восстанавливаем рейтинг профилей если есть сохранённый
+        if (settings.ProfileRatings.Count > 0)
+        {
+            RebuildProfileScores();
+            foreach (var rating in settings.ProfileRatings)
+            {
+                var entry = ProfileScores.FirstOrDefault(s => s.FileName == rating.FileName);
+                if (entry is not null && rating.Score > 0)
+                    entry.SetScore(rating.Score / 100.0);
+            }
+            var sorted = ProfileScores.OrderByDescending(s => s.Score).ToList();
+            ProfileScores.Clear();
+            foreach (var s in sorted) ProfileScores.Add(s);
+            Logs.Add("📊 Рейтинг профилей восстановлен.");
+        }
+
+        _settingsLoaded = true; // Теперь можно сохранять
+
         DisableNativeUpdateCheck();
         CurrentEngineVersion = _updater.GetLocalVersion(EngineDir);
         _ = CheckUpdatesOnStartupAsync();
@@ -163,6 +222,48 @@ public partial class MainViewModel : ObservableObject
 
         _orchestratorUiTimer.Tick += (_, _) => UpdateOrchestratorNextCheck();
         _orchestratorUiTimer.Start();
+    }
+
+    // ── Настройки: сохранение / загрузка ──
+
+    private void ApplySettings(AppSettings settings)
+    {
+        OrchestratorInterval = settings.OrchestratorInterval;
+        SiteYouTube = settings.SiteYouTube;
+        SiteDiscord = settings.SiteDiscord;
+        SiteGoogle = settings.SiteGoogle;
+        SiteTwitch = settings.SiteTwitch;
+        SiteInstagram = settings.SiteInstagram;
+        AutoUpdateEnabled = settings.AutoUpdateEnabled;
+        AutoStartEnabled = settings.AutoStartEnabled;
+        MinimizeToTray = settings.MinimizeToTray;
+    }
+
+    public void SaveSettings()
+    {
+        if (!_settingsLoaded) return;
+
+        var settings = new AppSettings
+        {
+            LastProfileFileName = SelectedProfile?.FileName,
+            OrchestratorInterval = OrchestratorInterval,
+            SiteYouTube = SiteYouTube,
+            SiteDiscord = SiteDiscord,
+            SiteGoogle = SiteGoogle,
+            SiteTwitch = SiteTwitch,
+            SiteInstagram = SiteInstagram,
+            AutoUpdateEnabled = AutoUpdateEnabled,
+            AutoStartEnabled = AutoStartEnabled,
+            MinimizeToTray = MinimizeToTray,
+            ProfileRatings = ProfileScores.Select(s => new ProfileRatingEntry
+            {
+                FileName = s.FileName,
+                DisplayName = s.DisplayName,
+                Score = s.Score
+            }).ToList()
+        };
+
+        _settingsService.Save(settings);
     }
 
     // ── Компактный интерфейс: команды ──
@@ -222,6 +323,7 @@ public partial class MainViewModel : ObservableObject
                 var sorted = ProfileScores.OrderByDescending(s => s.Score).ToList();
                 ProfileScores.Clear();
                 foreach (var s in sorted) ProfileScores.Add(s);
+                SaveSettings(); // Сохраняем рейтинг после сканирования
             }
 
             if (e.IsSwitched && e.NewProfile is not null)
@@ -232,6 +334,7 @@ public partial class MainViewModel : ObservableObject
                     SelectedProfile = profile;
                     CurrentStrategy = profile.DisplayName;
                     Logs.Add($"[Оркестратор] Переключено на «{profile.DisplayName}»");
+                    ProfileSwitchNotification?.Invoke(this, profile.DisplayName);
                 }
             }
         });
@@ -324,6 +427,7 @@ public partial class MainViewModel : ObservableObject
 
         IsScanning = false;
         ScanProgressText = "Сканирование завершено";
+        SaveSettings();
     }
 
     [RelayCommand]
@@ -340,7 +444,10 @@ public partial class MainViewModel : ObservableObject
                 _orchestrator.CheckInterval = TimeSpan.FromMinutes(mins);
 
             UpdateOrchestratorEnabledSites();
-            RebuildProfileScores();
+
+            // Перестраиваем только если рейтинг ещё не был получен
+            if (ProfileScores.Count == 0 || ProfileScores.All(s => s.Score == 0))
+                RebuildProfileScores();
 
             if (_runningProcess is null || _runningProcess.HasExited)
             {
@@ -584,6 +691,9 @@ public partial class MainViewModel : ObservableObject
 
     private void LoadProfiles()
     {
+        // Запоминаем текущий профиль
+        var currentFileName = SelectedProfile?.FileName;
+
         Profiles.Clear();
         if (!Directory.Exists(EngineDir)) { Logs.Add($"Папка engine не найдена: {EngineDir}"); SelectedProfile = null; return; }
 
@@ -595,7 +705,13 @@ public partial class MainViewModel : ObservableObject
         foreach (var bat in bats)
             Profiles.Add(new ProfileItem { FileName = Path.GetFileName(bat), DisplayName = Path.GetFileNameWithoutExtension(bat), FullPath = bat });
 
-        SelectedProfile ??= Profiles.FirstOrDefault();
+        // Восстанавливаем текущий профиль, если он есть в новом списке
+        if (currentFileName is not null)
+            SelectedProfile = Profiles.FirstOrDefault(p => p.FileName == currentFileName)
+                              ?? Profiles.FirstOrDefault();
+        else
+            SelectedProfile ??= Profiles.FirstOrDefault();
+
         Logs.Add($"Профили загружены: {Profiles.Count} (.bat)");
     }
 

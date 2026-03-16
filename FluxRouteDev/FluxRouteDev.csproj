@@ -5,8 +5,9 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
-	<Version>1.0.1</Version>
+	<UseWPF>true</UseWPF>
+	<UseWindowsForms>true</UseWindowsForms>
+	<Version>1.1.0</Version>
     <ApplicationIcon>FluxRoute.ico</ApplicationIcon>
   </PropertyGroup>
 
@@ -18,6 +19,7 @@
 
 	<ItemGroup>
 	  <Content Include="FluxRoute.ico" />
+	  <EmbeddedResource Include="FluxRoute.ico" LogicalName="FluxRoute.ico" />
 	</ItemGroup>
 
   <ItemGroup>

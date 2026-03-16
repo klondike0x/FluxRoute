@@ -522,6 +522,18 @@
                     <StackPanel Margin="18,12">
 
                         <TextBlock Style="{StaticResource SectionHeader}" Text="СИСТЕМНЫЕ КОМПОНЕНТЫ"/>
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="СИСТЕМНЫЕ НАСТРОЙКИ" Margin="0,0,0,8"/>
+
+                        <CheckBox Content="Запускать FluxRoute при входе в Windows"
+                                  IsChecked="{Binding AutoStartEnabled}" Margin="0,4"/>
+
+                        <CheckBox Content="Сворачивать в системный трей"
+                                  IsChecked="{Binding MinimizeToTray}" Margin="0,4,0,12"/>
+
+                        <Rectangle Style="{StaticResource Sep}"/>
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="КОМПОНЕНТЫ"/>
                         <Grid Margin="0,0,0,12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="160"/>
