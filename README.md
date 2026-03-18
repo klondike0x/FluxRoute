@@ -1,8 +1,8 @@
 # FluxRoute Desktop
 
 [![.NET Version](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
-[![GitHub all releases](https://img.shields.io/github/downloads/klondike0x/FluxRouteDev/total)](https://github.com/klondike0x/FluxRouteDev/releases)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/klondike0x/FluxRouteDev)](https://github.com/klondike0x/FluxRouteDev/releases/latest)
+[![GitHub all releases](https://img.shields.io/github/downloads/klondike0x/FluxRoute/total)](https://github.com/klondike0x/FluxRoute/releases)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/klondike0x/FluxRoute)](https://github.com/klondike0x/FluxRoute/releases/latest)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 > GUI-оболочка для управления скриптами [Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube) — красиво, быстро и без ручного запуска BAT-файлов.
@@ -23,15 +23,15 @@
 
 | Главное окно | Запущено |
 |:---:|:---:|
-| ![Главное окно](screenshots/FluxRouteDev_MainMenu.png) | ![Запущено](screenshots/FluxRouteDev_Started.png) |
+| ![Главное окно](screenshots/FluxRoute_MainMenu.png) | ![Запущено](screenshots/FluxRoute_Started.png) |
 
 | Профиль | Оркестратор |
 |:---:|:---:|
-| ![Профиль](screenshots/FluxRouteDev_Profile.png) | ![Оркестратор](screenshots/FluxRouteDev_AutoSelectedProfile.png) |
+| ![Профиль](screenshots/FluxRoute_Profile.png) | ![Оркестратор](screenshots/FluxRoute_AutoSelectedProfile.png) |
 
 | Обновления |
 |:---:|
-| ![Обновления](screenshots/FluxRouteDev_Update.png) |
+| ![Обновления](screenshots/FluxRoute_Update.png) |
 
 ---
 
@@ -43,9 +43,9 @@
 
 ### Первый запуск
 
-1. Скачай последний релиз: [Releases](https://github.com/klondike0x/FluxRouteDev/releases)
+1. Скачай последний релиз: [Releases](https://github.com/klondike0x/FluxRoute/releases)
 2. Распакуй ZIP в любую папку
-3. Запусти `FluxRouteDev.exe` **от имени администратора**
+3. Запусти `FluxRoute.exe` **от имени администратора**
 4. Перейди на вкладку **Обновления** → нажми **Проверить** → **Обновить**
    - Это скачает актуальную версию Flowseal zapret в папку `engine/`
 5. Выбери профиль в настройках и нажми **▶ Запустить**
@@ -66,8 +66,8 @@
 ## 📁 Структура проекта
 
 ```
-FluxRouteDev/
-├── FluxRouteDev/        — UI (WPF, Views, ViewModels)
+FluxRoute/
+├── FluxRoute/           — UI (WPF, Views, ViewModels)
 ├── FluxRoute.Core/      — Логика (Оркестратор, Проверка связи, Модели)
 ├── FluxRoute.Updater/   — Автообновление engine/ с GitHub
 └── engine/              — Скрипты Flowseal (скачиваются автоматически)
@@ -80,8 +80,8 @@ FluxRouteDev/
 **Требования:** .NET 10 SDK, Visual Studio 2022
 
 ```bash
-git clone https://github.com/klondike0x/FluxRouteDev.git
-cd FluxRouteDev
+git clone https://github.com/klondike0x/FluxRoute.git
+cd FluxRoute
 dotnet build
 ```
 
@@ -96,7 +96,7 @@ dotnet build
 
 ## 🐛 Нашёл баг?
 
-Если что-то работает не так — открой [Issue](https://github.com/klondike0x/FluxRouteDev/issues) и опиши:
+Если что-то работает не так — открой [Issue](https://github.com/klondike0x/FluxRoute/issues) и опиши:
 - Что происходит
 - Что ожидал увидеть
 - Шаги для воспроизведения

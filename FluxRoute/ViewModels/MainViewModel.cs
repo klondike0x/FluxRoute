@@ -672,7 +672,7 @@ public partial class MainViewModel : ObservableObject
             // Используем CheckForUpdateAsync с несуществующей версией чтобы всегда получить ссылку
             var url = "https://api.github.com/repos/Flowseal/zapret-discord-youtube/releases/latest";
             using var http = new System.Net.Http.HttpClient();
-            http.DefaultRequestHeaders.Add("User-Agent", "FluxRouteDev-Updater");
+            http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-Updater");
             var json = await http.GetStringAsync(url);
             using var doc = System.Text.Json.JsonDocument.Parse(json);
             var root = doc.RootElement;
@@ -931,7 +931,7 @@ public partial class MainViewModel : ObservableObject
         {
             var url = "https://raw.githubusercontent.com/Flowseal/zapret-discord-youtube/refs/heads/main/.service/ipset-service.txt";
             using var http = new System.Net.Http.HttpClient();
-            http.DefaultRequestHeaders.Add("User-Agent", "FluxRouteDev");
+            http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
             var content = await http.GetStringAsync(url);
 
             var listsDir = Path.GetDirectoryName(IpSetFilePath)!;
@@ -967,7 +967,7 @@ public partial class MainViewModel : ObservableObject
         {
             var hostsUrl = "https://raw.githubusercontent.com/Flowseal/zapret-discord-youtube/refs/heads/main/.service/hosts";
             using var http = new System.Net.Http.HttpClient();
-            http.DefaultRequestHeaders.Add("User-Agent", "FluxRouteDev");
+            http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
             var newContent = await http.GetStringAsync(hostsUrl);
             var newLines = newContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 

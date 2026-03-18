@@ -22,7 +22,7 @@ public sealed class UpdaterService
 
     static UpdaterService()
     {
-        _http.DefaultRequestHeaders.Add("User-Agent", "FluxRouteDev-Updater");
+        _http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-Updater");
     }
 
     /// <summary>Читает текущую версию из engine/version.txt</summary>

@@ -1,5 +1,5 @@
 <Solution>
   <Project Path="FluxRoute.Core/FluxRoute.Core.csproj" />
   <Project Path="FluxRoute.Updater/FluxRoute.Updater.csproj" />
-  <Project Path="FluxRouteDev/FluxRouteDev.csproj" />
+  <Project Path="FluxRoute/FluxRoute.csproj" />
 </Solution>

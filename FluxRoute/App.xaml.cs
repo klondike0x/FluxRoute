@@ -2,7 +2,7 @@
 using System.Data;
 using System.Windows;
 
-namespace FluxRouteDev
+namespace FluxRoute
 {
     /// <summary>
     /// Interaction logic for App.xaml
