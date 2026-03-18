@@ -21,8 +21,11 @@
         <!-- Header -->
         <Border Grid.Row="0" Background="#252526">
             <Grid Margin="15,0">
-                <TextBlock Text="🔷 FluxRoute" FontSize="22" FontWeight="Bold"
-                           Foreground="White" VerticalAlignment="Center"/>
+                <TextBlock FontSize="22" FontWeight="Bold"
+                           Foreground="White" VerticalAlignment="Center">
+                    <Run Text="🔷 FluxRoute"/>
+                    <Run Text="{Binding AppVersion, Mode=OneWay}" FontSize="12" Foreground="#888888"/>
+                </TextBlock>
                 <Button Width="35" Height="35" HorizontalAlignment="Right" VerticalAlignment="Center"
                         Command="{Binding OpenAboutCommand}"
                         Background="Transparent" BorderBrush="Transparent"
@@ -88,6 +91,18 @@
                            HorizontalAlignment="Center" Margin="0,0,0,25"
                            Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisConverter}}"/>
 
+                <!-- Engine download progress -->
+                <Border Background="#2A2000" BorderBrush="#5A4800" BorderThickness="1"
+                        CornerRadius="8" Padding="12,10" Margin="0,0,0,15"
+                        Visibility="{Binding IsDownloadingEngine, Converter={StaticResource BoolToVisConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="⬇️ Первый запуск — скачиваем Flowseal..."
+                                   Foreground="#FFD700" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding EngineDownloadStatus}"
+                                   Foreground="#CCAA00" FontSize="12" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
                 <!-- Separator -->
                 <Rectangle Height="1" Fill="#3E3E42" Margin="0,0,0,20"/>
 
@@ -100,12 +115,24 @@
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <TextBlock Text="🔹" FontSize="16" Margin="0,0,8,0"/>
-                        <TextBlock Text="Статус: " Foreground="#AAAAAA" FontSize="15"/>
-                        <TextBlock Foreground="White" FontSize="15" FontWeight="Bold">
-                            <Run Text="{Binding StatusText}"/>
-                        </TextBlock>
-                    </StackPanel>
+                            <TextBlock Text="🔹" FontSize="16" Margin="0,0,8,0"/>
+                            <TextBlock Text="Статус: " Foreground="#AAAAAA" FontSize="15"/>
+                            <Ellipse Width="12" Height="12" Margin="0,0,6,0" VerticalAlignment="Center">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="#C0392B"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                                <Setter Property="Fill" Value="#27AE60"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock Foreground="White" FontSize="15" FontWeight="Bold">
+                                <Run Text="{Binding StatusText}"/>
+                            </TextBlock>
+                        </StackPanel>
 
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="🔹" FontSize="16" Margin="0,0,8,0"/>

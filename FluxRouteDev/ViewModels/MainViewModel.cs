@@ -130,6 +130,17 @@ public partial class MainViewModel : ObservableObject
     private readonly OrchestratorService _orchestrator;
     private readonly DispatcherTimer _orchestratorUiTimer = new() { Interval = TimeSpan.FromSeconds(5) };
 
+    // ── Сервис ──
+    [ObservableProperty] private bool gameFilterEnabled;
+    [ObservableProperty] private string ipSetMode = "—";
+    [ObservableProperty] private string zapretServiceStatus = "—";
+    [ObservableProperty] private bool isServiceBusy;
+    public ObservableCollection<string> ServiceLogs { get; } = new();
+
+    private string GameFilterFlagPath => Path.Combine(EngineDir, "utils", "game_filter.enabled");
+    private string IpSetFilePath => Path.Combine(EngineDir, "lists", "ipset-all.txt");
+    private string IpSetBackupPath => Path.Combine(EngineDir, "lists", "ipset-all.txt.backup");
+
     // ── Runtime ──
     private DateTimeOffset? _runStartedAt;
     private readonly DispatcherTimer _uptimeTimer = new() { Interval = TimeSpan.FromSeconds(1) };
@@ -164,6 +175,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string updateStatus = "Не проверялось";
     [ObservableProperty] private string currentEngineVersion = "—";
     [ObservableProperty] private bool isUpdating;
+    [ObservableProperty] private bool isDownloadingEngine;
+    [ObservableProperty] private string engineDownloadStatus = "";
     private UpdateInfo? _pendingUpdate;
 
     public MainViewModel()
@@ -202,10 +215,19 @@ public partial class MainViewModel : ObservableObject
 
         _settingsLoaded = true; // Теперь можно сохранять
 
+        // Первый запуск: если engine/ нет — автоскачать Flowseal
+        if (!Directory.Exists(EngineDir) || Directory.GetFiles(EngineDir, "*.bat").Length == 0)
+        {
+            Logs.Add("⚠️ Папка engine/ не найдена. Скачиваем Flowseal...");
+            AddToRecentLogs("⬇️ Скачивание Flowseal...");
+            _ = AutoDownloadEngineAsync();
+        }
+
         DisableNativeUpdateCheck();
         CurrentEngineVersion = _updater.GetLocalVersion(EngineDir);
         _ = CheckUpdatesOnStartupAsync();
         RefreshDiagnostics();
+        RefreshServiceStatus();
 
         _uptimeTimer.Tick += (_, _) => UpdateRuntimeInfo();
         _uptimeTimer.Start();
@@ -640,8 +662,428 @@ public partial class MainViewModel : ObservableObject
         LoadProfiles();
     }
 
+    private async Task AutoDownloadEngineAsync()
+    {
+        IsDownloadingEngine = true;
+        EngineDownloadStatus = "🔍 Поиск последней версии Flowseal...";
+
+        try
+        {
+            // Используем CheckForUpdateAsync с несуществующей версией чтобы всегда получить ссылку
+            var url = "https://api.github.com/repos/Flowseal/zapret-discord-youtube/releases/latest";
+            using var http = new System.Net.Http.HttpClient();
+            http.DefaultRequestHeaders.Add("User-Agent", "FluxRouteDev-Updater");
+            var json = await http.GetStringAsync(url);
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            var tag = root.GetProperty("tag_name").GetString() ?? "unknown";
+            string? downloadUrl = null;
+            foreach (var asset in root.GetProperty("assets").EnumerateArray())
+            {
+                var name = asset.GetProperty("name").GetString() ?? "";
+                if (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    downloadUrl = asset.GetProperty("browser_download_url").GetString();
+                    break;
+                }
+            }
+
+            if (downloadUrl is null)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    EngineDownloadStatus = "❌ Не удалось найти архив для скачивания";
+                    Logs.Add("❌ Flowseal: архив не найден в последнем релизе");
+                    IsDownloadingEngine = false;
+                });
+                return;
+            }
+
+            var update = new UpdateInfo { Version = tag, DownloadUrl = downloadUrl };
+
+            await _updater.InstallUpdateAsync(EngineDir, update,
+                msg => Application.Current.Dispatcher.Invoke(() =>
+                {
+                    EngineDownloadStatus = msg;
+                    Logs.Add(msg);
+                }));
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                CurrentEngineVersion = _updater.GetLocalVersion(EngineDir);
+                EngineDownloadStatus = $"✅ Flowseal {tag} установлен!";
+                Logs.Add($"✅ Flowseal {tag} установлен автоматически");
+                AddToRecentLogs($"✅ Flowseal {tag} установлен");
+                IsDownloadingEngine = false;
+                LoadProfiles();
+                RefreshDiagnostics();
+            });
+        }
+        catch (Exception ex)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                EngineDownloadStatus = $"❌ Ошибка: {ex.Message}";
+                Logs.Add($"❌ Автоскачивание Flowseal: {ex.Message}");
+                IsDownloadingEngine = false;
+            });
+        }
+    }
+
     [RelayCommand] private void ApplyProfile() { if (SelectedProfile is null) { Logs.Add("Профиль не выбран."); return; } Logs.Add($"Выбран профиль: {SelectedProfile.FileName}"); }
     [RelayCommand] private void CopyDiagnostics() { try { Clipboard.SetText(BuildDiagnosticsText()); Logs.Add("Диагностика скопирована."); } catch (Exception ex) { Logs.Add($"Ошибка: {ex.Message}"); } }
+
+    [RelayCommand]
+    private void ExportLogs()
+    {
+        try
+        {
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "Текстовый файл (*.txt)|*.txt",
+                FileName = $"FluxRoute_log_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.txt",
+                Title = "Экспорт логов"
+            };
+
+            if (dialog.ShowDialog() != true) return;
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"FluxRoute v{AppVersion} — Лог от {DateTime.Now:dd.MM.yyyy HH:mm:ss}");
+            sb.AppendLine(new string('═', 50));
+            sb.AppendLine();
+
+            sb.AppendLine("── Системный лог ──");
+            foreach (var line in Logs) sb.AppendLine(line);
+            sb.AppendLine();
+
+            sb.AppendLine("── Лог оркестратора ──");
+            foreach (var line in OrchestratorLogs) sb.AppendLine(line);
+            sb.AppendLine();
+
+            sb.AppendLine("── Лог обновлений ──");
+            foreach (var line in UpdateLogs) sb.AppendLine(line);
+            sb.AppendLine();
+
+            sb.AppendLine("── Диагностика ──");
+            sb.Append(BuildDiagnosticsText());
+
+            File.WriteAllText(dialog.FileName, sb.ToString(), Encoding.UTF8);
+            Logs.Add($"📄 Логи экспортированы: {dialog.FileName}");
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"❌ Ошибка экспорта логов: {ex.Message}");
+        }
+    }
+
+    // ── Сервис: команды ──
+
+    private void AddServiceLog(string message)
+    {
+        ServiceLogs.Add($"[{DateTime.Now:HH:mm:ss}] {message}");
+        while (ServiceLogs.Count > 50)
+            ServiceLogs.RemoveAt(0);
+    }
+
+    private void RefreshServiceStatus()
+    {
+        // Game Filter
+        GameFilterEnabled = File.Exists(GameFilterFlagPath);
+
+        // IPSet mode
+        if (!File.Exists(IpSetFilePath))
+        {
+            IpSetMode = "—";
+        }
+        else
+        {
+            try
+            {
+                var lines = File.ReadAllLines(IpSetFilePath).Where(l => !string.IsNullOrWhiteSpace(l)).ToArray();
+                if (lines.Length == 0)
+                    IpSetMode = "any";
+                else if (lines.Length == 1 && lines[0].Trim() == "203.0.113.113/32")
+                    IpSetMode = "none";
+                else
+                    IpSetMode = "loaded";
+            }
+            catch { IpSetMode = "—"; }
+        }
+
+        // Zapret service
+        try
+        {
+            using var sc = new Process
+            {
+                StartInfo = new ProcessStartInfo("sc", "query zapret")
+                {
+                    CreateNoWindow = true, UseShellExecute = false,
+                    RedirectStandardOutput = true
+                }
+            };
+            sc.Start();
+            var output = sc.StandardOutput.ReadToEnd();
+            sc.WaitForExit(3000);
+
+            if (output.Contains("RUNNING", StringComparison.OrdinalIgnoreCase))
+                ZapretServiceStatus = "✅ Запущена";
+            else if (output.Contains("STOPPED", StringComparison.OrdinalIgnoreCase))
+                ZapretServiceStatus = "⏹ Остановлена";
+            else if (output.Contains("STOP_PENDING", StringComparison.OrdinalIgnoreCase))
+                ZapretServiceStatus = "⚠️ Останавливается...";
+            else
+                ZapretServiceStatus = "❌ Не установлена";
+        }
+        catch
+        {
+            ZapretServiceStatus = "❌ Не установлена";
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleGameFilter()
+    {
+        try
+        {
+            var utilsDir = Path.GetDirectoryName(GameFilterFlagPath)!;
+            Directory.CreateDirectory(utilsDir);
+
+            if (File.Exists(GameFilterFlagPath))
+            {
+                File.Delete(GameFilterFlagPath);
+                GameFilterEnabled = false;
+                AddServiceLog("🎮 Game Filter выключен");
+                Logs.Add("Game Filter выключен");
+            }
+            else
+            {
+                File.WriteAllText(GameFilterFlagPath, "ENABLED");
+                GameFilterEnabled = true;
+                AddServiceLog("🎮 Game Filter включён");
+                Logs.Add("Game Filter включён");
+            }
+
+            AddServiceLog("⚠️ Перезапустите zapret для применения изменений");
+        }
+        catch (Exception ex)
+        {
+            AddServiceLog($"❌ Ошибка: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private void CycleIpSetMode()
+    {
+        try
+        {
+            var listsDir = Path.GetDirectoryName(IpSetFilePath)!;
+            Directory.CreateDirectory(listsDir);
+
+            if (IpSetMode == "loaded")
+            {
+                // loaded → none: бэкап + заглушка
+                if (File.Exists(IpSetBackupPath)) File.Delete(IpSetBackupPath);
+                if (File.Exists(IpSetFilePath)) File.Move(IpSetFilePath, IpSetBackupPath);
+                File.WriteAllText(IpSetFilePath, "203.0.113.113/32\n");
+                IpSetMode = "none";
+                AddServiceLog("🔒 IPSet → none (фильтрация отключена)");
+            }
+            else if (IpSetMode == "none")
+            {
+                // none → any: пустой файл
+                File.WriteAllText(IpSetFilePath, "");
+                IpSetMode = "any";
+                AddServiceLog("🌐 IPSet → any (все адреса)");
+            }
+            else
+            {
+                // any / — → loaded: восстановить бэкап
+                if (File.Exists(IpSetBackupPath))
+                {
+                    if (File.Exists(IpSetFilePath)) File.Delete(IpSetFilePath);
+                    File.Move(IpSetBackupPath, IpSetFilePath);
+                    IpSetMode = "loaded";
+                    AddServiceLog("📋 IPSet → loaded (список восстановлен)");
+                }
+                else
+                {
+                    AddServiceLog("⚠️ Нет бэкапа IPSet. Обновите список через кнопку ниже");
+                    return;
+                }
+            }
+
+            AddServiceLog("⚠️ Перезапустите zapret для применения изменений");
+        }
+        catch (Exception ex)
+        {
+            AddServiceLog($"❌ Ошибка: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private async Task UpdateIpSetList()
+    {
+        IsServiceBusy = true;
+        AddServiceLog("⬇️ Скачиваем ipset-all.txt...");
+
+        try
+        {
+            var url = "https://raw.githubusercontent.com/Flowseal/zapret-discord-youtube/refs/heads/main/.service/ipset-service.txt";
+            using var http = new System.Net.Http.HttpClient();
+            http.DefaultRequestHeaders.Add("User-Agent", "FluxRouteDev");
+            var content = await http.GetStringAsync(url);
+
+            var listsDir = Path.GetDirectoryName(IpSetFilePath)!;
+            Directory.CreateDirectory(listsDir);
+            await File.WriteAllTextAsync(IpSetFilePath, content);
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                AddServiceLog($"✅ IPSet обновлён ({content.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length} записей)");
+                RefreshServiceStatus();
+            });
+        }
+        catch (Exception ex)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                AddServiceLog($"❌ Ошибка скачивания IPSet: {ex.Message}");
+            });
+        }
+        finally
+        {
+            Application.Current.Dispatcher.Invoke(() => IsServiceBusy = false);
+        }
+    }
+
+    [RelayCommand]
+    private async Task UpdateHostsFile()
+    {
+        IsServiceBusy = true;
+        AddServiceLog("⬇️ Проверяем hosts файл...");
+
+        try
+        {
+            var hostsUrl = "https://raw.githubusercontent.com/Flowseal/zapret-discord-youtube/refs/heads/main/.service/hosts";
+            using var http = new System.Net.Http.HttpClient();
+            http.DefaultRequestHeaders.Add("User-Agent", "FluxRouteDev");
+            var newContent = await http.GetStringAsync(hostsUrl);
+            var newLines = newContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+            var hostsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts");
+
+            if (!File.Exists(hostsPath))
+            {
+                Application.Current.Dispatcher.Invoke(() => AddServiceLog("❌ Файл hosts не найден"));
+                return;
+            }
+
+            var currentHosts = await File.ReadAllTextAsync(hostsPath);
+            var firstLine = newLines.FirstOrDefault()?.Trim() ?? "";
+            var lastLine = newLines.LastOrDefault()?.Trim() ?? "";
+
+            if (currentHosts.Contains(firstLine) && currentHosts.Contains(lastLine))
+            {
+                Application.Current.Dispatcher.Invoke(() => AddServiceLog("✅ Hosts файл актуален"));
+                return;
+            }
+
+            // Сохраняем во временный файл и открываем
+            var tempFile = Path.Combine(Path.GetTempPath(), "zapret_hosts.txt");
+            await File.WriteAllTextAsync(tempFile, newContent);
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                AddServiceLog("⚠️ Hosts нужно обновить — открыты оба файла");
+                AddServiceLog($"  Источник: {tempFile}");
+                AddServiceLog($"  Цель: {hostsPath}");
+                Process.Start(new ProcessStartInfo("notepad.exe", tempFile) { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{hostsPath}\"") { UseShellExecute = true });
+            });
+        }
+        catch (Exception ex)
+        {
+            Application.Current.Dispatcher.Invoke(() => AddServiceLog($"❌ Ошибка: {ex.Message}"));
+        }
+        finally
+        {
+            Application.Current.Dispatcher.Invoke(() => IsServiceBusy = false);
+        }
+    }
+
+    [RelayCommand]
+    private void InstallZapretService()
+    {
+        if (SelectedProfile is null)
+        {
+            AddServiceLog("❌ Сначала выберите профиль");
+            return;
+        }
+
+        AddServiceLog($"🔧 Установка службы zapret с профилем «{SelectedProfile.DisplayName}»...");
+        AddServiceLog("⚠️ Запускаем service.bat — следуйте инструкциям в консоли");
+
+        try
+        {
+            var serviceBat = Path.Combine(EngineDir, "service.bat");
+            if (!File.Exists(serviceBat))
+            {
+                AddServiceLog("❌ service.bat не найден в engine/");
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c \"{serviceBat}\" admin",
+                WorkingDirectory = EngineDir,
+                UseShellExecute = true,
+                Verb = "runas"
+            });
+
+            AddServiceLog("✅ service.bat запущен с правами администратора");
+        }
+        catch (Exception ex)
+        {
+            AddServiceLog($"❌ Ошибка: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private void RemoveZapretService()
+    {
+        AddServiceLog("🗑 Удаление службы zapret...");
+
+        try
+        {
+            var commands = "net stop zapret >nul 2>&1 & sc delete zapret >nul 2>&1 & taskkill /IM winws.exe /F >nul 2>&1 & net stop WinDivert >nul 2>&1 & sc delete WinDivert >nul 2>&1 & echo Done & timeout /t 2";
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c {commands}",
+                UseShellExecute = true,
+                Verb = "runas",
+                CreateNoWindow = false
+            });
+
+            AddServiceLog("✅ Команды удаления отправлены");
+            // Обновим статус через пару секунд
+            _ = Task.Delay(3000).ContinueWith(_ =>
+                Application.Current.Dispatcher.Invoke(RefreshServiceStatus));
+        }
+        catch (Exception ex)
+        {
+            AddServiceLog($"❌ Ошибка: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private void RefreshServiceInfo()
+    {
+        RefreshServiceStatus();
+        AddServiceLog("🔄 Статус обновлён");
+    }
 
     // ── Вспомогательные ──
 

@@ -516,6 +516,132 @@
                 </ScrollViewer>
             </TabItem>
 
+            <!-- ═══ СЕРВИС ═══ -->
+            <TabItem Header="🛠 Сервис">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="18,12">
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="GAME FILTER"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <TextBlock Style="{StaticResource Label}" Text="Статус: " Margin="0,0,8,0"/>
+                            <TextBlock>
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="❌ Выключен"/>
+                                        <Setter Property="Foreground" Value="#E74C3C"/>
+                                        <Setter Property="FontSize" Value="13"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding GameFilterEnabled}" Value="True">
+                                                <Setter Property="Text" Value="✅ Включён"/>
+                                                <Setter Property="Foreground" Value="#27AE60"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                        <TextBlock Foreground="#777777" FontSize="11" Margin="0,2,0,8"
+                                   Text="Расширяет диапазон портов (1024-65535) для обхода в играх. Перезапустите zapret после изменения."
+                                   TextWrapping="Wrap"/>
+                        <Button Command="{Binding ToggleGameFilterCommand}" HorizontalAlignment="Left">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource DarkButton}">
+                                    <Setter Property="Content" Value="🎮 Включить Game Filter"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding GameFilterEnabled}" Value="True">
+                                            <Setter Property="Content" Value="🎮 Выключить Game Filter"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <Rectangle Style="{StaticResource Sep}"/>
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="IPSET FILTER"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <TextBlock Style="{StaticResource Label}" Text="Режим: " Margin="0,0,8,0"/>
+                            <TextBlock Style="{StaticResource Value}" Text="{Binding IpSetMode}"/>
+                        </StackPanel>
+                        <TextBlock Foreground="#777777" FontSize="11" Margin="0,2,0,8" TextWrapping="Wrap"
+                                   Text="loaded — фильтрация по списку IP · none — фильтрация отключена · any — все адреса"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="🔄 Переключить режим" Style="{StaticResource DarkButton}"
+                                    Margin="0,0,10,0" Command="{Binding CycleIpSetModeCommand}"/>
+                            <Button Content="⬇️ Обновить IPSet" Margin="0,0,0,0"
+                                    Command="{Binding UpdateIpSetListCommand}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource AccentButton}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsServiceBusy}" Value="True">
+                                                <Setter Property="IsEnabled" Value="False"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </StackPanel>
+
+                        <Rectangle Style="{StaticResource Sep}"/>
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="HOSTS FILE"/>
+                        <TextBlock Foreground="#777777" FontSize="11" Margin="0,0,0,8" TextWrapping="Wrap"
+                                   Text="Проверяет и обновляет системный hosts файл. Если нужно обновление — откроются оба файла для ручного копирования."/>
+                        <Button Content="🔍 Проверить / обновить Hosts"
+                                Command="{Binding UpdateHostsFileCommand}" HorizontalAlignment="Left">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource DarkButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsServiceBusy}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <Rectangle Style="{StaticResource Sep}"/>
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="СЛУЖБА ZAPRET"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <TextBlock Style="{StaticResource Label}" Text="Статус: " Margin="0,0,8,0"/>
+                            <TextBlock Style="{StaticResource Value}" Text="{Binding ZapretServiceStatus}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <Button Content="📦 Установить службу" Style="{StaticResource GreenButton}"
+                                    Margin="0,0,10,0" Command="{Binding InstallZapretServiceCommand}"/>
+                            <Button Content="🗑 Удалить службу" Style="{StaticResource RedButton}"
+                                    Margin="0,0,10,0" Command="{Binding RemoveZapretServiceCommand}"/>
+                            <Button Content="🔄" Style="{StaticResource DarkButton}"
+                                    Command="{Binding RefreshServiceInfoCommand}"/>
+                        </StackPanel>
+
+                        <Border Background="#2A2000" BorderBrush="#5A4800" BorderThickness="1"
+                                CornerRadius="6" Padding="10,8" Margin="0,12,0,0">
+                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#FFD700"
+                                       Text="⚠️ Установка службы запускает service.bat с правами администратора. Служба запускает zapret автоматически при загрузке Windows (без GUI)."/>
+                        </Border>
+
+                        <Rectangle Style="{StaticResource Sep}"/>
+
+                        <TextBlock Style="{StaticResource SectionHeader}" Text="ЛОГ СЕРВИСА"/>
+                        <Border Background="#141414" CornerRadius="6" MaxHeight="150">
+                            <ItemsControl ItemsSource="{Binding ServiceLogs}" Margin="8">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" Foreground="#888888"
+                                                   FontFamily="Consolas" FontSize="11" Margin="0,2"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
             <!-- ═══ ДИАГНОСТИКА ═══ -->
             <TabItem Header="🔧 Диагностика">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -565,7 +691,10 @@
                             <Button Content="🔄 Обновить" Style="{StaticResource DarkButton}"
                                     Margin="0,0,10,0" Command="{Binding RefreshProfilesCommand}"/>
                             <Button Content="📋 Скопировать диагностику" Style="{StaticResource DarkButton}"
+                                    Margin="0,0,10,0"
                                     Command="{Binding CopyDiagnosticsCommand}"/>
+                            <Button Content="📄 Экспорт логов" Style="{StaticResource DarkButton}"
+                                    Command="{Binding ExportLogsCommand}"/>
                         </StackPanel>
 
                         <Rectangle Style="{StaticResource Sep}"/>
