@@ -647,8 +647,6 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="18,12">
 
-                        <TextBlock Style="{StaticResource SectionHeader}" Text="СИСТЕМНЫЕ КОМПОНЕНТЫ"/>
-
                         <TextBlock Style="{StaticResource SectionHeader}" Text="СИСТЕМНЫЕ НАСТРОЙКИ" Margin="0,0,0,8"/>
 
                         <CheckBox Content="Запускать FluxRoute при входе в Windows"
@@ -687,15 +685,16 @@
                             <TextBlock Grid.Row="5" Grid.Column="1" Style="{StaticResource Value}" Text="{Binding AppVersion}"/>
                         </Grid>
 
-                        <StackPanel Orientation="Horizontal">
+                        <WrapPanel>
                             <Button Content="🔄 Обновить" Style="{StaticResource DarkButton}"
-                                    Margin="0,0,10,0" Command="{Binding RefreshProfilesCommand}"/>
-                            <Button Content="📋 Скопировать диагностику" Style="{StaticResource DarkButton}"
-                                    Margin="0,0,10,0"
+                                    Margin="0,0,8,8" Command="{Binding RefreshProfilesCommand}"/>
+                            <Button Content="📋 Скопировать" Style="{StaticResource DarkButton}"
+                                    Margin="0,0,8,8"
                                     Command="{Binding CopyDiagnosticsCommand}"/>
                             <Button Content="📄 Экспорт логов" Style="{StaticResource DarkButton}"
+                                    Margin="0,0,8,8"
                                     Command="{Binding ExportLogsCommand}"/>
-                        </StackPanel>
+                        </WrapPanel>
 
                         <Rectangle Style="{StaticResource Sep}"/>
 
