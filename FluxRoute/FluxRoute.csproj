@@ -34,4 +34,8 @@
 	  <ProjectReference Include="..\FluxRoute.Updater\FluxRoute.Updater.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+
 </Project>

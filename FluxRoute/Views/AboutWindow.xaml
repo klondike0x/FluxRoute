@@ -38,18 +38,30 @@
 
                 <Rectangle Height="1" Fill="#3E3E42" Margin="0,14,0,14"/>
 
-                <TextBlock Text="Благодарности разработчикам" Foreground="#4FC3F7" FontWeight="SemiBold" FontSize="14"/>
+                <TextBlock Text="Благодарности" Foreground="#4FC3F7" FontWeight="SemiBold" FontSize="14"/>
                 <TextBlock Margin="0,8,0,0" Foreground="#DDDDDD" TextWrapping="Wrap" FontSize="13"
-                           Text="Спасибо всем, кто участвует в развитии проекта: автору идеи, разработчикам ядра и GUI, тестировщикам, а также участникам сообщества, которые делятся обратной связью, логами и проверяют профили в реальных условиях."/>
+                           Text="Проекты, которые вдохновили на создание FluxRoute:"/>
 
-                <Rectangle Height="1" Fill="#3E3E42" Margin="0,14,0,14"/>
-
-                <TextBlock Text="Что изучалось и источники" Foreground="#4FC3F7" FontWeight="SemiBold" FontSize="14"/>
-                <TextBlock Margin="0,8,0,0" Foreground="#DDDDDD" TextWrapping="Wrap" FontSize="13"
-                           Text="При разработке использовались материалы и документация по WPF/.NET, MVVM-подходу, сетевой диагностике, а также открытые технические обсуждения по настройке маршрутизации и работе сетевых фильтров в Windows."/>
-
-                <TextBlock Margin="0,18,0,0" Foreground="#AAAAAA" FontSize="12" TextWrapping="Wrap"
-                           Text="Если хотите, можно дополнительно указать персональные ники/ссылки разработчиков и точный список источников — я добавлю это в отдельный блок."/>
+                <StackPanel Margin="12,10,0,0">
+                    <TextBlock Foreground="#DDDDDD" FontSize="13" Margin="0,4">
+                        <Run Text="• "/><Hyperlink NavigateUri="https://github.com/bol-van/zapret" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">bol-van/zapret</Hyperlink> — <Run Text="оригинальный zapret, основа всего"/>
+                    </TextBlock>
+                    <TextBlock Foreground="#DDDDDD" FontSize="13" Margin="0,4">
+                        <Run Text="• "/><Hyperlink NavigateUri="https://github.com/Flowseal/zapret-discord-youtube" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">Flowseal/zapret-discord-youtube</Hyperlink> — <Run Text="основа engine"/>
+                    </TextBlock>
+                    <TextBlock Foreground="#DDDDDD" FontSize="13" Margin="0,4">
+                        <Run Text="• "/><Hyperlink NavigateUri="https://github.com/medvedeff-true/Zapret-GUI" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">medvedeff-true/Zapret-GUI</Hyperlink>
+                    </TextBlock>
+                    <TextBlock Foreground="#DDDDDD" FontSize="13" Margin="0,4">
+                        <Run Text="• "/><Hyperlink NavigateUri="https://github.com/Virenbar/ZapretControl" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">Virenbar/ZapretControl</Hyperlink>
+                    </TextBlock>
+                    <TextBlock Foreground="#DDDDDD" FontSize="13" Margin="0,4">
+                        <Run Text="• "/><Hyperlink NavigateUri="https://github.com/youtubediscord/zapret" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">youtubediscord/zapret</Hyperlink>
+                    </TextBlock>
+                    <TextBlock Foreground="#DDDDDD" FontSize="13" Margin="0,4">
+                        <Run Text="• "/><Hyperlink NavigateUri="https://github.com/winsw/winsw" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">winsw/WinSW</Hyperlink> — <Run Text="запуск приложений как Windows-служб"/>
+                    </TextBlock>
+                </StackPanel>
             </StackPanel>
         </ScrollViewer>
     </Grid>

@@ -23,15 +23,16 @@
 
 | Главное окно | Запущено |
 |:---:|:---:|
-| ![Главное окно](screenshots/FluxRoute_MainMenu.png) | ![Запущено](screenshots/FluxRoute_Started.png) |
+| <img width="406" height="513" alt="image" src="https://github.com/user-attachments/assets/7a066fe4-a1f2-4030-a8dc-24bf9d2f6f8d" /> | <img width="406" height="513" alt="image" src="https://github.com/user-attachments/assets/c2611a14-50c9-426c-a6ae-4219497b818a" /> |
+
 
 | Профиль | Оркестратор |
 |:---:|:---:|
-| ![Профиль](screenshots/FluxRoute_Profile.png) | ![Оркестратор](screenshots/FluxRoute_AutoSelectedProfile.png) |
+| <img width="506" height="593" alt="image" src="https://github.com/user-attachments/assets/3183eb9d-37ce-4e66-acb1-59c6092878c6" /> | <img width="506" height="593" alt="image" src="https://github.com/user-attachments/assets/5bbb7630-e26e-4892-a1ea-2358e258c723" /> |
 
 | Обновления |
 |:---:|
-| ![Обновления](screenshots/FluxRoute_Update.png) |
+| <img width="506" height="593" alt="image" src="https://github.com/user-attachments/assets/9b9233f9-31c4-47c1-890a-199fef3fdad6" /> |
 
 ---
 
