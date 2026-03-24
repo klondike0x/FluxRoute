@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Windows;
+using System.Windows.Input;
 using FluxRoute.Services;
 using FluxRoute.ViewModels;
 
@@ -10,6 +12,7 @@ public partial class MainWindow : Window
     private readonly TrayIconService _trayIcon;
     private SettingsWindow? _settingsWindow;
     private AboutWindow? _aboutWindow;
+    private bool _isClosingConfirmed;
 
     public MainWindow()
     {
@@ -54,6 +57,7 @@ public partial class MainWindow : Window
 
     private void OnTrayExitRequested(object? sender, EventArgs e)
     {
+        _isClosingConfirmed = true;
         Close();
     }
 
@@ -74,11 +78,74 @@ public partial class MainWindow : Window
     {
         base.OnClosing(e);
 
-        // Закрытие (✕) → останавливаем zapret и завершаем приложение
+        if (!_isClosingConfirmed)
+        {
+            // Показываем оверлей подтверждения вместо закрытия (✕ или Alt+F4)
+            e.Cancel = true;
+            CloseOverlay.Visibility = Visibility.Visible;
+            return;
+        }
+
+        // Останавливаем winws.exe через ViewModel
         if (_vm.IsRunning)
             _vm.StopCommand.Execute(null);
 
+        // Принудительно завершаем winws.exe и WinDivert
+        ForceKillProcesses();
+
         _trayIcon.Dispose();
+    }
+
+    private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Left)
+            DragMove();
+    }
+
+    private void MinimizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void CloseButton_Click(object sender, RoutedEventArgs e)
+    {
+        CloseOverlay.Visibility = Visibility.Visible;
+    }
+
+    private void CancelClose_Click(object sender, RoutedEventArgs e)
+    {
+        CloseOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private void ConfirmClose_Click(object sender, RoutedEventArgs e)
+    {
+        _isClosingConfirmed = true;
+        Close();
+    }
+
+    private static void ForceKillProcesses()
+    {
+        try
+        {
+            foreach (var p in Process.GetProcessesByName("winws"))
+            {
+                try { p.Kill(entireProcessTree: true); p.WaitForExit(3000); } catch { }
+            }
+        }
+        catch { }
+
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = "/c taskkill /IM winws.exe /F >nul 2>&1 & net stop WinDivert >nul 2>&1",
+                CreateNoWindow = true,
+                UseShellExecute = false
+            };
+            Process.Start(psi)?.WaitForExit(5000);
+        }
+        catch { }
     }
 
     private void OnOpenAboutRequested(object? sender, EventArgs e)

@@ -4,13 +4,16 @@
         Title="FluxRoute"
         Height="520" Width="420"
         WindowStartupLocation="CenterScreen"
-        Background="#1E1E1E"
-        ResizeMode="CanMinimize">
+        Background="Transparent"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="NoResize">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
     </Window.Resources>
 
+    <Border Background="#1E1E1E" BorderBrush="#3E3E42" BorderThickness="1" CornerRadius="8">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="60"/>
@@ -19,34 +22,69 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="#252526">
+        <Border Grid.Row="0" Background="#252526" CornerRadius="8,8,0,0" MouseLeftButtonDown="Header_MouseLeftButtonDown">
             <Grid Margin="15,0">
                 <TextBlock FontSize="22" FontWeight="Bold"
                            Foreground="White" VerticalAlignment="Center">
-                    <Run Text="🔷 FluxRoute"/>
+                    <Run Text="◇ FluxRoute"/>
                     <Run Text="{Binding AppVersion, Mode=OneWay}" FontSize="12" Foreground="#888888"/>
                 </TextBlock>
-                <Button Width="35" Height="35" HorizontalAlignment="Right" VerticalAlignment="Center"
-                        Command="{Binding OpenAboutCommand}"
-                        Background="Transparent" BorderBrush="Transparent"
-                        Foreground="White" FontSize="18" Cursor="Hand" Content="ℹ️">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <ContentPresenter/>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Opacity" Value="0.7"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-6,0">
+                    <Button Width="34" Height="34" Margin="2,0"
+                            Command="{Binding OpenAboutCommand}">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
+                                    <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                               Foreground="#AAAAAA" x:Name="Ico"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="#3E3E42"/>
+                                        <Setter TargetName="Ico" Property="Foreground" Value="White"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                    <Button Width="34" Height="34" Margin="2,0"
+                            Click="MinimizeButton_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
+                                    <TextBlock Text="&#xE949;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                               Foreground="#AAAAAA" x:Name="Ico"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="#3E3E42"/>
+                                        <Setter TargetName="Ico" Property="Foreground" Value="White"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                    <Button Width="34" Height="34" Margin="2,0"
+                            Click="CloseButton_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
+                                    <TextBlock Text="&#xE106;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                               Foreground="#AAAAAA" x:Name="Ico"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="#C42B1C"/>
+                                        <Setter TargetName="Ico" Property="Foreground" Value="White"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -212,5 +250,57 @@
 
             </StackPanel>
         </ScrollViewer>
+
+        <!-- Close Confirmation Overlay -->
+        <Grid x:Name="CloseOverlay" Grid.RowSpan="3" Visibility="Collapsed">
+            <Border Background="#AA000000"/>
+            <Border Background="#2D2D30" BorderBrush="#3E3E42" BorderThickness="1" CornerRadius="10"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Padding="28,24" MaxWidth="340">
+                <StackPanel>
+                    <TextBlock Text="Завершить работу FluxRoute?"
+                               Foreground="White" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <TextBlock Text="Все активные службы (WinDivert, WinWS) будут остановлены, защита прекратит работу."
+                               Foreground="#AAAAAA" FontSize="13" TextWrapping="Wrap" Margin="0,0,0,20"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Content="Отмена" Click="CancelClose_Click"
+                                Background="#3E3E42" Foreground="#CCCCCC" BorderThickness="0"
+                                Padding="20,10" FontSize="13" Cursor="Hand" Margin="0,0,12,0">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                                            Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="#505054"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                        <Button Content="Завершить" Click="ConfirmClose_Click"
+                                Background="#C0392B" Foreground="White" BorderThickness="0"
+                                Padding="20,10" FontSize="13" FontWeight="SemiBold" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                                            Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="#E74C3C"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
+    </Border>
 </Window>

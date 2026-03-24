@@ -4,23 +4,41 @@
         Title="О проекте FluxRoute"
         Height="560" Width="620"
         WindowStartupLocation="CenterOwner"
-        Background="#1E1E1E"
-        ResizeMode="CanMinimize"
+        Background="Transparent"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="NoResize"
         ShowInTaskbar="False">
 
+    <Border Background="#1E1E1E" BorderBrush="#3E3E42" BorderThickness="1" CornerRadius="8">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="52"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#252526">
+        <Border Grid.Row="0" Background="#252526" CornerRadius="8,8,0,0" MouseLeftButtonDown="Header_MouseLeftButtonDown">
             <Grid Margin="16,0">
                 <TextBlock Text="ℹ️ О проекте FluxRoute" FontSize="16" FontWeight="SemiBold"
                            Foreground="White" VerticalAlignment="Center"/>
-                <Button Content="✕" Width="30" Height="30" HorizontalAlignment="Right" VerticalAlignment="Center"
-                        Foreground="#AAAAAA" Background="Transparent" BorderThickness="0"
-                        FontSize="16" Cursor="Hand" Click="CloseButton_Click"/>
+                <Button Width="34" Height="34" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Click="CloseButton_Click">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
+                                <TextBlock Text="&#xE106;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                           Foreground="#AAAAAA" x:Name="Ico"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#C42B1C"/>
+                                    <Setter TargetName="Ico" Property="Foreground" Value="White"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
             </Grid>
         </Border>
 
@@ -65,4 +83,5 @@
             </StackPanel>
         </ScrollViewer>
     </Grid>
+    </Border>
 </Window>

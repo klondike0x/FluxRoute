@@ -4,8 +4,10 @@
         Title="Настройки FluxRoute"
         Height="600" Width="520"
         WindowStartupLocation="CenterOwner"
-        Background="#1E1E1E"
-        ResizeMode="CanMinimize"
+        Background="Transparent"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="NoResize"
         ShowInTaskbar="False">
 
     <Window.Resources>
@@ -231,6 +233,7 @@
         </Style>
     </Window.Resources>
 
+    <Border Background="#1E1E1E" BorderBrush="#3E3E42" BorderThickness="1" CornerRadius="8">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="50"/>
@@ -238,29 +241,27 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="#252526">
+        <Border Grid.Row="0" Background="#252526" CornerRadius="8,8,0,0" MouseLeftButtonDown="Header_MouseLeftButtonDown">
             <Grid Margin="16,0">
                 <TextBlock Text="⚙️ Настройки FluxRoute" FontSize="16" FontWeight="SemiBold"
                            Foreground="White" VerticalAlignment="Center"/>
-                <Button Content="✕" Width="30" Height="30" HorizontalAlignment="Right" VerticalAlignment="Center"
-                        Foreground="#AAAAAA" Background="Transparent" BorderThickness="0"
-                        FontSize="16" Cursor="Hand" Click="CloseButton_Click">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <ContentPresenter/>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
+                <Button Width="34" Height="34" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Click="CloseButton_Click">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
+                                <TextBlock Text="&#xE106;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                           Foreground="#AAAAAA" x:Name="Ico"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter TargetName="Bd" Property="Background" Value="#C42B1C"/>
+                                    <Setter TargetName="Ico" Property="Foreground" Value="White"/>
                                 </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
                 </Button>
             </Grid>
         </Border>
@@ -713,4 +714,5 @@
 
         </TabControl>
     </Grid>
+    </Border>
 </Window>

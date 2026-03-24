@@ -22,7 +22,7 @@ public sealed class TrayIconService : IDisposable
             ContextMenuStrip = CreateContextMenu()
         };
 
-        _notifyIcon.DoubleClick += (_, _) => ShowRequested?.Invoke(this, EventArgs.Empty);
+        _notifyIcon.Click += (_, _) => ShowRequested?.Invoke(this, EventArgs.Empty);
     }
 
     public void SetVisible(bool visible)
@@ -46,7 +46,7 @@ public sealed class TrayIconService : IDisposable
     {
         var menu = new ContextMenuStrip();
 
-        var showItem = new ToolStripMenuItem("Показать FluxRoute");
+        var showItem = new ToolStripMenuItem("Открыть");
         showItem.Click += (_, _) => ShowRequested?.Invoke(this, EventArgs.Empty);
 
         var exitItem = new ToolStripMenuItem("Выход");
