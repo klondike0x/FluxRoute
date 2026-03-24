@@ -650,10 +650,7 @@
                         <TextBlock Style="{StaticResource SectionHeader}" Text="СИСТЕМНЫЕ НАСТРОЙКИ" Margin="0,0,0,8"/>
 
                         <CheckBox Content="Запускать FluxRoute при входе в Windows"
-                                  IsChecked="{Binding AutoStartEnabled}" Margin="0,4"/>
-
-                        <CheckBox Content="Сворачивать в системный трей"
-                                  IsChecked="{Binding MinimizeToTray}" Margin="0,4,0,12"/>
+                                  IsChecked="{Binding AutoStartEnabled}" Margin="0,4,0,12"/>
 
                         <Rectangle Style="{StaticResource Sep}"/>
 

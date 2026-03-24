@@ -10,7 +10,6 @@ public partial class MainWindow : Window
     private readonly TrayIconService _trayIcon;
     private SettingsWindow? _settingsWindow;
     private AboutWindow? _aboutWindow;
-    private bool _forceClose;
 
     public MainWindow()
     {
@@ -55,7 +54,6 @@ public partial class MainWindow : Window
 
     private void OnTrayExitRequested(object? sender, EventArgs e)
     {
-        _forceClose = true;
         Close();
     }
 
@@ -63,7 +61,8 @@ public partial class MainWindow : Window
     {
         base.OnStateChanged(e);
 
-        if (WindowState == WindowState.Minimized && _vm.MinimizeToTray)
+        // Сворачивание (—) → прячем в трей
+        if (WindowState == WindowState.Minimized)
         {
             ShowInTaskbar = false;
             Hide();
@@ -75,12 +74,9 @@ public partial class MainWindow : Window
     {
         base.OnClosing(e);
 
-        if (!_forceClose && _vm.MinimizeToTray)
-        {
-            e.Cancel = true;
-            WindowState = WindowState.Minimized;
-            return;
-        }
+        // Закрытие (✕) → останавливаем zapret и завершаем приложение
+        if (_vm.IsRunning)
+            _vm.StopCommand.Execute(null);
 
         _trayIcon.Dispose();
     }
@@ -106,6 +102,6 @@ public partial class MainWindow : Window
         }
 
         _settingsWindow = new SettingsWindow(_vm) { Owner = this };
-        _settingsWindow.Show();
+        _settingsWindow.ShowDialog();
     }
 }
