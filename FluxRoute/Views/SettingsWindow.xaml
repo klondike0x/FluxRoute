@@ -613,8 +613,8 @@
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                             <Button Content="📦 Установить службу" Style="{StaticResource GreenButton}"
                                     Margin="0,0,10,0" Command="{Binding InstallZapretServiceCommand}"/>
-                            <Button Content="🗑 Удалить службу" Style="{StaticResource RedButton}"
-                                    Margin="0,0,10,0" Command="{Binding RemoveZapretServiceCommand}"/>
+                            <Button Content="⏹ Принудительно остановить" Style="{StaticResource RedButton}"
+                                    Margin="0,0,10,0" Command="{Binding ForceStopZapretServiceCommand}"/>
                             <Button Content="🔄" Style="{StaticResource DarkButton}"
                                     Command="{Binding RefreshServiceInfoCommand}"/>
                         </StackPanel>

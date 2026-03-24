@@ -1051,13 +1051,21 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void RemoveZapretService()
+    private void ForceStopZapretService()
     {
-        AddServiceLog("🗑 Удаление службы zapret...");
+        var result = System.Windows.MessageBox.Show(
+            "Вы действительно хотите принудительно остановить службу zapret?\n\nВсе активные соединения через zapret будут прерваны.",
+            "Подтверждение остановки",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning);
+
+        if (result != System.Windows.MessageBoxResult.Yes) return;
+
+        AddServiceLog("⏹ Принудительная остановка службы zapret...");
 
         try
         {
-            var commands = "net stop zapret >nul 2>&1 & sc delete zapret >nul 2>&1 & taskkill /IM winws.exe /F >nul 2>&1 & net stop WinDivert >nul 2>&1 & sc delete WinDivert >nul 2>&1 & echo Done & timeout /t 2";
+            var commands = "net stop zapret >nul 2>&1 & taskkill /IM winws.exe /F >nul 2>&1 & net stop WinDivert >nul 2>&1 & echo Done & timeout /t 2";
             Process.Start(new ProcessStartInfo
             {
                 FileName = "cmd.exe",
@@ -1067,7 +1075,7 @@ public partial class MainViewModel : ObservableObject
                 CreateNoWindow = false
             });
 
-            AddServiceLog("✅ Команды удаления отправлены");
+            AddServiceLog("✅ Команды остановки отправлены");
             // Обновим статус через пару секунд
             _ = Task.Delay(3000).ContinueWith(_ =>
                 Application.Current.Dispatcher.Invoke(RefreshServiceStatus));
