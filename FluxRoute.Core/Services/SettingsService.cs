@@ -20,6 +20,9 @@ public sealed class AppSettings
     // Рейтинг профилей
     public List<ProfileRatingEntry> ProfileRatings { get; set; } = new();
 
+    // Game Filter
+    public string GameFilterProtocol { get; set; } = "TCP и UDP";
+
     // Обновления
     public bool AutoUpdateEnabled { get; set; } = false;
 

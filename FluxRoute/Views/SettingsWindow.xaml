@@ -544,20 +544,26 @@
                             </TextBlock>
                         </StackPanel>
                         <TextBlock Foreground="#777777" FontSize="11" Margin="0,2,0,8"
-                                   Text="Расширяет диапазон портов (1024-65535) для обхода в играх. Перезапустите zapret после изменения."
+                                   Text="Расширяет диапазон портов (1024-65535) для обхода в играх. Выберите протокол и нажмите кнопку. Перезапустите zapret после изменения."
                                    TextWrapping="Wrap"/>
-                        <Button Command="{Binding ToggleGameFilterCommand}" HorizontalAlignment="Left">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource DarkButton}">
-                                    <Setter Property="Content" Value="🎮 Включить Game Filter"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding GameFilterEnabled}" Value="True">
-                                            <Setter Property="Content" Value="🎮 Выключить Game Filter"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Button Command="{Binding ToggleGameFilterCommand}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource DarkButton}">
+                                        <Setter Property="Content" Value="🎮 Включить Game Filter"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding GameFilterEnabled}" Value="True">
+                                                <Setter Property="Content" Value="🎮 Выключить Game Filter"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <ComboBox ItemsSource="{Binding GameFilterProtocols}"
+                                      SelectedItem="{Binding GameFilterProtocol}"
+                                      Width="140" Margin="10,0,0,0"/>
+                        </StackPanel>
 
                         <Rectangle Style="{StaticResource Sep}"/>
 

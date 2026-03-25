@@ -128,10 +128,13 @@ public partial class MainViewModel : ObservableObject
     partial void OnSiteInstagramChanged(bool value) => SaveSettings();
 
     private readonly OrchestratorService _orchestrator;
-    private readonly DispatcherTimer _orchestratorUiTimer = new() { Interval = TimeSpan.FromSeconds(5) };
+    private readonly DispatcherTimer _orchestratorUiTimer = new(DispatcherPriority.Render) { Interval = TimeSpan.FromSeconds(1) };
 
     // ── Сервис ──
     [ObservableProperty] private bool gameFilterEnabled;
+    [ObservableProperty] private string gameFilterProtocol = "TCP и UDP";
+    partial void OnGameFilterProtocolChanged(string value) => SaveSettings();
+    public List<string> GameFilterProtocols { get; } = ["TCP и UDP", "TCP", "UDP"];
     [ObservableProperty] private string ipSetMode = "—";
     [ObservableProperty] private string zapretServiceStatus = "—";
     [ObservableProperty] private bool isServiceBusy;
@@ -259,6 +262,7 @@ public partial class MainViewModel : ObservableObject
         AutoUpdateEnabled = settings.AutoUpdateEnabled;
         AutoStartEnabled = settings.AutoStartEnabled;
         MinimizeToTray = settings.MinimizeToTray;
+        GameFilterProtocol = settings.GameFilterProtocol;
     }
 
     public void SaveSettings()
@@ -277,6 +281,7 @@ public partial class MainViewModel : ObservableObject
             AutoUpdateEnabled = AutoUpdateEnabled,
             AutoStartEnabled = AutoStartEnabled,
             MinimizeToTray = MinimizeToTray,
+            GameFilterProtocol = GameFilterProtocol,
             ProfileRatings = ProfileScores.Select(s => new ProfileRatingEntry
             {
                 FileName = s.FileName,
@@ -414,7 +419,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (!AutoUpdateEnabled) return;
 
-        var update = await _updater.CheckForUpdateAsync(EngineDir);
+        var (update, _) = await _updater.CheckForUpdateAsync(EngineDir);
         if (update is null) return;
 
         _pendingUpdate = update;
@@ -615,13 +620,22 @@ public partial class MainViewModel : ObservableObject
     private async Task CheckUpdates()
     {
         UpdateStatus = "🔍 Проверяем обновления...";
-        var update = await _updater.CheckForUpdateAsync(EngineDir);
+        var (update, error) = await _updater.CheckForUpdateAsync(EngineDir);
 
         if (update is null)
         {
-            UpdateStatus = $"✅ Актуальная версия ({CurrentEngineVersion})";
-            Logs.Add("Обновлений не найдено.");
-            UpdateLogs.Add("✅ Обновлений не найдено");
+            if (error is not null)
+            {
+                UpdateStatus = $"❌ {error}";
+                Logs.Add($"Ошибка проверки: {error}");
+                UpdateLogs.Add($"❌ {error}");
+            }
+            else
+            {
+                UpdateStatus = $"✅ Актуальная версия ({CurrentEngineVersion})";
+                Logs.Add("Обновлений не найдено.");
+                UpdateLogs.Add("✅ Обновлений не найдено");
+            }
             return;
         }
 
@@ -637,7 +651,34 @@ public partial class MainViewModel : ObservableObject
         if (_pendingUpdate is null)
         {
             await CheckUpdates();
-            if (_pendingUpdate is null) return;
+            if (_pendingUpdate is null)
+            {
+                // Обычная проверка не нашла обновлений — предлагаем принудительную переустановку
+                UpdateStatus = "🔄 Принудительная проверка...";
+                var (latest, forceError) = await _updater.GetLatestReleaseAsync();
+                if (latest is null)
+                {
+                    var errMsg = forceError ?? "Неизвестная ошибка";
+                    UpdateStatus = $"❌ {errMsg}";
+                    UpdateLogs.Add($"❌ {errMsg}");
+                    return;
+                }
+
+                var result = System.Windows.MessageBox.Show(
+                    $"Локальная версия совпадает с последней ({latest.Version}).\n\nПринудительно переустановить Flowseal?\nЭто скачает и заменит все файлы engine/.",
+                    "Принудительное обновление",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Question);
+
+                if (result != System.Windows.MessageBoxResult.Yes)
+                {
+                    UpdateStatus = $"✅ Актуальная версия ({CurrentEngineVersion})";
+                    return;
+                }
+
+                _pendingUpdate = latest;
+                UpdateLogs.Add($"🔄 Принудительная переустановка {latest.Version}...");
+            }
         }
         await InstallUpdateAsync();
     }
@@ -648,7 +689,7 @@ public partial class MainViewModel : ObservableObject
         IsUpdating = true;
         Stop();
 
-        await _updater.InstallUpdateAsync(EngineDir, _pendingUpdate,
+        var success = await _updater.InstallUpdateAsync(EngineDir, _pendingUpdate,
             msg => Application.Current.Dispatcher.Invoke(() =>
             {
                 UpdateStatus = msg;
@@ -656,10 +697,18 @@ public partial class MainViewModel : ObservableObject
                 UpdateLogs.Add(msg);
             }));
 
-        CurrentEngineVersion = _updater.GetLocalVersion(EngineDir);
-        _pendingUpdate = null;
+        if (success)
+        {
+            CurrentEngineVersion = _updater.GetLocalVersion(EngineDir);
+            _pendingUpdate = null;
+            LoadProfiles();
+        }
+        else
+        {
+            UpdateLogs.Add("⚠️ Нажмите «Обновить» для повторной попытки");
+        }
+
         IsUpdating = false;
-        LoadProfiles();
     }
 
     private async Task AutoDownloadEngineAsync()
@@ -702,7 +751,7 @@ public partial class MainViewModel : ObservableObject
 
             var update = new UpdateInfo { Version = tag, DownloadUrl = downloadUrl };
 
-            await _updater.InstallUpdateAsync(EngineDir, update,
+            var success = await _updater.InstallUpdateAsync(EngineDir, update,
                 msg => Application.Current.Dispatcher.Invoke(() =>
                 {
                     EngineDownloadStatus = msg;
@@ -711,13 +760,21 @@ public partial class MainViewModel : ObservableObject
 
             Application.Current.Dispatcher.Invoke(() =>
             {
-                CurrentEngineVersion = _updater.GetLocalVersion(EngineDir);
-                EngineDownloadStatus = $"✅ Flowseal {tag} установлен!";
-                Logs.Add($"✅ Flowseal {tag} установлен автоматически");
-                AddToRecentLogs($"✅ Flowseal {tag} установлен");
+                if (success)
+                {
+                    CurrentEngineVersion = _updater.GetLocalVersion(EngineDir);
+                    EngineDownloadStatus = $"✅ Flowseal {tag} установлен!";
+                    Logs.Add($"✅ Flowseal {tag} установлен автоматически");
+                    AddToRecentLogs($"✅ Flowseal {tag} установлен");
+                    LoadProfiles();
+                    RefreshDiagnostics();
+                }
+                else
+                {
+                    Logs.Add("❌ Установка Flowseal не завершена");
+                    AddToRecentLogs("❌ Ошибка установки Flowseal");
+                }
                 IsDownloadingEngine = false;
-                LoadProfiles();
-                RefreshDiagnostics();
             });
         }
         catch (Exception ex)
@@ -789,7 +846,21 @@ public partial class MainViewModel : ObservableObject
     private void RefreshServiceStatus()
     {
         // Game Filter
-        GameFilterEnabled = File.Exists(GameFilterFlagPath);
+        if (File.Exists(GameFilterFlagPath))
+        {
+            GameFilterEnabled = true;
+            try
+            {
+                var content = File.ReadAllText(GameFilterFlagPath).Trim();
+                if (GameFilterProtocols.Contains(content))
+                    GameFilterProtocol = content;
+            }
+            catch { }
+        }
+        else
+        {
+            GameFilterEnabled = false;
+        }
 
         // IPSet mode
         if (!File.Exists(IpSetFilePath))
@@ -858,10 +929,10 @@ public partial class MainViewModel : ObservableObject
             }
             else
             {
-                File.WriteAllText(GameFilterFlagPath, "ENABLED");
+                File.WriteAllText(GameFilterFlagPath, GameFilterProtocol);
                 GameFilterEnabled = true;
-                AddServiceLog("🎮 Game Filter включён");
-                Logs.Add("Game Filter включён");
+                AddServiceLog($"🎮 Game Filter включён ({GameFilterProtocol})");
+                Logs.Add($"Game Filter включён ({GameFilterProtocol})");
             }
 
             AddServiceLog("⚠️ Перезапустите zapret для применения изменений");

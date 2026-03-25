@@ -1,9 +1,17 @@
 # FluxRoute Desktop
 
-[![.NET Version](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
-[![GitHub all releases](https://img.shields.io/github/downloads/klondike0x/FluxRoute/total)](https://github.com/klondike0x/FluxRoute/releases)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/klondike0x/FluxRoute)](https://github.com/klondike0x/FluxRoute/releases/latest)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+<p align="center">
+    <picture>
+        <img width="750" alt="FluxRoute" src="https://github.com/user-attachments/assets/57b5f5a8-a36e-4fe0-805d-6a2c77955368" />
+    </picture>
+</p>
+
+<p align="center">
+    <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet"/></a>
+    <a href="https://github.com/klondike0x/FluxRoute/releases"><img src="https://img.shields.io/github/downloads/klondike0x/FluxRoute/total?logo=github&label=downloads"/></a>
+    <a href="https://github.com/klondike0x/FluxRoute/releases/latest"><img src="https://img.shields.io/github/v/release/klondike0x/FluxRoute?logo=github"/></a>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg"/></a>
+</p>
 
 > GUI-оболочка для управления скриптами [Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube) — красиво, быстро и без ручного запуска BAT-файлов.
 
