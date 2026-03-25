@@ -40,12 +40,25 @@ public sealed partial class UpdaterService
         => version.Trim().TrimStart('v', 'V').Trim().ToLowerInvariant();
 
     /// <summary>
-    /// Читает текущую версию — сначала LOCAL_VERSION из service.bat,
-    /// затем engine/version.txt как fallback
+    /// Читает текущую версию — сначала version.txt (записывается нашим апдейтером),
+    /// затем LOCAL_VERSION из service.bat как fallback (для первого запуска без обновлений)
     /// </summary>
     public string GetLocalVersion(string engineDir)
     {
-        // Приоритет: LOCAL_VERSION из service.bat (как делает Zapret-GUI)
+        // Приоритет: version.txt — мы сами его пишем после успешного обновления
+        var versionPath = Path.Combine(engineDir, VersionFile);
+        if (File.Exists(versionPath))
+        {
+            try
+            {
+                var ver = NormalizeVersion(File.ReadAllText(versionPath));
+                if (ver.Length > 0 && ver != "unknown")
+                    return ver;
+            }
+            catch { /* fallback ниже */ }
+        }
+
+        // Fallback: LOCAL_VERSION из service.bat (до первого обновления через FluxRoute)
         var serviceBat = Path.Combine(engineDir, "service.bat");
         if (File.Exists(serviceBat))
         {
@@ -61,9 +74,7 @@ public sealed partial class UpdaterService
             catch { /* fallback ниже */ }
         }
 
-        // Fallback: version.txt
-        var path = Path.Combine(engineDir, VersionFile);
-        return File.Exists(path) ? NormalizeVersion(File.ReadAllText(path)) : "unknown";
+        return "unknown";
     }
 
     /// <summary>Сохраняет версию в engine/version.txt</summary>
