@@ -730,6 +730,34 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
+            // Подтверждение перед первым скачиванием — прозрачность источника
+            var confirmed = Application.Current.Dispatcher.Invoke(() =>
+            {
+                var result = System.Windows.MessageBox.Show(
+                    $"Для работы FluxRoute необходим движок Flowseal (v{update.Version}).\n\n" +
+                    $"Источник: официальный GitHub-репозиторий\n" +
+                    $"github.com/Flowseal/zapret-discord-youtube\n\n" +
+                    $"Ссылка на скачивание:\n{update.DownloadUrl}\n\n" +
+                    $"Это open-source проект — исходный код доступен публично.\n" +
+                    $"После скачивания SHA-256 хеш будет отображён в логах.\n\n" +
+                    $"Скачать и установить?",
+                    "Скачивание Flowseal",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Question);
+                return result == System.Windows.MessageBoxResult.Yes;
+            });
+
+            if (!confirmed)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    EngineDownloadStatus = "⏹ Скачивание отменено пользователем";
+                    Logs.Add("⏹ Пользователь отменил скачивание Flowseal");
+                    IsDownloadingEngine = false;
+                });
+                return;
+            }
+
             var success = await _updater.InstallUpdateAsync(EngineDir, update,
                 msg => Application.Current.Dispatcher.Invoke(() =>
                 {

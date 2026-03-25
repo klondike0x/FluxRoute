@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
 namespace FluxRoute.Updater.Services;
@@ -150,9 +151,14 @@ public sealed partial class UpdaterService
         try
         {
             // Шаг 1: Скачиваем
+            onProgress($"📥 Источник: {update.DownloadUrl}");
             onProgress("⬇️ Скачиваем обновление...");
             var bytes = await _http.GetByteArrayAsync(update.DownloadUrl, ct);
             await File.WriteAllBytesAsync(tempZip, bytes, ct);
+
+            // SHA-256 для верификации — пользователь может сверить хеш
+            var hash = Convert.ToHexString(SHA256.HashData(bytes));
+            onProgress($"🔒 SHA-256: {hash}");
 
             // Шаг 2: Распаковываем во временную папку
             onProgress("📦 Распаковываем архив...");
