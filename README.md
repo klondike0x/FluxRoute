@@ -1,6 +1,10 @@
 # FluxRoute Desktop
 
-<img width="2933" height="598" alt="FluxRoute" src="https://github.com/user-attachments/assets/57b5f5a8-a36e-4fe0-805d-6a2c77955368" />
+<p align="center">
+    <picture>
+        <img width="750" alt="FluxRoute" src="https://github.com/user-attachments/assets/57b5f5a8-a36e-4fe0-805d-6a2c77955368" />
+    </picture>
+</p>
 
 [![.NET Version](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 [![GitHub all releases](https://img.shields.io/github/downloads/klondike0x/FluxRoute/total)](https://github.com/klondike0x/FluxRoute/releases)
