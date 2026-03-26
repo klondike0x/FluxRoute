@@ -1273,7 +1273,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     private static bool CheckIsAdmin() { using var id = WindowsIdentity.GetCurrent(); return new WindowsPrincipal(id).IsInRole(WindowsBuiltInRole.Administrator); }
-    private static string GetAppVersion() { var asm = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly(); return asm.GetName().Version?.ToString() ?? "—"; }
+    private static string GetAppVersion() { var asm = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly(); return asm.GetName().Version?.ToString(3) ?? "—"; }
 
     private void LoadProfiles()
     {

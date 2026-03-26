@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
 	<UseWPF>true</UseWPF>
 	<UseWindowsForms>true</UseWindowsForms>
-	<Version>1.2.0</Version>
+	<Version>1.2.1</Version>
     <ApplicationIcon>FluxRoute.ico</ApplicationIcon>
   </PropertyGroup>
 
@@ -18,9 +18,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Compile Remove="Properties\**" />
 	  <Compile Remove="ViewModels\Новая папка\**" />
+	  <EmbeddedResource Remove="Properties\**" />
 	  <EmbeddedResource Remove="ViewModels\Новая папка\**" />
+	  <None Remove="Properties\**" />
 	  <None Remove="ViewModels\Новая папка\**" />
+	  <Page Remove="Properties\**" />
 	  <Page Remove="ViewModels\Новая папка\**" />
 	</ItemGroup>
 
@@ -39,10 +43,6 @@
   <ItemGroup>
 	  <ProjectReference Include="..\FluxRoute.Core\FluxRoute.Core.csproj" />
 	  <ProjectReference Include="..\FluxRoute.Updater\FluxRoute.Updater.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Properties\" />
   </ItemGroup>
 
 </Project>
