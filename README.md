@@ -31,16 +31,16 @@
 
 | Главное окно | Запущено |
 |:---:|:---:|
-| <img width="406" height="513" alt="image" src="https://github.com/user-attachments/assets/7a066fe4-a1f2-4030-a8dc-24bf9d2f6f8d" /> | <img width="406" height="513" alt="image" src="https://github.com/user-attachments/assets/c2611a14-50c9-426c-a6ae-4219497b818a" /> |
+| <img width="420" height="520" alt="изображение" src="https://github.com/user-attachments/assets/9d85d881-80dc-4cbc-9c2f-413500d48222" /> | <img width="420" height="520" alt="изображение" src="https://github.com/user-attachments/assets/e129b222-0bbd-4dad-8a10-d0cfb12c0d1c" /> |
 
 
-| Профиль | Оркестратор |
+| Оркестратор | Обновления |
 |:---:|:---:|
-| <img width="506" height="593" alt="image" src="https://github.com/user-attachments/assets/3183eb9d-37ce-4e66-acb1-59c6092878c6" /> | <img width="506" height="593" alt="image" src="https://github.com/user-attachments/assets/5bbb7630-e26e-4892-a1ea-2358e258c723" /> |
+| <img width="520" height="600" alt="изображение" src="https://github.com/user-attachments/assets/245ae590-2f2f-43db-a45a-9d55e68b8488" /> | <img width="520" height="600" alt="изображение" src="https://github.com/user-attachments/assets/bfd6dca8-08b4-4f7e-9cb1-547a36759335" /> |
 
-| Обновления |
+| Сервис |
 |:---:|
-| <img width="506" height="593" alt="image" src="https://github.com/user-attachments/assets/9b9233f9-31c4-47c1-890a-199fef3fdad6" /> |
+| <img width="520" height="600" alt="изображение" src="https://github.com/user-attachments/assets/800a256c-5e88-4aa5-93a0-94e8870aee5d" /> |
 
 ---
 
