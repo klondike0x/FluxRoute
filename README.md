@@ -116,7 +116,7 @@ dotnet build
 
 ---
 
-## Основа engine
+## 🧩 Основа engine
 
 FluxRoute использует экосистему проектов в такой цепочке:
 
@@ -125,7 +125,7 @@ FluxRoute использует экосистему проектов в тако
 - [bol-van/zapret-win-bundle](https://github.com/bol-van/zapret-win-bundle) — Windows-бандл с winws.exe
 - [Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube) — непосредственная основа engine, используемая в FluxRoute
 
-## Вдохновение
+## 💡 Вдохновение
 
 - [medvedeff-true/Zapret-GUI](https://github.com/medvedeff-true/Zapret-GUI)
 - [Virenbar/ZapretControl](https://github.com/Virenbar/ZapretControl)
