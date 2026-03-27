@@ -17,7 +17,22 @@
         <img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge" /></a>
 </p>
 
-> GUI-оболочка для управления скриптами [Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube) — красиво, быстро и без ручного запуска BAT-файлов.
+<p align="center">
+  <b>Windows GUI для запуска и автоматизации BAT-профилей Flowseal</b><br/>
+  Чистый интерфейс, автообновление engine, оркестратор профилей и запуск без ручной возни с BAT-файлами.
+</p>
+
+> FluxRoute Desktop — современная GUI-оболочка для управления профилями `Flowseal/zapret-discord-youtube`: удобно запускать, обновлять и переключать профили в одном окне.
+
+---
+
+## ❓ Почему FluxRoute
+
+- **Удобный GUI** вместо ручного запуска BAT-файлов
+- **Автообновление `engine/`** из GitHub Releases
+- **Оркестратор профилей**, который тестирует соединение и переключает лучший вариант при сбое
+- **Скрытый запуск** BAT-файлов и `winws.exe` без лишних консольных окон
+- **Диагностика и логи** под рукой, без прыжков между окнами
 
 ---
 
@@ -48,31 +63,37 @@
 
 ---
 
-
+## 🚀 Быстрый старт
 
 ### Требования
-- Windows 10/11 x64
-- Права администратора (нужны для `winws.exe`)
+
+- **Windows 10/11 x64**
+- **Права администратора** для корректной работы `winws.exe`
 
 ### Первый запуск
 
-1. Скачай последний релиз: [Releases](https://github.com/klondike0x/FluxRoute/releases)
-2. Распакуй ZIP в любую папку
+1. Скачай последний релиз в разделе [Releases](https://github.com/klondike0x/FluxRoute/releases)
+2. Распакуй ZIP в любую удобную папку
 3. Запусти `FluxRoute.exe` **от имени администратора**
-4. Перейди на вкладку **Обновления** → нажми **Проверить** → **Обновить**
-   - Это скачает актуальную версию Flowseal zapret в папку `engine/`
-5. Выбери профиль и нажми **▶ Запустить**
+4. Открой вкладку **Обновления** и нажми **Проверить** → **Обновить**
+5. После загрузки актуального `engine/` выбери профиль и нажми **▶ Запустить**
 
 ---
 
 ## 🤖 Оркестратор
 
-Оркестратор — умная система автоматического управления профилями:
+Оркестратор — это автоматическое управление профилями без ручного перебора.
 
-1. **Сканирует** все профили и проверяет доступность YouTube, Discord, Google, Twitch, Instagram
-2. **Выставляет рейтинг** — каждый профиль получает оценку от 0 до 100%
-3. **Автоматически переключается** на лучший профиль если текущий перестал работать
-4. **Проверяет** соединение с заданным интервалом (по умолчанию каждые 20 минут)
+Как он работает:
+
+1. **Сканирует** доступные профили
+2. **Проверяет** доступность выбранных сайтов
+3. **Оценивает** каждый профиль по рейтингу от `0` до `100%`
+4. **Переключается** на лучший профиль, если текущий перестал работать
+5. **Повторно проверяет** соединение через заданный интервал  
+   По умолчанию — **каждые 20 минут**
+
+Это позволяет держать рабочий профиль активным почти без ручного вмешательства.
 
 ---
 
@@ -88,51 +109,64 @@ FluxRoute/
 
 ---
 
-## 🛠 Сборка из исходников
+## 🛠️ Сборка из исходников
 
-**Требования:** .NET 10 SDK, Visual Studio 2022
+**Требования:**
+- .NET 10 SDK
+- Visual Studio 2026
 
 ```bash
 git clone https://github.com/klondike0x/FluxRoute.git
 cd FluxRoute
 dotnet build
 ```
-
 ---
 
 ## ⚠️ Дисклеймер
 
-Программа является GUI-оболочкой для проекта [Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube).
-Все права на `zapret` и скрипты Flowseal принадлежат их авторам.
+FluxRoute Desktop является **GUI-оболочкой** для проекта [Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube).
+
+Все права на `zapret`, `winws.exe` и связанные с ними скрипты принадлежат их авторам.  
+Этот репозиторий не претендует на авторство оригинальной низкоуровневой сетевой части.
 
 ---
 
-## 🐛 Нашёл баг?
+## 🐞 Нашёл баг?
 
-Если что-то работает не так — открой [Issue](https://github.com/klondike0x/FluxRoute/issues) и опиши:
-- Что происходит
-- Что ожидал увидеть
-- Шаги для воспроизведения
+Если что-то работает не так, открой [Issue](https://github.com/klondike0x/FluxRoute/issues) и по возможности укажи:
+
+- что произошло;
+- что ты ожидал увидеть;
+- как это воспроизвести;
+- какой профиль был выбран;
+- что написано в логах или диагностике.
+
+Чем точнее описание, тем быстрее получится разобраться.
 
 ---
 
 ## 🧩 Основа engine
 
-FluxRoute использует экосистему проектов в такой цепочке:
+FluxRoute использует следующую экосистему проектов:
 
-- [WinDivert](https://github.com/basil00/WinDivert) — низкоуровневая основа для Windows
-- [bol-van/zapret](https://github.com/bol-van/zapret) — оригинальный проект
-- [bol-van/zapret-win-bundle](https://github.com/bol-van/zapret-win-bundle) — Windows-бандл с winws.exe
-- [Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube) — непосредственная основа engine, используемая в FluxRoute
+- [**WinDivert**](https://github.com/basil00/WinDivert) — низкоуровневая Windows-основа
+- [**bol-van/zapret**](https://github.com/bol-van/zapret) — оригинальный проект
+- [**bol-van/zapret-win-bundle**](https://github.com/bol-van/zapret-win-bundle) — Windows-бандл с `winws.exe`
+- [**Flowseal/zapret-discord-youtube**](https://github.com/Flowseal/zapret-discord-youtube) — непосредственная основа `engine/`, используемая в FluxRoute
+
+---
 
 ## 💡 Вдохновение
 
-- [medvedeff-true/Zapret-GUI](https://github.com/medvedeff-true/Zapret-GUI)
-- [Virenbar/ZapretControl](https://github.com/Virenbar/ZapretControl)
-- [youtubediscord/zapret](https://github.com/youtubediscord/zapret)
+Проекты, которые вдохновили на создание FluxRoute Desktop:
+
+- [**Zapret-GUI**](https://github.com/medvedeff-true/Zapret-GUI) — от `medvedeff-true`
+- [**ZapretControl**](https://github.com/Virenbar/ZapretControl) — от `Virenbar`
+- [**zapret**](https://github.com/youtubediscord/zapret) — от `youtubediscord`
 
 ---
 
 ## 📄 Лицензия
 
-GNU General Public License v3.0 — см. [LICENSE](LICENSE)
+Проект распространяется по лицензии **GNU General Public License v3.0**.  
+Подробности — в файле [LICENSE](./LICENSE).
