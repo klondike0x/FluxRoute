@@ -1,6 +1,16 @@
 # FluxRoute Desktop
 
 <p align="center">
+  <b>Language:</b> <a href="#-fluxroute-desktop-ru">🇷🇺 Русский</a> | <a href="#-fluxroute-desktop-en">🇬🇧 English</a>
+</p>
+
+---
+
+<a id="-fluxroute-desktop-ru"></a>
+
+## FluxRoute Desktop [RU]
+
+<p align="center">
     <picture>
         <source media="(prefers-color-scheme: light)" srcset="./assets/FluxRoute-dark.svg">
         <source media="(prefers-color-scheme: light)" srcset="./assets/FluxRoute-white.svg">
