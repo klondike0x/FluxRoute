@@ -12,9 +12,9 @@
 
 <p align="center">
     <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="./assets/FluxRoute-white.svg">
         <source media="(prefers-color-scheme: light)" srcset="./assets/FluxRoute-dark.svg">
-        <source media="(prefers-color-scheme: light)" srcset="./assets/FluxRoute-white.svg">
-        <img width="750" alt="FluxRoute" src="./assets/FluxRoute-white.svg" />
+        <img width="750" alt="FluxRoute" src="./assets/FluxRoute-dark.svg" />
     </picture>
 </p>
 
