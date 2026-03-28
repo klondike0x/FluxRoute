@@ -1,3 +1,4 @@
+using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Input;
 using FluxRoute.ViewModels;
@@ -10,6 +11,14 @@ public partial class SettingsWindow : Window
     {
         InitializeComponent();
         DataContext = vm;
+
+        vm.ServiceLogs.CollectionChanged += ServiceLogs_CollectionChanged;
+        Closed += (_, _) => vm.ServiceLogs.CollectionChanged -= ServiceLogs_CollectionChanged;
+    }
+
+    private void ServiceLogs_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        ServiceLogScroll?.ScrollToEnd();
     }
 
     private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

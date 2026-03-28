@@ -1024,7 +1024,7 @@ public partial class MainViewModel : ObservableObject
                 // loaded → none: бэкап + заглушка
                 if (File.Exists(IpSetBackupPath)) File.Delete(IpSetBackupPath);
                 if (File.Exists(IpSetFilePath)) File.Move(IpSetFilePath, IpSetBackupPath);
-                File.WriteAllText(IpSetFilePath, "203.0.113.113/32\n");
+                File.WriteAllText(IpSetFilePath, "203.0.113.113/32\r\n");
                 IpSetMode = "none";
                 AddServiceLog("🔒 IPSet → none (фильтрация отключена)");
             }
@@ -1053,6 +1053,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             AddServiceLog("⚠️ Перезапустите zapret для применения изменений");
+            RefreshServiceStatus();
         }
         catch (Exception ex)
         {

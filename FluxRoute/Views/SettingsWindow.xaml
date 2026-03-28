@@ -581,14 +581,17 @@
 
                         <TextBlock Style="{StaticResource SectionHeader}" Text="ЛОГ СЕРВИСА"/>
                         <Border Background="#141414" CornerRadius="6" MaxHeight="150">
-                            <ItemsControl ItemsSource="{Binding ServiceLogs}" Margin="8">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding}" Foreground="#888888"
-                                                   FontFamily="Consolas" FontSize="11" Margin="0,2"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          x:Name="ServiceLogScroll">
+                                <ItemsControl ItemsSource="{Binding ServiceLogs}" Margin="8">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}" Foreground="#888888"
+                                                       FontFamily="Consolas" FontSize="11" Margin="0,2"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
                         </Border>
 
                     </StackPanel>

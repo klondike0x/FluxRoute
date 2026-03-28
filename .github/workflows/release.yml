@@ -1,0 +1,78 @@
+name: Build and Release FluxRoute
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Версия без v, например 1.2.3'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore solution
+        run: dotnet restore .\FluxRoute.slnx
+
+      - name: Publish app
+        run: dotnet publish .\FluxRoute\FluxRoute.csproj -c Release -r win-x64 --self-contained true -o .\publish
+
+      - name: Prepare release variables
+        shell: pwsh
+        run: |
+          $version = "${{ inputs.version }}".Trim()
+
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            throw "Version input is empty."
+          }
+
+          if ($version.StartsWith("v")) {
+            $tag = $version
+            $cleanVersion = $version.Substring(1)
+          }
+          else {
+            $tag = "v$version"
+            $cleanVersion = $version
+          }
+
+          $zipName = "FluxRoute-$tag-portable.zip"
+
+          "RELEASE_TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "RELEASE_VERSION=$cleanVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive -Path .\publish\* -DestinationPath ".\$env:ZIP_NAME" -Force
+
+      - name: Create or update GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$env:RELEASE_TAG" --repo "$env:GITHUB_REPOSITORY" *> $null
+
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload "$env:RELEASE_TAG" ".\$env:ZIP_NAME" --clobber --repo "$env:GITHUB_REPOSITORY"
+          }
+          else {
+            gh release create "$env:RELEASE_TAG" ".\$env:ZIP_NAME" `
+              --title "FluxRoute $env:RELEASE_TAG" `
+              --generate-notes `
+              --target "${{ github.ref_name }}" `
+              --repo "$env:GITHUB_REPOSITORY"
+          }
