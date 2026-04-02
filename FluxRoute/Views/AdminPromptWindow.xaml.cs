@@ -38,8 +38,9 @@ public partial class AdminPromptWindow : Window
             return;
         }
 
-        // Завершаем текущий процесс без прав
-        System.Windows.Application.Current.Shutdown();
+        // Закрываем диалог — App.OnStartup() вызовет Shutdown()
+        ContinueWithoutAdmin = false;
+        Close();
     }
 
     private void ContinueButton_Click(object sender, RoutedEventArgs e)

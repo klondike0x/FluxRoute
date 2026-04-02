@@ -13,6 +13,9 @@ namespace FluxRoute
 
             if (!IsRunningAsAdmin())
             {
+                // Временно переключаем, чтобы закрытие диалога не завершило приложение
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
                 var prompt = new AdminPromptWindow();
                 prompt.ShowDialog();
 
@@ -22,6 +25,11 @@ namespace FluxRoute
                     return;
                 }
             }
+
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
+            var mainWindow = new MainWindow();
+            MainWindow = mainWindow;
+            mainWindow.Show();
         }
 
         private static bool IsRunningAsAdmin()

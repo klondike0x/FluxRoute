@@ -88,7 +88,14 @@ public partial class MainWindow : Window
                 "Завершить", "Отмена", isDanger: true))
             {
                 _isClosingConfirmed = true;
-                Dispatcher.BeginInvoke(Close);
+                if (!Dispatcher.HasShutdownStarted)
+                {
+                    Dispatcher.BeginInvoke(Close);
+                }
+                else
+                {
+                    Close();
+                }
             }
 
             return;
@@ -97,6 +104,9 @@ public partial class MainWindow : Window
         // Останавливаем winws.exe через ViewModel
         if (_vm.IsRunning)
             _vm.StopCommand.Execute(null);
+
+        // Очищаем ресурсы ViewModel (останавливаем оркестратор и таймеры)
+        _vm.Cleanup();
 
         // Принудительно завершаем winws.exe и WinDivert
         ForceKillProcesses();

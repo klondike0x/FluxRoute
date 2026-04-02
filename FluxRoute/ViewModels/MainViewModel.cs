@@ -407,6 +407,9 @@ public partial class MainViewModel : ObservableObject
 
     private void OnOrchestratorStatus(object? sender, OrchestratorEventArgs e)
     {
+        if (Application.Current == null || Application.Current.Dispatcher.HasShutdownStarted)
+            return;
+
         Application.Current.Dispatcher.Invoke(() =>
         {
             AddOrchestratorLog(e.Message);
@@ -446,6 +449,9 @@ public partial class MainViewModel : ObservableObject
 
     private async Task SwitchProfileAsync(ProfileItem profile)
     {
+        if (Application.Current == null || Application.Current.Dispatcher.HasShutdownStarted)
+            return;
+
         await Application.Current.Dispatcher.InvokeAsync(() =>
         {
             Stop();
@@ -461,6 +467,9 @@ public partial class MainViewModel : ObservableObject
 
     private Task UpdateProfileScoreAsync(string fileName, int score)
     {
+        if (Application.Current == null || Application.Current.Dispatcher.HasShutdownStarted)
+            return Task.CompletedTask;
+
         return Application.Current.Dispatcher.InvokeAsync(() =>
         {
             var entry = ProfileScores.FirstOrDefault(s => s.FileName == fileName);
@@ -496,16 +505,19 @@ public partial class MainViewModel : ObservableObject
         if (update is null) return;
 
         _pendingUpdate = update;
-        Application.Current.Dispatcher.Invoke(() =>
+        if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
         {
-            UpdateStatus = $"Доступна новая версия: {update.Version}";
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                UpdateStatus = $"Доступна новая версия: {update.Version}";
 
-            if (CustomDialog.Show(
-                "⬆️ Обновление доступно",
-                $"Доступно обновление Flowseal zapret!\n\nВерсия: {update.Version}\n\nОбновить сейчас?",
-                "Обновить", "Позже"))
-                _ = InstallUpdateAsync();
-        });
+                if (CustomDialog.Show(
+                    "⬆️ Обновление доступно",
+                    $"Доступно обновление Flowseal zapret!\n\nВерсия: {update.Version}\n\nОбновить сейчас?",
+                    "Обновить", "Позже"))
+                    _ = InstallUpdateAsync();
+            });
+        }
     }
 
     [RelayCommand]
@@ -631,30 +643,36 @@ public partial class MainViewModel : ObservableObject
 
         if (winws is null) { Logs.Add("winws.exe не найден после запуска BAT."); AddToRecentLogs("❌ winws.exe не найден"); return; }
 
-        Application.Current.Dispatcher.Invoke(() =>
+        if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
         {
-            _runningProcess = winws;
-            PidText = winws.Id.ToString();
-            IsRunning = true;
-            Logs.Add($"winws.exe запущен, PID: {winws.Id}");
-            AddToRecentLogs($"✅ Запущен (PID: {winws.Id})");
-        });
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                _runningProcess = winws;
+                PidText = winws.Id.ToString();
+                IsRunning = true;
+                Logs.Add($"winws.exe запущен, PID: {winws.Id}");
+                AddToRecentLogs($"✅ Запущен (PID: {winws.Id})");
+            });
+        }
 
         try { await winws.WaitForExitAsync(ct); } catch (OperationCanceledException) { }
 
-        Application.Current.Dispatcher.Invoke(() =>
+        if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
         {
-            if (!ct.IsCancellationRequested)
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                StatusText = "Не запущено";
-                CurrentStrategy = "—";
-                RunningScriptName = "—";
-                PidText = "—"; UptimeText = "—"; _runStartedAt = null; _runningProcess = null;
-                IsRunning = false;
-                Logs.Add("winws.exe завершился.");
-                AddToRecentLogs("⏹ Завершён");
-            }
-        });
+                if (!ct.IsCancellationRequested)
+                {
+                    StatusText = "Не запущено";
+                    CurrentStrategy = "—";
+                    RunningScriptName = "—";
+                    PidText = "—"; UptimeText = "—"; _runStartedAt = null; _runningProcess = null;
+                    IsRunning = false;
+                    Logs.Add("winws.exe завершился.");
+                    AddToRecentLogs("⏹ Завершён");
+                }
+            });
+        }
     }
 
     [RelayCommand]
@@ -757,12 +775,18 @@ public partial class MainViewModel : ObservableObject
         Stop();
 
         var success = await _updater.InstallUpdateAsync(EngineDir, _pendingUpdate,
-            msg => Application.Current.Dispatcher.Invoke(() =>
+            msg =>
             {
-                UpdateStatus = msg;
-                Logs.Add(msg);
-                UpdateLogs.Add(msg);
-            }));
+                if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        UpdateStatus = msg;
+                        Logs.Add(msg);
+                        UpdateLogs.Add(msg);
+                    });
+                }
+            });
 
         if (success)
         {
@@ -788,72 +812,94 @@ public partial class MainViewModel : ObservableObject
             var (update, error) = await _updater.GetLatestReleaseAsync();
             if (update is null)
             {
-                Application.Current.Dispatcher.Invoke(() =>
+                if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
                 {
-                    EngineDownloadStatus = $"❌ {error ?? "Не удалось получить информацию о релизе"}";
-                    Logs.Add($"❌ Flowseal: {error ?? "неизвестная ошибка"}");
-                    IsDownloadingEngine = false;
-                });
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        EngineDownloadStatus = $"❌ {error ?? "Не удалось получить информацию о релизе"}";
+                        Logs.Add($"❌ Flowseal: {error ?? "неизвестная ошибка"}");
+                        IsDownloadingEngine = false;
+                    });
+                }
                 return;
             }
 
             // Подтверждение перед первым скачиванием — прозрачность источника
-            var confirmed = Application.Current.Dispatcher.Invoke(() =>
-                CustomDialog.Show(
-                    "⬇️ Скачивание Flowseal",
-                    $"Для работы FluxRoute необходим движок Flowseal (v{update.Version}).\n\n" +
-                    $"Источник: официальный GitHub-репозиторий\n" +
-                    $"github.com/Flowseal/zapret-discord-youtube\n\n" +
-                    $"Ссылка на скачивание:\n{update.DownloadUrl}\n\n" +
-                    $"Это open-source проект — исходный код доступен публично.\n" +
-                    $"После скачивания SHA-256 хеш будет отображён в логах.",
-                    "Скачать", "Отмена"));
+            var confirmed = false;
+            if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
+            {
+                confirmed = Application.Current.Dispatcher.Invoke(() =>
+                    CustomDialog.Show(
+                        "⬇️ Скачивание Flowseal",
+                        $"Для работы FluxRoute необходим движок Flowseal (v{update.Version}).\n\n" +
+                        $"Источник: официальный GitHub-репозиторий\n" +
+                        $"github.com/Flowseal/zapret-discord-youtube\n\n" +
+                        $"Ссылка на скачивание:\n{update.DownloadUrl}\n\n" +
+                        $"Это open-source проект — исходный код доступен публично.\n" +
+                        $"После скачивания SHA-256 хеш будет отображён в логах.",
+                        "Скачать", "Отмена"));
+            }
 
             if (!confirmed)
             {
-                Application.Current.Dispatcher.Invoke(() =>
+                if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
                 {
-                    EngineDownloadStatus = "⏹ Скачивание отменено пользователем";
-                    Logs.Add("⏹ Пользователь отменил скачивание Flowseal");
-                    IsDownloadingEngine = false;
-                });
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        EngineDownloadStatus = "⏹ Скачивание отменено пользователем";
+                        Logs.Add("⏹ Пользователь отменил скачивание Flowseal");
+                        IsDownloadingEngine = false;
+                    });
+                }
                 return;
             }
 
             var success = await _updater.InstallUpdateAsync(EngineDir, update,
-                msg => Application.Current.Dispatcher.Invoke(() =>
+                msg =>
                 {
-                    EngineDownloadStatus = msg;
-                    Logs.Add(msg);
-                }));
+                    if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            EngineDownloadStatus = msg;
+                            Logs.Add(msg);
+                        });
+                    }
+                });
 
-            Application.Current.Dispatcher.Invoke(() =>
+            if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
             {
-                if (success)
+                Application.Current.Dispatcher.Invoke(() =>
                 {
-                    CurrentEngineVersion = _updater.GetLocalVersion(EngineDir);
-                    EngineDownloadStatus = $"✅ Flowseal {update.Version} установлен!";
-                    Logs.Add($"✅ Flowseal {update.Version} установлен автоматически");
-                    AddToRecentLogs($"✅ Flowseal {update.Version} установлен");
-                    LoadProfiles();
-                    RefreshDiagnostics();
-                }
-                else
-                {
-                    Logs.Add("❌ Установка Flowseal не завершена");
-                    AddToRecentLogs("❌ Ошибка установки Flowseal");
-                }
-                IsDownloadingEngine = false;
-            });
+                    if (success)
+                    {
+                        CurrentEngineVersion = _updater.GetLocalVersion(EngineDir);
+                        EngineDownloadStatus = $"✅ Flowseal {update.Version} установлен!";
+                        Logs.Add($"✅ Flowseal {update.Version} установлен автоматически");
+                        AddToRecentLogs($"✅ Flowseal {update.Version} установлен");
+                        LoadProfiles();
+                        RefreshDiagnostics();
+                    }
+                    else
+                    {
+                        Logs.Add("❌ Установка Flowseal не завершена");
+                        AddToRecentLogs("❌ Ошибка установки Flowseal");
+                    }
+                    IsDownloadingEngine = false;
+                });
+            }
         }
         catch (Exception ex)
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
             {
-                EngineDownloadStatus = $"❌ Ошибка: {ex.Message}";
-                Logs.Add($"❌ Автоскачивание Flowseal: {ex.Message}");
-                IsDownloadingEngine = false;
-            });
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    EngineDownloadStatus = $"❌ Ошибка: {ex.Message}";
+                    Logs.Add($"❌ Автоскачивание Flowseal: {ex.Message}");
+                    IsDownloadingEngine = false;
+                });
+            }
         }
     }
 
@@ -1335,5 +1381,20 @@ public partial class MainViewModel : ObservableObject
     private static void HideWindowsForPids(HashSet<uint> pids)
     {
         EnumWindows((hWnd, _) => { if (IsWindowVisible(hWnd)) { GetWindowThreadProcessId(hWnd, out uint pid); if (pids.Contains(pid)) ShowWindow(hWnd, SW_HIDE); } return true; }, IntPtr.Zero);
+    }
+
+    public void Cleanup()
+    {
+        // Останавливаем оркестратор
+        if (_orchestrator.IsRunning)
+            _orchestrator.Stop();
+
+        // Останавливаем таймеры
+        _uptimeTimer?.Stop();
+        _orchestratorUiTimer?.Stop();
+
+        // Отменяем отслеживание окон
+        _hideWindowsCts?.Cancel();
+        _hideWindowsCts?.Dispose();
     }
 }
