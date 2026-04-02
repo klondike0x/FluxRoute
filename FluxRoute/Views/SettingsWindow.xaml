@@ -581,9 +581,9 @@
 
                         <TextBlock Style="{StaticResource SectionHeader}" Text="ЛОГ СЕРВИСА"/>
                         <Border Background="#141414" CornerRadius="6" MaxHeight="150">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                <ScrollViewer VerticalScrollBarVisibility="Auto"
                                           x:Name="ServiceLogScroll">
-                                <ItemsControl ItemsSource="{Binding ServiceLogs}" Margin="8">
+                                    <ItemsControl ItemsSource="{Binding ServiceLogs}" Margin="8">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <TextBlock Text="{Binding}" Foreground="#888888"
