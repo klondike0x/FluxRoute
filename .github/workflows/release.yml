@@ -33,17 +33,13 @@ jobs:
         run: dotnet restore .\FluxRoute.slnx
 
       - name: Publish win-x64
-        run: dotnet publish .\FluxRoute\FluxRoute.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o .\publish-x64
+        run: dotnet publish .\FluxRoute\FluxRoute.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o .\publish
 
-      - name: Publish win-x86
-        run: dotnet publish .\FluxRoute\FluxRoute.csproj -c Release -r win-x86 --self-contained true -p:PublishSingleFile=true -o .\publish-x86
-
-      - name: Create ZIPs
+      - name: Create ZIP
         shell: pwsh
         run: |
           $tag = "${{ steps.version.outputs.TAG }}"
-          Compress-Archive -Path .\publish-x64\* -DestinationPath ".\FluxRoute-$tag-win-x64.zip" -Force
-          Compress-Archive -Path .\publish-x86\* -DestinationPath ".\FluxRoute-$tag-win-x86.zip" -Force
+          Compress-Archive -Path .\publish\* -DestinationPath ".\FluxRoute-$tag-portable.zip" -Force
 
       - name: Create or update GitHub Release
         shell: pwsh
@@ -51,16 +47,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $tag = "${{ steps.version.outputs.TAG }}"
-          $zipX64 = ".\FluxRoute-$tag-win-x64.zip"
-          $zipX86 = ".\FluxRoute-$tag-win-x86.zip"
+          $zip = ".\FluxRoute-$tag-portable.zip"
 
           gh release view $tag --repo "$env:GITHUB_REPOSITORY" *> $null
 
           if ($LASTEXITCODE -eq 0) {
-            gh release upload $tag $zipX64 $zipX86 --clobber --repo "$env:GITHUB_REPOSITORY"
+            gh release upload $tag $zip --clobber --repo "$env:GITHUB_REPOSITORY"
           }
           else {
-            gh release create $tag $zipX64 $zipX86 `
+            gh release create $tag $zip `
               --title "FluxRoute Desktop $tag" `
               --generate-notes `
               --target "${{ github.ref_name }}" `
