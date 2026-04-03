@@ -81,7 +81,7 @@ jobs:
           }
           else {
             gh release create $tag $zip `
-              --title "🔷 FluxRoute Desktop $tag" `
+              --title "$tag" `
               --generate-notes `
               --target "${{ github.ref_name }}" `
               --repo "$env:GITHUB_REPOSITORY"
