@@ -16,6 +16,7 @@ public sealed class AppSettings
     public bool SiteGoogle { get; set; } = true;
     public bool SiteTwitch { get; set; } = true;
     public bool SiteInstagram { get; set; } = true;
+    public bool SiteTelegram { get; set; } = true;
 
     // Рейтинг профилей
     public List<ProfileRatingEntry> ProfileRatings { get; set; } = new();
