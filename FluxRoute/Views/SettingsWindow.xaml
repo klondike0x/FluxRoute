@@ -378,7 +378,7 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding}" Foreground="#888888"
-                                                   FontFamily="Consolas" FontSize="11" Margin="0,2"/>
+                                                   FontFamily="Cascadia Code, Consolas" FontSize="11" Margin="0,2"/>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -454,7 +454,7 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding}" Foreground="#888888"
-                                                   FontFamily="Consolas" FontSize="11" Margin="0,2"/>
+                                                   FontFamily="Cascadia Code, Consolas" FontSize="11" Margin="0,2"/>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -588,7 +588,7 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <TextBlock Text="{Binding}" Foreground="#888888"
-                                                       FontFamily="Consolas" FontSize="11" Margin="0,2"/>
+                                                       FontFamily="Cascadia Code, Consolas" FontSize="11" Margin="0,2"/>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
@@ -661,7 +661,7 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding}" Foreground="#888888"
-                                                   FontFamily="Consolas" FontSize="11" Margin="0,2"/>
+                                                   FontFamily="Cascadia Code, Consolas" FontSize="11" Margin="0,2"/>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

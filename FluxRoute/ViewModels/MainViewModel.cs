@@ -98,6 +98,20 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string uptimeText = "—";
     public string AppVersion { get; } = GetAppVersion();
 
+    // ── Навигация ──
+    [ObservableProperty] private int selectedTabIndex = 0;
+    public string SelectedTabName => SelectedTabIndex switch
+    {
+        0 => "ГЛАВНАЯ",
+        1 => "ОРКЕСТРАТОР",
+        2 => "ОБНОВЛЕНИЕ",
+        3 => "ДИАГНОСТИКА",
+        4 => "СЕРВИС",
+        5 => "О ПРОГРАММЕ",
+        _ => ""
+    };
+    partial void OnSelectedTabIndexChanged(int value) => OnPropertyChanged(nameof(SelectedTabName));
+
     // ── Компактный интерфейс ──
     [ObservableProperty] private bool isSettingsOpen = false;
     [ObservableProperty] private bool isRunning = false;
@@ -105,6 +119,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string currentStrategy = "—";
     [ObservableProperty] private string uploadSpeed = "0.0";
     [ObservableProperty] private string downloadSpeed = "0.0";
+    [ObservableProperty] private string lastStatusMessage = "Готово";
 
     public string MainActionButtonText => IsRunning ? "⏹ Остановить" : "▶ Запустить";
     partial void OnIsRunningChanged(bool value) => OnPropertyChanged(nameof(MainActionButtonText));
@@ -367,6 +382,25 @@ public partial class MainViewModel : ObservableObject
     // ── Компактный интерфейс: команды ──
 
     [RelayCommand]
+    private void SelectTab(string index) => SelectedTabIndex = int.Parse(index);
+
+    [RelayCommand]
+    private void OpenEngineFolder()
+    {
+        try
+        {
+            if (Directory.Exists(EngineDir))
+                Process.Start(new ProcessStartInfo("explorer.exe", EngineDir) { UseShellExecute = true });
+            else
+                AddToRecentLogs("❌ Папка engine не найдена");
+        }
+        catch (Exception ex) { AddToRecentLogs($"❌ {ex.Message}"); }
+    }
+
+    [RelayCommand]
+    private void ShowLogs() => SelectedTabIndex = 3;
+
+    [RelayCommand]
     private void ToggleSettings()
     {
         OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
@@ -396,6 +430,7 @@ public partial class MainViewModel : ObservableObject
         RecentLogs.Add(message);
         while (RecentLogs.Count > 10)
             RecentLogs.RemoveAt(0);
+        LastStatusMessage = message;
     }
 
     // ── Оркестратор: методы ──
@@ -591,6 +626,13 @@ public partial class MainViewModel : ObservableObject
 
     [RelayCommand]
     private void RefreshProfiles() { Logs.Add("Обновляем список профилей..."); LoadProfiles(); RefreshDiagnostics(); }
+
+    [RelayCommand]
+    private void ToggleStartStop()
+    {
+        if (IsRunning) Stop();
+        else Start();
+    }
 
     [RelayCommand]
     private void Start()

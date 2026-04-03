@@ -1,6 +1,11 @@
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Navigation;
 using FluxRoute.Services;
 using FluxRoute.ViewModels;
 
@@ -10,8 +15,6 @@ public partial class MainWindow : Window
 {
     private readonly MainViewModel _vm;
     private readonly TrayIconService _trayIcon;
-    private SettingsWindow? _settingsWindow;
-    private AboutWindow? _aboutWindow;
     private bool _isClosingConfirmed;
 
     public MainWindow()
@@ -26,10 +29,13 @@ public partial class MainWindow : Window
         _trayIcon.ShowRequested += OnTrayShowRequested;
         _trayIcon.ExitRequested += OnTrayExitRequested;
 
-        // Открываем настройки когда ViewModel просит
-        _vm.OpenSettingsRequested += OnOpenSettingsRequested;
-        _vm.OpenAboutRequested += OnOpenAboutRequested;
         _vm.ProfileSwitchNotification += OnProfileSwitched;
+
+        // Auto-scroll service log
+        _vm.ServiceLogs.CollectionChanged += ServiceLogs_CollectionChanged;
+
+        // Animate sliding indicator on tab change
+        _vm.PropertyChanged += OnViewModelPropertyChanged;
 
         // Если запуск с --minimized (автозапуск), сворачиваем в трей
         var args = Environment.GetCommandLineArgs();
@@ -74,7 +80,7 @@ public partial class MainWindow : Window
         }
     }
 
-    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    protected override void OnClosing(CancelEventArgs e)
     {
         base.OnClosing(e);
 
@@ -112,6 +118,28 @@ public partial class MainWindow : Window
         ForceKillProcesses();
 
         _trayIcon.Dispose();
+    }
+
+    private void ServiceLogs_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        ServiceLogScroll?.ScrollToEnd();
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.SelectedTabIndex))
+            AnimateNavIndicator(_vm.SelectedTabIndex);
+    }
+
+    private void AnimateNavIndicator(int tabIndex)
+    {
+        var animation = new DoubleAnimation
+        {
+            To = tabIndex * 36,
+            Duration = TimeSpan.FromMilliseconds(300),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+        };
+        NavIndicatorTransform.BeginAnimation(TranslateTransform.YProperty, animation);
     }
 
     private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -155,27 +183,9 @@ public partial class MainWindow : Window
         catch { }
     }
 
-    private void OnOpenAboutRequested(object? sender, EventArgs e)
+    private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
     {
-        if (_aboutWindow is { IsVisible: true })
-        {
-            _aboutWindow.Activate();
-            return;
-        }
-
-        _aboutWindow = new AboutWindow() { Owner = this };
-        _aboutWindow.Show();
-    }
-
-    private void OnOpenSettingsRequested(object? sender, EventArgs e)
-    {
-        if (_settingsWindow is { IsVisible: true })
-        {
-            _settingsWindow.Activate();
-            return;
-        }
-
-        _settingsWindow = new SettingsWindow(_vm) { Owner = this };
-        _settingsWindow.ShowDialog();
+        Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+        e.Handled = true;
     }
 }

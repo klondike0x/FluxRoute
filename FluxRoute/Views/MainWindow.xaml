@@ -1,356 +1,1355 @@
 <Window x:Class="FluxRoute.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
         Title="FluxRoute"
-        Height="520" Width="420"
+        Height="530" Width="760"
         WindowStartupLocation="CenterScreen"
-        Background="Transparent"
-        WindowStyle="None"
-        AllowsTransparency="True"
-        ResizeMode="NoResize">
+		Background="#0D1117"
+		WindowStyle="None"
+		ResizeMode="NoResize">
 
-    <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+	<WindowChrome.WindowChrome>
+		<WindowChrome CaptionHeight="0"
+					  ResizeBorderThickness="0"
+					  GlassFrameThickness="0"/>
+	</WindowChrome.WindowChrome>
 
-        <!-- ComboBox style -->
-        <Style TargetType="ComboBox">
-            <Setter Property="Background" Value="#2D2D30"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#3E3E42"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="Padding" Value="8,4"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ComboBox">
-                        <Grid>
-                            <Border Background="{TemplateBinding Background}"
+	<Window.Resources>
+		<BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+		<!-- ══════ TERMINAL BUTTON ══════ -->
+		<Style x:Key="TermBtn" TargetType="Button">
+			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="Foreground" Value="#8B949E"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="BorderBrush" Value="#30363D"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="Padding" Value="14,6"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="Button">
+						<Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+							<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="Bd" Property="Background" Value="#1C2128"/>
+								<Setter Property="Foreground" Value="#E6EDF3"/>
+								<Setter TargetName="Bd" Property="BorderBrush" Value="#4FC3F7"/>
+							</Trigger>
+							<Trigger Property="IsEnabled" Value="False">
+								<Setter Property="Opacity" Value="0.4"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<!-- ══════ ACCENT BUTTON ══════ -->
+		<Style x:Key="AccentBtn" TargetType="Button" BasedOn="{StaticResource TermBtn}">
+			<Setter Property="Foreground" Value="#4FC3F7"/>
+			<Setter Property="BorderBrush" Value="#264F78"/>
+		</Style>
+
+		<!-- ══════ GREEN BUTTON ══════ -->
+		<Style x:Key="GreenBtn" TargetType="Button" BasedOn="{StaticResource TermBtn}">
+			<Setter Property="Foreground" Value="#3FB950"/>
+			<Setter Property="BorderBrush" Value="#238636"/>
+		</Style>
+
+		<!-- ══════ RED BUTTON ══════ -->
+		<Style x:Key="RedBtn" TargetType="Button" BasedOn="{StaticResource TermBtn}">
+			<Setter Property="Foreground" Value="#F85149"/>
+			<Setter Property="BorderBrush" Value="#DA3633"/>
+		</Style>
+
+		<!-- ══════ NAV BUTTON ══════ -->
+		<Style x:Key="NavBtn" TargetType="Button">
+			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="Foreground" Value="#8B949E"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderBrush" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="3,0,0,0"/>
+			<Setter Property="HorizontalContentAlignment" Value="Left"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="Padding" Value="10,8"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="Button">
+						<Border BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+							<Grid>
+								<Border Background="{TemplateBinding Background}"/>
+								<Border x:Name="HoverOverlay" Opacity="0">
+									<Border.Background>
+										<SolidColorBrush Color="#161B22"/>
+									</Border.Background>
+								</Border>
+								<ContentPresenter Margin="{TemplateBinding Padding}"
+                                                  HorizontalAlignment="Left" VerticalAlignment="Center"/>
+							</Grid>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter Property="Foreground" Value="#E6EDF3"/>
+								<Trigger.EnterActions>
+									<BeginStoryboard>
+										<Storyboard>
+											<DoubleAnimation Storyboard.TargetName="HoverOverlay"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="1" Duration="0:0:0.15">
+												<DoubleAnimation.EasingFunction>
+													<CubicEase EasingMode="EaseOut"/>
+												</DoubleAnimation.EasingFunction>
+											</DoubleAnimation>
+										</Storyboard>
+									</BeginStoryboard>
+								</Trigger.EnterActions>
+								<Trigger.ExitActions>
+									<BeginStoryboard>
+										<Storyboard>
+											<DoubleAnimation Storyboard.TargetName="HoverOverlay"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0" Duration="0:0:0.2">
+												<DoubleAnimation.EasingFunction>
+													<CubicEase EasingMode="EaseOut"/>
+												</DoubleAnimation.EasingFunction>
+											</DoubleAnimation>
+										</Storyboard>
+									</BeginStoryboard>
+								</Trigger.ExitActions>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<!-- ══════ SECTION HEADER ══════ -->
+		<Style x:Key="SecH" TargetType="TextBlock">
+			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="Foreground" Value="#4FC3F7"/>
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="FontWeight" Value="Bold"/>
+			<Setter Property="Margin" Value="0,14,0,8"/>
+		</Style>
+
+		<!-- ══════ LABEL ══════ -->
+		<Style x:Key="Lbl" TargetType="TextBlock">
+			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="Foreground" Value="#8B949E"/>
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+
+		<!-- ══════ VALUE ══════ -->
+		<Style x:Key="Val" TargetType="TextBlock">
+			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="Foreground" Value="#E6EDF3"/>
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+
+		<!-- ══════ CARD ══════ -->
+		<Style x:Key="Card" TargetType="Border">
+			<Setter Property="Background" Value="#161B22"/>
+			<Setter Property="BorderBrush" Value="#30363D"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="Padding" Value="12,10"/>
+		</Style>
+
+		<!-- ══════ LOG AREA ══════ -->
+		<Style x:Key="LogArea" TargetType="Border">
+			<Setter Property="Background" Value="#0D1117"/>
+			<Setter Property="BorderBrush" Value="#21262D"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="Padding" Value="8"/>
+			<Setter Property="MaxHeight" Value="150"/>
+		</Style>
+
+		<!-- ══════ COMBOBOX ══════ -->
+		<Style TargetType="ComboBox">
+			<Setter Property="Background" Value="#161B22"/>
+			<Setter Property="Foreground" Value="#E6EDF3"/>
+			<Setter Property="BorderBrush" Value="#30363D"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Height" Value="28"/>
+			<Setter Property="Padding" Value="6,3"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="ComboBox">
+						<Grid>
+							<Border Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="4">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="28"/>
-                                    </Grid.ColumnDefinitions>
-                                    <ContentPresenter Grid.Column="0"
+                                    BorderThickness="{TemplateBinding BorderThickness}">
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="24"/>
+									</Grid.ColumnDefinitions>
+									<ContentPresenter Grid.Column="0"
                                                       Content="{TemplateBinding SelectionBoxItem}"
                                                       ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
-                                                      Margin="8,0,0,0"
-                                                      VerticalAlignment="Center">
-                                        <ContentPresenter.Resources>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Foreground" Value="White"/>
-                                                <Setter Property="FontSize" Value="13"/>
-                                            </Style>
-                                        </ContentPresenter.Resources>
-                                    </ContentPresenter>
-                                    <TextBlock Grid.Column="1" Text="▾" Foreground="#AAAAAA"
+                                                      Margin="6,0,0,0" VerticalAlignment="Center">
+										<ContentPresenter.Resources>
+											<Style TargetType="TextBlock">
+												<Setter Property="Foreground" Value="#E6EDF3"/>
+												<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+												<Setter Property="FontSize" Value="12"/>
+											</Style>
+										</ContentPresenter.Resources>
+									</ContentPresenter>
+									<TextBlock Grid.Column="1" Text="▾" Foreground="#8B949E"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                                               FontSize="12"/>
-                                    <ToggleButton Grid.Column="0" Grid.ColumnSpan="2"
+                                               FontSize="11" FontFamily="Cascadia Code, Consolas"/>
+									<ToggleButton Grid.Column="0" Grid.ColumnSpan="2"
                                                   IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
                                                   Background="Transparent" BorderThickness="0"
                                                   Cursor="Hand" Opacity="0"/>
-                                </Grid>
-                            </Border>
-                            <Popup IsOpen="{TemplateBinding IsDropDownOpen}"
+								</Grid>
+							</Border>
+							<Popup IsOpen="{TemplateBinding IsDropDownOpen}"
                                    AllowsTransparency="True" Focusable="False"
                                    PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
                                    Placement="Bottom" PopupAnimation="Slide">
-                                <Border Background="#2D2D30" BorderBrush="#3E3E42"
-                                        BorderThickness="1" CornerRadius="4" Margin="0,2,0,0"
+								<Border Background="#161B22" BorderBrush="#30363D"
+                                        BorderThickness="1" Margin="0,2,0,0"
                                         MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
-                                    <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
-                                        <ItemsPresenter/>
-                                    </ScrollViewer>
-                                </Border>
-                            </Popup>
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="#2D2D30"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ComboBoxItem">
-                        <Border Background="{TemplateBinding Background}"
+									<ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+										<ItemsPresenter/>
+									</ScrollViewer>
+								</Border>
+							</Popup>
+						</Grid>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+		<Style TargetType="ComboBoxItem">
+			<Setter Property="Background" Value="#161B22"/>
+			<Setter Property="Foreground" Value="#E6EDF3"/>
+			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Padding" Value="8,5"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="ComboBoxItem">
+						<Border Background="{TemplateBinding Background}"
                                 Padding="{TemplateBinding Padding}">
-                            <ContentPresenter/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#3E3E42"/>
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#0078D4"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
+							<ContentPresenter/>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter Property="Background" Value="#1C2128"/>
+							</Trigger>
+							<Trigger Property="IsSelected" Value="True">
+								<Setter Property="Background" Value="#264F78"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
 
-    <Border Background="#1E1E1E" BorderBrush="#3E3E42" BorderThickness="1" CornerRadius="8">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="60"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+		<!-- ══════ CHECKBOX ══════ -->
+		<Style TargetType="CheckBox">
+			<Setter Property="Foreground" Value="#8B949E"/>
+			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="Margin" Value="0,4"/>
+			<Setter Property="Cursor" Value="Hand"/>
+		</Style>
 
-        <!-- Header -->
-        <Border Grid.Row="0" Background="#252526" CornerRadius="8,8,0,0" MouseLeftButtonDown="Header_MouseLeftButtonDown">
-            <Grid Margin="15,0">
-                <TextBlock FontSize="22" FontWeight="Bold"
-                           Foreground="White" VerticalAlignment="Center">
-                    <Run Text="◇ FluxRoute"/>
-                    <Run Text="{Binding AppVersion, Mode=OneWay}" FontSize="12" Foreground="#888888"/>
-                </TextBlock>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-6,0">
-                    <Button Width="34" Height="34" Margin="2,0"
-                            Command="{Binding OpenAboutCommand}">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
-                                    <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                                               Foreground="#AAAAAA" x:Name="Ico"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="#3E3E42"/>
-                                        <Setter TargetName="Ico" Property="Foreground" Value="White"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
-                    </Button>
-                    <Button Width="34" Height="34" Margin="2,0"
-                            Click="MinimizeButton_Click">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
-                                    <TextBlock Text="&#xE949;" FontFamily="Segoe MDL2 Assets" FontSize="10"
-                                               Foreground="#AAAAAA" x:Name="Ico"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="#3E3E42"/>
-                                        <Setter TargetName="Ico" Property="Foreground" Value="White"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
-                    </Button>
-                    <Button Width="34" Height="34" Margin="2,0"
-                            Click="CloseButton_Click">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
-                                    <TextBlock Text="&#xE106;" FontFamily="Segoe MDL2 Assets" FontSize="10"
-                                               Foreground="#AAAAAA" x:Name="Ico"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Bd" Property="Background" Value="#C42B1C"/>
-                                        <Setter TargetName="Ico" Property="Foreground" Value="White"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
-                    </Button>
-                </StackPanel>
-            </Grid>
-        </Border>
+		<!-- ══════ SEPARATOR ══════ -->
+		<Style x:Key="Sep" TargetType="Rectangle">
+			<Setter Property="Height" Value="1"/>
+			<Setter Property="Fill" Value="#21262D"/>
+			<Setter Property="Margin" Value="0,8"/>
+		</Style>
 
-        <!-- Main Content -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="25,20">
+		<!-- ══════ TEXTBOX ══════ -->
+		<Style TargetType="TextBox">
+			<Setter Property="Background" Value="#161B22"/>
+			<Setter Property="Foreground" Value="#E6EDF3"/>
+			<Setter Property="BorderBrush" Value="#30363D"/>
+			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="Padding" Value="6,4"/>
+			<Setter Property="CaretBrush" Value="#E6EDF3"/>
+		</Style>
+	</Window.Resources>
 
-                <!-- Big Action Button -->
-                <Button Height="70" FontSize="20" FontWeight="Bold"
-                        Command="{Binding MainActionCommand}"
-                        Margin="0,0,0,15"
-                        Foreground="White" BorderThickness="0">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Cursor" Value="Hand"/>
-                            <Setter Property="Background" Value="#27AE60"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" CornerRadius="12">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                    <Setter Property="Background" Value="#C0392B"/>
-                                </DataTrigger>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Opacity" Value="0.9"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                    <TextBlock Text="{Binding MainActionButtonText}" FontSize="20" FontWeight="Bold"/>
-                </Button>
+	<Border Background="#0D1117" BorderBrush="#30363D" BorderThickness="1" CornerRadius="4">
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="36"/>
+				<RowDefinition Height="*"/>
+				<RowDefinition Height="26"/>
+			</Grid.RowDefinitions>
 
-                <!-- Active status label -->
-                <TextBlock Text="Защита активна ✓"
-                           Foreground="#4CAF50" FontSize="14" FontWeight="SemiBold"
-                           HorizontalAlignment="Center" Margin="0,0,0,25"
-                           Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisConverter}}"/>
-
-                <!-- Engine download progress -->
-                <Border Background="#2A2000" BorderBrush="#5A4800" BorderThickness="1"
-                        CornerRadius="8" Padding="12,10" Margin="0,0,0,15"
-                        Visibility="{Binding IsDownloadingEngine, Converter={StaticResource BoolToVisConverter}}">
-                    <StackPanel>
-                        <TextBlock Text="⬇️ Первый запуск — скачиваем Flowseal..."
-                                   Foreground="#FFD700" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                        <TextBlock Text="{Binding EngineDownloadStatus}"
-                                   Foreground="#CCAA00" FontSize="12" TextWrapping="Wrap"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- Separator -->
-                <Rectangle Height="1" Fill="#3E3E42" Margin="0,0,0,20"/>
-
-                <!-- Stats Block -->
-                <StackPanel Margin="0,0,0,25">
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <TextBlock Text="🔹" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Профиль: " Foreground="#AAAAAA" FontSize="15" VerticalAlignment="Center"/>
-                        <ComboBox ItemsSource="{Binding Profiles}"
-                                  SelectedItem="{Binding SelectedProfile}"
-                                  MinWidth="180" VerticalAlignment="Center">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding DisplayName}" Foreground="White" FontSize="13"/>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-                        <Button Width="30" Height="30" Margin="6,0,0,0" VerticalAlignment="Center"
-                                Command="{Binding RefreshProfilesCommand}" ToolTip="Обновить список профилей" Cursor="Hand">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Bd" Background="#2D2D30" CornerRadius="6"
-                                            BorderBrush="#3E3E42" BorderThickness="1">
-                                        <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                                   Foreground="#AAAAAA" x:Name="Ico"
+			<!-- ═══════════ TITLE BAR ═══════════ -->
+			<Border Grid.Row="0" Background="#010409" CornerRadius="4,4,0,0"
+                    MouseLeftButtonDown="Header_MouseLeftButtonDown">
+				<Grid Margin="14,0">
+					<TextBlock Text="FluxRoute" FontFamily="Cascadia Code, Consolas" FontSize="14" FontWeight="Bold"
+                               Foreground="#E6EDF3" VerticalAlignment="Center"/>
+					<StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                                VerticalAlignment="Center" Margin="0,0,-6,0">
+						<Button Width="36" Height="36" Click="MinimizeButton_Click">
+							<Button.Template>
+								<ControlTemplate TargetType="Button">
+									<Border x:Name="Bd" Background="Transparent">
+										<TextBlock Text="—" FontFamily="Cascadia Code, Consolas" FontSize="13"
+                                                   Foreground="#8B949E" x:Name="Ico"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="#3E3E42"/>
-                                            <Setter TargetName="Bd" Property="BorderBrush" Value="#4FC3F7"/>
-                                            <Setter TargetName="Ico" Property="Foreground" Value="White"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
-                        </Button>
-                    </StackPanel>
+									</Border>
+									<ControlTemplate.Triggers>
+										<Trigger Property="IsMouseOver" Value="True">
+											<Setter TargetName="Bd" Property="Background" Value="#1C2128"/>
+											<Setter TargetName="Ico" Property="Foreground" Value="#E6EDF3"/>
+										</Trigger>
+									</ControlTemplate.Triggers>
+								</ControlTemplate>
+							</Button.Template>
+						</Button>
+						<Button Width="36" Height="36" IsEnabled="False">
+							<Button.Template>
+								<ControlTemplate TargetType="Button">
+									<Border Background="Transparent">
+										<TextBlock Text="□" FontFamily="Cascadia Code, Consolas" FontSize="13"
+                                                   Foreground="#484F58"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+									</Border>
+								</ControlTemplate>
+							</Button.Template>
+						</Button>
+						<Button Width="36" Height="36" Click="CloseButton_Click">
+							<Button.Template>
+								<ControlTemplate TargetType="Button">
+									<Border x:Name="Bd" Background="Transparent">
+										<TextBlock Text="✕" FontFamily="Cascadia Code, Consolas" FontSize="12"
+                                                   Foreground="#8B949E" x:Name="Ico"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+									</Border>
+									<ControlTemplate.Triggers>
+										<Trigger Property="IsMouseOver" Value="True">
+											<Setter TargetName="Bd" Property="Background" Value="#DA3633"/>
+											<Setter TargetName="Ico" Property="Foreground" Value="#E6EDF3"/>
+										</Trigger>
+									</ControlTemplate.Triggers>
+								</ControlTemplate>
+							</Button.Template>
+						</Button>
+					</StackPanel>
+				</Grid>
+			</Border>
 
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <TextBlock Text="🔹" FontSize="16" Margin="0,0,8,0"/>
-                        <TextBlock Text="Uptime: " Foreground="#AAAAAA" FontSize="15"/>
-                        <TextBlock Text="{Binding UptimeText}" Foreground="White" FontSize="15" FontWeight="Bold"/>
-                    </StackPanel>
+			<!-- ═══════════ BODY ═══════════ -->
+			<Grid Grid.Row="1">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="165"/>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+				</Grid.ColumnDefinitions>
 
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="🔹" FontSize="16" Margin="0,0,8,0"/>
-                        <TextBlock Text="PID: " Foreground="#AAAAAA" FontSize="15"/>
-                        <TextBlock Text="{Binding PidText}" Foreground="White" FontSize="15" FontWeight="Bold"/>
-                    </StackPanel>
-                </StackPanel>
+				<!-- ─── SIDEBAR ─── -->
+				<Border Grid.Column="0" Background="#0D1117">
+					<StackPanel Margin="0,14,0,0">
+						<TextBlock Text="  ◇ FluxRoute" FontFamily="Cascadia Code, Consolas" FontSize="14"
+                                   FontWeight="Bold" Foreground="#E6EDF3" Margin="6,0,0,16"/>
 
-                <!-- Footer Actions -->
-                <Grid Margin="0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+						<Grid>
+							<StackPanel>
+								<!-- Nav: Главная -->
+								<Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="0">
+									<Button.Style>
+										<Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
+											<Style.Triggers>
+												<DataTrigger Binding="{Binding SelectedTabIndex}" Value="0">
+													<Setter Property="Foreground" Value="#E6EDF3"/>
+													<Setter Property="Background" Value="#161B22"/>
+												</DataTrigger>
+											</Style.Triggers>
+										</Style>
+									</Button.Style>
+									<TextBlock Text="[🏠 Главная]" FontFamily="Cascadia Code, Consolas"/>
+								</Button>
 
-                    <Button Grid.Column="0" HorizontalAlignment="Left"
-                            Background="Transparent" Foreground="#AAAAAA" BorderThickness="0"
-                            FontSize="13" Cursor="Hand"
-                            Command="{Binding ToggleLogsCommand}">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Content" Value="▼ Показать логи"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                            <ContentPresenter/>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsLogsVisible}" Value="True">
-                                        <Setter Property="Content" Value="▲ Скрыть логи"/>
-                                    </DataTrigger>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Foreground" Value="White"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+								<!-- Nav: Оркестратор -->
+								<Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="1">
+									<Button.Style>
+										<Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
+											<Style.Triggers>
+												<DataTrigger Binding="{Binding SelectedTabIndex}" Value="1">
+													<Setter Property="Foreground" Value="#E6EDF3"/>
+													<Setter Property="Background" Value="#161B22"/>
+												</DataTrigger>
+											</Style.Triggers>
+										</Style>
+									</Button.Style>
+									<TextBlock Text="[⚙ Оркестр.]" FontFamily="Cascadia Code, Consolas"/>
+								</Button>
 
-                    <Button Grid.Column="1" HorizontalAlignment="Right"
-                            Background="#2D2D30" Foreground="White" BorderThickness="0"
-                            Padding="15,8" FontSize="13" Cursor="Hand"
-                            Command="{Binding ToggleSettingsCommand}">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
-                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                            </ControlTemplate>
-                        </Button.Template>
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Content" Value="⚙ Настройки"/>
-                                <Style.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#3E3E42"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                </Grid>
+								<!-- Nav: Обновление -->
+								<Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="2">
+									<Button.Style>
+										<Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
+											<Style.Triggers>
+												<DataTrigger Binding="{Binding SelectedTabIndex}" Value="2">
+													<Setter Property="Foreground" Value="#E6EDF3"/>
+													<Setter Property="Background" Value="#161B22"/>
+												</DataTrigger>
+											</Style.Triggers>
+										</Style>
+									</Button.Style>
+									<TextBlock Text="[🔄 Обновление]" FontFamily="Cascadia Code, Consolas"/>
+								</Button>
 
-                <!-- Collapsible Logs -->
-                <ItemsControl ItemsSource="{Binding RecentLogs}"
-                              Margin="0,15,0,0"
-                              Visibility="{Binding IsLogsVisible, Converter={StaticResource BoolToVisConverter}}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding}" Foreground="#888888"
-                                       Margin="0,4" FontFamily="Consolas" FontSize="11"/>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+								<!-- Nav: Диагностика -->
+								<Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="3">
+									<Button.Style>
+										<Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
+											<Style.Triggers>
+												<DataTrigger Binding="{Binding SelectedTabIndex}" Value="3">
+													<Setter Property="Foreground" Value="#E6EDF3"/>
+													<Setter Property="Background" Value="#161B22"/>
+												</DataTrigger>
+											</Style.Triggers>
+										</Style>
+									</Button.Style>
+									<TextBlock Text="[🔧 Диагн.]" FontFamily="Cascadia Code, Consolas"/>
+								</Button>
 
-            </StackPanel>
-        </ScrollViewer>
+								<!-- Nav: Сервис -->
+								<Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="4">
+									<Button.Style>
+										<Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
+											<Style.Triggers>
+												<DataTrigger Binding="{Binding SelectedTabIndex}" Value="4">
+													<Setter Property="Foreground" Value="#E6EDF3"/>
+													<Setter Property="Background" Value="#161B22"/>
+												</DataTrigger>
+											</Style.Triggers>
+										</Style>
+									</Button.Style>
+									<TextBlock Text="[🛠 Сервис]" FontFamily="Cascadia Code, Consolas"/>
+								</Button>
 
-            </Grid>
-            </Border>
-        </Window>
+								<!-- Nav: О программе -->
+								<Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="5">
+									<Button.Style>
+										<Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
+											<Style.Triggers>
+												<DataTrigger Binding="{Binding SelectedTabIndex}" Value="5">
+													<Setter Property="Foreground" Value="#E6EDF3"/>
+													<Setter Property="Background" Value="#161B22"/>
+												</DataTrigger>
+											</Style.Triggers>
+										</Style>
+									</Button.Style>
+									<TextBlock Text="[ℹ О программе]" FontFamily="Cascadia Code, Consolas"/>
+								</Button>
+							</StackPanel>
+
+							<!-- Sliding accent indicator -->
+							<Border Width="3" Height="36" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                    IsHitTestVisible="False">
+								<Border.Background>
+									<SolidColorBrush Color="#4FC3F7"/>
+								</Border.Background>
+								<Border.RenderTransform>
+									<TranslateTransform x:Name="NavIndicatorTransform"/>
+								</Border.RenderTransform>
+							</Border>
+						</Grid>
+					</StackPanel>
+				</Border>
+
+				<!-- ─── VERTICAL SEPARATOR ─── -->
+				<Rectangle Grid.Column="1" Width="1" Fill="#30363D"/>
+
+				<!-- ─── CONTENT AREA ─── -->
+				<Grid Grid.Column="2">
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="*"/>
+					</Grid.RowDefinitions>
+
+					<!-- Page Title -->
+					<Border Grid.Row="0" BorderBrush="#21262D" BorderThickness="0,0,0,1" Padding="16,8">
+						<TextBlock Text="{Binding SelectedTabName}" FontFamily="Cascadia Code, Consolas" FontSize="15"
+                                   FontWeight="Bold" Foreground="#E6EDF3"/>
+					</Border>
+
+					<!-- ═══ PAGES ═══ -->
+					<Grid Grid.Row="1">
+
+						<!-- ╔══════════════════════════════════════╗ -->
+						<!-- ║          TAB 0: ГЛАВНАЯ             ║ -->
+						<!-- ╚══════════════════════════════════════╝ -->
+						<Border RenderTransformOrigin="0.5,0"
+                                d:Visibility="Visible" d:Opacity="1">
+							<Border.RenderTransform>
+								<TranslateTransform/>
+							</Border.RenderTransform>
+							<Border.Style>
+								<Style TargetType="Border">
+									<Setter Property="Visibility" Value="Collapsed"/>
+									<Setter Property="Opacity" Value="0"/>
+									<Style.Triggers>
+										<DataTrigger Binding="{Binding SelectedTabIndex}" Value="0">
+											<Setter Property="Visibility" Value="Visible"/>
+											<DataTrigger.EnterActions>
+												<BeginStoryboard>
+													<Storyboard>
+														<DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                         From="0" To="1" Duration="0:0:0.3">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+														<DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                                         From="15" To="0" Duration="0:0:0.3">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+													</Storyboard>
+												</BeginStoryboard>
+											</DataTrigger.EnterActions>
+										</DataTrigger>
+									</Style.Triggers>
+								</Style>
+							</Border.Style>
+							<ScrollViewer VerticalScrollBarVisibility="Auto">
+								<StackPanel Margin="16,12">
+
+									<!-- Engine download banner -->
+									<Border Background="#1C1500" BorderBrush="#5A4800" BorderThickness="1"
+                                            Padding="10,8" Margin="0,0,0,12"
+                                            Visibility="{Binding IsDownloadingEngine, Converter={StaticResource BoolToVis}}">
+										<StackPanel>
+											<TextBlock Text="⬇️ Первый запуск — скачиваем Flowseal..." FontFamily="Cascadia Code, Consolas"
+                                                       Foreground="#FFD700" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
+											<TextBlock Text="{Binding EngineDownloadStatus}" FontFamily="Cascadia Code, Consolas"
+                                                       Foreground="#CCAA00" FontSize="11" TextWrapping="Wrap"/>
+										</StackPanel>
+									</Border>
+
+									<!-- STATUS + PROFILE row -->
+									<Grid Margin="0,0,0,12">
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="*"/>
+											<ColumnDefinition Width="12"/>
+											<ColumnDefinition Width="*"/>
+										</Grid.ColumnDefinitions>
+
+										<!-- Status card -->
+										<Border Grid.Column="0" Style="{StaticResource Card}">
+											<StackPanel>
+												<TextBlock Text="Статус" FontFamily="Cascadia Code, Consolas" Foreground="#4FC3F7"
+                                                           FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
+												<StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+													<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="13" Margin="0,0,6,0">
+														<TextBlock.Style>
+															<Style TargetType="TextBlock">
+																<Setter Property="Text" Value="○"/>
+																<Setter Property="Foreground" Value="#F85149"/>
+																<Style.Triggers>
+																	<DataTrigger Binding="{Binding IsRunning}" Value="True">
+																		<Setter Property="Text" Value="●"/>
+																		<Setter Property="Foreground" Value="#3FB950"/>
+																	</DataTrigger>
+																</Style.Triggers>
+															</Style>
+														</TextBlock.Style>
+													</TextBlock>
+													<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="13">
+														<TextBlock.Style>
+															<Style TargetType="TextBlock">
+																<Setter Property="Text" Value="Защита не активна"/>
+																<Setter Property="Foreground" Value="#F85149"/>
+																<Style.Triggers>
+																	<DataTrigger Binding="{Binding IsRunning}" Value="True">
+																		<Setter Property="Text" Value="Защита активна"/>
+																		<Setter Property="Foreground" Value="#3FB950"/>
+																	</DataTrigger>
+																</Style.Triggers>
+															</Style>
+														</TextBlock.Style>
+													</TextBlock>
+												</StackPanel>
+												<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0">
+                                                    <Run Text="PID: "/><Run Text="{Binding PidText, Mode=OneWay}" Foreground="#E6EDF3"/>
+												</TextBlock>
+												<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="12" Foreground="#8B949E">
+                                                    <Run Text="Uptime: "/><Run Text="{Binding UptimeText, Mode=OneWay}" Foreground="#E6EDF3"/>
+												</TextBlock>
+											</StackPanel>
+										</Border>
+
+										<!-- Profile card -->
+										<Border Grid.Column="2" Style="{StaticResource Card}">
+											<StackPanel>
+												<TextBlock Text="Профиль" FontFamily="Cascadia Code, Consolas" Foreground="#4FC3F7"
+                                                           FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
+												<ComboBox ItemsSource="{Binding Profiles}"
+                                                          SelectedItem="{Binding SelectedProfile}"
+                                                          Margin="0,0,0,8">
+													<ComboBox.ItemTemplate>
+														<DataTemplate>
+															<TextBlock Text="{Binding DisplayName}" FontFamily="Cascadia Code, Consolas"
+                                                                       Foreground="#E6EDF3" FontSize="12"/>
+														</DataTemplate>
+													</ComboBox.ItemTemplate>
+												</ComboBox>
+												<Button Content="[ Обновить список ]" Style="{StaticResource TermBtn}"
+                                                        FontSize="11" Padding="8,4"
+                                                        Command="{Binding RefreshProfilesCommand}"
+                                                        HorizontalAlignment="Left"/>
+											</StackPanel>
+										</Border>
+									</Grid>
+
+									<!-- ACTION BUTTON -->
+									<Border Style="{StaticResource Card}" Margin="0,0,0,12">
+										<Button Command="{Binding ToggleStartStopCommand}"
+                                                Content="{Binding MainActionButtonText}"
+                                                FontSize="14" Padding="28,8"
+                                                HorizontalAlignment="Center">
+											<Button.Style>
+												<Style TargetType="Button" BasedOn="{StaticResource GreenBtn}">
+													<Style.Triggers>
+														<DataTrigger Binding="{Binding IsRunning}" Value="True">
+															<Setter Property="Foreground" Value="#F85149"/>
+															<Setter Property="BorderBrush" Value="#DA3633"/>
+														</DataTrigger>
+													</Style.Triggers>
+												</Style>
+											</Button.Style>
+										</Button>
+									</Border>
+
+									<!-- DIAGNOSTICS + QUICK ACTIONS row -->
+									<Grid Margin="0,0,0,12">
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="*"/>
+											<ColumnDefinition Width="12"/>
+											<ColumnDefinition Width="*"/>
+										</Grid.ColumnDefinitions>
+
+										<!-- Diagnostics card -->
+										<Border Grid.Column="0" Style="{StaticResource Card}">
+											<StackPanel>
+												<TextBlock Text="Диагностика" FontFamily="Cascadia Code, Consolas" Foreground="#4FC3F7"
+                                                           FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
+												<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0">
+                                                    <Run Text="winws.exe: "/><Run Text="{Binding WinwsText, Mode=OneWay}" Foreground="#E6EDF3"/>
+												</TextBlock>
+												<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0">
+                                                    <Run Text="Engine: "/><Run Text="{Binding CurrentEngineVersion, Mode=OneWay}" Foreground="#E6EDF3"/>
+												</TextBlock>
+												<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0">
+                                                    <Run Text="Администратор: "/><Run Text="{Binding AdminText, Mode=OneWay}" Foreground="#E6EDF3"/>
+												</TextBlock>
+											</StackPanel>
+										</Border>
+
+										<!-- Quick Actions card -->
+										<Border Grid.Column="2" Style="{StaticResource Card}">
+											<StackPanel>
+												<TextBlock Text="Быстрые действия" FontFamily="Cascadia Code, Consolas" Foreground="#4FC3F7"
+                                                           FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
+												<Button Content="[ Открыть папку ]" Style="{StaticResource TermBtn}"
+                                                        FontSize="12" Padding="8,4"
+                                                        Command="{Binding OpenEngineFolderCommand}"
+                                                        HorizontalAlignment="Left" Margin="0,0,0,4"/>
+												<Button Content="[ Показать логи ]" Style="{StaticResource TermBtn}"
+                                                        FontSize="12" Padding="8,4"
+                                                        Command="{Binding ShowLogsCommand}"
+                                                        HorizontalAlignment="Left" Margin="0,0,0,4"/>
+												<Button Content="[ Проверить сейчас ]" Style="{StaticResource TermBtn}"
+                                                        FontSize="12" Padding="8,4"
+                                                        Command="{Binding CheckNowCommand}"
+                                                        HorizontalAlignment="Left"/>
+											</StackPanel>
+										</Border>
+									</Grid>
+
+									<!-- Status line -->
+									<Border BorderBrush="#21262D" BorderThickness="0,1,0,0" Padding="0,8,0,0">
+										<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="12" Foreground="#8B949E" TextWrapping="Wrap">
+                                            <Run Text="Строка состояния: "/><Run Text="{Binding LastStatusMessage, Mode=OneWay}" Foreground="#E6EDF3"/>
+										</TextBlock>
+									</Border>
+
+								</StackPanel>
+							</ScrollViewer>
+						</Border>
+
+						<!-- ╔══════════════════════════════════════╗ -->
+						<!-- ║       TAB 1: ОРКЕСТРАТОР            ║ -->
+						<!-- ╚══════════════════════════════════════╝ -->
+						<Border RenderTransformOrigin="0.5,0">
+							<Border.RenderTransform>
+								<TranslateTransform/>
+							</Border.RenderTransform>
+							<Border.Style>
+								<Style TargetType="Border">
+									<Setter Property="Visibility" Value="Collapsed"/>
+									<Setter Property="Opacity" Value="0"/>
+									<Style.Triggers>
+										<DataTrigger Binding="{Binding SelectedTabIndex}" Value="1">
+											<Setter Property="Visibility" Value="Visible"/>
+											<DataTrigger.EnterActions>
+												<BeginStoryboard>
+													<Storyboard>
+														<DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                         From="0" To="1" Duration="0:0:0.3">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+														<DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                                         From="15" To="0" Duration="0:0:0.3">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+													</Storyboard>
+												</BeginStoryboard>
+											</DataTrigger.EnterActions>
+										</DataTrigger>
+									</Style.Triggers>
+								</Style>
+							</Border.Style>
+							<ScrollViewer VerticalScrollBarVisibility="Auto">
+								<StackPanel Margin="16,12">
+
+									<TextBlock Style="{StaticResource SecH}" Text="УПРАВЛЕНИЕ" Margin="0,0,0,8"/>
+									<StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+										<Button Margin="0,0,10,0"
+                                                Command="{Binding ToggleOrchestratorCommand}">
+											<Button.Style>
+												<Style TargetType="Button" BasedOn="{StaticResource TermBtn}">
+													<Setter Property="Content" Value="[ ▶ Запустить оркестратор ]"/>
+													<Style.Triggers>
+														<DataTrigger Binding="{Binding OrchestratorRunning}" Value="True">
+															<Setter Property="Content" Value="[ ⏹ Остановить оркестратор ]"/>
+															<Setter Property="BorderBrush" Value="#DA3633"/>
+															<Setter Property="Foreground" Value="#F85149"/>
+														</DataTrigger>
+													</Style.Triggers>
+												</Style>
+											</Button.Style>
+										</Button>
+										<Button Content="[ 🔍 Проверить сейчас ]" Style="{StaticResource TermBtn}"
+                                                Command="{Binding CheckNowCommand}"/>
+									</StackPanel>
+
+									<StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+										<TextBlock Style="{StaticResource Lbl}" Text="Интервал (мин): " Margin="0,0,8,0"/>
+										<TextBox Text="{Binding OrchestratorInterval, UpdateSourceTrigger=PropertyChanged}"
+                                                 Width="50" Height="26" VerticalContentAlignment="Center"/>
+									</StackPanel>
+									<StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+										<TextBlock Style="{StaticResource Lbl}" Text="Следующая проверка: " Margin="0,0,4,0"/>
+										<TextBlock Style="{StaticResource Val}" Text="{Binding OrchestratorNextCheck}"/>
+									</StackPanel>
+
+									<Rectangle Style="{StaticResource Sep}"/>
+
+									<TextBlock Style="{StaticResource SecH}" Text="САЙТЫ ДЛЯ ПРОВЕРКИ"/>
+									<WrapPanel Margin="0,0,0,8">
+										<CheckBox Content="YouTube" IsChecked="{Binding SiteYouTube}" Margin="0,4,16,4"/>
+										<CheckBox Content="Discord" IsChecked="{Binding SiteDiscord}" Margin="0,4,16,4"/>
+										<CheckBox Content="Google" IsChecked="{Binding SiteGoogle}" Margin="0,4,16,4"/>
+										<CheckBox Content="Twitch" IsChecked="{Binding SiteTwitch}" Margin="0,4,16,4"/>
+										<CheckBox Content="Instagram" IsChecked="{Binding SiteInstagram}" Margin="0,4,16,4"/>
+										<CheckBox Content="Telegram" IsChecked="{Binding SiteTelegram}" Margin="0,4,16,4"/>
+									</WrapPanel>
+
+									<Rectangle Style="{StaticResource Sep}"/>
+
+									<TextBlock Style="{StaticResource SecH}" Text="РЕЙТИНГ ПРОФИЛЕЙ"/>
+									<Button HorizontalAlignment="Left" Margin="0,0,0,10"
+                                            Command="{Binding ScanProfilesCommand}">
+										<Button.Style>
+											<Style TargetType="Button" BasedOn="{StaticResource AccentBtn}">
+												<Setter Property="Content" Value="[ 📊 Сканировать все профили ]"/>
+												<Style.Triggers>
+													<DataTrigger Binding="{Binding IsScanning}" Value="True">
+														<Setter Property="IsEnabled" Value="False"/>
+														<Setter Property="Content" Value="[ ⏳ Сканирование... ]"/>
+													</DataTrigger>
+												</Style.Triggers>
+											</Style>
+										</Button.Style>
+									</Button>
+
+									<TextBlock Text="{Binding ScanProgressText}" FontFamily="Cascadia Code, Consolas" Foreground="#4FC3F7"
+                                               FontSize="12" Margin="0,0,0,8"
+                                               Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}"/>
+
+									<ItemsControl ItemsSource="{Binding ProfileScores}">
+										<ItemsControl.ItemTemplate>
+											<DataTemplate>
+												<Border Background="#161B22" Padding="10,6" Margin="0,2">
+													<Grid>
+														<Grid.ColumnDefinitions>
+															<ColumnDefinition Width="*"/>
+															<ColumnDefinition Width="Auto"/>
+														</Grid.ColumnDefinitions>
+														<TextBlock Grid.Column="0" Text="{Binding DisplayName}"
+                                                                   FontFamily="Cascadia Code, Consolas" Foreground="#E6EDF3" FontSize="13"
+                                                                   VerticalAlignment="Center"/>
+														<TextBlock Grid.Column="1" Text="{Binding ScoreText}"
+                                                                   FontFamily="Cascadia Code, Consolas" Foreground="#4FC3F7" FontSize="13"
+                                                                   FontWeight="Bold" VerticalAlignment="Center"/>
+													</Grid>
+												</Border>
+											</DataTemplate>
+										</ItemsControl.ItemTemplate>
+									</ItemsControl>
+
+									<Button Content="[ 🗑 Очистить лог ]" Style="{StaticResource TermBtn}"
+                                            HorizontalAlignment="Left" Margin="0,10,0,0"
+                                            Command="{Binding ClearOrchestratorLogsCommand}"/>
+
+									<Border Style="{StaticResource LogArea}" Margin="0,8,0,0">
+										<ItemsControl ItemsSource="{Binding OrchestratorLogs}">
+											<ItemsControl.ItemTemplate>
+												<DataTemplate>
+													<TextBlock Text="{Binding}" Foreground="#8B949E"
+                                                               FontFamily="Cascadia Code, Consolas" FontSize="11" Margin="0,2"/>
+												</DataTemplate>
+											</ItemsControl.ItemTemplate>
+										</ItemsControl>
+									</Border>
+
+								</StackPanel>
+							</ScrollViewer>
+						</Border>
+
+						<!-- ╔══════════════════════════════════════╗ -->
+						<!-- ║       TAB 2: ОБНОВЛЕНИЕ             ║ -->
+						<!-- ╚══════════════════════════════════════╝ -->
+						<Border RenderTransformOrigin="0.5,0">
+							<Border.RenderTransform>
+								<TranslateTransform/>
+							</Border.RenderTransform>
+							<Border.Style>
+								<Style TargetType="Border">
+									<Setter Property="Visibility" Value="Collapsed"/>
+									<Setter Property="Opacity" Value="0"/>
+									<Style.Triggers>
+										<DataTrigger Binding="{Binding SelectedTabIndex}" Value="2">
+											<Setter Property="Visibility" Value="Visible"/>
+											<DataTrigger.EnterActions>
+												<BeginStoryboard>
+													<Storyboard>
+														<DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                         From="0" To="1" Duration="0:0:0.3">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+														<DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                                         From="15" To="0" Duration="0:0:0.3">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+													</Storyboard>
+												</BeginStoryboard>
+											</DataTrigger.EnterActions>
+										</DataTrigger>
+									</Style.Triggers>
+								</Style>
+							</Border.Style>
+							<ScrollViewer VerticalScrollBarVisibility="Auto">
+								<StackPanel Margin="16,12">
+
+									<TextBlock Style="{StaticResource SecH}" Text="FLOWSEAL ZAPRET" Margin="0,0,0,8"/>
+									<Grid Margin="0,0,0,12">
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="140"/>
+											<ColumnDefinition Width="*"/>
+										</Grid.ColumnDefinitions>
+										<Grid.RowDefinitions>
+											<RowDefinition Height="26"/>
+											<RowDefinition Height="26"/>
+										</Grid.RowDefinitions>
+										<TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Текущая версия:"/>
+										<TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding CurrentEngineVersion}"/>
+										<TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Статус:"/>
+										<TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding UpdateStatus}"/>
+									</Grid>
+
+									<StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+										<Button Margin="0,0,10,0"
+                                                Command="{Binding CheckUpdatesCommand}">
+											<Button.Style>
+												<Style TargetType="Button" BasedOn="{StaticResource TermBtn}">
+													<Setter Property="Content" Value="[ 🔍 Проверить ]"/>
+													<Style.Triggers>
+														<DataTrigger Binding="{Binding IsUpdating}" Value="True">
+															<Setter Property="IsEnabled" Value="False"/>
+															<Setter Property="Content" Value="[ ⏳ Обновление... ]"/>
+														</DataTrigger>
+													</Style.Triggers>
+												</Style>
+											</Button.Style>
+										</Button>
+										<Button Command="{Binding InstallUpdatesCommand}">
+											<Button.Style>
+												<Style TargetType="Button" BasedOn="{StaticResource AccentBtn}">
+													<Setter Property="Content" Value="[ ⬆️ Обновить ]"/>
+													<Style.Triggers>
+														<DataTrigger Binding="{Binding IsUpdating}" Value="True">
+															<Setter Property="IsEnabled" Value="False"/>
+														</DataTrigger>
+													</Style.Triggers>
+												</Style>
+											</Button.Style>
+										</Button>
+									</StackPanel>
+
+									<CheckBox Content="Автоматически проверять при запуске"
+                                              IsChecked="{Binding AutoUpdateEnabled}" Margin="0,0,0,12"/>
+
+									<Border Background="#1C1500" BorderBrush="#5A4800" BorderThickness="1"
+                                            Padding="10,8" Margin="0,0,0,12">
+										<TextBlock TextWrapping="Wrap" FontFamily="Cascadia Code, Consolas" FontSize="11" Foreground="#FFD700"
+                                                   Text="⚠️ При обновлении winws.exe будет остановлен. После установки нужно заново запустить профиль."/>
+									</Border>
+
+									<TextBlock Style="{StaticResource SecH}" Text="ЛОГ ОБНОВЛЕНИЯ"/>
+									<Border Style="{StaticResource LogArea}">
+										<ItemsControl ItemsSource="{Binding UpdateLogs}">
+											<ItemsControl.ItemTemplate>
+												<DataTemplate>
+													<TextBlock Text="{Binding}" Foreground="#8B949E"
+                                                               FontFamily="Cascadia Code, Consolas" FontSize="11" Margin="0,2"/>
+												</DataTemplate>
+											</ItemsControl.ItemTemplate>
+										</ItemsControl>
+									</Border>
+
+								</StackPanel>
+							</ScrollViewer>
+						</Border>
+
+						<!-- ╔══════════════════════════════════════╗ -->
+						<!-- ║       TAB 3: ДИАГНОСТИКА            ║ -->
+						<!-- ╚══════════════════════════════════════╝ -->
+						<Border RenderTransformOrigin="0.5,0">
+							<Border.RenderTransform>
+								<TranslateTransform/>
+							</Border.RenderTransform>
+							<Border.Style>
+								<Style TargetType="Border">
+									<Setter Property="Visibility" Value="Collapsed"/>
+									<Setter Property="Opacity" Value="0"/>
+									<Style.Triggers>
+										<DataTrigger Binding="{Binding SelectedTabIndex}" Value="3">
+											<Setter Property="Visibility" Value="Visible"/>
+											<DataTrigger.EnterActions>
+												<BeginStoryboard>
+													<Storyboard>
+														<DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                         From="0" To="1" Duration="0:0:0.3">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+														<DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                                         From="15" To="0" Duration="0:0:0.3">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+													</Storyboard>
+												</BeginStoryboard>
+											</DataTrigger.EnterActions>
+										</DataTrigger>
+									</Style.Triggers>
+								</Style>
+							</Border.Style>
+							<ScrollViewer VerticalScrollBarVisibility="Auto">
+								<StackPanel Margin="16,12">
+
+									<TextBlock Style="{StaticResource SecH}" Text="СИСТЕМНЫЕ НАСТРОЙКИ" Margin="0,0,0,8"/>
+
+									<CheckBox Content="Запускать FluxRoute при входе в Windows"
+                                              IsChecked="{Binding AutoStartEnabled}" Margin="0,4,0,4"/>
+									<CheckBox Content="Показывать предупреждение при смене профиля"
+                                              IsChecked="{Binding ShowProfileSwitchWarning}" Margin="0,4,0,12"/>
+
+									<Rectangle Style="{StaticResource Sep}"/>
+
+									<TextBlock Style="{StaticResource SecH}" Text="КОМПОНЕНТЫ"/>
+									<Grid Margin="0,0,0,12">
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="170"/>
+											<ColumnDefinition Width="*"/>
+										</Grid.ColumnDefinitions>
+										<Grid.RowDefinitions>
+											<RowDefinition Height="26"/>
+											<RowDefinition Height="26"/>
+											<RowDefinition Height="26"/>
+											<RowDefinition Height="26"/>
+											<RowDefinition Height="26"/>
+											<RowDefinition Height="26"/>
+										</Grid.RowDefinitions>
+										<TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Права администратора:"/>
+										<TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AdminText}"/>
+										<TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="engine/:"/>
+										<TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding EngineText}"/>
+										<TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Lbl}" Text="winws.exe:"/>
+										<TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding WinwsText}"/>
+										<TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource Lbl}" Text="WinDivert.dll:"/>
+										<TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding WinDivertDllText}"/>
+										<TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource Lbl}" Text="WinDivert.sys:"/>
+										<TextBlock Grid.Row="4" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding WinDivertDriverText}"/>
+										<TextBlock Grid.Row="5" Grid.Column="0" Style="{StaticResource Lbl}" Text="Версия приложения:"/>
+										<TextBlock Grid.Row="5" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AppVersion}"/>
+									</Grid>
+
+									<WrapPanel>
+										<Button Content="[ 🔄 Обновить ]" Style="{StaticResource TermBtn}"
+                                                Margin="0,0,8,8" Command="{Binding RefreshProfilesCommand}"/>
+										<Button Content="[ 📋 Скопировать ]" Style="{StaticResource TermBtn}"
+                                                Margin="0,0,8,8" Command="{Binding CopyDiagnosticsCommand}"/>
+										<Button Content="[ 📄 Экспорт логов ]" Style="{StaticResource TermBtn}"
+                                                Margin="0,0,8,8" Command="{Binding ExportLogsCommand}"/>
+									</WrapPanel>
+
+									<Rectangle Style="{StaticResource Sep}"/>
+
+									<TextBlock Style="{StaticResource SecH}" Text="СИСТЕМНЫЙ ЛОГ"/>
+									<Border Style="{StaticResource LogArea}" MaxHeight="200">
+										<ItemsControl ItemsSource="{Binding Logs}">
+											<ItemsControl.ItemTemplate>
+												<DataTemplate>
+													<TextBlock Text="{Binding}" Foreground="#8B949E"
+                                                               FontFamily="Cascadia Code, Consolas" FontSize="11" Margin="0,2"/>
+												</DataTemplate>
+											</ItemsControl.ItemTemplate>
+										</ItemsControl>
+									</Border>
+
+								</StackPanel>
+							</ScrollViewer>
+						</Border>
+
+						<!-- ╔══════════════════════════════════════╗ -->
+						<!-- ║         TAB 4: СЕРВИС               ║ -->
+						<!-- ╚══════════════════════════════════════╝ -->
+						<Border RenderTransformOrigin="0.5,0">
+							<Border.RenderTransform>
+								<TranslateTransform/>
+							</Border.RenderTransform>
+							<Border.Style>
+								<Style TargetType="Border">
+									<Setter Property="Visibility" Value="Collapsed"/>
+									<Setter Property="Opacity" Value="0"/>
+									<Style.Triggers>
+										<DataTrigger Binding="{Binding SelectedTabIndex}" Value="4">
+											<Setter Property="Visibility" Value="Visible"/>
+											<DataTrigger.EnterActions>
+												<BeginStoryboard>
+													<Storyboard>
+														<DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                         From="0" To="1" Duration="0:0:0.3">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+														<DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                                         From="15" To="0" Duration="0:0:0.3">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+													</Storyboard>
+												</BeginStoryboard>
+											</DataTrigger.EnterActions>
+										</DataTrigger>
+									</Style.Triggers>
+								</Style>
+							</Border.Style>
+							<ScrollViewer VerticalScrollBarVisibility="Auto">
+								<StackPanel Margin="16,12">
+
+									<!-- GAME FILTER -->
+									<TextBlock Style="{StaticResource SecH}" Text="GAME FILTER" Margin="0,0,0,8"/>
+									<StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+										<TextBlock Style="{StaticResource Lbl}" Text="Статус: " Margin="0,0,4,0"/>
+										<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="13">
+											<TextBlock.Style>
+												<Style TargetType="TextBlock">
+													<Setter Property="Text" Value="❌ Выключен"/>
+													<Setter Property="Foreground" Value="#F85149"/>
+													<Setter Property="VerticalAlignment" Value="Center"/>
+													<Style.Triggers>
+														<DataTrigger Binding="{Binding GameFilterEnabled}" Value="True">
+															<Setter Property="Text" Value="✅ Включён"/>
+															<Setter Property="Foreground" Value="#3FB950"/>
+														</DataTrigger>
+													</Style.Triggers>
+												</Style>
+											</TextBlock.Style>
+										</TextBlock>
+									</StackPanel>
+									<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#484F58" FontSize="11"
+                                               Margin="0,2,0,8" TextWrapping="Wrap"
+                                               Text="Расширяет диапазон портов (1024-65535) для обхода в играх."/>
+									<StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+										<Button Command="{Binding ToggleGameFilterCommand}">
+											<Button.Style>
+												<Style TargetType="Button" BasedOn="{StaticResource TermBtn}">
+													<Setter Property="Content" Value="[ 🎮 Включить ]"/>
+													<Style.Triggers>
+														<DataTrigger Binding="{Binding GameFilterEnabled}" Value="True">
+															<Setter Property="Content" Value="[ 🎮 Выключить ]"/>
+														</DataTrigger>
+													</Style.Triggers>
+												</Style>
+											</Button.Style>
+										</Button>
+										<ComboBox ItemsSource="{Binding GameFilterProtocols}"
+                                                  SelectedItem="{Binding GameFilterProtocol}"
+                                                  Width="120" Margin="10,0,0,0"/>
+									</StackPanel>
+
+									<Rectangle Style="{StaticResource Sep}"/>
+
+									<!-- IPSET -->
+									<TextBlock Style="{StaticResource SecH}" Text="IPSET FILTER"/>
+									<StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+										<TextBlock Style="{StaticResource Lbl}" Text="Режим: " Margin="0,0,4,0"/>
+										<TextBlock Style="{StaticResource Val}" Text="{Binding IpSetMode}"/>
+									</StackPanel>
+									<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#484F58" FontSize="11"
+                                               Margin="0,2,0,8" TextWrapping="Wrap"
+                                               Text="loaded — фильтрация по списку IP · none — отключена · any — все адреса"/>
+									<StackPanel Orientation="Horizontal">
+										<Button Content="[ 🔄 Переключить режим ]" Style="{StaticResource TermBtn}"
+                                                Margin="0,0,10,0" Command="{Binding CycleIpSetModeCommand}"/>
+										<Button Command="{Binding UpdateIpSetListCommand}">
+											<Button.Style>
+												<Style TargetType="Button" BasedOn="{StaticResource AccentBtn}">
+													<Setter Property="Content" Value="[ ⬇️ Обновить IPSet ]"/>
+													<Style.Triggers>
+														<DataTrigger Binding="{Binding IsServiceBusy}" Value="True">
+															<Setter Property="IsEnabled" Value="False"/>
+														</DataTrigger>
+													</Style.Triggers>
+												</Style>
+											</Button.Style>
+										</Button>
+									</StackPanel>
+
+									<Rectangle Style="{StaticResource Sep}"/>
+
+									<!-- HOSTS -->
+									<TextBlock Style="{StaticResource SecH}" Text="HOSTS FILE"/>
+									<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#484F58" FontSize="11"
+                                               Margin="0,0,0,8" TextWrapping="Wrap"
+                                               Text="Проверяет и обновляет системный hosts файл."/>
+									<Button Content="[ 🔍 Проверить / обновить Hosts ]" HorizontalAlignment="Left"
+                                            Command="{Binding UpdateHostsFileCommand}">
+										<Button.Style>
+											<Style TargetType="Button" BasedOn="{StaticResource TermBtn}">
+												<Style.Triggers>
+													<DataTrigger Binding="{Binding IsServiceBusy}" Value="True">
+														<Setter Property="IsEnabled" Value="False"/>
+													</DataTrigger>
+												</Style.Triggers>
+											</Style>
+										</Button.Style>
+									</Button>
+
+									<Rectangle Style="{StaticResource Sep}"/>
+
+									<!-- ZAPRET SERVICE -->
+									<TextBlock Style="{StaticResource SecH}" Text="СЛУЖБА ZAPRET"/>
+									<StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+										<TextBlock Style="{StaticResource Lbl}" Text="Статус: " Margin="0,0,4,0"/>
+										<TextBlock Style="{StaticResource Val}" Text="{Binding ZapretServiceStatus}"/>
+									</StackPanel>
+									<StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+										<Button Content="[ 📦 Установить ]" Style="{StaticResource GreenBtn}"
+                                                Margin="0,0,10,0" Command="{Binding InstallZapretServiceCommand}"/>
+										<Button Content="[ ⏹ Остановить ]" Style="{StaticResource RedBtn}"
+                                                Margin="0,0,10,0" Command="{Binding ForceStopZapretServiceCommand}"/>
+										<Button Content="[ 🔄 ]" Style="{StaticResource TermBtn}"
+                                                Command="{Binding RefreshServiceInfoCommand}"/>
+									</StackPanel>
+
+									<Border Background="#1C1500" BorderBrush="#5A4800" BorderThickness="1"
+                                            Padding="10,8" Margin="0,12,0,0">
+										<TextBlock TextWrapping="Wrap" FontFamily="Cascadia Code, Consolas" FontSize="11" Foreground="#FFD700"
+                                                   Text="⚠️ Установка службы запускает service.bat с правами администратора."/>
+									</Border>
+
+									<Rectangle Style="{StaticResource Sep}"/>
+
+									<TextBlock Style="{StaticResource SecH}" Text="ЛОГ СЕРВИСА"/>
+									<Border Style="{StaticResource LogArea}" x:Name="ServiceLogContainer">
+										<ScrollViewer VerticalScrollBarVisibility="Auto" x:Name="ServiceLogScroll">
+											<ItemsControl ItemsSource="{Binding ServiceLogs}">
+												<ItemsControl.ItemTemplate>
+													<DataTemplate>
+														<TextBlock Text="{Binding}" Foreground="#8B949E"
+                                                                   FontFamily="Cascadia Code, Consolas" FontSize="11" Margin="0,2"/>
+													</DataTemplate>
+												</ItemsControl.ItemTemplate>
+											</ItemsControl>
+										</ScrollViewer>
+									</Border>
+
+								</StackPanel>
+							</ScrollViewer>
+						</Border>
+
+						<!-- ╔══════════════════════════════════════╗ -->
+						<!-- ║       TAB 5: О ПРОГРАММЕ            ║ -->
+						<!-- ╚══════════════════════════════════════╝ -->
+						<Border RenderTransformOrigin="0.5,0">
+							<Border.RenderTransform>
+								<TranslateTransform/>
+							</Border.RenderTransform>
+							<Border.Style>
+								<Style TargetType="Border">
+									<Setter Property="Visibility" Value="Collapsed"/>
+									<Setter Property="Opacity" Value="0"/>
+									<Style.Triggers>
+										<DataTrigger Binding="{Binding SelectedTabIndex}" Value="5">
+											<Setter Property="Visibility" Value="Visible"/>
+											<DataTrigger.EnterActions>
+												<BeginStoryboard>
+													<Storyboard>
+														<DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                         From="0" To="1" Duration="0:0:0.3">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+														<DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                                         From="15" To="0" Duration="0:0:0.3">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+													</Storyboard>
+												</BeginStoryboard>
+											</DataTrigger.EnterActions>
+										</DataTrigger>
+									</Style.Triggers>
+								</Style>
+							</Border.Style>
+							<ScrollViewer VerticalScrollBarVisibility="Auto">
+								<StackPanel Margin="16,12">
+
+									<TextBlock Style="{StaticResource SecH}" Text="ДЛЯ ЧЕГО СОЗДАН ПРОЕКТ" Margin="0,0,0,8"/>
+									<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" TextWrapping="Wrap" FontSize="12"
+                                               Text="FluxRoute создан как удобный desktop-интерфейс для управления сетевыми профилями и сценариями обхода ограничений. Главная цель — упростить запуск и переключение стратегий без ручного редактирования bat-файлов."/>
+
+									<Rectangle Style="{StaticResource Sep}"/>
+
+									<TextBlock Style="{StaticResource SecH}" Text="КАК РАБОТАЕТ"/>
+									<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" TextWrapping="Wrap" FontSize="12"
+                                               Text="Приложение загружает профили из каталога engine, запускает выбранный сценарий, отслеживает статус процесса и диагностику. Оркестратор анализирует доступность целей и переключает профиль на более стабильный."/>
+
+									<Rectangle Style="{StaticResource Sep}"/>
+
+									<TextBlock Style="{StaticResource SecH}" Text="ОСНОВА ENGINE"/>
+									<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" TextWrapping="Wrap" FontSize="12"
+                                               Text="FluxRoute использует экосистему проектов:"/>
+									<StackPanel Margin="8,8,0,0">
+										<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+                                            <Run Text="• "/><Hyperlink NavigateUri="https://github.com/basil00/WinDivert" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">WinDivert</Hyperlink>
+                                            <Run Text=" — низкоуровневая основа"/>
+										</TextBlock>
+										<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+                                            <Run Text="• "/><Hyperlink NavigateUri="https://github.com/bol-van/zapret" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">bol-van/zapret</Hyperlink>
+                                            <Run Text=" — оригинальный проект"/>
+										</TextBlock>
+										<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+                                            <Run Text="• "/><Hyperlink NavigateUri="https://github.com/bol-van/zapret-win-bundle" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">zapret-win-bundle</Hyperlink>
+                                            <Run Text=" — Windows-бандл"/>
+										</TextBlock>
+										<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+                                            <Run Text="• "/><Hyperlink NavigateUri="https://github.com/Flowseal/zapret-discord-youtube" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">Flowseal/zapret-discord-youtube</Hyperlink>
+                                            <Run Text=" — основа engine"/>
+										</TextBlock>
+									</StackPanel>
+
+									<Rectangle Style="{StaticResource Sep}"/>
+
+									<TextBlock Style="{StaticResource SecH}" Text="ВДОХНОВЕНИЕ"/>
+									<StackPanel Margin="8,0,0,0">
+										<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+                                            <Run Text="• "/><Hyperlink NavigateUri="https://github.com/medvedeff-true/Zapret-GUI" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">medvedeff-true/Zapret-GUI</Hyperlink>
+										</TextBlock>
+										<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+                                            <Run Text="• "/><Hyperlink NavigateUri="https://github.com/Virenbar/ZapretControl" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">Virenbar/ZapretControl</Hyperlink>
+										</TextBlock>
+										<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+                                            <Run Text="• "/><Hyperlink NavigateUri="https://github.com/youtubediscord/zapret" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">youtubediscord/zapret</Hyperlink>
+										</TextBlock>
+									</StackPanel>
+
+								</StackPanel>
+							</ScrollViewer>
+						</Border>
+
+					</Grid>
+				</Grid>
+			</Grid>
+
+			<!-- ═══════════ STATUS BAR ═══════════ -->
+			<Border Grid.Row="2" Background="#010409" BorderBrush="#21262D" BorderThickness="0,1,0,0"
+                    CornerRadius="0,0,4,4">
+				<Grid Margin="14,0">
+					<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="11" Foreground="#8B949E"
+                               VerticalAlignment="Center" HorizontalAlignment="Left">
+                        <Run Text="v"/><Run Text="{Binding AppVersion, Mode=OneWay}"/>
+					</TextBlock>
+					<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="11" Foreground="#8B949E"
+                               VerticalAlignment="Center" HorizontalAlignment="Right">
+						<TextBlock.Style>
+							<Style TargetType="TextBlock">
+								<Setter Property="Text" Value="Ready"/>
+								<Style.Triggers>
+									<DataTrigger Binding="{Binding IsRunning}" Value="True">
+										<Setter Property="Text" Value="● Active"/>
+										<Setter Property="Foreground" Value="#3FB950"/>
+									</DataTrigger>
+								</Style.Triggers>
+							</Style>
+						</TextBlock.Style>
+					</TextBlock>
+				</Grid>
+			</Border>
+
+		</Grid>
+	</Border>
+</Window>
