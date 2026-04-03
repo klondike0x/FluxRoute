@@ -50,6 +50,11 @@ public static class ConnectivityChecker
         ["Instagram"] =
         [
             new TargetEntry { Key = "Instagram", Kind = TargetKind.Http, Value = "https://www.instagram.com" }
+        ],
+        ["Telegram"] =
+        [
+            new TargetEntry { Key = "Telegram", Kind = TargetKind.Http, Value = "https://web.telegram.org" },
+            new TargetEntry { Key = "TelegramMe", Kind = TargetKind.Http, Value = "https://t.me" }
         ]
     };
 

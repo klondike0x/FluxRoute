@@ -148,6 +148,8 @@ public partial class MainViewModel : ObservableObject
     partial void OnSiteTwitchChanged(bool value) => SaveSettings();
     [ObservableProperty] private bool siteInstagram = true;
     partial void OnSiteInstagramChanged(bool value) => SaveSettings();
+    [ObservableProperty] private bool siteTelegram = true;
+    partial void OnSiteTelegramChanged(bool value) => SaveSettings();
 
     private readonly OrchestratorService _orchestrator;
     private readonly DispatcherTimer _orchestratorUiTimer = new(DispatcherPriority.Render) { Interval = TimeSpan.FromSeconds(1) };
@@ -324,6 +326,7 @@ public partial class MainViewModel : ObservableObject
         SiteGoogle = settings.SiteGoogle;
         SiteTwitch = settings.SiteTwitch;
         SiteInstagram = settings.SiteInstagram;
+        SiteTelegram = settings.SiteTelegram;
         AutoUpdateEnabled = settings.AutoUpdateEnabled;
         AutoStartEnabled = settings.AutoStartEnabled;
         MinimizeToTray = settings.MinimizeToTray;
@@ -344,6 +347,7 @@ public partial class MainViewModel : ObservableObject
             SiteGoogle = SiteGoogle,
             SiteTwitch = SiteTwitch,
             SiteInstagram = SiteInstagram,
+            SiteTelegram = SiteTelegram,
             AutoUpdateEnabled = AutoUpdateEnabled,
             AutoStartEnabled = AutoStartEnabled,
             MinimizeToTray = MinimizeToTray,
@@ -494,6 +498,7 @@ public partial class MainViewModel : ObservableObject
         if (SiteGoogle) sites.Add("Google");
         if (SiteTwitch) sites.Add("Twitch");
         if (SiteInstagram) sites.Add("Instagram");
+        if (SiteTelegram) sites.Add("Telegram");
         _orchestrator.EnabledSites = sites;
     }
 

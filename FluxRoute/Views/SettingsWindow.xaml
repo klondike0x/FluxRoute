@@ -323,6 +323,7 @@
                             <CheckBox Content="Google" IsChecked="{Binding SiteGoogle}" Margin="0,4,16,4"/>
                             <CheckBox Content="Twitch" IsChecked="{Binding SiteTwitch}" Margin="0,4,16,4"/>
                             <CheckBox Content="Instagram" IsChecked="{Binding SiteInstagram}" Margin="0,4,16,4"/>
+                            <CheckBox Content="Telegram" IsChecked="{Binding SiteTelegram}" Margin="0,4,16,4"/>
                         </WrapPanel>
 
                         <Rectangle Style="{StaticResource Sep}"/>

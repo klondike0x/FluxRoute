@@ -13,7 +13,7 @@ public sealed class OrchestratorService : IDisposable
 {
     public TimeSpan CheckInterval { get; set; } = TimeSpan.FromMinutes(20);
     public double FailThreshold { get; set; } = 0.5;
-    public HashSet<string> EnabledSites { get; set; } = ["YouTube", "Discord", "Google", "Twitch", "Instagram"];
+    public HashSet<string> EnabledSites { get; set; } = ["YouTube", "Discord", "Google", "Twitch", "Instagram", "Telegram"];
 
     public bool IsRunning => _cts is not null;
     public bool IsScanning { get; private set; }
