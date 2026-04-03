@@ -33,10 +33,10 @@ jobs:
         run: dotnet restore .\FluxRoute.slnx
 
       - name: Publish win-x64
-        run: dotnet publish .\FluxRoute\FluxRoute.csproj -c Release -r win-x64 --self-contained true -o .\publish-x64
+        run: dotnet publish .\FluxRoute\FluxRoute.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o .\publish-x64
 
       - name: Publish win-x86
-        run: dotnet publish .\FluxRoute\FluxRoute.csproj -c Release -r win-x86 --self-contained true -o .\publish-x86
+        run: dotnet publish .\FluxRoute\FluxRoute.csproj -c Release -r win-x86 --self-contained true -p:PublishSingleFile=true -o .\publish-x86
 
       - name: Create ZIPs
         shell: pwsh
