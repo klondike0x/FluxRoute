@@ -1410,7 +1410,29 @@
                                             <Run Text="• "/><Hyperlink NavigateUri="https://github.com/Virenbar/ZapretControl" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">Virenbar/ZapretControl</Hyperlink>
 										</TextBlock>
 										<TextBlock FontFamily="Segoe UI" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
-                                            <Run Text="• "/><Hyperlink NavigateUri="https://github.com/youtubediscord/zapret" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">youtubediscord/zapret</Hyperlink>
+											<Run Text="• "/><Hyperlink NavigateUri="https://github.com/youtubediscord/zapret" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">youtubediscord/zapret</Hyperlink>
+										</TextBlock>
+									</StackPanel>
+
+									<Rectangle Style="{StaticResource Sep}"/>
+
+									<TextBlock Style="{StaticResource SecH}" Text="ПОЛЕЗНЫЕ ССЫЛКИ"/>
+									<StackPanel Margin="8,0,0,0">
+										<TextBlock FontFamily="Segoe UI" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+											<Run Text="• "/><Hyperlink NavigateUri="https://github.com/klondike0x/FluxRoute" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">FluxRoute на GitHub</Hyperlink>
+											<Run Text=" — репозиторий проекта"/>
+										</TextBlock>
+										<TextBlock FontFamily="Segoe UI" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+											<Run Text="• "/><Hyperlink NavigateUri="https://github.com/klondike0x/FluxRoute/releases" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">Релизы</Hyperlink>
+											<Run Text=" — скачать последнюю версию"/>
+										</TextBlock>
+										<TextBlock FontFamily="Segoe UI" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+											<Run Text="• "/><Hyperlink NavigateUri="https://github.com/klondike0x/FluxRoute/issues" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">Issues</Hyperlink>
+											<Run Text=" — баг-репорты и предложения"/>
+										</TextBlock>
+										<TextBlock FontFamily="Segoe UI" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+											<Run Text="• "/><Hyperlink NavigateUri="https://github.com/klondike0x" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">klondike0x</Hyperlink>
+											<Run Text=" — страница автора на GitHub"/>
 										</TextBlock>
 									</StackPanel>
 
