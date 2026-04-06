@@ -44,16 +44,48 @@
                         Padding="16,8" FontSize="13" Cursor="Hand" Margin="0,0,10,0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                            <Border x:Name="Bd"
                                     BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                    Padding="{TemplateBinding Padding}">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    BorderThickness="{TemplateBinding BorderThickness}">
+                                <Grid>
+                                    <Border Background="{TemplateBinding Background}"/>
+                                    <Border x:Name="HoverOverlay" Opacity="0">
+                                        <Border.Background>
+                                            <SolidColorBrush Color="#161B22"/>
+                                        </Border.Background>
+                                    </Border>
+                                    <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="#161B22"/>
                                     <Setter Property="Foreground" Value="#E6EDF3"/>
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="HoverOverlay"
+                                                                 Storyboard.TargetProperty="Opacity"
+                                                                 To="1" Duration="0:0:0.15">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut"/>
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                    <Trigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="HoverOverlay"
+                                                                 Storyboard.TargetProperty="Opacity"
+                                                                 To="0" Duration="0:0:0.2">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut"/>
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.ExitActions>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -66,15 +98,47 @@
                         Padding="16,8" FontSize="13" FontWeight="SemiBold" Cursor="Hand">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                            <Border x:Name="Bd"
                                     BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                    Padding="{TemplateBinding Padding}">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    BorderThickness="{TemplateBinding BorderThickness}">
+                                <Grid>
+                                    <Border Background="{TemplateBinding Background}"/>
+                                    <Border x:Name="HoverOverlay" Opacity="0">
+                                        <Border.Background>
+                                            <SolidColorBrush Color="#161B22"/>
+                                        </Border.Background>
+                                    </Border>
+                                    <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="#161B22"/>
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="HoverOverlay"
+                                                                 Storyboard.TargetProperty="Opacity"
+                                                                 To="1" Duration="0:0:0.15">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut"/>
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                    <Trigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="HoverOverlay"
+                                                                 Storyboard.TargetProperty="Opacity"
+                                                                 To="0" Duration="0:0:0.2">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut"/>
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.ExitActions>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>

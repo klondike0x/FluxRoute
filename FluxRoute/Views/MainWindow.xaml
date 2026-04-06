@@ -34,17 +34,49 @@
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="Button">
-						<Border x:Name="Bd" Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="{TemplateBinding Padding}">
-							<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+						<Border x:Name="Bd"
+							BorderBrush="{TemplateBinding BorderBrush}"
+							BorderThickness="{TemplateBinding BorderThickness}">
+							<Grid>
+								<Border Background="{TemplateBinding Background}"/>
+								<Border x:Name="HoverOverlay" Opacity="0">
+									<Border.Background>
+										<SolidColorBrush Color="#1C2128"/>
+									</Border.Background>
+								</Border>
+								<ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+							</Grid>
 						</Border>
 						<ControlTemplate.Triggers>
 							<Trigger Property="IsMouseOver" Value="True">
-								<Setter TargetName="Bd" Property="Background" Value="#1C2128"/>
 								<Setter Property="Foreground" Value="#E6EDF3"/>
 								<Setter TargetName="Bd" Property="BorderBrush" Value="#4FC3F7"/>
+								<Trigger.EnterActions>
+									<BeginStoryboard>
+										<Storyboard>
+											<DoubleAnimation Storyboard.TargetName="HoverOverlay"
+												Storyboard.TargetProperty="Opacity"
+												To="1" Duration="0:0:0.15">
+												<DoubleAnimation.EasingFunction>
+													<CubicEase EasingMode="EaseOut"/>
+												</DoubleAnimation.EasingFunction>
+											</DoubleAnimation>
+										</Storyboard>
+									</BeginStoryboard>
+								</Trigger.EnterActions>
+								<Trigger.ExitActions>
+									<BeginStoryboard>
+										<Storyboard>
+											<DoubleAnimation Storyboard.TargetName="HoverOverlay"
+												Storyboard.TargetProperty="Opacity"
+												To="0" Duration="0:0:0.2">
+												<DoubleAnimation.EasingFunction>
+													<CubicEase EasingMode="EaseOut"/>
+												</DoubleAnimation.EasingFunction>
+											</DoubleAnimation>
+										</Storyboard>
+									</BeginStoryboard>
+								</Trigger.ExitActions>
 							</Trigger>
 							<Trigger Property="IsEnabled" Value="False">
 								<Setter Property="Opacity" Value="0.4"/>
@@ -314,14 +346,46 @@
 							<Button.Template>
 								<ControlTemplate TargetType="Button">
 									<Border x:Name="Bd" Background="Transparent">
-																				<TextBlock Text="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="10"
-																					   Foreground="#8B949E" x:Name="Ico"
-																					   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-																			</Border>
-																			<ControlTemplate.Triggers>
-																				<Trigger Property="IsMouseOver" Value="True">
-																					<Setter TargetName="Bd" Property="Background" Value="#1C2128"/>
-																					<Setter TargetName="Ico" Property="Foreground" Value="#E6EDF3"/>
+										<Grid>
+											<Border x:Name="HoverOverlay" Opacity="0">
+												<Border.Background>
+													<SolidColorBrush Color="#1C2128"/>
+												</Border.Background>
+											</Border>
+											<TextBlock Text="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+												Foreground="#8B949E" x:Name="Ico"
+												HorizontalAlignment="Center" VerticalAlignment="Center"/>
+										</Grid>
+									</Border>
+									<ControlTemplate.Triggers>
+										<Trigger Property="IsMouseOver" Value="True">
+											<Setter TargetName="Ico" Property="Foreground" Value="#E6EDF3"/>
+											<Trigger.EnterActions>
+												<BeginStoryboard>
+													<Storyboard>
+														<DoubleAnimation Storyboard.TargetName="HoverOverlay"
+															Storyboard.TargetProperty="Opacity"
+															To="1" Duration="0:0:0.15">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+													</Storyboard>
+												</BeginStoryboard>
+											</Trigger.EnterActions>
+											<Trigger.ExitActions>
+												<BeginStoryboard>
+													<Storyboard>
+														<DoubleAnimation Storyboard.TargetName="HoverOverlay"
+															Storyboard.TargetProperty="Opacity"
+															To="0" Duration="0:0:0.2">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+													</Storyboard>
+												</BeginStoryboard>
+											</Trigger.ExitActions>
 										</Trigger>
 									</ControlTemplate.Triggers>
 								</ControlTemplate>
@@ -331,14 +395,46 @@
 							<Button.Template>
 								<ControlTemplate TargetType="Button">
 									<Border x:Name="Bd" Background="Transparent">
-																				<TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="10"
-																					   Foreground="#8B949E" x:Name="Ico"
-																					   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+										<Grid>
+											<Border x:Name="HoverOverlay" Opacity="0">
+												<Border.Background>
+													<SolidColorBrush Color="#DA3633"/>
+												</Border.Background>
+											</Border>
+											<TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+												Foreground="#8B949E" x:Name="Ico"
+												HorizontalAlignment="Center" VerticalAlignment="Center"/>
+										</Grid>
 									</Border>
 									<ControlTemplate.Triggers>
 										<Trigger Property="IsMouseOver" Value="True">
-											<Setter TargetName="Bd" Property="Background" Value="#DA3633"/>
 											<Setter TargetName="Ico" Property="Foreground" Value="#E6EDF3"/>
+											<Trigger.EnterActions>
+												<BeginStoryboard>
+													<Storyboard>
+														<DoubleAnimation Storyboard.TargetName="HoverOverlay"
+															Storyboard.TargetProperty="Opacity"
+															To="1" Duration="0:0:0.15">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+													</Storyboard>
+												</BeginStoryboard>
+											</Trigger.EnterActions>
+											<Trigger.ExitActions>
+												<BeginStoryboard>
+													<Storyboard>
+														<DoubleAnimation Storyboard.TargetName="HoverOverlay"
+															Storyboard.TargetProperty="Opacity"
+															To="0" Duration="0:0:0.2">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+													</Storyboard>
+												</BeginStoryboard>
+											</Trigger.ExitActions>
 										</Trigger>
 									</ControlTemplate.Triggers>
 								</ControlTemplate>
@@ -362,17 +458,48 @@
 						<Button Height="36" Command="{Binding ToggleSidebarCommand}" Cursor="Hand">
 							<Button.Template>
 								<ControlTemplate TargetType="Button">
-									<Border x:Name="Bd" Background="Transparent"
-											BorderThickness="3,0,0,0" BorderBrush="Transparent">
-										<TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-												   Foreground="#8B949E" x:Name="Ico" Margin="10,8"
-												   Width="20" TextAlignment="Center"
-												   HorizontalAlignment="Left" VerticalAlignment="Center"/>
+									<Border x:Name="Bd" Background="Transparent" BorderThickness="3,0,0,0" BorderBrush="Transparent">
+										<Grid>
+											<Border x:Name="HoverOverlay" Opacity="0">
+												<Border.Background>
+													<SolidColorBrush Color="#161B22"/>
+												</Border.Background>
+											</Border>
+											<TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+												Foreground="#8B949E" x:Name="Ico" Margin="10,8"
+												Width="20" TextAlignment="Center"
+												HorizontalAlignment="Left" VerticalAlignment="Center"/>
+										</Grid>
 									</Border>
 									<ControlTemplate.Triggers>
 										<Trigger Property="IsMouseOver" Value="True">
-											<Setter TargetName="Bd" Property="Background" Value="#161B22"/>
 											<Setter TargetName="Ico" Property="Foreground" Value="#E6EDF3"/>
+											<Trigger.EnterActions>
+												<BeginStoryboard>
+													<Storyboard>
+														<DoubleAnimation Storyboard.TargetName="HoverOverlay"
+															Storyboard.TargetProperty="Opacity"
+															To="1" Duration="0:0:0.15">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+													</Storyboard>
+												</BeginStoryboard>
+											</Trigger.EnterActions>
+											<Trigger.ExitActions>
+												<BeginStoryboard>
+													<Storyboard>
+														<DoubleAnimation Storyboard.TargetName="HoverOverlay"
+															Storyboard.TargetProperty="Opacity"
+															To="0" Duration="0:0:0.2">
+															<DoubleAnimation.EasingFunction>
+																<CubicEase EasingMode="EaseOut"/>
+															</DoubleAnimation.EasingFunction>
+														</DoubleAnimation>
+													</Storyboard>
+												</BeginStoryboard>
+											</Trigger.ExitActions>
 										</Trigger>
 									</ControlTemplate.Triggers>
 								</ControlTemplate>
