@@ -112,6 +112,12 @@ public partial class MainViewModel : ObservableObject
     };
     partial void OnSelectedTabIndexChanged(int value) => OnPropertyChanged(nameof(SelectedTabName));
 
+    // ── Боковая панель ──
+    [ObservableProperty] private bool isSidebarExpanded = true;
+
+    [RelayCommand]
+    private void ToggleSidebar() => IsSidebarExpanded = !IsSidebarExpanded;
+
     // ── Компактный интерфейс ──
     [ObservableProperty] private bool isSettingsOpen = false;
     [ObservableProperty] private bool isRunning = false;

@@ -129,6 +129,8 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(MainViewModel.SelectedTabIndex))
             AnimateNavIndicator(_vm.SelectedTabIndex);
+        if (e.PropertyName == nameof(MainViewModel.IsSidebarExpanded))
+            AnimateSidebar(_vm.IsSidebarExpanded);
     }
 
     private void AnimateNavIndicator(int tabIndex)
@@ -140,6 +142,17 @@ public partial class MainWindow : Window
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
         };
         NavIndicatorTransform.BeginAnimation(TranslateTransform.YProperty, animation);
+    }
+
+    private void AnimateSidebar(bool expanded)
+    {
+        var anim = new DoubleAnimation
+        {
+            To = expanded ? 165 : 48,
+            Duration = TimeSpan.FromMilliseconds(200),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+        };
+        SidebarBorder.BeginAnimation(WidthProperty, anim);
     }
 
     private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

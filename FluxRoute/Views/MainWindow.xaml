@@ -23,7 +23,7 @@
 		<!-- ══════ TERMINAL BUTTON ══════ -->
 		<Style x:Key="TermBtn" TargetType="Button">
 			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="FontFamily" Value="Segoe UI"/>
 			<Setter Property="FontSize" Value="13"/>
 			<Setter Property="Foreground" Value="#8B949E"/>
 			<Setter Property="Background" Value="Transparent"/>
@@ -76,7 +76,7 @@
 		<!-- ══════ NAV BUTTON ══════ -->
 		<Style x:Key="NavBtn" TargetType="Button">
 			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="FontFamily" Value="Segoe UI"/>
 			<Setter Property="FontSize" Value="13"/>
 			<Setter Property="Foreground" Value="#8B949E"/>
 			<Setter Property="Background" Value="Transparent"/>
@@ -139,7 +139,7 @@
 
 		<!-- ══════ SECTION HEADER ══════ -->
 		<Style x:Key="SecH" TargetType="TextBlock">
-			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="FontFamily" Value="Segoe UI"/>
 			<Setter Property="Foreground" Value="#4FC3F7"/>
 			<Setter Property="FontSize" Value="12"/>
 			<Setter Property="FontWeight" Value="Bold"/>
@@ -148,7 +148,7 @@
 
 		<!-- ══════ LABEL ══════ -->
 		<Style x:Key="Lbl" TargetType="TextBlock">
-			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="FontFamily" Value="Segoe UI"/>
 			<Setter Property="Foreground" Value="#8B949E"/>
 			<Setter Property="FontSize" Value="13"/>
 			<Setter Property="VerticalAlignment" Value="Center"/>
@@ -156,7 +156,7 @@
 
 		<!-- ══════ VALUE ══════ -->
 		<Style x:Key="Val" TargetType="TextBlock">
-			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="FontFamily" Value="Segoe UI"/>
 			<Setter Property="Foreground" Value="#E6EDF3"/>
 			<Setter Property="FontSize" Value="13"/>
 			<Setter Property="VerticalAlignment" Value="Center"/>
@@ -185,7 +185,7 @@
 			<Setter Property="Foreground" Value="#E6EDF3"/>
 			<Setter Property="BorderBrush" Value="#30363D"/>
 			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="FontFamily" Value="Segoe UI"/>
 			<Setter Property="FontSize" Value="12"/>
 			<Setter Property="Height" Value="28"/>
 			<Setter Property="Padding" Value="6,3"/>
@@ -208,14 +208,14 @@
 										<ContentPresenter.Resources>
 											<Style TargetType="TextBlock">
 												<Setter Property="Foreground" Value="#E6EDF3"/>
-												<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+												<Setter Property="FontFamily" Value="Segoe UI"/>
 												<Setter Property="FontSize" Value="12"/>
 											</Style>
 										</ContentPresenter.Resources>
 									</ContentPresenter>
 									<TextBlock Grid.Column="1" Text="▾" Foreground="#8B949E"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                                               FontSize="11" FontFamily="Cascadia Code, Consolas"/>
+                                               FontSize="11" FontFamily="Segoe UI"/>
 									<ToggleButton Grid.Column="0" Grid.ColumnSpan="2"
                                                   IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
                                                   Background="Transparent" BorderThickness="0"
@@ -242,7 +242,7 @@
 		<Style TargetType="ComboBoxItem">
 			<Setter Property="Background" Value="#161B22"/>
 			<Setter Property="Foreground" Value="#E6EDF3"/>
-			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="FontFamily" Value="Segoe UI"/>
 			<Setter Property="FontSize" Value="12"/>
 			<Setter Property="Padding" Value="8,5"/>
 			<Setter Property="Cursor" Value="Hand"/>
@@ -269,7 +269,7 @@
 		<!-- ══════ CHECKBOX ══════ -->
 		<Style TargetType="CheckBox">
 			<Setter Property="Foreground" Value="#8B949E"/>
-			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="FontFamily" Value="Segoe UI"/>
 			<Setter Property="FontSize" Value="13"/>
 			<Setter Property="Margin" Value="0,4"/>
 			<Setter Property="Cursor" Value="Hand"/>
@@ -287,7 +287,7 @@
 			<Setter Property="Background" Value="#161B22"/>
 			<Setter Property="Foreground" Value="#E6EDF3"/>
 			<Setter Property="BorderBrush" Value="#30363D"/>
-			<Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+			<Setter Property="FontFamily" Value="Segoe UI"/>
 			<Setter Property="FontSize" Value="13"/>
 			<Setter Property="Padding" Value="6,4"/>
 			<Setter Property="CaretBrush" Value="#E6EDF3"/>
@@ -306,7 +306,7 @@
 			<Border Grid.Row="0" Background="#010409" CornerRadius="4,4,0,0"
                     MouseLeftButtonDown="Header_MouseLeftButtonDown">
 				<Grid Margin="14,0">
-					<TextBlock Text="FluxRoute" FontFamily="Cascadia Code, Consolas" FontSize="14" FontWeight="Bold"
+					<TextBlock Text="FluxRoute" FontFamily="Segoe UI" FontSize="14" FontWeight="Bold"
                                Foreground="#E6EDF3" VerticalAlignment="Center"/>
 					<StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                                 VerticalAlignment="Center" Margin="0,0,-6,0">
@@ -314,27 +314,16 @@
 							<Button.Template>
 								<ControlTemplate TargetType="Button">
 									<Border x:Name="Bd" Background="Transparent">
-										<TextBlock Text="—" FontFamily="Cascadia Code, Consolas" FontSize="13"
-                                                   Foreground="#8B949E" x:Name="Ico"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-									</Border>
-									<ControlTemplate.Triggers>
-										<Trigger Property="IsMouseOver" Value="True">
-											<Setter TargetName="Bd" Property="Background" Value="#1C2128"/>
-											<Setter TargetName="Ico" Property="Foreground" Value="#E6EDF3"/>
+																				<TextBlock Text="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+																					   Foreground="#8B949E" x:Name="Ico"
+																					   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+																			</Border>
+																			<ControlTemplate.Triggers>
+																				<Trigger Property="IsMouseOver" Value="True">
+																					<Setter TargetName="Bd" Property="Background" Value="#1C2128"/>
+																					<Setter TargetName="Ico" Property="Foreground" Value="#E6EDF3"/>
 										</Trigger>
 									</ControlTemplate.Triggers>
-								</ControlTemplate>
-							</Button.Template>
-						</Button>
-						<Button Width="36" Height="36" IsEnabled="False">
-							<Button.Template>
-								<ControlTemplate TargetType="Button">
-									<Border Background="Transparent">
-										<TextBlock Text="□" FontFamily="Cascadia Code, Consolas" FontSize="13"
-                                                   Foreground="#484F58"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-									</Border>
 								</ControlTemplate>
 							</Button.Template>
 						</Button>
@@ -342,9 +331,9 @@
 							<Button.Template>
 								<ControlTemplate TargetType="Button">
 									<Border x:Name="Bd" Background="Transparent">
-										<TextBlock Text="✕" FontFamily="Cascadia Code, Consolas" FontSize="12"
-                                                   Foreground="#8B949E" x:Name="Ico"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+																				<TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+																					   Foreground="#8B949E" x:Name="Ico"
+																					   HorizontalAlignment="Center" VerticalAlignment="Center"/>
 									</Border>
 									<ControlTemplate.Triggers>
 										<Trigger Property="IsMouseOver" Value="True">
@@ -362,16 +351,33 @@
 			<!-- ═══════════ BODY ═══════════ -->
 			<Grid Grid.Row="1">
 				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="165"/>
+					<ColumnDefinition Width="Auto"/>
 					<ColumnDefinition Width="Auto"/>
 					<ColumnDefinition Width="*"/>
 				</Grid.ColumnDefinitions>
 
 				<!-- ─── SIDEBAR ─── -->
-				<Border Grid.Column="0" Background="#0D1117">
-					<StackPanel Margin="0,14,0,0">
-						<TextBlock Text="  ◇ FluxRoute" FontFamily="Cascadia Code, Consolas" FontSize="14"
-                                   FontWeight="Bold" Foreground="#E6EDF3" Margin="6,0,0,16"/>
+				<Border Grid.Column="0" Background="#0D1117" x:Name="SidebarBorder" Width="165" ClipToBounds="True">
+					<StackPanel>
+						<Button Height="36" Command="{Binding ToggleSidebarCommand}" Cursor="Hand">
+							<Button.Template>
+								<ControlTemplate TargetType="Button">
+									<Border x:Name="Bd" Background="Transparent"
+											BorderThickness="3,0,0,0" BorderBrush="Transparent">
+										<TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+												   Foreground="#8B949E" x:Name="Ico" Margin="10,8"
+												   Width="20" TextAlignment="Center"
+												   HorizontalAlignment="Left" VerticalAlignment="Center"/>
+									</Border>
+									<ControlTemplate.Triggers>
+										<Trigger Property="IsMouseOver" Value="True">
+											<Setter TargetName="Bd" Property="Background" Value="#161B22"/>
+											<Setter TargetName="Ico" Property="Foreground" Value="#E6EDF3"/>
+										</Trigger>
+									</ControlTemplate.Triggers>
+								</ControlTemplate>
+							</Button.Template>
+						</Button>
 
 						<Grid>
 							<StackPanel>
@@ -387,7 +393,10 @@
 											</Style.Triggers>
 										</Style>
 									</Button.Style>
-									<TextBlock Text="[🏠 Главная]" FontFamily="Cascadia Code, Consolas"/>
+									<StackPanel Orientation="Horizontal">
+																				<TextBlock Text="🏠" Width="20" TextAlignment="Center"/>
+																				<TextBlock Text="Главная" Margin="6,0,0,0" Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolToVis}}"/>
+																			</StackPanel>
 								</Button>
 
 								<!-- Nav: Оркестратор -->
@@ -402,7 +411,10 @@
 											</Style.Triggers>
 										</Style>
 									</Button.Style>
-									<TextBlock Text="[⚙ Оркестр.]" FontFamily="Cascadia Code, Consolas"/>
+									<StackPanel Orientation="Horizontal">
+																				<TextBlock Text="⚙" Width="20" TextAlignment="Center"/>
+																				<TextBlock Text="Оркестр." Margin="6,0,0,0" Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolToVis}}"/>
+																			</StackPanel>
 								</Button>
 
 								<!-- Nav: Обновление -->
@@ -417,7 +429,10 @@
 											</Style.Triggers>
 										</Style>
 									</Button.Style>
-									<TextBlock Text="[🔄 Обновление]" FontFamily="Cascadia Code, Consolas"/>
+									<StackPanel Orientation="Horizontal">
+																				<TextBlock Text="🔄" Width="20" TextAlignment="Center"/>
+																				<TextBlock Text="Обновление" Margin="6,0,0,0" Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolToVis}}"/>
+																			</StackPanel>
 								</Button>
 
 								<!-- Nav: Диагностика -->
@@ -432,7 +447,10 @@
 											</Style.Triggers>
 										</Style>
 									</Button.Style>
-									<TextBlock Text="[🔧 Диагн.]" FontFamily="Cascadia Code, Consolas"/>
+									<StackPanel Orientation="Horizontal">
+																				<TextBlock Text="🔧" Width="20" TextAlignment="Center"/>
+																				<TextBlock Text="Диагн." Margin="6,0,0,0" Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolToVis}}"/>
+																			</StackPanel>
 								</Button>
 
 								<!-- Nav: Сервис -->
@@ -447,7 +465,10 @@
 											</Style.Triggers>
 										</Style>
 									</Button.Style>
-									<TextBlock Text="[🛠 Сервис]" FontFamily="Cascadia Code, Consolas"/>
+									<StackPanel Orientation="Horizontal">
+																				<TextBlock Text="🛠" Width="20" TextAlignment="Center"/>
+																				<TextBlock Text="Сервис" Margin="6,0,0,0" Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolToVis}}"/>
+																			</StackPanel>
 								</Button>
 
 								<!-- Nav: О программе -->
@@ -462,7 +483,10 @@
 											</Style.Triggers>
 										</Style>
 									</Button.Style>
-									<TextBlock Text="[ℹ О программе]" FontFamily="Cascadia Code, Consolas"/>
+									<StackPanel Orientation="Horizontal">
+																				<TextBlock Text="ℹ" Width="20" TextAlignment="Center"/>
+																				<TextBlock Text="О программе" Margin="6,0,0,0" Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolToVis}}"/>
+																			</StackPanel>
 								</Button>
 							</StackPanel>
 
@@ -492,7 +516,7 @@
 
 					<!-- Page Title -->
 					<Border Grid.Row="0" BorderBrush="#21262D" BorderThickness="0,0,0,1" Padding="16,8">
-						<TextBlock Text="{Binding SelectedTabName}" FontFamily="Cascadia Code, Consolas" FontSize="15"
+						<TextBlock Text="{Binding SelectedTabName}" FontFamily="Segoe UI" FontSize="15"
                                    FontWeight="Bold" Foreground="#E6EDF3"/>
 					</Border>
 
@@ -544,9 +568,9 @@
                                             Padding="10,8" Margin="0,0,0,12"
                                             Visibility="{Binding IsDownloadingEngine, Converter={StaticResource BoolToVis}}">
 										<StackPanel>
-											<TextBlock Text="⬇️ Первый запуск — скачиваем Flowseal..." FontFamily="Cascadia Code, Consolas"
+											<TextBlock Text="⬇️ Первый запуск — скачиваем Flowseal..." FontFamily="Segoe UI"
                                                        Foreground="#FFD700" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
-											<TextBlock Text="{Binding EngineDownloadStatus}" FontFamily="Cascadia Code, Consolas"
+											<TextBlock Text="{Binding EngineDownloadStatus}" FontFamily="Segoe UI"
                                                        Foreground="#CCAA00" FontSize="11" TextWrapping="Wrap"/>
 										</StackPanel>
 									</Border>
@@ -562,10 +586,10 @@
 										<!-- Status card -->
 										<Border Grid.Column="0" Style="{StaticResource Card}">
 											<StackPanel>
-												<TextBlock Text="Статус" FontFamily="Cascadia Code, Consolas" Foreground="#4FC3F7"
+												<TextBlock Text="Статус" FontFamily="Segoe UI" Foreground="#4FC3F7"
                                                            FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
 												<StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-													<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="13" Margin="0,0,6,0">
+													<TextBlock FontFamily="Segoe UI" FontSize="13" Margin="0,0,6,0">
 														<TextBlock.Style>
 															<Style TargetType="TextBlock">
 																<Setter Property="Text" Value="○"/>
@@ -579,7 +603,7 @@
 															</Style>
 														</TextBlock.Style>
 													</TextBlock>
-													<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="13">
+													<TextBlock FontFamily="Segoe UI" FontSize="13">
 														<TextBlock.Style>
 															<Style TargetType="TextBlock">
 																<Setter Property="Text" Value="Защита не активна"/>
@@ -594,10 +618,10 @@
 														</TextBlock.Style>
 													</TextBlock>
 												</StackPanel>
-												<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0">
+												<TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0">
                                                     <Run Text="PID: "/><Run Text="{Binding PidText, Mode=OneWay}" Foreground="#E6EDF3"/>
 												</TextBlock>
-												<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="12" Foreground="#8B949E">
+												<TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E">
                                                     <Run Text="Uptime: "/><Run Text="{Binding UptimeText, Mode=OneWay}" Foreground="#E6EDF3"/>
 												</TextBlock>
 											</StackPanel>
@@ -606,19 +630,19 @@
 										<!-- Profile card -->
 										<Border Grid.Column="2" Style="{StaticResource Card}">
 											<StackPanel>
-												<TextBlock Text="Профиль" FontFamily="Cascadia Code, Consolas" Foreground="#4FC3F7"
+												<TextBlock Text="Профиль" FontFamily="Segoe UI" Foreground="#4FC3F7"
                                                            FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
 												<ComboBox ItemsSource="{Binding Profiles}"
                                                           SelectedItem="{Binding SelectedProfile}"
                                                           Margin="0,0,0,8">
 													<ComboBox.ItemTemplate>
 														<DataTemplate>
-															<TextBlock Text="{Binding DisplayName}" FontFamily="Cascadia Code, Consolas"
+															<TextBlock Text="{Binding DisplayName}" FontFamily="Segoe UI"
                                                                        Foreground="#E6EDF3" FontSize="12"/>
 														</DataTemplate>
 													</ComboBox.ItemTemplate>
 												</ComboBox>
-												<Button Content="[ Обновить список ]" Style="{StaticResource TermBtn}"
+												<Button Content="Обновить список" Style="{StaticResource TermBtn}"
                                                         FontSize="11" Padding="8,4"
                                                         Command="{Binding RefreshProfilesCommand}"
                                                         HorizontalAlignment="Left"/>
@@ -656,15 +680,15 @@
 										<!-- Diagnostics card -->
 										<Border Grid.Column="0" Style="{StaticResource Card}">
 											<StackPanel>
-												<TextBlock Text="Диагностика" FontFamily="Cascadia Code, Consolas" Foreground="#4FC3F7"
+												<TextBlock Text="Диагностика" FontFamily="Segoe UI" Foreground="#4FC3F7"
                                                            FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
-												<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0">
+												<TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0">
                                                     <Run Text="winws.exe: "/><Run Text="{Binding WinwsText, Mode=OneWay}" Foreground="#E6EDF3"/>
 												</TextBlock>
-												<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0">
+												<TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0">
                                                     <Run Text="Engine: "/><Run Text="{Binding CurrentEngineVersion, Mode=OneWay}" Foreground="#E6EDF3"/>
 												</TextBlock>
-												<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0">
+												<TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0">
                                                     <Run Text="Администратор: "/><Run Text="{Binding AdminText, Mode=OneWay}" Foreground="#E6EDF3"/>
 												</TextBlock>
 											</StackPanel>
@@ -673,17 +697,17 @@
 										<!-- Quick Actions card -->
 										<Border Grid.Column="2" Style="{StaticResource Card}">
 											<StackPanel>
-												<TextBlock Text="Быстрые действия" FontFamily="Cascadia Code, Consolas" Foreground="#4FC3F7"
+												<TextBlock Text="Быстрые действия" FontFamily="Segoe UI" Foreground="#4FC3F7"
                                                            FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
-												<Button Content="[ Открыть папку ]" Style="{StaticResource TermBtn}"
+												<Button Content="Открыть папку" Style="{StaticResource TermBtn}"
                                                         FontSize="12" Padding="8,4"
                                                         Command="{Binding OpenEngineFolderCommand}"
                                                         HorizontalAlignment="Left" Margin="0,0,0,4"/>
-												<Button Content="[ Показать логи ]" Style="{StaticResource TermBtn}"
+												<Button Content="Показать логи" Style="{StaticResource TermBtn}"
                                                         FontSize="12" Padding="8,4"
                                                         Command="{Binding ShowLogsCommand}"
                                                         HorizontalAlignment="Left" Margin="0,0,0,4"/>
-												<Button Content="[ Проверить сейчас ]" Style="{StaticResource TermBtn}"
+												<Button Content="Проверить сейчас" Style="{StaticResource TermBtn}"
                                                         FontSize="12" Padding="8,4"
                                                         Command="{Binding CheckNowCommand}"
                                                         HorizontalAlignment="Left"/>
@@ -693,7 +717,7 @@
 
 									<!-- Status line -->
 									<Border BorderBrush="#21262D" BorderThickness="0,1,0,0" Padding="0,8,0,0">
-										<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="12" Foreground="#8B949E" TextWrapping="Wrap">
+										<TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E" TextWrapping="Wrap">
                                             <Run Text="Строка состояния: "/><Run Text="{Binding LastStatusMessage, Mode=OneWay}" Foreground="#E6EDF3"/>
 										</TextBlock>
 									</Border>
@@ -747,10 +771,10 @@
                                                 Command="{Binding ToggleOrchestratorCommand}">
 											<Button.Style>
 												<Style TargetType="Button" BasedOn="{StaticResource TermBtn}">
-													<Setter Property="Content" Value="[ ▶ Запустить оркестратор ]"/>
+													<Setter Property="Content" Value="▶ Запустить оркестратор"/>
 													<Style.Triggers>
 														<DataTrigger Binding="{Binding OrchestratorRunning}" Value="True">
-															<Setter Property="Content" Value="[ ⏹ Остановить оркестратор ]"/>
+															<Setter Property="Content" Value="⏹ Остановить оркестратор"/>
 															<Setter Property="BorderBrush" Value="#DA3633"/>
 															<Setter Property="Foreground" Value="#F85149"/>
 														</DataTrigger>
@@ -758,7 +782,7 @@
 												</Style>
 											</Button.Style>
 										</Button>
-										<Button Content="[ 🔍 Проверить сейчас ]" Style="{StaticResource TermBtn}"
+										<Button Content="🔍 Проверить сейчас" Style="{StaticResource TermBtn}"
                                                 Command="{Binding CheckNowCommand}"/>
 									</StackPanel>
 
@@ -791,18 +815,18 @@
                                             Command="{Binding ScanProfilesCommand}">
 										<Button.Style>
 											<Style TargetType="Button" BasedOn="{StaticResource AccentBtn}">
-												<Setter Property="Content" Value="[ 📊 Сканировать все профили ]"/>
+												<Setter Property="Content" Value="📊 Сканировать все профили"/>
 												<Style.Triggers>
 													<DataTrigger Binding="{Binding IsScanning}" Value="True">
 														<Setter Property="IsEnabled" Value="False"/>
-														<Setter Property="Content" Value="[ ⏳ Сканирование... ]"/>
+														<Setter Property="Content" Value="⏳ Сканирование..."/>
 													</DataTrigger>
 												</Style.Triggers>
 											</Style>
 										</Button.Style>
 									</Button>
 
-									<TextBlock Text="{Binding ScanProgressText}" FontFamily="Cascadia Code, Consolas" Foreground="#4FC3F7"
+									<TextBlock Text="{Binding ScanProgressText}" FontFamily="Segoe UI" Foreground="#4FC3F7"
                                                FontSize="12" Margin="0,0,0,8"
                                                Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}"/>
 
@@ -816,10 +840,10 @@
 															<ColumnDefinition Width="Auto"/>
 														</Grid.ColumnDefinitions>
 														<TextBlock Grid.Column="0" Text="{Binding DisplayName}"
-                                                                   FontFamily="Cascadia Code, Consolas" Foreground="#E6EDF3" FontSize="13"
+                                                                   FontFamily="Segoe UI" Foreground="#E6EDF3" FontSize="13"
                                                                    VerticalAlignment="Center"/>
 														<TextBlock Grid.Column="1" Text="{Binding ScoreText}"
-                                                                   FontFamily="Cascadia Code, Consolas" Foreground="#4FC3F7" FontSize="13"
+                                                                   FontFamily="Segoe UI" Foreground="#4FC3F7" FontSize="13"
                                                                    FontWeight="Bold" VerticalAlignment="Center"/>
 													</Grid>
 												</Border>
@@ -827,7 +851,7 @@
 										</ItemsControl.ItemTemplate>
 									</ItemsControl>
 
-									<Button Content="[ 🗑 Очистить лог ]" Style="{StaticResource TermBtn}"
+									<Button Content="🗑 Очистить лог" Style="{StaticResource TermBtn}"
                                             HorizontalAlignment="Left" Margin="0,10,0,0"
                                             Command="{Binding ClearOrchestratorLogsCommand}"/>
 
@@ -836,7 +860,7 @@
 											<ItemsControl.ItemTemplate>
 												<DataTemplate>
 													<TextBlock Text="{Binding}" Foreground="#8B949E"
-                                                               FontFamily="Cascadia Code, Consolas" FontSize="11" Margin="0,2"/>
+                                                               FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
 												</DataTemplate>
 											</ItemsControl.ItemTemplate>
 										</ItemsControl>
@@ -906,11 +930,11 @@
                                                 Command="{Binding CheckUpdatesCommand}">
 											<Button.Style>
 												<Style TargetType="Button" BasedOn="{StaticResource TermBtn}">
-													<Setter Property="Content" Value="[ 🔍 Проверить ]"/>
+													<Setter Property="Content" Value="🔍 Проверить"/>
 													<Style.Triggers>
 														<DataTrigger Binding="{Binding IsUpdating}" Value="True">
 															<Setter Property="IsEnabled" Value="False"/>
-															<Setter Property="Content" Value="[ ⏳ Обновление... ]"/>
+															<Setter Property="Content" Value="⏳ Обновление..."/>
 														</DataTrigger>
 													</Style.Triggers>
 												</Style>
@@ -919,7 +943,7 @@
 										<Button Command="{Binding InstallUpdatesCommand}">
 											<Button.Style>
 												<Style TargetType="Button" BasedOn="{StaticResource AccentBtn}">
-													<Setter Property="Content" Value="[ ⬆️ Обновить ]"/>
+													<Setter Property="Content" Value="⬆️ Обновить"/>
 													<Style.Triggers>
 														<DataTrigger Binding="{Binding IsUpdating}" Value="True">
 															<Setter Property="IsEnabled" Value="False"/>
@@ -935,7 +959,7 @@
 
 									<Border Background="#1C1500" BorderBrush="#5A4800" BorderThickness="1"
                                             Padding="10,8" Margin="0,0,0,12">
-										<TextBlock TextWrapping="Wrap" FontFamily="Cascadia Code, Consolas" FontSize="11" Foreground="#FFD700"
+										<TextBlock TextWrapping="Wrap" FontFamily="Segoe UI" FontSize="11" Foreground="#FFD700"
                                                    Text="⚠️ При обновлении winws.exe будет остановлен. После установки нужно заново запустить профиль."/>
 									</Border>
 
@@ -945,7 +969,7 @@
 											<ItemsControl.ItemTemplate>
 												<DataTemplate>
 													<TextBlock Text="{Binding}" Foreground="#8B949E"
-                                                               FontFamily="Cascadia Code, Consolas" FontSize="11" Margin="0,2"/>
+                                                               FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
 												</DataTemplate>
 											</ItemsControl.ItemTemplate>
 										</ItemsControl>
@@ -1032,11 +1056,11 @@
 									</Grid>
 
 									<WrapPanel>
-										<Button Content="[ 🔄 Обновить ]" Style="{StaticResource TermBtn}"
+										<Button Content="🔄 Обновить" Style="{StaticResource TermBtn}"
                                                 Margin="0,0,8,8" Command="{Binding RefreshProfilesCommand}"/>
-										<Button Content="[ 📋 Скопировать ]" Style="{StaticResource TermBtn}"
+										<Button Content="📋 Скопировать" Style="{StaticResource TermBtn}"
                                                 Margin="0,0,8,8" Command="{Binding CopyDiagnosticsCommand}"/>
-										<Button Content="[ 📄 Экспорт логов ]" Style="{StaticResource TermBtn}"
+										<Button Content="📄 Экспорт логов" Style="{StaticResource TermBtn}"
                                                 Margin="0,0,8,8" Command="{Binding ExportLogsCommand}"/>
 									</WrapPanel>
 
@@ -1048,7 +1072,7 @@
 											<ItemsControl.ItemTemplate>
 												<DataTemplate>
 													<TextBlock Text="{Binding}" Foreground="#8B949E"
-                                                               FontFamily="Cascadia Code, Consolas" FontSize="11" Margin="0,2"/>
+                                                               FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
 												</DataTemplate>
 											</ItemsControl.ItemTemplate>
 										</ItemsControl>
@@ -1101,7 +1125,7 @@
 									<TextBlock Style="{StaticResource SecH}" Text="GAME FILTER" Margin="0,0,0,8"/>
 									<StackPanel Orientation="Horizontal" Margin="0,0,0,4">
 										<TextBlock Style="{StaticResource Lbl}" Text="Статус: " Margin="0,0,4,0"/>
-										<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="13">
+										<TextBlock FontFamily="Segoe UI" FontSize="13">
 											<TextBlock.Style>
 												<Style TargetType="TextBlock">
 													<Setter Property="Text" Value="❌ Выключен"/>
@@ -1117,17 +1141,17 @@
 											</TextBlock.Style>
 										</TextBlock>
 									</StackPanel>
-									<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#484F58" FontSize="11"
+									<TextBlock FontFamily="Segoe UI" Foreground="#484F58" FontSize="11"
                                                Margin="0,2,0,8" TextWrapping="Wrap"
                                                Text="Расширяет диапазон портов (1024-65535) для обхода в играх."/>
 									<StackPanel Orientation="Horizontal" Margin="0,0,0,8">
 										<Button Command="{Binding ToggleGameFilterCommand}">
 											<Button.Style>
 												<Style TargetType="Button" BasedOn="{StaticResource TermBtn}">
-													<Setter Property="Content" Value="[ 🎮 Включить ]"/>
+													<Setter Property="Content" Value="🎮 Включить"/>
 													<Style.Triggers>
 														<DataTrigger Binding="{Binding GameFilterEnabled}" Value="True">
-															<Setter Property="Content" Value="[ 🎮 Выключить ]"/>
+															<Setter Property="Content" Value="🎮 Выключить"/>
 														</DataTrigger>
 													</Style.Triggers>
 												</Style>
@@ -1146,16 +1170,16 @@
 										<TextBlock Style="{StaticResource Lbl}" Text="Режим: " Margin="0,0,4,0"/>
 										<TextBlock Style="{StaticResource Val}" Text="{Binding IpSetMode}"/>
 									</StackPanel>
-									<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#484F58" FontSize="11"
+									<TextBlock FontFamily="Segoe UI" Foreground="#484F58" FontSize="11"
                                                Margin="0,2,0,8" TextWrapping="Wrap"
                                                Text="loaded — фильтрация по списку IP · none — отключена · any — все адреса"/>
 									<StackPanel Orientation="Horizontal">
-										<Button Content="[ 🔄 Переключить режим ]" Style="{StaticResource TermBtn}"
+										<Button Content="🔄 Переключить режим" Style="{StaticResource TermBtn}"
                                                 Margin="0,0,10,0" Command="{Binding CycleIpSetModeCommand}"/>
 										<Button Command="{Binding UpdateIpSetListCommand}">
 											<Button.Style>
 												<Style TargetType="Button" BasedOn="{StaticResource AccentBtn}">
-													<Setter Property="Content" Value="[ ⬇️ Обновить IPSet ]"/>
+													<Setter Property="Content" Value="⬇️ Обновить IPSet"/>
 													<Style.Triggers>
 														<DataTrigger Binding="{Binding IsServiceBusy}" Value="True">
 															<Setter Property="IsEnabled" Value="False"/>
@@ -1170,10 +1194,10 @@
 
 									<!-- HOSTS -->
 									<TextBlock Style="{StaticResource SecH}" Text="HOSTS FILE"/>
-									<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#484F58" FontSize="11"
+									<TextBlock FontFamily="Segoe UI" Foreground="#484F58" FontSize="11"
                                                Margin="0,0,0,8" TextWrapping="Wrap"
                                                Text="Проверяет и обновляет системный hosts файл."/>
-									<Button Content="[ 🔍 Проверить / обновить Hosts ]" HorizontalAlignment="Left"
+									<Button Content="🔍 Проверить / обновить Hosts" HorizontalAlignment="Left"
                                             Command="{Binding UpdateHostsFileCommand}">
 										<Button.Style>
 											<Style TargetType="Button" BasedOn="{StaticResource TermBtn}">
@@ -1195,17 +1219,17 @@
 										<TextBlock Style="{StaticResource Val}" Text="{Binding ZapretServiceStatus}"/>
 									</StackPanel>
 									<StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-										<Button Content="[ 📦 Установить ]" Style="{StaticResource GreenBtn}"
+										<Button Content="📦 Установить" Style="{StaticResource GreenBtn}"
                                                 Margin="0,0,10,0" Command="{Binding InstallZapretServiceCommand}"/>
-										<Button Content="[ ⏹ Остановить ]" Style="{StaticResource RedBtn}"
+										<Button Content="⏹ Остановить" Style="{StaticResource RedBtn}"
                                                 Margin="0,0,10,0" Command="{Binding ForceStopZapretServiceCommand}"/>
-										<Button Content="[ 🔄 ]" Style="{StaticResource TermBtn}"
+										<Button Content="🔄" Style="{StaticResource TermBtn}"
                                                 Command="{Binding RefreshServiceInfoCommand}"/>
 									</StackPanel>
 
 									<Border Background="#1C1500" BorderBrush="#5A4800" BorderThickness="1"
                                             Padding="10,8" Margin="0,12,0,0">
-										<TextBlock TextWrapping="Wrap" FontFamily="Cascadia Code, Consolas" FontSize="11" Foreground="#FFD700"
+										<TextBlock TextWrapping="Wrap" FontFamily="Segoe UI" FontSize="11" Foreground="#FFD700"
                                                    Text="⚠️ Установка службы запускает service.bat с правами администратора."/>
 									</Border>
 
@@ -1218,7 +1242,7 @@
 												<ItemsControl.ItemTemplate>
 													<DataTemplate>
 														<TextBlock Text="{Binding}" Foreground="#8B949E"
-                                                                   FontFamily="Cascadia Code, Consolas" FontSize="11" Margin="0,2"/>
+                                                                   FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
 													</DataTemplate>
 												</ItemsControl.ItemTemplate>
 											</ItemsControl>
@@ -1269,34 +1293,34 @@
 								<StackPanel Margin="16,12">
 
 									<TextBlock Style="{StaticResource SecH}" Text="ДЛЯ ЧЕГО СОЗДАН ПРОЕКТ" Margin="0,0,0,8"/>
-									<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" TextWrapping="Wrap" FontSize="12"
+									<TextBlock FontFamily="Segoe UI" Foreground="#C9D1D9" TextWrapping="Wrap" FontSize="12"
                                                Text="FluxRoute создан как удобный desktop-интерфейс для управления сетевыми профилями и сценариями обхода ограничений. Главная цель — упростить запуск и переключение стратегий без ручного редактирования bat-файлов."/>
 
 									<Rectangle Style="{StaticResource Sep}"/>
 
 									<TextBlock Style="{StaticResource SecH}" Text="КАК РАБОТАЕТ"/>
-									<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" TextWrapping="Wrap" FontSize="12"
+									<TextBlock FontFamily="Segoe UI" Foreground="#C9D1D9" TextWrapping="Wrap" FontSize="12"
                                                Text="Приложение загружает профили из каталога engine, запускает выбранный сценарий, отслеживает статус процесса и диагностику. Оркестратор анализирует доступность целей и переключает профиль на более стабильный."/>
 
 									<Rectangle Style="{StaticResource Sep}"/>
 
 									<TextBlock Style="{StaticResource SecH}" Text="ОСНОВА ENGINE"/>
-									<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" TextWrapping="Wrap" FontSize="12"
+									<TextBlock FontFamily="Segoe UI" Foreground="#C9D1D9" TextWrapping="Wrap" FontSize="12"
                                                Text="FluxRoute использует экосистему проектов:"/>
 									<StackPanel Margin="8,8,0,0">
-										<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+										<TextBlock FontFamily="Segoe UI" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
                                             <Run Text="• "/><Hyperlink NavigateUri="https://github.com/basil00/WinDivert" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">WinDivert</Hyperlink>
                                             <Run Text=" — низкоуровневая основа"/>
 										</TextBlock>
-										<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+										<TextBlock FontFamily="Segoe UI" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
                                             <Run Text="• "/><Hyperlink NavigateUri="https://github.com/bol-van/zapret" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">bol-van/zapret</Hyperlink>
                                             <Run Text=" — оригинальный проект"/>
 										</TextBlock>
-										<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+										<TextBlock FontFamily="Segoe UI" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
                                             <Run Text="• "/><Hyperlink NavigateUri="https://github.com/bol-van/zapret-win-bundle" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">zapret-win-bundle</Hyperlink>
                                             <Run Text=" — Windows-бандл"/>
 										</TextBlock>
-										<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+										<TextBlock FontFamily="Segoe UI" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
                                             <Run Text="• "/><Hyperlink NavigateUri="https://github.com/Flowseal/zapret-discord-youtube" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">Flowseal/zapret-discord-youtube</Hyperlink>
                                             <Run Text=" — основа engine"/>
 										</TextBlock>
@@ -1306,13 +1330,13 @@
 
 									<TextBlock Style="{StaticResource SecH}" Text="ВДОХНОВЕНИЕ"/>
 									<StackPanel Margin="8,0,0,0">
-										<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+										<TextBlock FontFamily="Segoe UI" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
                                             <Run Text="• "/><Hyperlink NavigateUri="https://github.com/medvedeff-true/Zapret-GUI" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">medvedeff-true/Zapret-GUI</Hyperlink>
 										</TextBlock>
-										<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+										<TextBlock FontFamily="Segoe UI" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
                                             <Run Text="• "/><Hyperlink NavigateUri="https://github.com/Virenbar/ZapretControl" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">Virenbar/ZapretControl</Hyperlink>
 										</TextBlock>
-										<TextBlock FontFamily="Cascadia Code, Consolas" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
+										<TextBlock FontFamily="Segoe UI" Foreground="#C9D1D9" FontSize="12" Margin="0,3">
                                             <Run Text="• "/><Hyperlink NavigateUri="https://github.com/youtubediscord/zapret" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4FC3F7">youtubediscord/zapret</Hyperlink>
 										</TextBlock>
 									</StackPanel>
@@ -1329,11 +1353,11 @@
 			<Border Grid.Row="2" Background="#010409" BorderBrush="#21262D" BorderThickness="0,1,0,0"
                     CornerRadius="0,0,4,4">
 				<Grid Margin="14,0">
-					<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="11" Foreground="#8B949E"
+					<TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
                                VerticalAlignment="Center" HorizontalAlignment="Left">
                         <Run Text="v"/><Run Text="{Binding AppVersion, Mode=OneWay}"/>
 					</TextBlock>
-					<TextBlock FontFamily="Cascadia Code, Consolas" FontSize="11" Foreground="#8B949E"
+					<TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
                                VerticalAlignment="Center" HorizontalAlignment="Right">
 						<TextBlock.Style>
 							<Style TargetType="TextBlock">
