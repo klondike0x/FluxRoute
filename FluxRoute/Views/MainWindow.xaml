@@ -108,26 +108,26 @@
 									<BeginStoryboard>
 										<Storyboard>
 											<DoubleAnimation Storyboard.TargetName="HoverOverlay"
-                                                             Storyboard.TargetProperty="Opacity"
-                                                             To="1" Duration="0:0:0.15">
-												<DoubleAnimation.EasingFunction>
-													<CubicEase EasingMode="EaseOut"/>
-												</DoubleAnimation.EasingFunction>
-											</DoubleAnimation>
-										</Storyboard>
+															 Storyboard.TargetProperty="Opacity"
+															 To="1" Duration="0:0:0.15">
+										<DoubleAnimation.EasingFunction>
+											<CubicEase EasingMode="EaseOut"/>
+										</DoubleAnimation.EasingFunction>
+									</DoubleAnimation>
+								</Storyboard>
 									</BeginStoryboard>
 								</Trigger.EnterActions>
 								<Trigger.ExitActions>
 									<BeginStoryboard>
 										<Storyboard>
 											<DoubleAnimation Storyboard.TargetName="HoverOverlay"
-                                                             Storyboard.TargetProperty="Opacity"
-                                                             To="0" Duration="0:0:0.2">
-												<DoubleAnimation.EasingFunction>
-													<CubicEase EasingMode="EaseOut"/>
-												</DoubleAnimation.EasingFunction>
-											</DoubleAnimation>
-										</Storyboard>
+															 Storyboard.TargetProperty="Opacity"
+															 To="0" Duration="0:0:0.2">
+										<DoubleAnimation.EasingFunction>
+											<CubicEase EasingMode="EaseOut"/>
+										</DoubleAnimation.EasingFunction>
+									</DoubleAnimation>
+								</Storyboard>
 									</BeginStoryboard>
 								</Trigger.ExitActions>
 							</Trigger>
@@ -526,11 +526,8 @@
 						<!-- ╔══════════════════════════════════════╗ -->
 						<!-- ║          TAB 0: ГЛАВНАЯ             ║ -->
 						<!-- ╚══════════════════════════════════════╝ -->
-						<Border RenderTransformOrigin="0.5,0"
+						<Border
                                 d:Visibility="Visible" d:Opacity="1">
-							<Border.RenderTransform>
-								<TranslateTransform/>
-							</Border.RenderTransform>
 							<Border.Style>
 								<Style TargetType="Border">
 									<Setter Property="Visibility" Value="Collapsed"/>
@@ -543,12 +540,6 @@
 													<Storyboard>
 														<DoubleAnimation Storyboard.TargetProperty="Opacity"
                                                                          From="0" To="1" Duration="0:0:0.3">
-															<DoubleAnimation.EasingFunction>
-																<CubicEase EasingMode="EaseOut"/>
-															</DoubleAnimation.EasingFunction>
-														</DoubleAnimation>
-														<DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
-                                                                         From="15" To="0" Duration="0:0:0.3">
 															<DoubleAnimation.EasingFunction>
 																<CubicEase EasingMode="EaseOut"/>
 															</DoubleAnimation.EasingFunction>
@@ -729,10 +720,7 @@
 						<!-- ╔══════════════════════════════════════╗ -->
 						<!-- ║       TAB 1: ОРКЕСТРАТОР            ║ -->
 						<!-- ╚══════════════════════════════════════╝ -->
-						<Border RenderTransformOrigin="0.5,0">
-							<Border.RenderTransform>
-								<TranslateTransform/>
-							</Border.RenderTransform>
+						<Border>
 							<Border.Style>
 								<Style TargetType="Border">
 									<Setter Property="Visibility" Value="Collapsed"/>
@@ -745,12 +733,6 @@
 													<Storyboard>
 														<DoubleAnimation Storyboard.TargetProperty="Opacity"
                                                                          From="0" To="1" Duration="0:0:0.3">
-															<DoubleAnimation.EasingFunction>
-																<CubicEase EasingMode="EaseOut"/>
-															</DoubleAnimation.EasingFunction>
-														</DoubleAnimation>
-														<DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
-                                                                         From="15" To="0" Duration="0:0:0.3">
 															<DoubleAnimation.EasingFunction>
 																<CubicEase EasingMode="EaseOut"/>
 															</DoubleAnimation.EasingFunction>
@@ -873,10 +855,7 @@
 						<!-- ╔══════════════════════════════════════╗ -->
 						<!-- ║       TAB 2: ОБНОВЛЕНИЕ             ║ -->
 						<!-- ╚══════════════════════════════════════╝ -->
-						<Border RenderTransformOrigin="0.5,0">
-							<Border.RenderTransform>
-								<TranslateTransform/>
-							</Border.RenderTransform>
+						<Border>
 							<Border.Style>
 								<Style TargetType="Border">
 									<Setter Property="Visibility" Value="Collapsed"/>
@@ -889,12 +868,6 @@
 													<Storyboard>
 														<DoubleAnimation Storyboard.TargetProperty="Opacity"
                                                                          From="0" To="1" Duration="0:0:0.3">
-															<DoubleAnimation.EasingFunction>
-																<CubicEase EasingMode="EaseOut"/>
-															</DoubleAnimation.EasingFunction>
-														</DoubleAnimation>
-														<DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
-                                                                         From="15" To="0" Duration="0:0:0.3">
 															<DoubleAnimation.EasingFunction>
 																<CubicEase EasingMode="EaseOut"/>
 															</DoubleAnimation.EasingFunction>
@@ -982,10 +955,7 @@
 						<!-- ╔══════════════════════════════════════╗ -->
 						<!-- ║       TAB 3: ДИАГНОСТИКА            ║ -->
 						<!-- ╚══════════════════════════════════════╝ -->
-						<Border RenderTransformOrigin="0.5,0">
-							<Border.RenderTransform>
-								<TranslateTransform/>
-							</Border.RenderTransform>
+						<Border>
 							<Border.Style>
 								<Style TargetType="Border">
 									<Setter Property="Visibility" Value="Collapsed"/>
@@ -998,12 +968,6 @@
 													<Storyboard>
 														<DoubleAnimation Storyboard.TargetProperty="Opacity"
                                                                          From="0" To="1" Duration="0:0:0.3">
-															<DoubleAnimation.EasingFunction>
-																<CubicEase EasingMode="EaseOut"/>
-															</DoubleAnimation.EasingFunction>
-														</DoubleAnimation>
-														<DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
-                                                                         From="15" To="0" Duration="0:0:0.3">
 															<DoubleAnimation.EasingFunction>
 																<CubicEase EasingMode="EaseOut"/>
 															</DoubleAnimation.EasingFunction>
@@ -1085,10 +1049,7 @@
 						<!-- ╔══════════════════════════════════════╗ -->
 						<!-- ║         TAB 4: СЕРВИС               ║ -->
 						<!-- ╚══════════════════════════════════════╝ -->
-						<Border RenderTransformOrigin="0.5,0">
-							<Border.RenderTransform>
-								<TranslateTransform/>
-							</Border.RenderTransform>
+						<Border>
 							<Border.Style>
 								<Style TargetType="Border">
 									<Setter Property="Visibility" Value="Collapsed"/>
@@ -1101,12 +1062,6 @@
 													<Storyboard>
 														<DoubleAnimation Storyboard.TargetProperty="Opacity"
                                                                          From="0" To="1" Duration="0:0:0.3">
-															<DoubleAnimation.EasingFunction>
-																<CubicEase EasingMode="EaseOut"/>
-															</DoubleAnimation.EasingFunction>
-														</DoubleAnimation>
-														<DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
-                                                                         From="15" To="0" Duration="0:0:0.3">
 															<DoubleAnimation.EasingFunction>
 																<CubicEase EasingMode="EaseOut"/>
 															</DoubleAnimation.EasingFunction>
@@ -1256,10 +1211,7 @@
 						<!-- ╔══════════════════════════════════════╗ -->
 						<!-- ║       TAB 5: О ПРОГРАММЕ            ║ -->
 						<!-- ╚══════════════════════════════════════╝ -->
-						<Border RenderTransformOrigin="0.5,0">
-							<Border.RenderTransform>
-								<TranslateTransform/>
-							</Border.RenderTransform>
+						<Border>
 							<Border.Style>
 								<Style TargetType="Border">
 									<Setter Property="Visibility" Value="Collapsed"/>
@@ -1272,12 +1224,6 @@
 													<Storyboard>
 														<DoubleAnimation Storyboard.TargetProperty="Opacity"
                                                                          From="0" To="1" Duration="0:0:0.3">
-															<DoubleAnimation.EasingFunction>
-																<CubicEase EasingMode="EaseOut"/>
-															</DoubleAnimation.EasingFunction>
-														</DoubleAnimation>
-														<DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
-                                                                         From="15" To="0" Duration="0:0:0.3">
 															<DoubleAnimation.EasingFunction>
 																<CubicEase EasingMode="EaseOut"/>
 															</DoubleAnimation.EasingFunction>
