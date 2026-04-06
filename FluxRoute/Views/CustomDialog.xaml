@@ -3,33 +3,42 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="FluxRoute"
         WindowStartupLocation="CenterOwner"
-        Background="Transparent"
+        Background="#0D1117"
         WindowStyle="None"
-        AllowsTransparency="True"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         SizeToContent="WidthAndHeight">
 
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" ResizeBorderThickness="0" GlassFrameThickness="0"/>
+    </WindowChrome.WindowChrome>
+
     <Window.Resources>
-        <!-- Cancel button -->
+        <!-- Cancel button (matches TermBtn) -->
         <Style x:Key="DialogCancelBtn" TargetType="Button">
-            <Setter Property="Background" Value="#3E3E42"/>
-            <Setter Property="Foreground" Value="#CCCCCC"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#8B949E"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#30363D"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Margin" Value="0,0,12,0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#505054"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#161B22"/>
+                                <Setter Property="Foreground" Value="#E6EDF3"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -37,25 +46,30 @@
             </Setter>
         </Style>
 
-        <!-- Danger confirm (red) -->
+        <!-- Danger confirm (matches RedBtn) -->
         <Style x:Key="DangerConfirmBtn" TargetType="Button">
-            <Setter Property="Background" Value="#C0392B"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#F85149"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#DA3633"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#E74C3C"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#161B22"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -63,25 +77,30 @@
             </Setter>
         </Style>
 
-        <!-- Accent confirm (blue) -->
+        <!-- Accent confirm (matches AccentBtn) -->
         <Style x:Key="AccentConfirmBtn" TargetType="Button">
-            <Setter Property="Background" Value="#0078D4"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#4FC3F7"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#264F78"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#1084D8"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#161B22"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -90,19 +109,17 @@
         </Style>
     </Window.Resources>
 
-    <!-- Margin gives space for the drop shadow -->
-    <Border Background="#1E1E1E" BorderBrush="#3E3E42" BorderThickness="1" CornerRadius="10"
-            Margin="16" MinWidth="320" MaxWidth="420"
+    <Border Background="#0D1117" BorderBrush="#30363D" BorderThickness="1" CornerRadius="4"
+            MinWidth="340" MaxWidth="440"
             MouseLeftButtonDown="Card_MouseLeftButtonDown">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="16" ShadowDepth="0" Opacity="0.6" Color="Black"/>
-        </Border.Effect>
-        <StackPanel Margin="28,24">
+        <StackPanel Margin="24,20">
             <TextBlock x:Name="TitleText"
-                       Foreground="White" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                       FontFamily="Segoe UI" Foreground="#E6EDF3" FontSize="15"
+                       FontWeight="SemiBold" Margin="0,0,0,8"/>
             <TextBlock x:Name="MessageText"
-                       Foreground="#AAAAAA" FontSize="13" TextWrapping="Wrap" Margin="0,0,0,20"/>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                       FontFamily="Segoe UI" Foreground="#8B949E" FontSize="13"
+                       TextWrapping="Wrap" Margin="0,0,0,20"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button x:Name="CancelBtn" Content="Отмена" Click="Cancel_Click"
                         Style="{StaticResource DialogCancelBtn}"/>
                 <Button x:Name="ConfirmBtn" Content="Да" Click="Confirm_Click"
