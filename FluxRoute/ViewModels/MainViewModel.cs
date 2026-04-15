@@ -32,9 +32,16 @@ public partial class MainViewModel : ObservableObject
     [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)] private static extern bool Process32First(IntPtr snapshot, ref PROCESSENTRY32 entry);
     [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)] private static extern bool Process32Next(IntPtr snapshot, ref PROCESSENTRY32 entry);
     [DllImport("kernel32.dll")] private static extern bool CloseHandle(IntPtr handle);
+    [DllImport("user32.dll")] private static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventProc lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
+    [DllImport("user32.dll")] private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
+    [DllImport("user32.dll", CharSet = CharSet.Auto)] private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
     private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+    private delegate void WinEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint idEventThread, uint dwmsEventTime);
     private const int SW_HIDE = 0;
     private const uint TH32CS_SNAPPROCESS = 0x00000002;
+    private const uint EVENT_OBJECT_SHOW = 0x8002;
+    private const uint WINEVENT_OUTOFCONTEXT = 0x0000;
+    private const uint WINEVENT_SKIPOWNPROCESS = 0x0002;
     private static readonly IntPtr INVALID_HANDLE_VALUE = new(-1);
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
     private struct PROCESSENTRY32
@@ -239,6 +246,8 @@ public partial class MainViewModel : ObservableObject
     private Process? _runningProcess;
     private CancellationTokenSource? _hideWindowsCts;
     private volatile HashSet<uint> _trackedPids = [];
+    private IntPtr _winEventHook;
+    private WinEventProc? _winEventCallback;
     private string EngineDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "engine");
 
     private readonly UpdaterService _updater = new();
@@ -643,8 +652,11 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void Start()
     {
+        if (IsRunning) { Logs.Add("Процесс уже запущен."); return; }
         if (SelectedProfile is null) { Logs.Add("Профиль не выбран."); AddToRecentLogs("❌ Профиль не выбран"); return; }
         if (!File.Exists(SelectedProfile.FullPath)) { Logs.Add($"BAT не найден: {SelectedProfile.FullPath}"); AddToRecentLogs("❌ BAT не найден"); return; }
+
+        InstallWindowHook();
 
         var psi = new ProcessStartInfo
         {
@@ -674,19 +686,20 @@ public partial class MainViewModel : ObservableObject
 
     private async Task TrackWinwsAsync(Process cmdProcess)
     {
+        _hideWindowsCts?.Cancel();
+        _hideWindowsCts?.Dispose();
         _hideWindowsCts = new CancellationTokenSource();
         var ct = _hideWindowsCts.Token;
 
         Process? winws = null;
-        for (int i = 0; i < 40 && !ct.IsCancellationRequested; i++)
+        for (int i = 0; i < 100 && !ct.IsCancellationRequested; i++)
         {
-            await Task.Delay(250, ct).ConfigureAwait(false);
+            await Task.Delay(100, ct).ConfigureAwait(false);
             var rootPid = !cmdProcess.HasExited ? (uint)cmdProcess.Id : 0;
             var pids = rootPid > 0 ? GetProcessTreePids(rootPid) : new HashSet<uint>();
 
-            try { var c = Process.GetProcessesByName("winws").FirstOrDefault(); if (c is not null) pids.Add((uint)c.Id); } catch { }
+            try { foreach (var c in Process.GetProcessesByName("winws")) pids.Add((uint)c.Id); } catch { }
             _trackedPids = pids;
-            HideWindowsForPids(pids);
 
             if (winws is null)
                 try { winws = Process.GetProcessesByName("winws").FirstOrDefault(); } catch { }
@@ -694,7 +707,16 @@ public partial class MainViewModel : ObservableObject
             if (winws is not null) break;
         }
 
-        if (winws is null) { Logs.Add("winws.exe не найден после запуска BAT."); AddToRecentLogs("❌ winws.exe не найден"); return; }
+        if (winws is null)
+        {
+            RemoveWindowHook();
+            Logs.Add("winws.exe не найден после запуска BAT.");
+            AddToRecentLogs("❌ winws.exe не найден");
+            return;
+        }
+
+        _trackedPids = new HashSet<uint>(_trackedPids) { (uint)winws.Id };
+        HideWindowsForPids(_trackedPids);
 
         if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
         {
@@ -709,6 +731,8 @@ public partial class MainViewModel : ObservableObject
         }
 
         try { await winws.WaitForExitAsync(ct); } catch (OperationCanceledException) { }
+
+        RemoveWindowHook();
 
         if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
         {
@@ -732,6 +756,7 @@ public partial class MainViewModel : ObservableObject
     private void Stop()
     {
         _hideWindowsCts?.Cancel();
+        RemoveWindowHook();
 
         var pidsToKill = new HashSet<uint>(_trackedPids);
         if (_runningProcess is not null && !_runningProcess.HasExited)
@@ -745,6 +770,12 @@ public partial class MainViewModel : ObservableObject
         foreach (var pid in pidsToKill)
         {
             try { var p = Process.GetProcessById((int)pid); p.Kill(entireProcessTree: true); p.WaitForExit(3000); killed++; } catch { }
+        }
+
+        for (int i = 0; i < 20; i++)
+        {
+            try { if (Process.GetProcessesByName("winws").Length == 0) break; } catch { break; }
+            Thread.Sleep(100);
         }
 
         Logs.Add($"Остановлено процессов: {killed} ({RunningScriptName})");
@@ -1436,6 +1467,57 @@ public partial class MainViewModel : ObservableObject
         EnumWindows((hWnd, _) => { if (IsWindowVisible(hWnd)) { GetWindowThreadProcessId(hWnd, out uint pid); if (pids.Contains(pid)) ShowWindow(hWnd, SW_HIDE); } return true; }, IntPtr.Zero);
     }
 
+    private void InstallWindowHook()
+    {
+        if (_winEventHook != IntPtr.Zero) return;
+
+        _winEventCallback = (hHook, eventType, hwnd, idObject, idChild, idThread, dwms) =>
+        {
+            if (idObject != 0 || idChild != 0) return;
+
+            GetWindowThreadProcessId(hwnd, out uint pid);
+            if (pid == 0) return;
+
+            var tracked = _trackedPids;
+            if (tracked.Contains(pid))
+            {
+                ShowWindow(hwnd, SW_HIDE);
+                return;
+            }
+
+            var className = new StringBuilder(64);
+            if (GetClassName(hwnd, className, 64) > 0 && className.ToString() == "ConsoleWindowClass")
+            {
+                try
+                {
+                    using var proc = Process.GetProcessById((int)pid);
+                    if (proc.ProcessName.Equals("winws", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ShowWindow(hwnd, SW_HIDE);
+                        _trackedPids = new HashSet<uint>(tracked) { pid };
+                    }
+                }
+                catch { }
+            }
+        };
+
+        _winEventHook = SetWinEventHook(
+            EVENT_OBJECT_SHOW, EVENT_OBJECT_SHOW,
+            IntPtr.Zero, _winEventCallback,
+            0, 0,
+            WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+    }
+
+    private void RemoveWindowHook()
+    {
+        if (_winEventHook != IntPtr.Zero)
+        {
+            UnhookWinEvent(_winEventHook);
+            _winEventHook = IntPtr.Zero;
+        }
+        _winEventCallback = null;
+    }
+
     public void Cleanup()
     {
         // Останавливаем оркестратор
@@ -1446,7 +1528,8 @@ public partial class MainViewModel : ObservableObject
         _uptimeTimer?.Stop();
         _orchestratorUiTimer?.Stop();
 
-        // Отменяем отслеживание окон
+        // Убираем хук и отменяем отслеживание
+        RemoveWindowHook();
         _hideWindowsCts?.Cancel();
         _hideWindowsCts?.Dispose();
     }
