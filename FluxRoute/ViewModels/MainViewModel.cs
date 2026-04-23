@@ -316,6 +316,14 @@ public partial class MainViewModel : ObservableObject
         TgProxyDomain = settings.TgProxy.Domain;
         TgProxyVerbose = settings.TgProxy.Verbose;
         TgProxyPreferIPv4 = settings.TgProxy.PreferIPv4;
+        TgProxyDcIps = string.IsNullOrWhiteSpace(settings.TgProxy.DcIps) ? "2:149.154.167.220\n4:149.154.167.220" : settings.TgProxy.DcIps;
+        TgProxyCfEnabled = settings.TgProxy.CfProxyEnabled;
+        TgProxyCfPriority = settings.TgProxy.CfProxyPriority;
+        TgProxyCfDomainEnabled = settings.TgProxy.CfDomainEnabled;
+        TgProxyCfDomain = settings.TgProxy.CfDomain;
+        TgProxyBufKb = settings.TgProxy.BufKb == 0 ? "256" : settings.TgProxy.BufKb.ToString();
+        TgProxyPoolSize = settings.TgProxy.PoolSize == 0 ? "4" : settings.TgProxy.PoolSize.ToString();
+        TgProxyLogMaxMb = settings.TgProxy.LogMaxMb == 0 ? "5.0" : settings.TgProxy.LogMaxMb.ToString();
     }
 
     public void SaveSettings()
@@ -350,7 +358,15 @@ public partial class MainViewModel : ObservableObject
                 Secret = TgProxySecret,
                 Domain = TgProxyDomain,
                 Verbose = TgProxyVerbose,
-                PreferIPv4 = TgProxyPreferIPv4
+                PreferIPv4 = TgProxyPreferIPv4,
+                DcIps = TgProxyDcIps,
+                CfProxyEnabled = TgProxyCfEnabled,
+                CfProxyPriority = TgProxyCfPriority,
+                CfDomainEnabled = TgProxyCfDomainEnabled,
+                CfDomain = TgProxyCfDomain,
+                BufKb = int.TryParse(TgProxyBufKb, out var bufKb) ? bufKb : 256,
+                PoolSize = int.TryParse(TgProxyPoolSize, out var poolSize) ? poolSize : 4,
+                LogMaxMb = double.TryParse(TgProxyLogMaxMb, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var logMb) ? logMb : 5.0
             }
         };
 

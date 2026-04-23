@@ -49,6 +49,28 @@ public partial class MainViewModel
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool tgProxyPreferIPv4 = true;
     partial void OnTgProxyPreferIPv4Changed(bool value) => SaveSettings();
 
+    // DC → IP
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyDcIps = "2:149.154.167.220\n4:149.154.167.220";
+    partial void OnTgProxyDcIpsChanged(string value) => SaveSettings();
+
+    // Cloudflare Proxy
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool tgProxyCfEnabled = true;
+    partial void OnTgProxyCfEnabledChanged(bool value) => SaveSettings();
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool tgProxyCfPriority = true;
+    partial void OnTgProxyCfPriorityChanged(bool value) => SaveSettings();
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool tgProxyCfDomainEnabled = false;
+    partial void OnTgProxyCfDomainEnabledChanged(bool value) => SaveSettings();
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyCfDomain = "";
+    partial void OnTgProxyCfDomainChanged(string value) => SaveSettings();
+
+    // Производительность
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyBufKb = "256";
+    partial void OnTgProxyBufKbChanged(string value) => SaveSettings();
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyPoolSize = "4";
+    partial void OnTgProxyPoolSizeChanged(string value) => SaveSettings();
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyLogMaxMb = "5.0";
+    partial void OnTgProxyLogMaxMbChanged(string value) => SaveSettings();
+
     // ── Текст кнопки запуска ──
     public string TgProxyToggleText => TgProxyRunning ? "⏹ Остановить прокси" : "▶ Запустить прокси";
     partial void OnTgProxyRunningChanged(bool value) => OnPropertyChanged(nameof(TgProxyToggleText));
@@ -287,12 +309,12 @@ public partial class MainViewModel
         return File.Exists(versionFile) ? File.ReadAllText(versionFile).Trim() : "unknown";
     }
 
-    // ── Генерация Secret (32 hex = 16 байт) ──
+    // ── Генерация Secret (dd + 32 hex = dd-prefix + 16 байт) ──
     [RelayCommand]
     private void GenerateTgProxySecret()
     {
         var bytes = RandomNumberGenerator.GetBytes(16);
-        TgProxySecret = Convert.ToHexString(bytes).ToLowerInvariant();
+        TgProxySecret = "dd" + Convert.ToHexString(bytes).ToLowerInvariant();
         AddTgProxyLog("🔑 Secret сгенерирован");
     }
 
@@ -372,13 +394,43 @@ public partial class MainViewModel
     private string BuildArguments()
     {
         var args = new System.Text.StringBuilder();
+
+        // Python-скрипт принимает только 32 hex-символа (без dd/ee-префикса)
+        var rawSecret = TgProxySecret.StartsWith("dd", StringComparison.OrdinalIgnoreCase)
+            ? TgProxySecret[2..]
+            : TgProxySecret;
         args.Append($"--host {TgProxyHost}");
         args.Append($" --port {TgProxyPort}");
-        args.Append($" --secret {TgProxySecret}");
+        args.Append($" --secret {rawSecret}");
 
         var domain = TgProxyDomain.Trim();
         if (!string.IsNullOrWhiteSpace(domain))
             args.Append($" --fake-tls-domain {domain}");
+
+        // DC → IP
+        foreach (var line in TgProxyDcIps.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var dc = line.Trim();
+            if (!string.IsNullOrEmpty(dc))
+                args.Append($" --dc-ip {dc}");
+        }
+
+        // Cloudflare
+        if (!TgProxyCfEnabled)
+            args.Append(" --no-cfproxy");
+        else if (!TgProxyCfPriority)
+            args.Append(" --cfproxy-priority false");
+
+        if (TgProxyCfDomainEnabled && !string.IsNullOrWhiteSpace(TgProxyCfDomain))
+            args.Append($" --cfproxy-domain {TgProxyCfDomain.Trim()}");
+
+        // Производительность
+        if (int.TryParse(TgProxyBufKb, out var bufKb) && bufKb != 256)
+            args.Append($" --buf-kb {bufKb}");
+        if (int.TryParse(TgProxyPoolSize, out var poolSize) && poolSize != 4)
+            args.Append($" --pool-size {poolSize}");
+        if (double.TryParse(TgProxyLogMaxMb, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var logMb) && logMb != 5.0)
+            args.Append($" --log-max-mb {logMb.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
 
         if (TgProxyVerbose)
             args.Append(" -v");
@@ -509,11 +561,15 @@ public partial class MainViewModel
             if (!string.IsNullOrWhiteSpace(domain))
             {
                 // ee-secret: ee + 32hex + hex(domain)
+                // TgProxySecret may have dd-prefix — strip it to get raw 32 hex
+                var rawHex = TgProxySecret.StartsWith("dd", StringComparison.OrdinalIgnoreCase)
+                    ? TgProxySecret[2..]
+                    : TgProxySecret;
                 var domainHex = Convert.ToHexString(System.Text.Encoding.UTF8.GetBytes(domain)).ToLowerInvariant();
-                return $"tg://proxy?server={domain}&port={TgProxyPort}&secret=ee{TgProxySecret}{domainHex}";
+                return $"tg://proxy?server={domain}&port={TgProxyPort}&secret=ee{rawHex}{domainHex}";
             }
-            // dd-secret: dd + 32hex
-            return $"tg://proxy?server=127.0.0.1&port={TgProxyPort}&secret=dd{TgProxySecret}";
+            // TgProxySecret already contains dd-prefix
+            return $"tg://proxy?server=127.0.0.1&port={TgProxyPort}&secret={TgProxySecret}";
         }
     }
 
