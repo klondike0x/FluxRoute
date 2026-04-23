@@ -1,4 +1,4 @@
-﻿<Window x:Class="FluxRoute.Views.MainWindow"
+<Window x:Class="FluxRoute.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -1498,28 +1498,41 @@
 														<Style TargetType="Border">
 															<Setter Property="Visibility" Value="Collapsed"/>
 															<Style.Triggers>
-																<DataTrigger Binding="{Binding TgProxyInstalled}" Value="False">
+																<MultiDataTrigger>
+																	<MultiDataTrigger.Conditions>
+																		<Condition Binding="{Binding TgProxyInstalled}" Value="False"/>
+																		<Condition Binding="{Binding IsTgProxyDownloading}" Value="False"/>
+																	</MultiDataTrigger.Conditions>
 																	<Setter Property="Visibility" Value="Visible"/>
-																</DataTrigger>
+																</MultiDataTrigger>
 															</Style.Triggers>
 														</Style>
 													</Border.Style>
 													<StackPanel>
 														<TextBlock FontFamily="Segoe UI" Foreground="#FFD700" FontSize="12"
 																   FontWeight="SemiBold" Margin="0,0,0,4"
-																   Text="⚠️ MTG Proxy не установлен"/>
-														<TextBlock Text="{Binding TgProxyDownloadStatus}" FontFamily="Segoe UI"
-																   Foreground="#CCAA00" FontSize="11" TextWrapping="Wrap"
-																   Visibility="{Binding IsTgProxyDownloading, Converter={StaticResource BoolToVis}}"/>
-														<Button Content="⬇️ Установить MTG" Style="{StaticResource AccentBtn}"
+																   Text="⚠️ TG WS Proxy не установлен"/>
+														<Button Content="⬇️ Установить TG WS Proxy" Style="{StaticResource AccentBtn}"
 																HorizontalAlignment="Left" Margin="0,6,0,0" FontSize="12" Padding="10,5"
-																Command="{Binding DownloadTgProxyCommand}"
-																IsEnabled="{Binding IsTgProxyDownloading, Converter={StaticResource InvBool}}"/>
+																Command="{Binding DownloadTgProxyCommand}"/>
+													</StackPanel>
+												</Border>
+
+												<!-- Прогресс установки -->
+												<Border Background="#0D1F0D" BorderBrush="#1A4A1A" BorderThickness="1"
+														Padding="10,8" Margin="0,0,0,12"
+														Visibility="{Binding IsTgProxyDownloading, Converter={StaticResource BoolToVis}}">
+													<StackPanel>
+														<TextBlock FontFamily="Segoe UI" Foreground="#66BB6A" FontSize="12"
+																   FontWeight="SemiBold" Margin="0,0,0,4"
+																   Text="⬇️ Установка TG WS Proxy..."/>
+														<TextBlock Text="{Binding TgProxyDownloadStatus}" FontFamily="Segoe UI"
+																   Foreground="#A5D6A7" FontSize="11" TextWrapping="Wrap"/>
 													</StackPanel>
 												</Border>
 
 												<!-- ПОДКЛЮЧЕНИЕ -->
-												<TextBlock Style="{StaticResource SecH}" Text="ПОДКЛЮЧЕНИЕ MTPROTO" Margin="0,0,0,8"/>
+																				<TextBlock Style="{StaticResource SecH}" Text="ПОДКЛЮЧЕНИЕ" Margin="0,0,0,8"/>
 												<Grid Margin="0,0,0,10">
 													<Grid.ColumnDefinitions>
 														<ColumnDefinition Width="*"/>

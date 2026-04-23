@@ -1,9 +1,8 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Security.Cryptography;
-using System.Text.Json;
 using CommunityToolkit.Mvvm.Input;
 using Application = System.Windows.Application;
 using FluxRoute.Views;
@@ -13,9 +12,19 @@ namespace FluxRoute.ViewModels;
 public partial class MainViewModel
 {
     // ── Пути ──
-    private string TgProxyDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tg-proxy");
-    private string TgProxyExe => Path.Combine(TgProxyDir, "mtg.exe");
-    private string TgProxyConfigPath => Path.Combine(TgProxyDir, "config.toml");
+    private string TgProxyDir     => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tg-proxy");
+    private string PythonDir      => Path.Combine(TgProxyDir, "python");
+    private string PythonExe      => Path.Combine(PythonDir, "python.exe");
+    private string ProxyScriptDir => Path.Combine(TgProxyDir, "proxy");
+    private string ProxyScript    => Path.Combine(ProxyScriptDir, "tg_ws_proxy.py");
+
+    // Файлы исходников proxy/ которые нужно скачать
+    private static readonly string[] ProxySourceFiles =
+    [
+        "__init__.py", "balancer.py", "bridge.py", "config.py",
+        "fake_tls.py", "raw_websocket.py", "stats.py", "tg_ws_proxy.py", "utils.py"
+    ];
+    private const string ProxyRawBase = "https://raw.githubusercontent.com/Flowseal/tg-ws-proxy/main/proxy/";
 
     // ── Состояние ──
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool tgProxyRunning;
@@ -27,13 +36,13 @@ public partial class MainViewModel
     public System.Collections.ObjectModel.ObservableCollection<string> TgProxyLogs { get; } = new();
 
     // ── Настройки ──
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyHost = "0.0.0.0";
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyHost = "127.0.0.1";
     partial void OnTgProxyHostChanged(string value) => SaveSettings();
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyPort = "1080";
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyPort = "1443";
     partial void OnTgProxyPortChanged(string value) => SaveSettings();
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxySecret = "";
     partial void OnTgProxySecretChanged(string value) => SaveSettings();
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyDomain = "www.google.com";
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyDomain = "";
     partial void OnTgProxyDomainChanged(string value) => SaveSettings();
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool tgProxyVerbose = false;
     partial void OnTgProxyVerboseChanged(bool value) => SaveSettings();
@@ -52,7 +61,7 @@ public partial class MainViewModel
         if (_tgProxyTabVisited) return;
         _tgProxyTabVisited = true;
 
-        TgProxyInstalled = File.Exists(TgProxyExe);
+        TgProxyInstalled = File.Exists(PythonExe) && File.Exists(ProxyScript);
         if (!TgProxyInstalled)
         {
             if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
@@ -60,8 +69,8 @@ public partial class MainViewModel
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     if (CustomDialog.Show(
-                        "🔧 MTG Proxy",
-                        "Компонент MTG (headless MTProto прокси) не установлен.\n\nЗагрузить его сейчас с GitHub (~5 МБ)?",
+                        "🔧 TG WS Proxy",
+                        "Компонент TG WS Proxy не установлен.\n\nБудет скачано:\n• Python Embeddable (~12 МБ)\n• Исходники прокси (~50 КБ)\n• Пакет cryptography\n\nЗагрузить сейчас?",
                         "Загрузить", "Отмена"))
                     {
                         _ = DownloadTgProxyAsync();
@@ -75,99 +84,201 @@ public partial class MainViewModel
         }
     }
 
-    // ── Скачивание ──
+    // ── Установка ──
     [RelayCommand]
     private async Task DownloadTgProxyAsync()
     {
         IsTgProxyDownloading = true;
-        TgProxyDownloadStatus = "🔍 Поиск последней версии...";
-        AddTgProxyLog("⬇️ Начало загрузки MTG...");
+        AddTgProxyLog("⬇️ Начало установки TG WS Proxy...");
 
         try
         {
+            Directory.CreateDirectory(TgProxyDir);
+            Directory.CreateDirectory(ProxyScriptDir);
+
             using var http = new HttpClient();
             http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
+            http.Timeout = TimeSpan.FromMinutes(5);
 
-            var json = await http.GetStringAsync("https://api.github.com/repos/9seconds/mtg/releases/latest");
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-
-            var tagName = root.GetProperty("tag_name").GetString() ?? "unknown";
-            string? downloadUrl = null;
-            string? assetName = null;
-
-            foreach (var asset in root.GetProperty("assets").EnumerateArray())
+            // Шаг 1: Python Embeddable
+            if (!File.Exists(PythonExe))
             {
-                var name = asset.GetProperty("name").GetString() ?? "";
-                // Ищем Windows AMD64: mtg_X.X.X_windows_amd64.zip или mtg_windows_amd64.zip
-                if (name.Contains("windows", StringComparison.OrdinalIgnoreCase) &&
-                    name.Contains("amd64", StringComparison.OrdinalIgnoreCase) &&
-                    (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)))
-                {
-                    downloadUrl = asset.GetProperty("browser_download_url").GetString();
-                    assetName = name;
-                    break;
-                }
-            }
+                TgProxyDownloadStatus = "⬇️ Скачиваем Python Embeddable...";
+                AddTgProxyLog("📦 Скачиваем Python 3.11 Embeddable...");
 
-            if (downloadUrl is null)
-            {
-                TgProxyDownloadStatus = "❌ Не найден Windows-релиз";
-                AddTgProxyLog("❌ Не найден mtg windows amd64 в релизе");
-                return;
-            }
+                var pythonZipUrl = "https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip";
+                var zipBytes = await http.GetByteArrayAsync(pythonZipUrl);
+                var zipPath = Path.Combine(TgProxyDir, "python_embed.zip");
+                await File.WriteAllBytesAsync(zipPath, zipBytes);
 
-            TgProxyDownloadStatus = $"⬇️ Загружаем {tagName}...";
-            Directory.CreateDirectory(TgProxyDir);
-
-            var bytes = await http.GetByteArrayAsync(downloadUrl);
-
-            // Удаляем старый exe если есть (не заблокирован)
-            if (File.Exists(TgProxyExe))
-                File.Delete(TgProxyExe);
-
-            if (assetName!.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-            {
-                var zipPath = Path.Combine(TgProxyDir, "mtg.zip");
-                if (File.Exists(zipPath)) File.Delete(zipPath);
-                await File.WriteAllBytesAsync(zipPath, bytes);
-
-                // Закрываем архив до удаления zip
-                using (var archive = ZipFile.OpenRead(zipPath))
-                {
-                    var entry = archive.Entries.FirstOrDefault(e =>
-                        e.Name.Equals("mtg.exe", StringComparison.OrdinalIgnoreCase) ||
-                        e.Name.Equals("mtg", StringComparison.OrdinalIgnoreCase))
-                        ?? archive.Entries.FirstOrDefault(e =>
-                        e.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
-                    if (entry is not null)
-                        entry.ExtractToFile(TgProxyExe, overwrite: true);
-                    else
-                        AddTgProxyLog("⚠ Не найден исполняемый файл в архиве");
-                }
+                TgProxyDownloadStatus = "📦 Распаковываем Python...";
+                Directory.CreateDirectory(PythonDir);
+                ZipFile.ExtractToDirectory(zipPath, PythonDir, overwriteFiles: true);
                 File.Delete(zipPath);
+
+                // Правим python311._pth — это единственный способ добавить пути в embeddable Python
+                // PYTHONPATH и sys.path игнорируются пока не включён site
+                var pthFile = Directory.GetFiles(PythonDir, "python*._pth").FirstOrDefault();
+                if (pthFile != null)
+                {
+                    var pthSitePackages = Path.Combine(PythonDir, "Lib", "site-packages");
+                    var lines = new List<string>();
+                    lines.Add(".");
+                    lines.Add(pthSitePackages);
+                    lines.Add(ProxyScriptDir);
+                    lines.Add("import site");
+                    File.WriteAllLines(pthFile, lines);
+                }
+
+                AddTgProxyLog("✅ Python распакован");
             }
-            else
+
+            // Всегда обновляем .pth — на случай если пути изменились или установка неполная
+            FixPythonPth();
+
+            // Шаг 2: pip через get-pip.py
+            var pipExe = Directory.GetFiles(PythonDir, "pip.exe", SearchOption.AllDirectories).FirstOrDefault();
+            if (pipExe is null)
             {
-                await File.WriteAllBytesAsync(TgProxyExe, bytes);
+                TgProxyDownloadStatus = "⬇️ Устанавливаем pip...";
+                AddTgProxyLog("📦 Устанавливаем pip...");
+
+                var getPipBytes = await http.GetByteArrayAsync("https://bootstrap.pypa.io/get-pip.py");
+                var getPipPath = Path.Combine(TgProxyDir, "get-pip.py");
+                await File.WriteAllBytesAsync(getPipPath, getPipBytes);
+
+                await RunProcessAsync(PythonExe, $"\"{getPipPath}\"", PythonDir,
+                    extraEnv: GetPythonEnv());
+                File.Delete(getPipPath);
+
+                pipExe = Directory.GetFiles(PythonDir, "pip.exe", SearchOption.AllDirectories).FirstOrDefault()
+                         ?? Path.Combine(PythonDir, "Scripts", "pip.exe");
+                AddTgProxyLog("✅ pip установлен");
+            }
+
+            // Шаг 3: cryptography
+            var sitePackages = Path.Combine(PythonDir, "Lib", "site-packages");
+            var cryptoDir = Directory.Exists(sitePackages)
+                ? Directory.GetDirectories(sitePackages, "cryptography*").FirstOrDefault()
+                : null;
+            if (cryptoDir is null)
+            {
+                TgProxyDownloadStatus = "📦 Устанавливаем cryptography...";
+                AddTgProxyLog("📦 Устанавливаем cryptography...");
+                await RunProcessAsync(pipExe!, "install cryptography --quiet --no-warn-script-location",
+                    PythonDir, extraEnv: GetPythonEnv(), ignoreExitCode: true);
+                AddTgProxyLog("✅ cryptography установлен");
+            }
+
+            // Шаг 4: исходники proxy/
+            TgProxyDownloadStatus = "⬇️ Скачиваем исходники прокси...";
+            AddTgProxyLog("📄 Скачиваем исходники proxy/...");
+
+            // Получаем версию
+            using var noRedirect = new HttpClientHandler { AllowAutoRedirect = false };
+            using var verHttp = new HttpClient(noRedirect);
+            verHttp.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
+            var verResp = await verHttp.GetAsync("https://github.com/Flowseal/tg-ws-proxy/releases/latest");
+            var tagName = verResp.Headers.Location?.ToString().Split('/').LastOrDefault() ?? "unknown";
+
+            foreach (var file in ProxySourceFiles)
+            {
+                var url = ProxyRawBase + file;
+                var dest = Path.Combine(ProxyScriptDir, file);
+                var content = await http.GetByteArrayAsync(url);
+                await File.WriteAllBytesAsync(dest, content);
             }
 
             File.WriteAllText(Path.Combine(TgProxyDir, "version.txt"), tagName);
+            AddTgProxyLog($"✅ Исходники proxy/ скачаны ({tagName})");
 
             TgProxyVersion = tagName;
             TgProxyInstalled = true;
             TgProxyDownloadStatus = $"✅ Установлено {tagName}";
-            AddTgProxyLog($"✅ MTG {tagName} успешно установлен");
+            AddTgProxyLog("🎉 TG WS Proxy готов к работе!");
+
+            if (string.IsNullOrWhiteSpace(TgProxySecret))
+                GenerateTgProxySecret();
+
+            // Если прокси запущен со старой сломанной установкой — перезапускаем
+            if (TgProxyRunning)
+            {
+                AddTgProxyLog("🔄 Перезапускаем прокси с новой установкой...");
+                StopTgProxy();
+                await Task.Delay(1000);
+                StartTgProxy();
+            }
         }
         catch (Exception ex)
         {
             TgProxyDownloadStatus = $"❌ Ошибка: {ex.Message}";
-            AddTgProxyLog($"❌ Ошибка загрузки: {ex.Message}");
+            AddTgProxyLog($"❌ Ошибка установки: {ex.Message}");
         }
         finally
         {
             IsTgProxyDownloading = false;
         }
+    }
+
+    private async Task RunProcessAsync(string exe, string args, string workDir,
+        Dictionary<string, string>? extraEnv = null, bool ignoreExitCode = false)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = exe,
+            Arguments = args,
+            WorkingDirectory = workDir,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        if (extraEnv != null)
+            foreach (var kv in extraEnv)
+                psi.Environment[kv.Key] = kv.Value;
+
+        using var proc = Process.Start(psi) ?? throw new Exception($"Не удалось запустить {exe}");
+        proc.OutputDataReceived += (_, e) => { if (e.Data != null) AppendTgLog(e.Data); };
+        proc.ErrorDataReceived += (_, e) => { if (e.Data != null) AppendTgLog(e.Data); };
+        proc.BeginOutputReadLine();
+        proc.BeginErrorReadLine();
+        await proc.WaitForExitAsync();
+        if (!ignoreExitCode && proc.ExitCode != 0)
+            throw new Exception($"{Path.GetFileName(exe)} завершился с кодом {proc.ExitCode}");
+    }
+
+    // Прописываем нужные пути в python311._pth — единственный способ управлять sys.path
+    // в embeddable Python (PYTHONPATH там игнорируется без включённого site)
+    private void FixPythonPth()
+    {
+        var pthFile = Directory.GetFiles(PythonDir, "python*._pth").FirstOrDefault();
+        if (pthFile is null) return;
+
+        var sitePackages = Path.Combine(PythonDir, "Lib", "site-packages");
+        Directory.CreateDirectory(sitePackages);
+
+        var lines = new List<string>
+        {
+            ".",
+            "python311.zip",
+            sitePackages,
+            ProxyScriptDir,
+            "import site"
+        };
+        File.WriteAllLines(pthFile, lines);
+    }
+
+    // Переменные окружения для корректной работы embeddable Python с пакетами
+    private Dictionary<string, string> GetPythonEnv()
+    {
+        var sitePackages = Path.Combine(PythonDir, "Lib", "site-packages");
+        var scripts = Path.Combine(PythonDir, "Scripts");
+        return new Dictionary<string, string>
+        {
+            ["PYTHONHOME"] = PythonDir,
+            ["PYTHONPATH"] = $"{ProxyScriptDir};{sitePackages}",
+            ["PATH"] = $"{PythonDir};{scripts};{Environment.GetEnvironmentVariable("PATH")}"
+        };
     }
 
     private string GetTgProxyLocalVersion()
@@ -176,25 +287,13 @@ public partial class MainViewModel
         return File.Exists(versionFile) ? File.ReadAllText(versionFile).Trim() : "unknown";
     }
 
-    // ── Генерация Secret ──
+    // ── Генерация Secret (32 hex = 16 байт) ──
     [RelayCommand]
     private void GenerateTgProxySecret()
     {
-        // mtg fake-tls secret: ee + 32 hex + encoded domain
         var bytes = RandomNumberGenerator.GetBytes(16);
-        var hex = Convert.ToHexString(bytes).ToLowerInvariant();
-        var domain = TgProxyDomain.Trim();
-        if (!string.IsNullOrWhiteSpace(domain))
-        {
-            var domainHex = Convert.ToHexString(System.Text.Encoding.UTF8.GetBytes(domain)).ToLowerInvariant();
-            TgProxySecret = "ee" + hex + domainHex;
-            AddTgProxyLog($"🔑 Fake-TLS secret сгенерирован (домен: {domain})");
-        }
-        else
-        {
-            TgProxySecret = hex;
-            AddTgProxyLog("🔑 Simple secret сгенерирован");
-        }
+        TgProxySecret = Convert.ToHexString(bytes).ToLowerInvariant();
+        AddTgProxyLog("🔑 Secret сгенерирован");
     }
 
     // ── Запуск / Остановка ──
@@ -207,9 +306,15 @@ public partial class MainViewModel
 
     private void StartTgProxy()
     {
-        if (!File.Exists(TgProxyExe))
+        if (IsTgProxyDownloading)
         {
-            AddTgProxyLog("❌ mtg.exe не найден. Установите компонент.");
+            AddTgProxyLog("⏳ Идёт установка, подождите завершения...");
+            return;
+        }
+
+        if (!File.Exists(PythonExe) || !File.Exists(ProxyScript))
+        {
+            AddTgProxyLog("❌ Компонент не установлен. Нажмите «Обновления».");
             return;
         }
 
@@ -219,19 +324,24 @@ public partial class MainViewModel
             return;
         }
 
-        WriteMtgConfig();
+        var scriptArgs = BuildArguments();
+        // Запускаем: python.exe proxy/tg_ws_proxy.py <args>
+        // -m не подходит т.к. нет пакета, запускаем скрипт напрямую
+        var fullArgs = $"\"{ProxyScript}\" {scriptArgs}";
+        AddTgProxyLog($"🔧 python {fullArgs}");
 
         var psi = new ProcessStartInfo
         {
-            FileName = TgProxyExe,
-            // mtg v2: mtg run <config.toml>
-            Arguments = $"run \"{TgProxyConfigPath}\"",
+            FileName = PythonExe,
+            Arguments = fullArgs,
             WorkingDirectory = TgProxyDir,
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };
+        foreach (var kv in GetPythonEnv())
+            psi.Environment[kv.Key] = kv.Value;
 
         try
         {
@@ -248,7 +358,7 @@ public partial class MainViewModel
             _tgProxyProcess.BeginErrorReadLine();
 
             TgProxyRunning = true;
-            AddTgProxyLog($"▶ MTG запущен (PID {_tgProxyProcess.Id})");
+            AddTgProxyLog($"▶ TG WS Proxy запущен (PID {_tgProxyProcess.Id})");
             AddTgProxyLog($"   Слушает: {TgProxyHost}:{TgProxyPort}");
 
             _ = WatchTgProxyProcessAsync(_tgProxyProcess);
@@ -259,22 +369,21 @@ public partial class MainViewModel
         }
     }
 
-    // Генерация TOML конфига для mtg v2
-    private void WriteMtgConfig()
+    private string BuildArguments()
     {
-        Directory.CreateDirectory(TgProxyDir);
+        var args = new System.Text.StringBuilder();
+        args.Append($"--host {TgProxyHost}");
+        args.Append($" --port {TgProxyPort}");
+        args.Append($" --secret {TgProxySecret}");
 
-        var bindAddr = $"{TgProxyHost}:{TgProxyPort}";
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine($"secret = \"{TgProxySecret}\"");
-        sb.AppendLine($"bind-to = \"{bindAddr}\"");
+        var domain = TgProxyDomain.Trim();
+        if (!string.IsNullOrWhiteSpace(domain))
+            args.Append($" --fake-tls-domain {domain}");
+
         if (TgProxyVerbose)
-            sb.AppendLine("debug = true");
-        if (TgProxyPreferIPv4)
-            sb.AppendLine("prefer-ip = \"prefer-ipv4\"");
+            args.Append(" -v");
 
-        File.WriteAllText(TgProxyConfigPath, sb.ToString());
-        AddTgProxyLog("💾 config.toml записан");
+        return args.ToString();
     }
 
     private void AppendTgLog(string line)
@@ -285,13 +394,19 @@ public partial class MainViewModel
 
     private async Task WatchTgProxyProcessAsync(Process proc)
     {
-        await proc.WaitForExitAsync();
+        try { await proc.WaitForExitAsync(); }
+        catch (Exception) { /* процесс удалён через StopTgProxy */ }
+
         if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
                 TgProxyRunning = false;
-                AddTgProxyLog($"⏹ MTG остановлен (код: {proc.ExitCode})");
+                int? code = null;
+                try { code = proc.ExitCode; } catch (Exception) { /* disposed */ }
+                AddTgProxyLog(code.HasValue
+                    ? $"⏹ TG WS Proxy остановлен (код: {code})"
+                    : "⏹ TG WS Proxy остановлен");
             });
         }
     }
@@ -312,29 +427,65 @@ public partial class MainViewModel
             AddTgProxyLog($"⚠ Ошибка остановки: {ex.Message}");
         }
         TgProxyRunning = false;
-        AddTgProxyLog("⏹ MTG остановлен");
+        AddTgProxyLog("⏹ TG WS Proxy остановлен");
     }
 
     [RelayCommand]
     private async Task CheckTgProxyUpdates()
     {
-        AddTgProxyLog("🔍 Проверяем обновления MTG...");
+        AddTgProxyLog("🔍 Проверяем обновления TG WS Proxy...");
         try
         {
-            using var http = new HttpClient();
+            using var handler = new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false };
+            using var http = new HttpClient(handler);
             http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
-            var json = await http.GetStringAsync("https://api.github.com/repos/9seconds/mtg/releases/latest");
-            using var doc = JsonDocument.Parse(json);
-            var latest = doc.RootElement.GetProperty("tag_name").GetString() ?? "?";
+            var response = await http.GetAsync("https://github.com/Flowseal/tg-ws-proxy/releases/latest");
+            var latest = response.Headers.Location?.ToString().Split('/').LastOrDefault() ?? "?";
             var local = GetTgProxyLocalVersion();
             if (latest == local)
                 AddTgProxyLog($"✅ Актуальная версия ({local})");
             else
+            {
                 AddTgProxyLog($"⬆️ Доступна версия {latest} (текущая {local})");
+                if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
+                {
+                    var update = Application.Current.Dispatcher.Invoke(() =>
+                        CustomDialog.Show("🔄 Обновление", $"Доступна версия {latest}.\nОбновить исходники прокси?", "Обновить", "Отмена"));
+                    if (update)
+                    {
+                        await UpdateProxySourcesAsync(latest);
+                    }
+                }
+            }
         }
         catch (Exception ex)
         {
             AddTgProxyLog($"❌ Ошибка проверки: {ex.Message}");
+        }
+    }
+
+    private async Task UpdateProxySourcesAsync(string tagName)
+    {
+        AddTgProxyLog($"⬇️ Обновляем исходники до {tagName}...");
+        try
+        {
+            using var http = new HttpClient();
+            http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
+
+            var rawBase = $"https://raw.githubusercontent.com/Flowseal/tg-ws-proxy/{tagName}/proxy/";
+            foreach (var file in ProxySourceFiles)
+            {
+                var content = await http.GetByteArrayAsync(rawBase + file);
+                await File.WriteAllBytesAsync(Path.Combine(ProxyScriptDir, file), content);
+            }
+
+            File.WriteAllText(Path.Combine(TgProxyDir, "version.txt"), tagName);
+            TgProxyVersion = tagName;
+            AddTgProxyLog($"✅ Исходники обновлены до {tagName}");
+        }
+        catch (Exception ex)
+        {
+            AddTgProxyLog($"❌ Ошибка обновления: {ex.Message}");
         }
     }
 
@@ -350,8 +501,21 @@ public partial class MainViewModel
 
     public void StopTgProxyOnExit() => StopTgProxy();
 
-    private string TgDeepLink =>
-        $"tg://proxy?server=127.0.0.1&port={TgProxyPort}&secret={TgProxySecret}";
+    private string TgDeepLink
+    {
+        get
+        {
+            var domain = TgProxyDomain.Trim();
+            if (!string.IsNullOrWhiteSpace(domain))
+            {
+                // ee-secret: ee + 32hex + hex(domain)
+                var domainHex = Convert.ToHexString(System.Text.Encoding.UTF8.GetBytes(domain)).ToLowerInvariant();
+                return $"tg://proxy?server={domain}&port={TgProxyPort}&secret=ee{TgProxySecret}{domainHex}";
+            }
+            // dd-secret: dd + 32hex
+            return $"tg://proxy?server=127.0.0.1&port={TgProxyPort}&secret=dd{TgProxySecret}";
+        }
+    }
 
     [RelayCommand]
     private void OpenInTelegram()
@@ -372,5 +536,4 @@ public partial class MainViewModel
         System.Windows.Clipboard.SetText(TgDeepLink);
         AddTgProxyLog($"Copied: {TgDeepLink}");
     }
-
 }

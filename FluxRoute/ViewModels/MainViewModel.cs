@@ -309,9 +309,9 @@ public partial class MainViewModel : ObservableObject
         GameFilterProtocol = settings.GameFilterProtocol;
         ShowProfileSwitchWarning = settings.ShowProfileSwitchWarning;
 
-        // TG Proxy
-        TgProxyHost = settings.TgProxy.Host;
-        TgProxyPort = settings.TgProxy.Port.ToString();
+        // TG Proxy — сбрасываем устаревшие дефолты
+        TgProxyHost = string.IsNullOrWhiteSpace(settings.TgProxy.Host) || settings.TgProxy.Host == "0.0.0.0" ? "127.0.0.1" : settings.TgProxy.Host;
+        TgProxyPort = (settings.TgProxy.Port is 0 or 1080 or 3128 or 2080) ? "1443" : settings.TgProxy.Port.ToString();
         TgProxySecret = settings.TgProxy.Secret;
         TgProxyDomain = settings.TgProxy.Domain;
         TgProxyVerbose = settings.TgProxy.Verbose;
@@ -346,7 +346,7 @@ public partial class MainViewModel : ObservableObject
             TgProxy = new FluxRoute.Core.Services.TgProxySettings
             {
                 Host = TgProxyHost,
-                Port = int.TryParse(TgProxyPort, out var tgPort) ? tgPort : 1080,
+                Port = int.TryParse(TgProxyPort, out var tgPort) ? tgPort : 1443,
                 Secret = TgProxySecret,
                 Domain = TgProxyDomain,
                 Verbose = TgProxyVerbose,

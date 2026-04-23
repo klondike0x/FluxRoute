@@ -40,10 +40,10 @@ public sealed class AppSettings
 
 public sealed class TgProxySettings
 {
-    public string Host { get; set; } = "0.0.0.0";
-    public int Port { get; set; } = 1080;
+    public string Host { get; set; } = "127.0.0.1";
+    public int Port { get; set; } = 1443;
     public string Secret { get; set; } = "";
-    public string Domain { get; set; } = "www.google.com";
+    public string Domain { get; set; } = "";
     public bool Verbose { get; set; } = false;
     public bool PreferIPv4 { get; set; } = true;
 }
@@ -79,8 +79,16 @@ public sealed class SettingsService
                 return new AppSettings();
 
             var json = File.ReadAllText(_settingsPath);
-            return JsonSerializer.Deserialize<AppSettings>(json, _jsonOptions)
-                   ?? new AppSettings();
+            var settings = JsonSerializer.Deserialize<AppSettings>(json, _jsonOptions)
+                           ?? new AppSettings();
+
+            // Миграция: сброс старого дефолтного домена www.google.com —
+            // fake-tls-domain требует домен, указывающий на IP самого прокси.
+            // Для локального 127.0.0.1 fake-tls не нужен, пустая строка = выкл.
+            if (settings.TgProxy.Domain == "www.google.com")
+                settings.TgProxy.Domain = "";
+
+            return settings;
         }
         catch
         {
