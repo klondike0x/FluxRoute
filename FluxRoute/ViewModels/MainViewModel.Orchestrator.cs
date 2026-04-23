@@ -1,8 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Linq;
 using System.Windows;
 using CommunityToolkit.Mvvm.Input;
 using Application = System.Windows.Application;
-
 using FluxRoute.Core.Models;
 using FluxRoute.Core.Services;
 
@@ -33,7 +35,8 @@ public partial class MainViewModel
             {
                 var sorted = ProfileScores.OrderByDescending(s => s.Score).ToList();
                 ProfileScores.Clear();
-                foreach (var s in sorted) ProfileScores.Add(s);
+                foreach (var s in sorted)
+                    ProfileScores.Add(s);
                 SaveSettings();
             }
 
@@ -56,12 +59,17 @@ public partial class MainViewModel
         if (_orchestrator.NextCheckAt is { } next)
         {
             var remaining = next - DateTimeOffset.Now;
-            OrchestratorNextCheck = remaining > TimeSpan.Zero ? $"через {(int)remaining.TotalMinutes:D2}:{remaining.Seconds:D2}" : "сейчас...";
+            OrchestratorNextCheck = remaining > TimeSpan.Zero
+                ? $"через {(int)remaining.TotalMinutes:D2}:{remaining.Seconds:D2}"
+                : "сейчас...";
         }
-        else OrchestratorNextCheck = "—";
+        else
+        {
+            OrchestratorNextCheck = "—";
+        }
     }
 
-    private async Task SwitchProfileAsync(ProfileItem profile)
+    private async Task SwitchProfileAsync(ProfileItem? profile)
     {
         if (Application.Current == null || Application.Current.Dispatcher.HasShutdownStarted)
             return;
@@ -69,6 +77,7 @@ public partial class MainViewModel
         await Application.Current.Dispatcher.InvokeAsync(() =>
         {
             Stop();
+
             if (profile is not null)
             {
                 _suppressProfileWarning = true;
@@ -87,9 +96,13 @@ public partial class MainViewModel
         return Application.Current.Dispatcher.InvokeAsync(() =>
         {
             var entry = ProfileScores.FirstOrDefault(s => s.FileName == fileName);
-            if (entry is null) return;
-            if (score == -1) entry.SetPending();
-            else entry.SetScore(score / 100.0);
+            if (entry is null)
+                return;
+
+            if (score == -1)
+                entry.SetPending();
+            else
+                entry.SetScore(score / 100.0);
         }).Task;
     }
 
@@ -120,15 +133,22 @@ public partial class MainViewModel
         ScanProgressText = "Сканирование...";
         UpdateOrchestratorEnabledSites();
 
-        await _orchestrator.ScanAllProfilesAsync();
+        try
+        {
+            await _orchestrator.ScanAllProfilesAsync();
 
-        var sorted = ProfileScores.OrderByDescending(s => s.Score).ToList();
-        ProfileScores.Clear();
-        foreach (var s in sorted) ProfileScores.Add(s);
+            var sorted = ProfileScores.OrderByDescending(s => s.Score).ToList();
+            ProfileScores.Clear();
+            foreach (var s in sorted)
+                ProfileScores.Add(s);
 
-        IsScanning = false;
-        ScanProgressText = "Сканирование завершено";
-        SaveSettings();
+            ScanProgressText = "Сканирование завершено";
+            SaveSettings();
+        }
+        finally
+        {
+            IsScanning = false;
+        }
     }
 
     [RelayCommand]
@@ -141,7 +161,7 @@ public partial class MainViewModel
         }
         else
         {
-            if (int.TryParse(OrchestratorInterval, out int mins) && mins >= 1)
+            if (int.TryParse(OrchestratorInterval, out var mins) && mins >= 1)
                 _orchestrator.CheckInterval = TimeSpan.FromMinutes(mins);
 
             UpdateOrchestratorEnabledSites();
@@ -151,8 +171,16 @@ public partial class MainViewModel
 
             if (_runningProcess is null || _runningProcess.HasExited)
             {
-                if (SelectedProfile is not null) { Logs.Add("[Оркестратор] Автозапуск профиля..."); Start(); }
-                else { Logs.Add("[Оркестратор] Профиль не выбран."); return; }
+                if (SelectedProfile is not null)
+                {
+                    Logs.Add("[Оркестратор] Автозапуск профиля...");
+                    Start();
+                }
+                else
+                {
+                    Logs.Add("[Оркестратор] Профиль не выбран.");
+                    return;
+                }
             }
 
             _orchestrator.Start();
