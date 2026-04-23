@@ -76,14 +76,19 @@ public partial class MainViewModel : ObservableObject
     public string SelectedTabName => SelectedTabIndex switch
     {
         0 => "ГЛАВНАЯ",
-        1 => "ОРКЕСТРАТОР",
-        2 => "ОБНОВЛЕНИЕ",
-        3 => "ДИАГНОСТИКА",
-        4 => "СЕРВИС",
-        5 => "О ПРОГРАММЕ",
+        1 => "TG ПРОКСИ",
+        2 => "ОРКЕСТРАТОР",
+        3 => "ОБНОВЛЕНИЕ",
+        4 => "ДИАГНОСТИКА",
+        5 => "СЕРВИС",
+        6 => "О ПРОГРАММЕ",
         _ => ""
     };
-    partial void OnSelectedTabIndexChanged(int value) => OnPropertyChanged(nameof(SelectedTabName));
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(SelectedTabName));
+        if (value == 1) OnTgProxyTabActivated();
+    }
 
     // ── Боковая панель ──
     [ObservableProperty] private bool isSidebarExpanded = true;
@@ -303,6 +308,21 @@ public partial class MainViewModel : ObservableObject
         MinimizeToTray = settings.MinimizeToTray;
         GameFilterProtocol = settings.GameFilterProtocol;
         ShowProfileSwitchWarning = settings.ShowProfileSwitchWarning;
+
+        // TG Proxy
+        TgProxyHost = settings.TgProxy.Host;
+        TgProxyPort = settings.TgProxy.Port.ToString();
+        TgProxySecret = settings.TgProxy.Secret;
+        TgProxyDatacenters = settings.TgProxy.DatacenterIps;
+        TgProxyCloudflarEnabled = settings.TgProxy.CloudflareEnabled;
+        TgProxyCloudflarePriority = settings.TgProxy.CloudflarePriority;
+        TgProxyUseCustomDomain = settings.TgProxy.UseCustomDomain;
+        TgProxyCustomDomain = settings.TgProxy.CustomDomain;
+        TgProxyVerbose = settings.TgProxy.Verbose;
+        TgProxyBufferKb = settings.TgProxy.BufferKb.ToString();
+        TgProxyWsPool = settings.TgProxy.WsPool.ToString();
+        TgProxyMaxLogMb = settings.TgProxy.MaxLogMb.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        TgProxyCheckUpdatesOnStart = settings.TgProxy.CheckUpdatesOnStart;
     }
 
     public void SaveSettings()
@@ -329,7 +349,24 @@ public partial class MainViewModel : ObservableObject
                 FileName = s.FileName,
                 DisplayName = s.DisplayName,
                 Score = s.Score
-            }).ToList()
+            }).ToList(),
+            TgProxy = new FluxRoute.Core.Services.TgProxySettings
+            {
+                Host = TgProxyHost,
+                Port = int.TryParse(TgProxyPort, out var tgPort) ? tgPort : 1080,
+                Secret = TgProxySecret,
+                DatacenterIps = TgProxyDatacenters,
+                CloudflareEnabled = TgProxyCloudflarEnabled,
+                CloudflarePriority = TgProxyCloudflarePriority,
+                UseCustomDomain = TgProxyUseCustomDomain,
+                CustomDomain = TgProxyCustomDomain,
+                Verbose = TgProxyVerbose,
+                BufferKb = int.TryParse(TgProxyBufferKb, out var tgBuf) ? tgBuf : 256,
+                WsPool = int.TryParse(TgProxyWsPool, out var tgPool) ? tgPool : 4,
+                MaxLogMb = double.TryParse(TgProxyMaxLogMb, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var tgLog) ? tgLog : 5.0,
+                CheckUpdatesOnStart = TgProxyCheckUpdatesOnStart
+            }
         };
 
         _settingsService.Save(settings);
