@@ -540,7 +540,7 @@
 									</Button.Style>
 									<StackPanel Orientation="Horizontal">
 																				<TextBlock Text="⚙" Width="20" TextAlignment="Center"/>
-																				<TextBlock Text="Оркестр." Margin="6,0,0,0" Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolToVis}}"/>
+																				<TextBlock Text="Оркестратор" Margin="6,0,0,0" Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolToVis}}"/>
 																			</StackPanel>
 								</Button>
 
@@ -576,7 +576,7 @@
 									</Button.Style>
 									<StackPanel Orientation="Horizontal">
 																				<TextBlock Text="🔧" Width="20" TextAlignment="Center"/>
-																				<TextBlock Text="Диагн." Margin="6,0,0,0" Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolToVis}}"/>
+																				<TextBlock Text="Диагностика" Margin="6,0,0,0" Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolToVis}}"/>
 																			</StackPanel>
 								</Button>
 
