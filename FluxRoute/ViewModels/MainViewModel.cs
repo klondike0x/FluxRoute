@@ -346,7 +346,7 @@ public partial class MainViewModel : ObservableObject
             TgProxy = new FluxRoute.Core.Services.TgProxySettings
             {
                 Host = TgProxyHost,
-                Port = int.TryParse(TgProxyPort, out var tgPort) ? tgPort : 3128,
+                Port = int.TryParse(TgProxyPort, out var tgPort) ? tgPort : 1080,
                 Secret = TgProxySecret,
                 Domain = TgProxyDomain,
                 Verbose = TgProxyVerbose,

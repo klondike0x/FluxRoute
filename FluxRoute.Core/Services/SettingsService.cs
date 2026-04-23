@@ -41,7 +41,7 @@ public sealed class AppSettings
 public sealed class TgProxySettings
 {
     public string Host { get; set; } = "0.0.0.0";
-    public int Port { get; set; } = 3128;
+    public int Port { get; set; } = 1080;
     public string Secret { get; set; } = "";
     public string Domain { get; set; } = "www.google.com";
     public bool Verbose { get; set; } = false;

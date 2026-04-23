@@ -1513,7 +1513,7 @@
 																   Visibility="{Binding IsTgProxyDownloading, Converter={StaticResource BoolToVis}}"/>
 														<Button Content="⬇️ Установить MTG" Style="{StaticResource AccentBtn}"
 																HorizontalAlignment="Left" Margin="0,6,0,0" FontSize="12" Padding="10,5"
-																Command="{Binding DownloadTgProxyAsyncCommand}"
+																Command="{Binding DownloadTgProxyCommand}"
 																IsEnabled="{Binding IsTgProxyDownloading, Converter={StaticResource InvBool}}"/>
 													</StackPanel>
 												</Border>
@@ -1589,6 +1589,12 @@
 													</Button>
 													<Button Content="🔍 Обновления" Style="{StaticResource TermBtn}"
 															Command="{Binding CheckTgProxyUpdatesCommand}"
+															IsEnabled="{Binding TgProxyInstalled}"/>
+														<Button Content="📲 Открыть в Telegram" Style="{StaticResource AccentBtn}" Margin="10,0,0,0"
+															Command="{Binding OpenInTelegramCommand}"
+															IsEnabled="{Binding TgProxyRunning}"/>
+														<Button Content="📋 Скопировать ссылку" Style="{StaticResource TermBtn}" Margin="10,0,0,0"
+															Command="{Binding CopyTgLinkCommand}"
 															IsEnabled="{Binding TgProxyInstalled}"/>
 												</StackPanel>
 

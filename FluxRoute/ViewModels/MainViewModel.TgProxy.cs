@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
@@ -29,7 +29,7 @@ public partial class MainViewModel
     // ── Настройки ──
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyHost = "0.0.0.0";
     partial void OnTgProxyHostChanged(string value) => SaveSettings();
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyPort = "3128";
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyPort = "1080";
     partial void OnTgProxyPortChanged(string value) => SaveSettings();
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxySecret = "";
     partial void OnTgProxySecretChanged(string value) => SaveSettings();
@@ -349,4 +349,28 @@ public partial class MainViewModel
     }
 
     public void StopTgProxyOnExit() => StopTgProxy();
+
+    private string TgDeepLink =>
+        $"tg://proxy?server=127.0.0.1&port={TgProxyPort}&secret={TgProxySecret}";
+
+    [RelayCommand]
+    private void OpenInTelegram()
+    {
+        if (string.IsNullOrWhiteSpace(TgProxySecret)) { AddTgProxyLog("Secret not set."); return; }
+        try
+        {
+            Process.Start(new ProcessStartInfo(TgDeepLink) { UseShellExecute = true });
+            AddTgProxyLog("Opening Telegram with proxy settings...");
+        }
+        catch (Exception ex) { AddTgProxyLog($"Error: {ex.Message}"); }
+    }
+
+    [RelayCommand]
+    private void CopyTgLink()
+    {
+        if (string.IsNullOrWhiteSpace(TgProxySecret)) { AddTgProxyLog("Secret not set."); return; }
+        System.Windows.Clipboard.SetText(TgDeepLink);
+        AddTgProxyLog($"Copied: {TgDeepLink}");
+    }
+
 }
