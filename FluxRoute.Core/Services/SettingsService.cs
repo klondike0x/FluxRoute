@@ -40,19 +40,12 @@ public sealed class AppSettings
 
 public sealed class TgProxySettings
 {
-    public string Host { get; set; } = "127.0.0.1";
-    public int Port { get; set; } = 1080;
+    public string Host { get; set; } = "0.0.0.0";
+    public int Port { get; set; } = 3128;
     public string Secret { get; set; } = "";
-    public string DatacenterIps { get; set; } = "2:149.154.167.220\n4:149.154.167.220";
-    public bool CloudflareEnabled { get; set; } = true;
-    public bool CloudflarePriority { get; set; } = true;
-    public string CustomDomain { get; set; } = "";
-    public bool UseCustomDomain { get; set; } = false;
+    public string Domain { get; set; } = "www.google.com";
     public bool Verbose { get; set; } = false;
-    public int BufferKb { get; set; } = 256;
-    public int WsPool { get; set; } = 4;
-    public double MaxLogMb { get; set; } = 5.0;
-    public bool CheckUpdatesOnStart { get; set; } = true;
+    public bool PreferIPv4 { get; set; } = true;
 }
 
 public sealed class ProfileRatingEntry

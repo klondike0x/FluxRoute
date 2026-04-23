@@ -1,10 +1,9 @@
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Net.Http;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.Input;
 using Application = System.Windows.Application;
 using FluxRoute.Views;
@@ -15,8 +14,8 @@ public partial class MainViewModel
 {
     // ── Пути ──
     private string TgProxyDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tg-proxy");
-    private string TgProxyExe => Path.Combine(TgProxyDir, "tg-ws-proxy.exe");
-    private string TgProxyConfigPath => Path.Combine(TgProxyDir, "config.json");
+    private string TgProxyExe => Path.Combine(TgProxyDir, "mtg.exe");
+    private string TgProxyConfigPath => Path.Combine(TgProxyDir, "config.toml");
 
     // ── Состояние ──
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool tgProxyRunning;
@@ -25,42 +24,21 @@ public partial class MainViewModel
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyDownloadStatus = "";
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyVersion = "—";
     private Process? _tgProxyProcess;
-    private CancellationTokenSource? _tgProxyHideCts;
     public System.Collections.ObjectModel.ObservableCollection<string> TgProxyLogs { get; } = new();
 
-    // ── Настройки MTProto ──
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyHost = "127.0.0.1";
+    // ── Настройки ──
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyHost = "0.0.0.0";
     partial void OnTgProxyHostChanged(string value) => SaveSettings();
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyPort = "1080";
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyPort = "3128";
     partial void OnTgProxyPortChanged(string value) => SaveSettings();
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxySecret = "";
     partial void OnTgProxySecretChanged(string value) => SaveSettings();
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyDatacenters = "2:149.154.167.220\n4:149.154.167.220";
-    partial void OnTgProxyDatacentersChanged(string value) => SaveSettings();
-
-    // ── Cloudflare ──
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool tgProxyCloudflarEnabled = true;
-    partial void OnTgProxyCloudflarEnabledChanged(bool value) => SaveSettings();
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool tgProxyCloudflarePriority = true;
-    partial void OnTgProxyCloudflarePriorityChanged(bool value) => SaveSettings();
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool tgProxyUseCustomDomain = false;
-    partial void OnTgProxyUseCustomDomainChanged(bool value) => SaveSettings();
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyCustomDomain = "";
-    partial void OnTgProxyCustomDomainChanged(string value) => SaveSettings();
-
-    // ── Логи и производительность ──
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyDomain = "www.google.com";
+    partial void OnTgProxyDomainChanged(string value) => SaveSettings();
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool tgProxyVerbose = false;
     partial void OnTgProxyVerboseChanged(bool value) => SaveSettings();
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyBufferKb = "256";
-    partial void OnTgProxyBufferKbChanged(string value) => SaveSettings();
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyWsPool = "4";
-    partial void OnTgProxyWsPoolChanged(string value) => SaveSettings();
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private string tgProxyMaxLogMb = "5.0";
-    partial void OnTgProxyMaxLogMbChanged(string value) => SaveSettings();
-
-    // ── Обновления ──
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool tgProxyCheckUpdatesOnStart = true;
-    partial void OnTgProxyCheckUpdatesOnStartChanged(bool value) => SaveSettings();
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool tgProxyPreferIPv4 = true;
+    partial void OnTgProxyPreferIPv4Changed(bool value) => SaveSettings();
 
     // ── Текст кнопки запуска ──
     public string TgProxyToggleText => TgProxyRunning ? "⏹ Остановить прокси" : "▶ Запустить прокси";
@@ -82,8 +60,8 @@ public partial class MainViewModel
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     if (CustomDialog.Show(
-                        "🔧 TG WS Proxy",
-                        "Компонент TG WS Proxy не установлен.\n\nЗагрузить его сейчас с GitHub (~5 МБ)?",
+                        "🔧 MTG Proxy",
+                        "Компонент MTG (headless MTProto прокси) не установлен.\n\nЗагрузить его сейчас с GitHub (~5 МБ)?",
                         "Загрузить", "Отмена"))
                     {
                         _ = DownloadTgProxyAsync();
@@ -98,30 +76,36 @@ public partial class MainViewModel
     }
 
     // ── Скачивание ──
+    [RelayCommand]
     private async Task DownloadTgProxyAsync()
     {
         IsTgProxyDownloading = true;
         TgProxyDownloadStatus = "🔍 Поиск последней версии...";
-        AddTgProxyLog("⬇️ Начало загрузки TG WS Proxy...");
+        AddTgProxyLog("⬇️ Начало загрузки MTG...");
 
         try
         {
             using var http = new HttpClient();
             http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
 
-            var json = await http.GetStringAsync("https://api.github.com/repos/Flowseal/tg-ws-proxy/releases/latest");
+            var json = await http.GetStringAsync("https://api.github.com/repos/9seconds/mtg/releases/latest");
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
             var tagName = root.GetProperty("tag_name").GetString() ?? "unknown";
             string? downloadUrl = null;
+            string? assetName = null;
 
             foreach (var asset in root.GetProperty("assets").EnumerateArray())
             {
                 var name = asset.GetProperty("name").GetString() ?? "";
-                if (name.Equals("TgWsProxy_windows.exe", StringComparison.OrdinalIgnoreCase))
+                // Ищем Windows AMD64: mtg_X.X.X_windows_amd64.zip или mtg_windows_amd64.zip
+                if (name.Contains("windows", StringComparison.OrdinalIgnoreCase) &&
+                    name.Contains("amd64", StringComparison.OrdinalIgnoreCase) &&
+                    (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)))
                 {
                     downloadUrl = asset.GetProperty("browser_download_url").GetString();
+                    assetName = name;
                     break;
                 }
             }
@@ -129,7 +113,7 @@ public partial class MainViewModel
             if (downloadUrl is null)
             {
                 TgProxyDownloadStatus = "❌ Не найден Windows-релиз";
-                AddTgProxyLog("❌ Не найден TgWsProxy_windows.exe в релизе");
+                AddTgProxyLog("❌ Не найден mtg windows amd64 в релизе");
                 return;
             }
 
@@ -137,15 +121,43 @@ public partial class MainViewModel
             Directory.CreateDirectory(TgProxyDir);
 
             var bytes = await http.GetByteArrayAsync(downloadUrl);
-            await File.WriteAllBytesAsync(TgProxyExe, bytes);
 
-            // Сохраняем версию
+            // Удаляем старый exe если есть (не заблокирован)
+            if (File.Exists(TgProxyExe))
+                File.Delete(TgProxyExe);
+
+            if (assetName!.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            {
+                var zipPath = Path.Combine(TgProxyDir, "mtg.zip");
+                if (File.Exists(zipPath)) File.Delete(zipPath);
+                await File.WriteAllBytesAsync(zipPath, bytes);
+
+                // Закрываем архив до удаления zip
+                using (var archive = ZipFile.OpenRead(zipPath))
+                {
+                    var entry = archive.Entries.FirstOrDefault(e =>
+                        e.Name.Equals("mtg.exe", StringComparison.OrdinalIgnoreCase) ||
+                        e.Name.Equals("mtg", StringComparison.OrdinalIgnoreCase))
+                        ?? archive.Entries.FirstOrDefault(e =>
+                        e.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+                    if (entry is not null)
+                        entry.ExtractToFile(TgProxyExe, overwrite: true);
+                    else
+                        AddTgProxyLog("⚠ Не найден исполняемый файл в архиве");
+                }
+                File.Delete(zipPath);
+            }
+            else
+            {
+                await File.WriteAllBytesAsync(TgProxyExe, bytes);
+            }
+
             File.WriteAllText(Path.Combine(TgProxyDir, "version.txt"), tagName);
 
             TgProxyVersion = tagName;
             TgProxyInstalled = true;
             TgProxyDownloadStatus = $"✅ Установлено {tagName}";
-            AddTgProxyLog($"✅ TG WS Proxy {tagName} успешно установлен");
+            AddTgProxyLog($"✅ MTG {tagName} успешно установлен");
         }
         catch (Exception ex)
         {
@@ -168,9 +180,21 @@ public partial class MainViewModel
     [RelayCommand]
     private void GenerateTgProxySecret()
     {
+        // mtg fake-tls secret: ee + 32 hex + encoded domain
         var bytes = RandomNumberGenerator.GetBytes(16);
-        TgProxySecret = Convert.ToHexString(bytes).ToLowerInvariant();
-        AddTgProxyLog("🔑 Secret сгенерирован");
+        var hex = Convert.ToHexString(bytes).ToLowerInvariant();
+        var domain = TgProxyDomain.Trim();
+        if (!string.IsNullOrWhiteSpace(domain))
+        {
+            var domainHex = Convert.ToHexString(System.Text.Encoding.UTF8.GetBytes(domain)).ToLowerInvariant();
+            TgProxySecret = "ee" + hex + domainHex;
+            AddTgProxyLog($"🔑 Fake-TLS secret сгенерирован (домен: {domain})");
+        }
+        else
+        {
+            TgProxySecret = hex;
+            AddTgProxyLog("🔑 Simple secret сгенерирован");
+        }
     }
 
     // ── Запуск / Остановка ──
@@ -185,23 +209,28 @@ public partial class MainViewModel
     {
         if (!File.Exists(TgProxyExe))
         {
-            AddTgProxyLog("❌ tg-ws-proxy.exe не найден. Установите компонент.");
+            AddTgProxyLog("❌ mtg.exe не найден. Установите компонент.");
             return;
         }
 
-        WriteTgProxyConfig();
+        if (string.IsNullOrWhiteSpace(TgProxySecret))
+        {
+            AddTgProxyLog("❌ Secret не задан. Нажмите 🔄 для генерации.");
+            return;
+        }
 
-        // Запускаем через CreateProcess с SW_HIDE, чтобы окно не мелькало с самого старта
+        WriteMtgConfig();
+
         var psi = new ProcessStartInfo
         {
             FileName = TgProxyExe,
-            Arguments = $"--config \"{TgProxyConfigPath}\"",
+            // mtg v2: mtg run <config.toml>
+            Arguments = $"run \"{TgProxyConfigPath}\"",
             WorkingDirectory = TgProxyDir,
             UseShellExecute = false,
             CreateNoWindow = true,
-            WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
-            RedirectStandardOutput = false,
-            RedirectStandardError = false
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
         };
 
         try
@@ -213,20 +242,14 @@ public partial class MainViewModel
                 return;
             }
 
-            var pid = (uint)_tgProxyProcess.Id;
-
-            // Регистрируем PID — WinEventHook скроет окно при EVENT_OBJECT_SHOW
-            _trackedPids = new HashSet<uint>(_trackedPids) { pid };
-            InstallWindowHook();
-
-            // Агрессивно скрываем все окна процесса в первые 5 секунд
-            _tgProxyHideCts?.Cancel();
-            _tgProxyHideCts = new CancellationTokenSource();
-            _ = AggressiveHideLoopAsync(pid, _tgProxyHideCts.Token);
+            _tgProxyProcess.OutputDataReceived += (_, e) => { if (e.Data != null) AppendTgLog(e.Data); };
+            _tgProxyProcess.ErrorDataReceived += (_, e) => { if (e.Data != null) AppendTgLog(e.Data); };
+            _tgProxyProcess.BeginOutputReadLine();
+            _tgProxyProcess.BeginErrorReadLine();
 
             TgProxyRunning = true;
-            AddTgProxyLog($"▶ TG WS Proxy запущен (PID {_tgProxyProcess.Id})");
-            AddTgProxyLog($"   MTProto: {TgProxyHost}:{TgProxyPort}");
+            AddTgProxyLog($"▶ MTG запущен (PID {_tgProxyProcess.Id})");
+            AddTgProxyLog($"   Слушает: {TgProxyHost}:{TgProxyPort}");
 
             _ = WatchTgProxyProcessAsync(_tgProxyProcess);
         }
@@ -236,39 +259,28 @@ public partial class MainViewModel
         }
     }
 
-    // Каждые 200 мс прячем все видимые окна процесса (включая трей-попапы)
-    private async Task AggressiveHideLoopAsync(uint pid, CancellationToken ct)
+    // Генерация TOML конфига для mtg v2
+    private void WriteMtgConfig()
     {
-        var deadline = DateTime.UtcNow.AddSeconds(10);
-        while (!ct.IsCancellationRequested && DateTime.UtcNow < deadline)
-        {
-            await Task.Delay(200, ct).ConfigureAwait(false);
-            HideAllWindowsOfPid(pid);
-        }
-        // После 10 секунд продолжаем реже — раз в секунду, пока процесс жив
-        while (!ct.IsCancellationRequested)
-        {
-            await Task.Delay(1000, ct).ConfigureAwait(false);
-            HideAllWindowsOfPid(pid);
-        }
+        Directory.CreateDirectory(TgProxyDir);
+
+        var bindAddr = $"{TgProxyHost}:{TgProxyPort}";
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"secret = \"{TgProxySecret}\"");
+        sb.AppendLine($"bind-to = \"{bindAddr}\"");
+        if (TgProxyVerbose)
+            sb.AppendLine("debug = true");
+        if (TgProxyPreferIPv4)
+            sb.AppendLine("prefer-ip = \"prefer-ipv4\"");
+
+        File.WriteAllText(TgProxyConfigPath, sb.ToString());
+        AddTgProxyLog("💾 config.toml записан");
     }
 
-    [DllImport("user32.dll")] private static extern bool EnumWindows_TG(EnumWindowsProc_TG lpEnumFunc, IntPtr lParam);
-    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId_TG(IntPtr hWnd, out uint lpdwProcessId);
-    [DllImport("user32.dll")] private static extern bool IsWindowVisible_TG(IntPtr hWnd);
-    [DllImport("user32.dll")] private static extern bool ShowWindow_TG(IntPtr hWnd, int nCmdShow);
-    [DllImport("user32.dll")] private static extern bool DestroyWindow(IntPtr hWnd);
-    private delegate bool EnumWindowsProc_TG(IntPtr hWnd, IntPtr lParam);
-
-    private static void HideAllWindowsOfPid(uint pid)
+    private void AppendTgLog(string line)
     {
-        EnumWindows_TG((hWnd, _) =>
-        {
-            GetWindowThreadProcessId_TG(hWnd, out uint winPid);
-            if (winPid == pid)
-                ShowWindow_TG(hWnd, 0); // SW_HIDE
-            return true;
-        }, IntPtr.Zero);
+        if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
+            Application.Current.Dispatcher.Invoke(() => AddTgProxyLog(line));
     }
 
     private async Task WatchTgProxyProcessAsync(Process proc)
@@ -279,32 +291,20 @@ public partial class MainViewModel
             Application.Current.Dispatcher.Invoke(() =>
             {
                 TgProxyRunning = false;
-                AddTgProxyLog("⏹ TG WS Proxy остановлен");
+                AddTgProxyLog($"⏹ MTG остановлен (код: {proc.ExitCode})");
             });
         }
     }
 
     private void StopTgProxy()
     {
-        _tgProxyHideCts?.Cancel();
-        _tgProxyHideCts = null;
-
         try
         {
             if (_tgProxyProcess is { HasExited: false })
             {
-                var pid = (uint)_tgProxyProcess.Id;
                 _tgProxyProcess.Kill(entireProcessTree: true);
                 _tgProxyProcess.Dispose();
                 _tgProxyProcess = null;
-
-                var updated = new HashSet<uint>(_trackedPids);
-                updated.Remove(pid);
-                _trackedPids = updated;
-
-                // Снимаем хук если winws тоже не работает
-                if (!IsRunning)
-                    RemoveWindowHook();
             }
         }
         catch (Exception ex)
@@ -312,61 +312,18 @@ public partial class MainViewModel
             AddTgProxyLog($"⚠ Ошибка остановки: {ex.Message}");
         }
         TgProxyRunning = false;
-        AddTgProxyLog("⏹ TG WS Proxy остановлен");
-    }
-
-    // ── Конфиг ──
-    private void WriteTgProxyConfig()
-    {
-        Directory.CreateDirectory(TgProxyDir);
-
-        // Парсим датацентры
-        var dcList = new List<DcEntry>();
-        foreach (var line in TgProxyDatacenters.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            var parts = line.Split(':', 2);
-            if (parts.Length == 2 && int.TryParse(parts[0], out var dcId))
-                dcList.Add(new DcEntry { Dc = dcId, Ip = parts[1].Trim() });
-        }
-
-        var cfg = new TgProxyConfig
-        {
-            Host = TgProxyHost,
-            Port = int.TryParse(TgProxyPort, out var p) ? p : 1080,
-            Secret = TgProxySecret,
-            Datacenters = dcList,
-            CloudflareEnabled = TgProxyCloudflarEnabled,
-            CloudflarePriority = TgProxyCloudflarePriority,
-            CustomDomain = TgProxyUseCustomDomain ? TgProxyCustomDomain : "",
-            Verbose = TgProxyVerbose,
-            BufferKb = int.TryParse(TgProxyBufferKb, out var buf) ? buf : 256,
-            WsPool = int.TryParse(TgProxyWsPool, out var pool) ? pool : 4,
-            MaxLogMb = double.TryParse(TgProxyMaxLogMb, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var logMb) ? logMb : 5.0,
-            CheckUpdates = TgProxyCheckUpdatesOnStart
-        };
-
-        var json = JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
-        File.WriteAllText(TgProxyConfigPath, json);
-        AddTgProxyLog("💾 Конфиг сохранён");
-    }
-
-    [RelayCommand]
-    private void SaveTgProxyConfig()
-    {
-        WriteTgProxyConfig();
-        AddTgProxyLog("✅ Настройки применены");
+        AddTgProxyLog("⏹ MTG остановлен");
     }
 
     [RelayCommand]
     private async Task CheckTgProxyUpdates()
     {
-        AddTgProxyLog("🔍 Проверяем обновления TG WS Proxy...");
+        AddTgProxyLog("🔍 Проверяем обновления MTG...");
         try
         {
             using var http = new HttpClient();
             http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
-            var json = await http.GetStringAsync("https://api.github.com/repos/Flowseal/tg-ws-proxy/releases/latest");
+            var json = await http.GetStringAsync("https://api.github.com/repos/9seconds/mtg/releases/latest");
             using var doc = JsonDocument.Parse(json);
             var latest = doc.RootElement.GetProperty("tag_name").GetString() ?? "?";
             var local = GetTgProxyLocalVersion();
@@ -387,32 +344,9 @@ public partial class MainViewModel
     private void AddTgProxyLog(string msg)
     {
         TgProxyLogs.Add(msg);
-        while (TgProxyLogs.Count > 200)
+        while (TgProxyLogs.Count > 500)
             TgProxyLogs.RemoveAt(0);
     }
 
     public void StopTgProxyOnExit() => StopTgProxy();
-
-    // ── JSON-модели для config.json ──
-    private sealed class TgProxyConfig
-    {
-        [JsonPropertyName("host")] public string Host { get; set; } = "127.0.0.1";
-        [JsonPropertyName("port")] public int Port { get; set; } = 1080;
-        [JsonPropertyName("secret")] public string Secret { get; set; } = "";
-        [JsonPropertyName("datacenters")] public List<DcEntry> Datacenters { get; set; } = new();
-        [JsonPropertyName("cloudflare_enabled")] public bool CloudflareEnabled { get; set; } = true;
-        [JsonPropertyName("cloudflare_priority")] public bool CloudflarePriority { get; set; } = true;
-        [JsonPropertyName("custom_domain")] public string? CustomDomain { get; set; }
-        [JsonPropertyName("verbose")] public bool Verbose { get; set; }
-        [JsonPropertyName("buffer_kb")] public int BufferKb { get; set; } = 256;
-        [JsonPropertyName("ws_pool")] public int WsPool { get; set; } = 4;
-        [JsonPropertyName("max_log_mb")] public double MaxLogMb { get; set; } = 5.0;
-        [JsonPropertyName("check_updates")] public bool CheckUpdates { get; set; } = true;
-    }
-
-    private sealed class DcEntry
-    {
-        [JsonPropertyName("dc")] public int Dc { get; set; }
-        [JsonPropertyName("ip")] public string Ip { get; set; } = "";
-    }
 }

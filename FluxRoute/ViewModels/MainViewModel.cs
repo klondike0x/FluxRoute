@@ -313,16 +313,9 @@ public partial class MainViewModel : ObservableObject
         TgProxyHost = settings.TgProxy.Host;
         TgProxyPort = settings.TgProxy.Port.ToString();
         TgProxySecret = settings.TgProxy.Secret;
-        TgProxyDatacenters = settings.TgProxy.DatacenterIps;
-        TgProxyCloudflarEnabled = settings.TgProxy.CloudflareEnabled;
-        TgProxyCloudflarePriority = settings.TgProxy.CloudflarePriority;
-        TgProxyUseCustomDomain = settings.TgProxy.UseCustomDomain;
-        TgProxyCustomDomain = settings.TgProxy.CustomDomain;
+        TgProxyDomain = settings.TgProxy.Domain;
         TgProxyVerbose = settings.TgProxy.Verbose;
-        TgProxyBufferKb = settings.TgProxy.BufferKb.ToString();
-        TgProxyWsPool = settings.TgProxy.WsPool.ToString();
-        TgProxyMaxLogMb = settings.TgProxy.MaxLogMb.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        TgProxyCheckUpdatesOnStart = settings.TgProxy.CheckUpdatesOnStart;
+        TgProxyPreferIPv4 = settings.TgProxy.PreferIPv4;
     }
 
     public void SaveSettings()
@@ -353,19 +346,11 @@ public partial class MainViewModel : ObservableObject
             TgProxy = new FluxRoute.Core.Services.TgProxySettings
             {
                 Host = TgProxyHost,
-                Port = int.TryParse(TgProxyPort, out var tgPort) ? tgPort : 1080,
+                Port = int.TryParse(TgProxyPort, out var tgPort) ? tgPort : 3128,
                 Secret = TgProxySecret,
-                DatacenterIps = TgProxyDatacenters,
-                CloudflareEnabled = TgProxyCloudflarEnabled,
-                CloudflarePriority = TgProxyCloudflarePriority,
-                UseCustomDomain = TgProxyUseCustomDomain,
-                CustomDomain = TgProxyCustomDomain,
+                Domain = TgProxyDomain,
                 Verbose = TgProxyVerbose,
-                BufferKb = int.TryParse(TgProxyBufferKb, out var tgBuf) ? tgBuf : 256,
-                WsPool = int.TryParse(TgProxyWsPool, out var tgPool) ? tgPool : 4,
-                MaxLogMb = double.TryParse(TgProxyMaxLogMb, System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var tgLog) ? tgLog : 5.0,
-                CheckUpdatesOnStart = TgProxyCheckUpdatesOnStart
+                PreferIPv4 = TgProxyPreferIPv4
             }
         };
 
