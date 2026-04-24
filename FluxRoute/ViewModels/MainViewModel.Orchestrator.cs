@@ -215,6 +215,63 @@ public partial class MainViewModel
             return;
         }
         AddOrchestratorLog("✅ Система готова к работе.");
+    }
+    private CancellationTokenSource? _advancedScanCts;
+
+    [RelayCommand]
+    private async Task ScanProfilesAdvanced()
+    {
+        if (IsScanning) return;
+        IsScanning = true;
+        ScanProgressText = "Подготовка...";
+        RebuildProfileScores();
+        var service = new FluxRoute.Core.ProfileBenchmarkService();
+        var profiles = Profiles.Select(p => (p.DisplayName, "https://www.youtube.com")).ToList();
+        _advancedScanCts?.Cancel();
+        _advancedScanCts = new CancellationTokenSource();
+
+        service.ProgressChanged += (msg, pct, remaining) =>
+        {
+            Application.Current?.Dispatcher.Invoke(() =>
+            {
+                ScanProgressText = $"{msg} ({pct:F0}%) — осталось ~{remaining} сек";
+            });
+        };
+
+        try
+        {
+            var results = await service.BenchmarkProfilesAsync(profiles, _advancedScanCts.Token);
+            ProfileScores.Clear();
+            foreach (var r in results.OrderByDescending(r => r.Score))
+            {
+                var score = new ProfileScore
+                {
+                    DisplayName = r.ProfileName,
+                    FileName = Profiles.FirstOrDefault(p => p.DisplayName == r.ProfileName)?.FileName ?? r.ProfileName
+                };
+                score.SetScore(r.Score / 100.0);
+                ProfileScores.Add(score);
+            }
+            ScanProgressText = $"✅ Сканирование завершено — лучший: {ProfileScores.FirstOrDefault()?.DisplayName ?? "—"}";
+        }
+        catch (OperationCanceledException)
+        {
+            ScanProgressText = "⏹ Сканирование отменено";
+        }
+        finally
+        {
+            IsScanning = false;
+            _advancedScanCts?.Dispose();
+            _advancedScanCts = null;
+        }
+    }
+
+    [RelayCommand]
+    private void CancelAdvancedScan()
+    {
+        _advancedScanCts?.Cancel();
+        AddOrchestratorLog("⏹ Расширенное сканирование отменено пользователем.");
     }}
+
 
 
