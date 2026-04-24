@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using Clipboard = System.Windows.Clipboard;
 
 using FluxRoute.Core.Models;
+using FluxRoute.Core.Services;
 
 namespace FluxRoute.ViewModels;
 
@@ -65,6 +66,47 @@ public partial class MainViewModel
         WinwsOk = File.Exists(WinwsPath);
         WinDivertDllOk = File.Exists(WinDivertDllPath);
         WinDivertDriverOk = File.Exists(WinDivertSys64Path) || File.Exists(WinDivertSysPath);
+        
+        // Расширенная проверка конфигурации (как в Zapret-Hub)
+        ValidateConfiguration();
+    }
+
+    private void ValidateConfiguration()
+    {
+        try
+        {
+            var results = ConfigValidator.ValidateAll(
+                engineDir: EngineDir,
+                winwsPath: WinwsPath,
+                winDivertDllPath: WinDivertDllPath,
+                winDivertSysPath: WinDivertSysPath,
+                winDivertSys64Path: WinDivertSys64Path,
+                getProfiles: () => Profiles);
+
+            var hasErrors = results.Any(r => r.Status == "error");
+            var hasWarnings = results.Any(r => r.Status == "warning");
+
+            if (hasErrors)
+            {
+                Logs.Add("❌ Проверка конфигурации обнаружила критические ошибки:");
+                foreach (var result in results.Where(r => r.Status == "error"))
+                    Logs.Add($"   • {result.Name}: {result.Message}");
+            }
+            else if (hasWarnings)
+            {
+                Logs.Add("⚠️ Проверка конфигурации обнаружила предупреждения:");
+                foreach (var result in results.Where(r => r.Status == "warning"))
+                    Logs.Add($"   • {result.Name}: {result.Message}");
+            }
+            else
+            {
+                Logs.Add("✅ Проверка конфигурации пройдена успешно");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"⚠️ Ошибка при проверке конфигурации: {ex.Message}");
+        }
     }
 
     private void UpdateRuntimeInfo()
@@ -125,6 +167,27 @@ public partial class MainViewModel
         sb.AppendLine($"WinDivert.sys: {WinDivertDriverText}"); sb.AppendLine($"Status: {StatusText}");
         sb.AppendLine($"Running BAT: {RunningScriptName}"); sb.AppendLine($"PID: {PidText}");
         sb.AppendLine($"Uptime: {UptimeText}"); sb.AppendLine($"Orchestrator: {(OrchestratorRunning ? "Running" : "Stopped")}");
+        
+        // Добавляем расширенную проверку конфигурации
+        sb.AppendLine();
+        sb.AppendLine("═══ Проверка конфигурации ═══");
+        try
+        {
+            var results = ConfigValidator.ValidateAll(
+                engineDir: EngineDir,
+                winwsPath: WinwsPath,
+                winDivertDllPath: WinDivertDllPath,
+                winDivertSysPath: WinDivertSysPath,
+                winDivertSys64Path: WinDivertSys64Path,
+                getProfiles: () => Profiles);
+            
+            sb.AppendLine(ConfigValidator.FormatResults(results));
+        }
+        catch (Exception ex)
+        {
+            sb.AppendLine($"Ошибка проверки: {ex.Message}");
+        }
+        
         return sb.ToString();
     }
 }

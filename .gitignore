@@ -1,1 +1,73 @@
-Nothing should be ignored since the changes only include XAML view files (.xaml) which are source code files and not build artifacts, dependencies, or temporary files.
+# Compiled and build artifacts
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.a
+*.out
+*.pyc
+__pycache__/
+*.class
+
+# Dependencies
+node_modules/
+venv/
+.venv/
+.env
+.env.local
+.env.*
+
+# Build directories
+dist/
+build/
+target/
+*.log
+*.tmp
+*.swp
+
+# Editors
+.vscode/
+.idea/
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Compression
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+
+# MyPy
+.mypy_cache/
+
+# PyTest
+.pytest_cache/
+
+# Gradle
+.gradle/
+
+# System files
+.DS_Store
+Thumbs.db
