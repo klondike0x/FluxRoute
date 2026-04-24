@@ -200,5 +200,21 @@ public partial class MainViewModel
         AddOrchestratorLog($"   Stability: {result.Stability * 100:F0}%");
         AddOrchestratorLog($"   Throughput: {result.ThroughputMbps:F1} Mbps");
         AddOrchestratorLog($"   Score: {result.Score:F1}");
+    }
+    [RelayCommand]
+    private async Task RunZapretDiagnostics()
+    {
+        AddOrchestratorLog("🔍 Запуск диагностики системы...");
+        var diag = await FluxRoute.Core.SystemDiagnostics.RunAsync();
+        AddOrchestratorLog($"• WinDivert (winws): {(diag.IsWinDivertRunning ? "✅ работает" : "❌ не запущен")}");
+        AddOrchestratorLog($"• Порт 9888: {(diag.IsPortAvailable ? "✅ свободен" : "⚠ занят")}");
+        AddOrchestratorLog($"• Интернет: {(diag.HasInternetAccess ? "✅ доступен" : "❌ отсутствует")}");
+        if (!string.IsNullOrEmpty(diag.ErrorMessage))
+        {
+            AddOrchestratorLog($"❌ Критические проблемы: {diag.ErrorMessage}Запуск профиля может быть невозможен.");
+            return;
+        }
+        AddOrchestratorLog("✅ Система готова к работе.");
     }}
+
 
