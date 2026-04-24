@@ -192,13 +192,13 @@ public partial class MainViewModel
             return;
         }
         AddOrchestratorLog("⏳ Тестирование выбранного профиля...");
-        var tester = new FluxRoute.Core.ZapretProfileTester();
+        var tester = new FluxRoute.Core.ProfileTester();
         var testUrl = "https://www.youtube.com"; // можно параметризовать позже
         var result = await tester.TestProfileAsync(SelectedProfile.DisplayName, testUrl);
         AddOrchestratorLog($"📊 Результаты для «{result.ProfileName}»:");
         AddOrchestratorLog($"   Latency: {result.LatencyMs} ms");
-        AddOrchestratorLog($"   Stability: {result.Stability * 100:F0}%");
-        AddOrchestratorLog($"   Throughput: {result.ThroughputMbps:F1} Mbps");
+        AddOrchestratorLog($"   Stability: {result.StabilityRate * 100:F0}%");
+        AddOrchestratorLog($"   Throughput: {result.SpeedMbps:F1} Mbps");
         AddOrchestratorLog($"   Score: {result.Score:F1}");
     }
     [RelayCommand]

@@ -9,7 +9,7 @@ namespace FluxRoute.Core
 {
     public class BenchmarkResult
     {
-        public string ProfileName { get; set; } = string.Empty; = string.Empty; = string.Empty; = string.Empty; = string.Empty;
+        public string ProfileName { get; set; } = string.Empty;
         public long LatencyMs { get; set; }
         public double StabilityRate { get; set; }
         public double ThroughputMbps { get; set; }
@@ -19,7 +19,7 @@ namespace FluxRoute.Core
     public class ProfileBenchmarkService
     {
         private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(10) };
-        public event Action<string, double, int> ProgressChanged;
+        public event Action<string, double, int>? ProgressChanged;
 
         public async Task<List<BenchmarkResult>> BenchmarkProfilesAsync(
             IEnumerable<(string name, string url)> profiles,
