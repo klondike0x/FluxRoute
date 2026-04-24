@@ -172,4 +172,33 @@ public partial class MainViewModel
     {
         OrchestratorLogs.Clear();
     }
-}
+
+    [RelayCommand]
+    private async Task RunAdvancedDiagnostics()
+    {
+        if (SelectedProfile is null)
+        {
+            AddOrchestratorLog("❌ Профиль не выбран.");
+            return;
+        }
+        AddOrchestratorLog("🔍 Запуск расширенной диагностики...");
+        var diag = await FluxRoute.Core.SystemDiagnostics.RunAsync();
+        AddOrchestratorLog($"• WinDivert: {(diag.IsWinDivertRunning ? "✅ работает" : "❌ остановлен")}");
+        AddOrchestratorLog($"• Порт 9888: {(diag.IsPortAvailable ? "✅ свободен" : "⚠ занят")}");
+        AddOrchestratorLog($"• Интернет: {(diag.HasInternetAccess ? "✅ доступен" : "❌ отсутствует")}");
+        if (!string.IsNullOrEmpty(diag.ErrorMessage))
+        {
+            AddOrchestratorLog($"⚠ Диагностика не пройдена: {diag.ErrorMessage}");
+            return;
+        }
+        AddOrchestratorLog("⏳ Тестирование выбранного профиля...");
+        var tester = new FluxRoute.Core.ZapretProfileTester();
+        var testUrl = "https://www.youtube.com"; // можно параметризовать позже
+        var result = await tester.TestProfileAsync(SelectedProfile.DisplayName, testUrl);
+        AddOrchestratorLog($"📊 Результаты для «{result.ProfileName}»:");
+        AddOrchestratorLog($"   Latency: {result.LatencyMs} ms");
+        AddOrchestratorLog($"   Stability: {result.Stability * 100:F0}%");
+        AddOrchestratorLog($"   Throughput: {result.ThroughputMbps:F1} Mbps");
+        AddOrchestratorLog($"   Score: {result.Score:F1}");
+    }}
+
