@@ -643,8 +643,8 @@
                         </Grid>
 
                         <WrapPanel>
-                            <Button Content="🔄 Обновить" Style="{StaticResource DarkButton}"
-                                    Margin="0,0,8,8" Command="{Binding RefreshProfilesCommand}"/>
+                            <Button Content="🩺 Диагностика системы" Style="{StaticResource DarkButton}" Margin="0,0,8,8" Command="{Binding RunZapretDiagnosticsCommand}"/>
+                        (<Button\s+Content="🔄 Обновить"\s+Style="\{StaticResource DarkButton\}"\s+Margin="0,0,8,8"\s+Command="\{Binding RefreshProfilesCommand\}"/>)
                             <Button Content="📋 Скопировать" Style="{StaticResource DarkButton}"
                                     Margin="0,0,8,8"
                                     Command="{Binding CopyDiagnosticsCommand}"/>
@@ -675,3 +675,4 @@
     </Grid>
     </Border>
 </Window>
+

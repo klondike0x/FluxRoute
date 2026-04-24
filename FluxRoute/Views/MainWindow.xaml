@@ -916,8 +916,8 @@
                                                 </Style>
                                             </Button.Style>
                                         </Button>
-                                        <Button Content="🔍 Проверить сейчас" Style="{StaticResource TermBtn}"
-                                                Command="{Binding CheckNowCommand}"/>
+                                        <Button Content="🩺 Диагностика системы" Style="{StaticResource TermBtn}" Margin="0,0,10,0" Command="{Binding RunZapretDiagnosticsCommand}"/>
+                (<Button\s+[^>]*Content="🔍 Проверить сейчас"[^>]*\s*Command="\{Binding CheckNowCommand\}"[^>]*/>)
                                     </StackPanel>
 
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
@@ -1717,3 +1717,4 @@
         </Grid>
     </Border>
 </Window>
+
