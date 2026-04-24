@@ -19,7 +19,7 @@ namespace FluxRoute.Core
     public class ProfileBenchmarkService
     {
         private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(10) };
-        public event Action<string, double, int> ProgressChanged; // сообщение, процент, оставшиеся сек
+        public event Action<string, double, int> ProgressChanged;
 
         public async Task<List<BenchmarkResult>> BenchmarkProfilesAsync(
             IEnumerable<(string name, string url)> profiles,
