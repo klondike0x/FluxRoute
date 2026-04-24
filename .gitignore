@@ -1,73 +1,38 @@
-# Compiled and build artifacts
-*.o
-*.obj
-*.exe
+```gitignore
+# Build artifacts
 *.dll
+*.exe
+*.pdb
 *.so
+*.dylib
+*.obj
+*.o
 *.a
+*.lib
 *.out
-*.pyc
-__pycache__/
-*.class
 
 # Dependencies
+packages/
 node_modules/
-venv/
-.venv/
-.env
-.env.local
-.env.*
+vendor/
 
-# Build directories
-dist/
-build/
-target/
+# Logs
 *.log
-*.tmp
-*.swp
 
-# Editors
-.vscode/
-.idea/
-
-# Coverage
-coverage/
-htmlcov/
-.coverage
-
-# Compression
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
-
-# MyPy
-.mypy_cache/
-
-# PyTest
-.pytest_cache/
-
-# Gradle
-.gradle/
-
-# System files
+# OS generated files
 .DS_Store
 Thumbs.db
+
+# IDE specific
+.vs/
+.idea/
+*.userprefs
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Configuration
+appsettings.Production.json
+appsettings.Development.json
+```
