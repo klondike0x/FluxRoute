@@ -466,7 +466,7 @@ public partial class MainWindow : Window
         var row = new WpfStackPanel { Orientation = WpfOrientation.Horizontal };
         row.Children.Add(new WpfTextBlock
         {
-            Text = "≡",
+            Text = "🧾",
             Width = 20,
             TextAlignment = System.Windows.TextAlignment.Center
         });
