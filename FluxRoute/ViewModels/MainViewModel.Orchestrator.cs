@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
-using System.Windows;
 using CommunityToolkit.Mvvm.Input;
 using Application = System.Windows.Application;
 using FluxRoute.Core.Models;
@@ -23,35 +22,42 @@ public partial class MainViewModel
 
     private void OnOrchestratorStatus(object? sender, OrchestratorEventArgs e)
     {
-        if (Application.Current == null || Application.Current.Dispatcher.HasShutdownStarted)
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
             return;
 
-        Application.Current.Dispatcher.Invoke(() =>
+        // Важно: не используем Dispatcher.Invoke(). Во время сканирования профилей события идут
+        // из фоновых задач и из UI-потока вперемешку; синхронный Invoke может создать re-entrancy.
+        _ = dispatcher.BeginInvoke(new Action(() =>
         {
-            AddOrchestratorLog(e.Message);
-            OrchestratorStatus = e.Message;
-
-            if (e.Message.Contains("Сканирование завершено"))
+            try
             {
-                var sorted = ProfileScores.OrderByDescending(s => s.Score).ToList();
-                ProfileScores.Clear();
-                foreach (var s in sorted)
-                    ProfileScores.Add(s);
-                SaveSettings();
-            }
+                AddOrchestratorLog(e.Message);
+                OrchestratorStatus = e.Message;
 
-            if (e.IsSwitched && e.NewProfile is not null)
-            {
-                var profile = Profiles.FirstOrDefault(p => p.DisplayName == e.NewProfile);
-                if (profile is not null)
+                if (e.Message.Contains("Сканирование завершено", StringComparison.OrdinalIgnoreCase))
                 {
-                    SelectedProfile = profile;
-                    CurrentStrategy = profile.DisplayName;
-                    Logs.Add($"[Оркестратор] Переключено на «{profile.DisplayName}»");
-                    ProfileSwitchNotification?.Invoke(this, profile.DisplayName);
+                    SortProfileScores();
+                    SaveSettings();
+                }
+
+                if (e.IsSwitched && e.NewProfile is not null)
+                {
+                    var profile = Profiles.FirstOrDefault(p => p.DisplayName == e.NewProfile);
+                    if (profile is not null)
+                    {
+                        SelectedProfile = profile;
+                        CurrentStrategy = profile.DisplayName;
+                        Logs.Add($"[Оркестратор] Переключено на «{profile.DisplayName}»");
+                        ProfileSwitchNotification?.Invoke(this, profile.DisplayName);
+                    }
                 }
             }
-        });
+            catch (Exception ex)
+            {
+                Logs.Add($"[Оркестратор] Ошибка UI-обновления: {ex.Message}");
+            }
+        }));
     }
 
     private void UpdateOrchestratorNextCheck()
@@ -71,10 +77,11 @@ public partial class MainViewModel
 
     private async Task SwitchProfileAsync(ProfileItem? profile)
     {
-        if (Application.Current == null || Application.Current.Dispatcher.HasShutdownStarted)
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
             return;
 
-        await Application.Current.Dispatcher.InvokeAsync(() =>
+        void SwitchOnUi()
         {
             Stop();
 
@@ -85,15 +92,21 @@ public partial class MainViewModel
                 _suppressProfileWarning = false;
                 Start();
             }
-        });
+        }
+
+        if (dispatcher.CheckAccess())
+            SwitchOnUi();
+        else
+            await dispatcher.InvokeAsync(SwitchOnUi).Task.ConfigureAwait(false);
     }
 
     private Task UpdateProfileScoreAsync(string fileName, int score)
     {
-        if (Application.Current == null || Application.Current.Dispatcher.HasShutdownStarted)
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
             return Task.CompletedTask;
 
-        return Application.Current.Dispatcher.InvokeAsync(() =>
+        void UpdateOnUi()
         {
             var entry = ProfileScores.FirstOrDefault(s => s.FileName == fileName);
             if (entry is null)
@@ -103,7 +116,15 @@ public partial class MainViewModel
                 entry.SetPending();
             else
                 entry.SetScore(score / 100.0);
-        }).Task;
+        }
+
+        if (dispatcher.CheckAccess())
+        {
+            UpdateOnUi();
+            return Task.CompletedTask;
+        }
+
+        return dispatcher.InvokeAsync(UpdateOnUi).Task;
     }
 
     private void RebuildProfileScores()
@@ -111,6 +132,14 @@ public partial class MainViewModel
         ProfileScores.Clear();
         foreach (var p in Profiles)
             ProfileScores.Add(new ProfileScore { DisplayName = p.DisplayName, FileName = p.FileName });
+    }
+
+    private void SortProfileScores()
+    {
+        var sorted = ProfileScores.OrderByDescending(s => s.Score).ToList();
+        ProfileScores.Clear();
+        foreach (var s in sorted)
+            ProfileScores.Add(s);
     }
 
     private void UpdateOrchestratorEnabledSites()
@@ -136,14 +165,15 @@ public partial class MainViewModel
         try
         {
             await _orchestrator.ScanAllProfilesAsync();
-
-            var sorted = ProfileScores.OrderByDescending(s => s.Score).ToList();
-            ProfileScores.Clear();
-            foreach (var s in sorted)
-                ProfileScores.Add(s);
-
+            SortProfileScores();
             ScanProgressText = "Сканирование завершено";
             SaveSettings();
+        }
+        catch (Exception ex)
+        {
+            ScanProgressText = "Ошибка сканирования";
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ❌ Ошибка сканирования: {ex.Message}");
+            Logs.Add($"[Оркестратор] Ошибка сканирования: {ex.Message}");
         }
         finally
         {
@@ -169,7 +199,7 @@ public partial class MainViewModel
             if (ProfileScores.Count == 0 || ProfileScores.All(s => s.Score == 0))
                 RebuildProfileScores();
 
-            if (_runningProcess is null || _runningProcess.HasExited)
+            if (!IsTrackedProcessRunning())
             {
                 if (SelectedProfile is not null)
                 {
@@ -192,12 +222,33 @@ public partial class MainViewModel
     private async Task CheckNow()
     {
         AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] Запуск ручной проверки...");
-        await _orchestrator.CheckNowAsync();
+
+        try
+        {
+            await _orchestrator.CheckNowAsync();
+        }
+        catch (Exception ex)
+        {
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ❌ Ошибка проверки: {ex.Message}");
+            Logs.Add($"[Оркестратор] Ошибка проверки: {ex.Message}");
+        }
     }
 
     [RelayCommand]
     private void ClearOrchestratorLogs()
     {
         OrchestratorLogs.Clear();
+    }
+
+    private bool IsTrackedProcessRunning()
+    {
+        try
+        {
+            return _runningProcess is not null && !_runningProcess.HasExited;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
