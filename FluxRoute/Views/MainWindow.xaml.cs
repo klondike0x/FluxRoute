@@ -43,6 +43,7 @@ public partial class MainWindow : Window
     private bool _isClosingConfirmed;
     private WpfTextBox? _unifiedLogsTextBox;
     private WpfTextBlock? _pageTitleTextBlock;
+    private WpfBorder? _navIndicatorBorder;
 
 
     public MainWindow()
@@ -183,9 +184,21 @@ public partial class MainWindow : Window
 
     private void AnimateNavIndicator(int tabIndex)
     {
+        // The About page is pinned to the bottom of the sidebar.
+        // Logs use tab index 7, but visually they are placed right after Service
+        // because About was removed from the main navigation list.
+        if (tabIndex == 6)
+        {
+            SetNavIndicatorVisible(false);
+            return;
+        }
+
+        SetNavIndicatorVisible(true);
+
+        var visualIndex = tabIndex > 6 ? tabIndex - 1 : tabIndex;
         var animation = new DoubleAnimation
         {
-            To = tabIndex * 36,
+            To = visualIndex * 36,
             Duration = TimeSpan.FromMilliseconds(300),
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
         };
@@ -260,6 +273,7 @@ public partial class MainWindow : Window
         try
         {
             AddLogsNavigationButton();
+            MoveAboutNavigationToBottom();
             AddLogsPage();
             UpdateInjectedPageTitle();
         }
@@ -267,6 +281,113 @@ public partial class MainWindow : Window
         {
             _vm.Logs.Add($"[Логи] Не удалось создать вкладку логов: {ex.Message}");
         }
+    }
+
+    private void MoveAboutNavigationToBottom()
+    {
+        try
+        {
+            if (SidebarBorder.Child is WpfGrid { Tag: string tag } && tag == "SidebarWithBottomAbout")
+                return;
+
+            if (SidebarBorder.Child is not WpfStackPanel originalSidebar)
+                return;
+
+            var navGrid = originalSidebar.Children.OfType<WpfGrid>().FirstOrDefault();
+            var navStack = navGrid?.Children.OfType<WpfStackPanel>()
+                .FirstOrDefault(sp => sp.Children.OfType<WpfButton>().Any(IsAboutNavButton));
+
+            if (navGrid is null || navStack is null)
+                return;
+
+            var aboutButton = navStack.Children.OfType<WpfButton>().FirstOrDefault(IsAboutNavButton);
+            if (aboutButton is null)
+                return;
+
+            navStack.Children.Remove(aboutButton);
+
+            // Remove spacer left by older patched builds, if it exists.
+            foreach (var spacer in navStack.Children.OfType<FrameworkElement>()
+                         .Where(e => Equals(e.Tag, "AboutNavSpacer"))
+                         .ToList())
+            {
+                navStack.Children.Remove(spacer);
+            }
+
+            SidebarBorder.Child = null;
+
+            var sidebarLayout = new WpfGrid { Tag = "SidebarWithBottomAbout" };
+            sidebarLayout.RowDefinitions.Add(new WpfRowDefinition { Height = GridLength.Auto });
+            sidebarLayout.RowDefinitions.Add(new WpfRowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            sidebarLayout.RowDefinitions.Add(new WpfRowDefinition { Height = GridLength.Auto });
+
+            WpfGrid.SetRow(originalSidebar, 0);
+            sidebarLayout.Children.Add(originalSidebar);
+
+            var bottomContainer = new WpfBorder
+            {
+                BorderBrush = BrushFrom("#21262D"),
+                BorderThickness = new Thickness(0, 1, 0, 0),
+                Padding = new Thickness(0, 4, 0, 4),
+                Background = BrushFrom("#0D1117")
+            };
+            bottomContainer.Child = aboutButton;
+            WpfGrid.SetRow(bottomContainer, 2);
+            sidebarLayout.Children.Add(bottomContainer);
+
+            SidebarBorder.Child = sidebarLayout;
+        }
+        catch (Exception ex)
+        {
+            _vm.Logs.Add($"[UI] Не удалось перенести пункт 'О программе' вниз: {ex.Message}");
+        }
+    }
+
+    private static bool IsAboutNavButton(WpfButton button)
+    {
+        var parameter = button.CommandParameter?.ToString();
+        if (parameter == "6")
+            return true;
+
+        return ContainsText(button, "О программе");
+    }
+
+    private static bool ContainsText(DependencyObject root, string text)
+    {
+        if (root is WpfTextBlock textBlock &&
+            string.Equals(textBlock.Text?.Trim(), text, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        foreach (var child in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>())
+        {
+            if (ContainsText(child, text))
+                return true;
+        }
+
+        try
+        {
+            var count = VisualTreeHelper.GetChildrenCount(root);
+            for (var i = 0; i < count; i++)
+            {
+                if (ContainsText(VisualTreeHelper.GetChild(root, i), text))
+                    return true;
+            }
+        }
+        catch
+        {
+        }
+
+        return false;
+    }
+
+    private void SetNavIndicatorVisible(bool visible)
+    {
+        _navIndicatorBorder ??= EnumerateDescendants(this)
+            .OfType<WpfBorder>()
+            .FirstOrDefault(border => ReferenceEquals(border.RenderTransform, NavIndicatorTransform));
+
+        if (_navIndicatorBorder is not null)
+            _navIndicatorBorder.Visibility = visible ? Visibility.Visible : Visibility.Hidden;
     }
 
     private void AddLogsNavigationButton()
