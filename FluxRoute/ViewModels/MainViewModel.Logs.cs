@@ -6,7 +6,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Windows;
 using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -52,6 +51,7 @@ public partial class MainViewModel
     {
         EnsureUnifiedLogsInitialized();
         _filteredLogEntries?.Refresh();
+        RefreshUnifiedLogsText();
     }
 
     [ObservableProperty]
@@ -61,6 +61,7 @@ public partial class MainViewModel
     {
         EnsureUnifiedLogsInitialized();
         _filteredLogEntries?.Refresh();
+        RefreshUnifiedLogsText();
     }
 
     [ObservableProperty]
@@ -73,7 +74,11 @@ public partial class MainViewModel
     {
         EnsureUnifiedLogsInitialized();
         _filteredLogEntries?.Refresh();
+        RefreshUnifiedLogsText();
     }
+
+    [ObservableProperty]
+    private string unifiedLogsText = string.Empty;
 
     private void EnsureUnifiedLogsInitialized()
     {
@@ -93,6 +98,8 @@ public partial class MainViewModel
 
         if (UnifiedLogEntries.Count == 0)
             AppendUnifiedLog(AppLogCategory.App, "Вкладка логов инициализирована.");
+
+        RefreshUnifiedLogsText();
     }
 
     private void AttachLogCollection(ObservableCollection<string> source, AppLogCategory category)
@@ -141,6 +148,8 @@ public partial class MainViewModel
 
         while (UnifiedLogEntries.Count > MaxUnifiedLogEntries)
             UnifiedLogEntries.RemoveAt(0);
+
+        RefreshUnifiedLogsText();
     }
 
     private static string NormalizeLogMessage(string message)
@@ -227,6 +236,14 @@ public partial class MainViewModel
         return true;
     }
 
+    private void RefreshUnifiedLogsText()
+    {
+        if (!_unifiedLogsInitialized || _filteredLogEntries is null)
+            return;
+
+        UnifiedLogsText = BuildVisibleLogText();
+    }
+
     private string BuildVisibleLogText()
     {
         EnsureUnifiedLogsInitialized();
@@ -238,6 +255,7 @@ public partial class MainViewModel
     {
         EnsureUnifiedLogsInitialized();
         UnifiedLogEntries.Clear();
+        RefreshUnifiedLogsText();
         AppendUnifiedLog(AppLogCategory.App, "Логи очищены.");
     }
 

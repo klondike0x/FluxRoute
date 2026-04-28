@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
@@ -16,15 +18,15 @@ using WpfButton = System.Windows.Controls.Button;
 using WpfCheckBox = System.Windows.Controls.CheckBox;
 using WpfComboBox = System.Windows.Controls.ComboBox;
 using WpfGrid = System.Windows.Controls.Grid;
-using WpfListBox = System.Windows.Controls.ListBox;
+using WpfItemsControl = System.Windows.Controls.ItemsControl;
 using WpfScrollViewer = System.Windows.Controls.ScrollViewer;
 using WpfStackPanel = System.Windows.Controls.StackPanel;
 using WpfTextBlock = System.Windows.Controls.TextBlock;
 using WpfTextBox = System.Windows.Controls.TextBox;
-using WpfVirtualizingPanel = System.Windows.Controls.VirtualizingPanel;
 using WpfWrapPanel = System.Windows.Controls.WrapPanel;
 using WpfBorder = System.Windows.Controls.Border;
 using WpfOrientation = System.Windows.Controls.Orientation;
+using WpfPanel = System.Windows.Controls.Panel;
 using WpfRowDefinition = System.Windows.Controls.RowDefinition;
 using WpfFontFamily = System.Windows.Media.FontFamily;
 using WpfBindingMode = System.Windows.Data.BindingMode;
@@ -39,7 +41,7 @@ public partial class MainWindow : Window
     private readonly MainViewModel _vm;
     private readonly TrayIconService _trayIcon;
     private bool _isClosingConfirmed;
-    private WpfListBox? _unifiedLogsList;
+    private WpfTextBox? _unifiedLogsTextBox;
     private WpfTextBlock? _pageTitleTextBlock;
 
 
@@ -67,6 +69,12 @@ public partial class MainWindow : Window
         InstallUnifiedLogsTab();
         _ = _vm.FilteredLogEntries;
         _vm.UnifiedLogEntries.CollectionChanged += UnifiedLogEntries_CollectionChanged;
+
+        Loaded += (_, _) =>
+        {
+            if (!Dispatcher.HasShutdownStarted && !Dispatcher.HasShutdownFinished)
+                Dispatcher.BeginInvoke(new Action(HideLegacyInlineLogControls));
+        };
 
         // Если запуск с --minimized (автозапуск), сворачиваем в трей
         var args = Environment.GetCommandLineArgs();
@@ -461,7 +469,7 @@ public partial class MainWindow : Window
         WpfGrid.SetRow(topCard, 0);
         root.Children.Add(topCard);
 
-        _unifiedLogsList = new WpfListBox
+        _unifiedLogsTextBox = new WpfTextBox
         {
             Background = BrushFrom("#010409"),
             Foreground = BrushFrom("#C9D1D9"),
@@ -470,17 +478,18 @@ public partial class MainWindow : Window
             FontFamily = new WpfFontFamily("Consolas"),
             FontSize = 12,
             Padding = new Thickness(8),
-            HorizontalContentAlignment = System.Windows.HorizontalAlignment.Stretch,
-            DisplayMemberPath = "DisplayText"
+            IsReadOnly = true,
+            IsUndoEnabled = false,
+            AcceptsReturn = true,
+            AcceptsTab = false,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = WpfScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = WpfScrollBarVisibility.Disabled
         };
-        WpfScrollViewer.SetVerticalScrollBarVisibility(_unifiedLogsList, WpfScrollBarVisibility.Auto);
-        WpfScrollViewer.SetHorizontalScrollBarVisibility(_unifiedLogsList, WpfScrollBarVisibility.Auto);
-        WpfVirtualizingPanel.SetIsVirtualizing(_unifiedLogsList, true);
-        WpfVirtualizingPanel.SetVirtualizationMode(_unifiedLogsList, System.Windows.Controls.VirtualizationMode.Recycling);
-        WpfBindingOperations.SetBinding(_unifiedLogsList, WpfListBox.ItemsSourceProperty, new WpfBinding("FilteredLogEntries"));
+        WpfBindingOperations.SetBinding(_unifiedLogsTextBox, WpfTextBox.TextProperty, new WpfBinding("UnifiedLogsText") { Mode = WpfBindingMode.OneWay });
 
-        WpfGrid.SetRow(_unifiedLogsList, 1);
-        root.Children.Add(_unifiedLogsList);
+        WpfGrid.SetRow(_unifiedLogsTextBox, 1);
+        root.Children.Add(_unifiedLogsTextBox);
 
         return root;
     }
@@ -508,7 +517,7 @@ public partial class MainWindow : Window
 
     private void UnifiedLogEntries_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (_unifiedLogsList is null || !_vm.LogsAutoScroll)
+        if (_unifiedLogsTextBox is null || !_vm.LogsAutoScroll)
             return;
 
         if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
@@ -518,14 +527,237 @@ public partial class MainWindow : Window
         {
             try
             {
-                var items = _unifiedLogsList.Items;
-                if (items.Count > 0)
-                    _unifiedLogsList.ScrollIntoView(items[items.Count - 1]);
+                _unifiedLogsTextBox.CaretIndex = _unifiedLogsTextBox.Text.Length;
+                _unifiedLogsTextBox.ScrollToEnd();
             }
             catch
             {
             }
         }));
+    }
+
+    private void HideLegacyInlineLogControls()
+    {
+        try
+        {
+            var targets = new HashSet<FrameworkElement>();
+
+            foreach (var element in EnumerateDescendants(this).OfType<FrameworkElement>())
+            {
+                if (IsInUnifiedLogsPage(element))
+                    continue;
+
+                if (HasLegacyLogBinding(element))
+                {
+                    targets.Add(FindLegacyLogContainer(element));
+                    continue;
+                }
+
+                if (IsLegacyLogCommandButton(element))
+                    targets.Add(element);
+            }
+
+            foreach (var target in targets.Where(t => !IsInUnifiedLogsPage(t)))
+            {
+                target.Visibility = Visibility.Collapsed;
+                HideNeighborLegacyLogHeaders(target);
+            }
+        }
+        catch (Exception ex)
+        {
+            _vm.Logs.Add($"[Логи] Не удалось скрыть старые блоки логов: {ex.Message}");
+        }
+    }
+
+    private static bool HasLegacyLogBinding(FrameworkElement element)
+    {
+        if (element is WpfItemsControl itemsControl)
+        {
+            var path = GetBindingPath(itemsControl, WpfItemsControl.ItemsSourceProperty);
+            if (IsLegacyLogCollectionPath(path))
+                return true;
+        }
+
+        if (element is WpfTextBox textBox)
+        {
+            var path = GetBindingPath(textBox, WpfTextBox.TextProperty);
+            if (IsLegacyLogTextPath(path))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsLegacyLogCommandButton(FrameworkElement element)
+    {
+        if (element is not WpfButton button)
+            return false;
+
+        var commandPath = GetBindingPath(button, WpfButton.CommandProperty);
+        if (!string.IsNullOrWhiteSpace(commandPath) &&
+            (commandPath.Equals("ShowLogsCommand", StringComparison.OrdinalIgnoreCase) ||
+             commandPath.StartsWith("Clear", StringComparison.OrdinalIgnoreCase) &&
+             commandPath.Contains("Logs", StringComparison.OrdinalIgnoreCase)))
+            return true;
+
+        var content = button.Content?.ToString() ?? string.Empty;
+        return content.Contains("Очистить лог", StringComparison.OrdinalIgnoreCase) ||
+               content.Contains("Показать логи", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsLegacyLogCollectionPath(string? path)
+    {
+        return path is "Logs" or "RecentLogs" or "UpdateLogs" or "ServiceLogs" or "TgProxyLogs" or "OrchestratorLogs";
+    }
+
+    private static bool IsLegacyLogTextPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        if (path.Equals("UnifiedLogsText", StringComparison.OrdinalIgnoreCase) ||
+            path.Equals("LogSearchText", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return path.Equals("LogsText", StringComparison.OrdinalIgnoreCase) ||
+               path.Equals("LogText", StringComparison.OrdinalIgnoreCase) ||
+               path.EndsWith("LogsText", StringComparison.OrdinalIgnoreCase) ||
+               path.EndsWith("LogText", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? GetBindingPath(DependencyObject element, DependencyProperty property)
+    {
+        return WpfBindingOperations.GetBinding(element, property)?.Path?.Path;
+    }
+
+    private static FrameworkElement FindLegacyLogContainer(FrameworkElement element)
+    {
+        FrameworkElement fallback = element;
+        DependencyObject? current = element;
+
+        for (var i = 0; i < 8; i++)
+        {
+            var parent = GetParentObject(current);
+            if (parent is null)
+                break;
+
+            if (parent is WpfBorder border && !IsInUnifiedLogsPage(border))
+                return border;
+
+            if (parent is WpfScrollViewer scrollViewer && !IsInUnifiedLogsPage(scrollViewer))
+                fallback = scrollViewer;
+
+            current = parent;
+        }
+
+        return fallback;
+    }
+
+    private static void HideNeighborLegacyLogHeaders(FrameworkElement target)
+    {
+        DependencyObject? current = target;
+
+        for (var level = 0; level < 4; level++)
+        {
+            var parent = GetParentObject(current);
+            if (parent is null)
+                return;
+
+            if (parent is WpfPanel panel)
+            {
+                var index = current is UIElement currentElement ? panel.Children.IndexOf(currentElement) : -1;
+                if (index >= 0)
+                {
+                    for (var i = index - 1; i >= 0 && i >= index - 5; i--)
+                    {
+                        if (panel.Children[i] is WpfTextBlock textBlock && IsLegacyLogHeaderText(textBlock.Text))
+                            textBlock.Visibility = Visibility.Collapsed;
+
+                        if (panel.Children[i] is WpfButton button && IsLegacyLogCommandButton(button))
+                            button.Visibility = Visibility.Collapsed;
+                    }
+                }
+            }
+
+            current = parent;
+        }
+    }
+
+    private static bool IsLegacyLogHeaderText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+
+        var normalized = text.Trim();
+        return normalized.Contains("ЛОГ", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("ЖУРНАЛ", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("СОБЫТ", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsInUnifiedLogsPage(DependencyObject element)
+    {
+        DependencyObject? current = element;
+
+        for (var i = 0; i < 32 && current is not null; i++)
+        {
+            if (current is FrameworkElement { Tag: "UnifiedLogsPage" })
+                return true;
+
+            current = GetParentObject(current);
+        }
+
+        return false;
+    }
+
+    private static DependencyObject? GetParentObject(DependencyObject? element)
+    {
+        if (element is null)
+            return null;
+
+        var logicalParent = LogicalTreeHelper.GetParent(element);
+        if (logicalParent is not null)
+            return logicalParent;
+
+        try
+        {
+            return VisualTreeHelper.GetParent(element);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static IEnumerable<DependencyObject> EnumerateDescendants(DependencyObject root)
+    {
+        var queue = new Queue<(DependencyObject Node, int Depth)>();
+        var visited = new HashSet<DependencyObject>();
+        queue.Enqueue((root, 0));
+
+        while (queue.Count > 0 && visited.Count < 10000)
+        {
+            var (node, depth) = queue.Dequeue();
+            if (!visited.Add(node))
+                continue;
+
+            yield return node;
+
+            if (depth >= 80)
+                continue;
+
+            foreach (var child in LogicalTreeHelper.GetChildren(node).OfType<DependencyObject>())
+                queue.Enqueue((child, depth + 1));
+
+            try
+            {
+                var visualChildrenCount = VisualTreeHelper.GetChildrenCount(node);
+                for (var i = 0; i < visualChildrenCount; i++)
+                    queue.Enqueue((VisualTreeHelper.GetChild(node, i), depth + 1));
+            }
+            catch
+            {
+            }
+        }
     }
 
     private void UpdateInjectedPageTitle()
