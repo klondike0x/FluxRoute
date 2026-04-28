@@ -1,48 +1,51 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-	<UseWPF>true</UseWPF>
-	<UseWindowsForms>true</UseWindowsForms>
-	<Version>1.4.0</Version>
-	<ApplicationIcon>..\assets\FluxRoute.ico</ApplicationIcon>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Version>1.4.0</Version>
+    <ApplicationIcon>..\assets\FluxRoute.ico</ApplicationIcon>
   </PropertyGroup>
 
-	<ItemGroup>
-		<Content Include="engine\**\*">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-	</ItemGroup>
+  <ItemGroup>
+    <Content Include="engine\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
-	<ItemGroup>
-	  <Compile Remove="Properties\**" />
-	  <Compile Remove="ViewModels\Новая папка\**" />
-	  <EmbeddedResource Remove="Properties\**" />
-	  <EmbeddedResource Remove="ViewModels\Новая папка\**" />
-	  <None Remove="Properties\**" />
-	  <None Remove="ViewModels\Новая папка\**" />
-	  <Page Remove="Properties\**" />
-	  <Page Remove="ViewModels\Новая папка\**" />
-	</ItemGroup>
+  <ItemGroup>
+    <Compile Remove="Properties\**" />
+    <Compile Remove="ViewModels\Новая папка\**" />
+    <EmbeddedResource Remove="Properties\**" />
+    <EmbeddedResource Remove="ViewModels\Новая папка\**" />
+    <None Remove="Properties\**" />
+    <None Remove="ViewModels\Новая папка\**" />
+    <Page Remove="Properties\**" />
+    <Page Remove="ViewModels\Новая папка\**" />
+  </ItemGroup>
 
-	<ItemGroup>
-	  <Content Include="..\assets\FluxRoute.ico" />
-	  <EmbeddedResource Include="..\assets\FluxRoute.ico" LogicalName="FluxRoute.ico" />
-	</ItemGroup>
+  <ItemGroup>
+    <Content Include="..\assets\FluxRoute.ico" />
+    <EmbeddedResource Include="..\assets\FluxRoute.ico" LogicalName="FluxRoute.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.3" />
+    <PackageReference Include="Serilog" Version="4.3.1" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-	  <ProjectReference Include="..\FluxRoute.Core\FluxRoute.Core.csproj" />
-	  <ProjectReference Include="..\FluxRoute.Updater\FluxRoute.Updater.csproj" />
+    <ProjectReference Include="..\FluxRoute.Core\FluxRoute.Core.csproj" />
+    <ProjectReference Include="..\FluxRoute.Updater\FluxRoute.Updater.csproj" />
   </ItemGroup>
 
 </Project>

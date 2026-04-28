@@ -10,6 +10,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Navigation;
 using FluxRoute.Services;
 using FluxRoute.ViewModels;
+using Microsoft.Extensions.Logging;
 using WpfBinding = System.Windows.Data.Binding;
 using WpfBindingOperations = System.Windows.Data.BindingOperations;
 using WpfBrush = System.Windows.Media.Brush;
@@ -40,20 +41,34 @@ public partial class MainWindow : Window
 {
     private readonly MainViewModel _vm;
     private readonly TrayIconService _trayIcon;
+    private readonly ILogger<MainWindow>? _logger;
     private bool _isClosingConfirmed;
     private WpfTextBox? _unifiedLogsTextBox;
     private WpfTextBlock? _pageTitleTextBlock;
     private WpfBorder? _navIndicatorBorder;
 
 
+    // Parameterless constructor is intentionally kept for the WPF designer
+    // and as a safe fallback if the window is ever instantiated outside DI.
     public MainWindow()
+        : this(new MainViewModel(), new TrayIconService(), null)
     {
+    }
+
+    public MainWindow(MainViewModel viewModel, TrayIconService trayIcon, ILogger<MainWindow>? logger = null)
+    {
+        ArgumentNullException.ThrowIfNull(viewModel);
+        ArgumentNullException.ThrowIfNull(trayIcon);
+
         InitializeComponent();
-        _vm = new MainViewModel();
+
+        _vm = viewModel;
+        _trayIcon = trayIcon;
+        _logger = logger;
+
         DataContext = _vm;
 
         // Tray icon
-        _trayIcon = new TrayIconService();
         _trayIcon.SetVisible(true);
         _trayIcon.ShowRequested += OnTrayShowRequested;
         _trayIcon.ExitRequested += OnTrayExitRequested;
@@ -79,18 +94,22 @@ public partial class MainWindow : Window
 
         // Если запуск с --minimized (автозапуск), сворачиваем в трей
         var args = Environment.GetCommandLineArgs();
-        if (args.Contains("--minimized"))
+        if (args.Contains("--minimized", StringComparer.OrdinalIgnoreCase))
         {
             WindowState = WindowState.Minimized;
             ShowInTaskbar = false;
             Hide();
+            _logger?.LogInformation("Main window started minimized because --minimized argument was provided.");
         }
+
+        _logger?.LogInformation("Main window initialized.");
     }
 
     private void OnProfileSwitched(object? sender, string profileName)
     {
         _trayIcon.ShowBalloon("FluxRoute", $"Профиль переключён: {profileName}");
         _trayIcon.UpdateTooltip($"FluxRoute — {profileName}");
+        _logger?.LogInformation("Active profile switched to {ProfileName}.", profileName);
     }
 
     private void OnTrayShowRequested(object? sender, EventArgs e)
@@ -136,6 +155,8 @@ public partial class MainWindow : Window
                     isDanger: true))
             {
                 _isClosingConfirmed = true;
+                _logger?.LogInformation("User confirmed FluxRoute shutdown from main window.");
+
                 if (!Dispatcher.HasShutdownStarted)
                 {
                     Dispatcher.BeginInvoke(Close);
@@ -148,6 +169,8 @@ public partial class MainWindow : Window
 
             return;
         }
+
+        _logger?.LogInformation("Main window is closing. Starting application shutdown cleanup.");
 
         // Останавливаем winws.exe через ViewModel
         if (_vm.IsRunning)
@@ -162,7 +185,15 @@ public partial class MainWindow : Window
         // Принудительно завершаем winws.exe и WinDivert
         ForceKillProcesses();
 
+        _trayIcon.ShowRequested -= OnTrayShowRequested;
+        _trayIcon.ExitRequested -= OnTrayExitRequested;
+        _vm.ProfileSwitchNotification -= OnProfileSwitched;
+        _vm.ServiceLogs.CollectionChanged -= ServiceLogs_CollectionChanged;
+        _vm.PropertyChanged -= OnViewModelPropertyChanged;
+        _vm.UnifiedLogEntries.CollectionChanged -= UnifiedLogEntries_CollectionChanged;
+
         _trayIcon.Dispose();
+        _logger?.LogInformation("Main window cleanup completed.");
     }
 
     private void ServiceLogs_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
