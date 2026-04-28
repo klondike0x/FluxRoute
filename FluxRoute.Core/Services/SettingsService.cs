@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -69,54 +71,184 @@ public sealed class ProfileRatingEntry
     public int Score { get; set; } = 0;
 }
 
-public sealed class SettingsService
+public interface ISettingsService
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new()
+    string SettingsPath { get; }
+    string BackupPath { get; }
+    bool IsPortable { get; }
+
+    AppSettings Load();
+    void Save(AppSettings settings);
+}
+
+/// <summary>
+/// Portable-first settings storage.
+///
+/// FluxRoute is currently distributed as a portable app, so settings intentionally stay
+/// next to FluxRoute.exe. This service hardens the existing behavior without changing
+/// the storage location: atomic save, backup, corrupt-file quarantine and defensive
+/// normalization of nullable collections/nested settings.
+/// </summary>
+public sealed class SettingsService : ISettingsService
+{
+    private const string SettingsFileName = "fluxroute-settings.json";
+
+    private static readonly Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.Never
     };
 
-    private readonly string _settingsPath;
-
     public SettingsService()
     {
-        var appDir = AppDomain.CurrentDomain.BaseDirectory;
-        _settingsPath = Path.Combine(appDir, "fluxroute-settings.json");
+        var appDirectory = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory);
+
+        SettingsPath = Path.Combine(appDirectory, SettingsFileName);
+        BackupPath = SettingsPath + ".bak";
+        IsPortable = true;
     }
+
+    public string SettingsPath { get; }
+    public string BackupPath { get; }
+    public bool IsPortable { get; }
 
     public AppSettings Load()
     {
-        try
+        if (TryLoad(SettingsPath, out var settings))
         {
-            if (!File.Exists(_settingsPath))
-                return new AppSettings();
-
-            var json = File.ReadAllText(_settingsPath);
-            var settings = JsonSerializer.Deserialize<AppSettings>(json, _jsonOptions)
-                           ?? new AppSettings();
-
-            // Миграция: сброс старого дефолтного домена www.google.com —
-            // fake-tls-domain требует домен, указывающий на IP самого прокси.
-            // Для локального 127.0.0.1 fake-tls не нужен, пустая строка = выкл.
-            if (settings.TgProxy.Domain == "www.google.com")
-                settings.TgProxy.Domain = "";
-
-            return settings;
+            return Normalize(settings);
         }
-        catch
+
+        if (TryLoad(BackupPath, out var backupSettings))
         {
-            return new AppSettings();
+            TryRestoreBackupAsPrimary();
+            return Normalize(backupSettings);
         }
+
+        return new AppSettings();
     }
 
     public void Save(AppSettings settings)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var directory = Path.GetDirectoryName(SettingsPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        var tempPath = $"{SettingsPath}.{Guid.NewGuid():N}.tmp";
+
         try
         {
-            var json = JsonSerializer.Serialize(settings, _jsonOptions);
-            File.WriteAllText(_settingsPath, json);
+            var normalized = Normalize(settings);
+            var json = JsonSerializer.Serialize(normalized, JsonOptions);
+            File.WriteAllText(tempPath, json, Utf8NoBom);
+
+            ReplaceFileAtomically(tempPath, SettingsPath, BackupPath);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Trace.TraceError($"FluxRoute settings save failed. Path='{SettingsPath}'. Error='{ex}'");
+            TryDeleteTempFile(tempPath);
+        }
+    }
+
+    private static bool TryLoad(string path, out AppSettings settings)
+    {
+        settings = new AppSettings();
+
+        if (!File.Exists(path))
+        {
+            return false;
+        }
+
+        try
+        {
+            var json = File.ReadAllText(path, Utf8NoBom);
+            settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceError($"FluxRoute settings load failed. Path='{path}'. Error='{ex}'");
+            return false;
+        }
+    }
+
+    private void TryRestoreBackupAsPrimary()
+    {
+        try
+        {
+            var directory = Path.GetDirectoryName(SettingsPath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            if (File.Exists(SettingsPath))
+            {
+                var corruptPath = $"{SettingsPath}.corrupt-{DateTimeOffset.Now:yyyyMMddHHmmss}";
+                File.Move(SettingsPath, corruptPath, overwrite: true);
+            }
+
+            File.Copy(BackupPath, SettingsPath, overwrite: true);
+            Trace.TraceWarning($"FluxRoute settings restored from backup. Backup='{BackupPath}', Target='{SettingsPath}'.");
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceError($"FluxRoute settings backup restore failed. Backup='{BackupPath}', Target='{SettingsPath}'. Error='{ex}'");
+        }
+    }
+
+    private static void ReplaceFileAtomically(string tempPath, string targetPath, string backupPath)
+    {
+        if (File.Exists(targetPath))
+        {
+            if (File.Exists(backupPath))
+            {
+                File.Delete(backupPath);
+            }
+
+            // On NTFS File.Replace is atomic and keeps the previous valid config in *.bak.
+            File.Replace(tempPath, targetPath, backupPath, ignoreMetadataErrors: true);
+            return;
+        }
+
+        File.Move(tempPath, targetPath);
+    }
+
+    private static void TryDeleteTempFile(string tempPath)
+    {
+        try
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+        catch
+        {
+            // The next save uses a unique temp filename, so a failed cleanup is not fatal.
+        }
+    }
+
+    private static AppSettings Normalize(AppSettings settings)
+    {
+        settings.ProfileRatings ??= new List<ProfileRatingEntry>();
+        settings.TgProxy ??= new TgProxySettings();
+
+        // Миграция: сброс старого дефолтного домена www.google.com.
+        // fake-tls-domain требует домен, указывающий на IP самого прокси.
+        // Для локального 127.0.0.1 fake-tls не нужен, пустая строка = выкл.
+        if (settings.TgProxy.Domain == "www.google.com")
+        {
+            settings.TgProxy.Domain = "";
+        }
+
+        return settings;
     }
 }
