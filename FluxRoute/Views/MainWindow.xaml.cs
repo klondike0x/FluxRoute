@@ -89,9 +89,11 @@ public partial class MainWindow : Window
             e.Cancel = true;
 
             if (CustomDialog.Show(
-                "Завершить работу FluxRoute?",
-                "Все активные службы (WinDivert, WinWS) будут остановлены, защита прекратит работу.",
-                "Завершить", "Отмена", isDanger: true))
+                    "Завершить работу FluxRoute?",
+                    "Все активные службы (WinDivert, WinWS) будут остановлены, защита прекратит работу.",
+                    "Завершить",
+                    "Отмена",
+                    isDanger: true))
             {
                 _isClosingConfirmed = true;
                 if (!Dispatcher.HasShutdownStarted)
@@ -132,6 +134,7 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(MainViewModel.SelectedTabIndex))
             AnimateNavIndicator(_vm.SelectedTabIndex);
+
         if (e.PropertyName == nameof(MainViewModel.IsSidebarExpanded))
             AnimateSidebar(_vm.IsSidebarExpanded);
     }
@@ -180,10 +183,19 @@ public partial class MainWindow : Window
         {
             foreach (var p in Process.GetProcessesByName("winws"))
             {
-                try { p.Kill(entireProcessTree: true); p.WaitForExit(3000); } catch { }
+                try
+                {
+                    p.Kill(entireProcessTree: true);
+                    p.WaitForExit(3000);
+                }
+                catch
+                {
+                }
             }
         }
-        catch { }
+        catch
+        {
+        }
 
         try
         {
@@ -196,7 +208,9 @@ public partial class MainWindow : Window
             };
             Process.Start(psi)?.WaitForExit(5000);
         }
-        catch { }
+        catch
+        {
+        }
     }
 
     private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
@@ -204,4 +218,6 @@ public partial class MainWindow : Window
         Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
         e.Handled = true;
     }
+
+
 }
