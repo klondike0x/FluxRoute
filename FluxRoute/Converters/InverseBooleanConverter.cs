@@ -3,12 +3,15 @@ using System.Windows.Data;
 
 namespace FluxRoute.Converters;
 
-[ValueConversion(typeof(bool), typeof(bool))]
+/// <summary>
+/// Converts true to false and false to true for XAML bindings.
+/// Kept intentionally small because it is used only by the presentation layer.
+/// </summary>
 public sealed class InverseBooleanConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        => value is bool b && !b;
+        => value is bool boolValue ? !boolValue : value;
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        => value is bool b && !b;
+        => value is bool boolValue ? !boolValue : value;
 }
