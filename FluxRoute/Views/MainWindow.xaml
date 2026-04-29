@@ -1412,7 +1412,8 @@
                                 </Grid.RowDefinitions>
 
                                 <Border Grid.Row="0" Background="#0D1117" BorderBrush="#30363D"
-                                        BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,10" d:IsLocked="True">
+                                        BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,14"
+                                        Panel.ZIndex="2" d:IsLocked="True">
                                     <StackPanel d:IsLocked="True">
                                         <TextBlock Text="Логи" Foreground="#4FC3F7" FontSize="14"
                                                    FontWeight="Bold" Margin="0,0,0,4" d:IsLocked="True"/>
@@ -1444,12 +1445,16 @@
                                     </StackPanel>
                                 </Border>
 
-                                <TextBox Grid.Row="1" x:Name="UnifiedLogsTextBox"
-                                         Background="#010409" Foreground="#C9D1D9" BorderBrush="#30363D" BorderThickness="1"
-                                         FontFamily="Consolas" FontSize="12" Padding="8" IsReadOnly="True" IsUndoEnabled="False"
-                                         AcceptsReturn="True" AcceptsTab="False" TextWrapping="Wrap"
-                                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                         Text="{Binding UnifiedLogsText, Mode=OneWay}" d:IsLocked="True"/>
+                                <!-- Separate host border prevents the first log line from being visually clipped by the filters card. -->
+                                <Border Grid.Row="1" Background="#010409" BorderBrush="#30363D" BorderThickness="1"
+                                        Padding="0" Margin="0,0,0,0" Panel.ZIndex="1" d:IsLocked="True">
+                                    <TextBox x:Name="UnifiedLogsTextBox"
+                                             Background="Transparent" Foreground="#C9D1D9" BorderThickness="0"
+                                             FontFamily="Consolas" FontSize="12" Padding="10,8" IsReadOnly="True" IsUndoEnabled="False"
+                                             AcceptsReturn="True" AcceptsTab="False" TextWrapping="Wrap"
+                                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                             Text="{Binding UnifiedLogsText, Mode=OneWay}" d:IsLocked="True"/>
+                                </Border>
                             </Grid>
                         </Border>
 

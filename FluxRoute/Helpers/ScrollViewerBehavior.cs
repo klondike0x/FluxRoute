@@ -1,16 +1,14 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
-using WpfScrollBar = System.Windows.Controls.Primitives.ScrollBar;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using WpfScrollBar = System.Windows.Controls.Primitives.ScrollBar;
 
 namespace FluxRoute.Helpers;
 
 /// <summary>
-/// Attached behavior for the custom overlay scrollbars declared in ScrollBarStyle.xaml.
-/// The behavior fades scrollbars in while the user interacts with a ScrollViewer and fades
-/// them out after a short idle period. It is intentionally UI-only and has no dependency on
-/// application services or view models.
+/// Attached behavior for custom overlay scrollbars declared in ScrollBarStyle.xaml.
 /// </summary>
 public static class ScrollViewerBehavior
 {
