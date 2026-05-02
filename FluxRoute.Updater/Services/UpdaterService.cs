@@ -13,7 +13,15 @@ public sealed class UpdateInfo
     public string ReleaseNotes { get; init; } = "";
 }
 
-public sealed partial class UpdaterService
+public interface IUpdaterService
+{
+    string GetLocalVersion(string engineDir);
+    Task<(UpdateInfo? update, string? error)> CheckForUpdateAsync(string engineDir, CancellationToken ct = default);
+    Task<(UpdateInfo? update, string? error)> GetLatestReleaseAsync(CancellationToken ct = default);
+    Task<bool> InstallUpdateAsync(string engineDir, UpdateInfo update, Action<string> onProgress, CancellationToken ct = default);
+}
+
+public sealed partial class UpdaterService : IUpdaterService
 {
     // Flowseal хранит актуальную версию здесь — raw-файл, НЕ GitHub REST API (без лимита 60/час)
     private const string RemoteVersionUrl =
@@ -24,14 +32,22 @@ public sealed partial class UpdaterService
     private const string ZipUrlTemplate =
         "https://github.com/Flowseal/zapret-discord-youtube/releases/download/{0}/zapret-discord-youtube-{0}.zip";
 
-    private const string VersionFile = "version.txt";
+    private const string VersionFile    = "version.txt";
+    private const string StagingDirName = ".staging";
+    private const string BackupDirName  = ".rollback";
 
-    private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(15) };
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    static UpdaterService()
+    public UpdaterService(IHttpClientFactory httpClientFactory)
     {
-        _http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-Updater");
+        _httpClientFactory = httpClientFactory;
     }
+
+    /// <summary>
+    /// Fallback-конструктор для WPF designer и юнит-тестов.
+    /// Создаёт минимальную фабрику напрямую.
+    /// </summary>
+    public UpdaterService() : this(new DefaultHttpClientFactory()) { }
 
     [GeneratedRegex(@"^set\s+""?LOCAL_VERSION=([^""]+)""?", RegexOptions.IgnoreCase)]
     private static partial Regex LocalVersionRegex();
@@ -109,7 +125,8 @@ public sealed partial class UpdaterService
         try
         {
             // Один GET к статическому файлу — не тратит API rate limit
-            var raw = await _http.GetStringAsync(RemoteVersionUrl, ct);
+            using var http = _httpClientFactory.CreateClient(HttpClientNames.Updater);
+            var raw = await http.GetStringAsync(RemoteVersionUrl, ct);
             var remoteVersion = raw.Trim();
 
             if (string.IsNullOrWhiteSpace(remoteVersion))
@@ -138,35 +155,42 @@ public sealed partial class UpdaterService
         }
     }
 
-    /// <summary>Скачивает и устанавливает обновление</summary>
+    /// <summary>Скачивает и устанавливает обновление c полным staging → backup → rollback.</summary>
     public async Task<bool> InstallUpdateAsync(
         string engineDir,
         UpdateInfo update,
         Action<string> onProgress,
         CancellationToken ct = default)
     {
-        var tempZip = Path.Combine(Path.GetTempPath(), "fluxroute_update.zip");
+        var tempZip     = Path.Combine(Path.GetTempPath(), "fluxroute_update.zip");
         var tempExtract = Path.Combine(Path.GetTempPath(), "fluxroute_update_extract");
+        var stagingDir  = Path.Combine(engineDir, StagingDirName);
+        var backupDir   = Path.Combine(engineDir, BackupDirName);
 
         try
         {
-            // Шаг 1: Скачиваем
+            // ── Шаг 1: Скачиваем ──────────────────────────────────────────────────
             onProgress($"📥 Источник: {update.DownloadUrl}");
             onProgress("⬇️ Скачиваем обновление...");
-            var bytes = await _http.GetByteArrayAsync(update.DownloadUrl, ct);
-            await File.WriteAllBytesAsync(tempZip, bytes, ct);
 
-            // SHA-256 для верификации — пользователь может сверить хеш
+            using var http = _httpClientFactory.CreateClient(HttpClientNames.Updater);
+            var bytes = await http.GetByteArrayAsync(update.DownloadUrl, ct).ConfigureAwait(false);
+
             var hash = Convert.ToHexString(SHA256.HashData(bytes));
             onProgress($"🔒 SHA-256: {hash}");
 
-            // Шаг 2: Распаковываем во временную папку
-            onProgress("📦 Распаковываем архив...");
+            await File.WriteAllBytesAsync(tempZip, bytes, ct).ConfigureAwait(false);
+
+            // ── Шаг 2: Распаковываем в staging ────────────────────────────────────
+            onProgress("📦 Распаковываем в staging-директорию...");
+            if (Directory.Exists(stagingDir))
+                Directory.Delete(stagingDir, recursive: true);
+            Directory.CreateDirectory(stagingDir);
+
             if (Directory.Exists(tempExtract))
                 Directory.Delete(tempExtract, recursive: true);
             ZipFile.ExtractToDirectory(tempZip, tempExtract);
 
-            // Шаг 3: Находим корень распакованного архива
             var extractedRoot = FindEngineRoot(tempExtract);
             if (extractedRoot is null)
             {
@@ -174,23 +198,45 @@ public sealed partial class UpdaterService
                 return false;
             }
 
-            // Шаг 4: Останавливаем службу zapret если запущена
+            // Копируем в staging (не трогаем engine/ пока всё не готово)
+            CopyDirectoryToStaging(extractedRoot, stagingDir);
+            onProgress($"✅ Staging подготовлен: {CountFiles(stagingDir)} файлов");
+
+            // ── Шаг 3: Верифицируем манифест staging ──────────────────────────────
+            if (!VerifyStaging(stagingDir, onProgress))
+                return false;
+
+            // ── Шаг 4: Останавливаем zapret ───────────────────────────────────────
             StopZapretService(onProgress);
 
-            // Шаг 5: Копируем файлы в engine/
-            onProgress("🔄 Обновляем файлы engine/...");
-            var failedFiles = CopyDirectory(extractedRoot, engineDir, onProgress);
+            // ── Шаг 5: Backup текущего engine/ ────────────────────────────────────
+            onProgress("💾 Создаём резервную копию engine/...");
+            if (Directory.Exists(backupDir))
+                Directory.Delete(backupDir, recursive: true);
+            if (Directory.Exists(engineDir))
+                CopyDirectoryToStaging(engineDir, backupDir, skipNames: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { StagingDirName, BackupDirName });
+            onProgress($"💾 Резервная копия создана: {CountFiles(backupDir)} файлов");
+
+            // ── Шаг 6: Применяем staging → engine/ ────────────────────────────────
+            onProgress("🔄 Применяем обновление...");
+            var failedFiles = ApplyStaging(stagingDir, engineDir, onProgress);
 
             if (failedFiles.Count > 0)
             {
-                onProgress($"⚠️ Не удалось обновить {failedFiles.Count} файл(ов): {string.Join(", ", failedFiles.Take(5))}");
-                onProgress("❌ Обновление не завершено. Остановите zapret и повторите.");
+                onProgress($"⚠️ Не удалось записать {failedFiles.Count} файл(ов). Откатываемся...");
+                var rolled = TryRollback(backupDir, engineDir, onProgress);
+                onProgress(rolled ? "↩️ Откат выполнен." : "❌ Откат не удался — проверьте папку .rollback вручную.");
                 return false;
             }
 
-            // Шаг 6: Сохраняем версию только при полном успехе
+            // ── Шаг 7: Фиксируем версию ───────────────────────────────────────────
             SaveLocalVersion(engineDir, update.Version);
             onProgress($"✅ Обновление {NormalizeVersion(update.Version)} установлено!");
+
+            // Чистим staging и backup после успешного обновления
+            TryDeleteDir(stagingDir);
+            TryDeleteDir(backupDir);
+
             return true;
         }
         catch (OperationCanceledException)
@@ -205,7 +251,6 @@ public sealed partial class UpdaterService
         }
         finally
         {
-            // Чистим временные файлы
             try { File.Delete(tempZip); } catch { }
             try { Directory.Delete(tempExtract, recursive: true); } catch { }
         }
@@ -286,19 +331,60 @@ public sealed partial class UpdaterService
         return null;
     }
 
-    /// <summary>Копирует файлы, возвращает список файлов которые не удалось скопировать</summary>
-    private static List<string> CopyDirectory(string source, string dest, Action<string> onProgress)
+    // ── Вспомогательные методы ────────────────────────────────────────────────
+
+    /// <summary>Проверяем что staging содержит минимально необходимые файлы запуска.</summary>
+    private static bool VerifyStaging(string stagingDir, Action<string> onProgress)
+    {
+        var batFiles = Directory.GetFiles(stagingDir, "*.bat", SearchOption.AllDirectories);
+        if (batFiles.Length == 0)
+        {
+            onProgress("❌ Staging не прошёл верификацию: *.bat файлы не найдены.");
+            return false;
+        }
+
+        onProgress($"🔍 Верификация staging: *.bat файлов найдено — {batFiles.Length}");
+        return true;
+    }
+
+    /// <summary>
+    /// Копирует содержимое source в dest для staging и backup.
+    /// Пользовательские файлы не копируются в staging, но сохраняются при backup.
+    /// </summary>
+    private static void CopyDirectoryToStaging(string source, string dest, HashSet<string>? skipNames = null)
     {
         Directory.CreateDirectory(dest);
-        var failedFiles = new List<string>();
 
         foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
         {
-            var fileName = Path.GetFileName(file);
+            var relativePath = Path.GetRelativePath(source, file);
+            var topSegment   = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
+
+            if (skipNames is not null && skipNames.Contains(topSegment, StringComparer.OrdinalIgnoreCase))
+                continue;
+
+            var destFile = Path.Combine(dest, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(destFile)!);
+            File.Copy(file, destFile, overwrite: true);
+        }
+    }
+
+    /// <summary>
+    /// Применяет staging → engine/. Пропускает пользовательские файлы.
+    /// Возвращает список относительных путей файлов, которые не удалось записать.
+    /// </summary>
+    private static List<string> ApplyStaging(string stagingDir, string engineDir, Action<string> onProgress)
+    {
+        var failedFiles = new List<string>();
+
+        foreach (var file in Directory.EnumerateFiles(stagingDir, "*", SearchOption.AllDirectories))
+        {
+            var fileName     = Path.GetFileName(file);
             if (IsUserFile(fileName)) continue;
 
-            var relativePath = Path.GetRelativePath(source, file);
-            var destFile = Path.Combine(dest, relativePath);
+            var relativePath = Path.GetRelativePath(stagingDir, file);
+            var destFile     = Path.Combine(engineDir, relativePath);
+
             Directory.CreateDirectory(Path.GetDirectoryName(destFile)!);
 
             try
@@ -307,14 +393,12 @@ public sealed partial class UpdaterService
             }
             catch (IOException)
             {
-                // Файл заблокирован — пробуем через переименование
+                // Файл заблокирован — пробуем атомарную замену через временное имя
                 try
                 {
-                    var backup = destFile + ".old";
-                    if (File.Exists(backup)) File.Delete(backup);
-                    File.Move(destFile, backup);
-                    File.Copy(file, destFile, overwrite: true);
-                    try { File.Delete(backup); } catch { }
+                    var tmp = destFile + ".upd";
+                    File.Copy(file, tmp, overwrite: true);
+                    File.Move(tmp, destFile, overwrite: true);
                 }
                 catch
                 {
@@ -323,7 +407,57 @@ public sealed partial class UpdaterService
             }
         }
 
+        if (failedFiles.Count > 0)
+            onProgress($"⚠️ Не записаны: {string.Join(", ", failedFiles.Take(5))}");
+
         return failedFiles;
+    }
+
+    /// <summary>Пытается откатить engine/ из backup. Возвращает true при полном успехе.</summary>
+    private static bool TryRollback(string backupDir, string engineDir, Action<string> onProgress)
+    {
+        if (!Directory.Exists(backupDir))
+        {
+            onProgress("❌ Backup-директория не найдена — откат невозможен.");
+            return false;
+        }
+
+        onProgress("↩️ Откат: восстанавливаем файлы из .rollback...");
+        var failed = new List<string>();
+
+        foreach (var file in Directory.EnumerateFiles(backupDir, "*", SearchOption.AllDirectories))
+        {
+            var relativePath = Path.GetRelativePath(backupDir, file);
+            var destFile     = Path.Combine(engineDir, relativePath);
+
+            Directory.CreateDirectory(Path.GetDirectoryName(destFile)!);
+            try
+            {
+                File.Copy(file, destFile, overwrite: true);
+            }
+            catch
+            {
+                failed.Add(relativePath);
+            }
+        }
+
+        if (failed.Count > 0)
+        {
+            onProgress($"⚠️ Откат: не восстановлено {failed.Count} файл(ов).");
+            return false;
+        }
+
+        return true;
+    }
+
+    private static int CountFiles(string dir) =>
+        Directory.Exists(dir)
+            ? Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories).Count()
+            : 0;
+
+    private static void TryDeleteDir(string dir)
+    {
+        try { if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true); } catch { }
     }
 
     /// <summary>Файлы которые НЕ перезаписываем при обновлении (пользовательские)</summary>

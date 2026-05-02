@@ -110,6 +110,15 @@ public sealed class SettingsService : ISettingsService
         IsPortable = true;
     }
 
+    /// <summary>Конструктор для юнит-тестов: позволяет задать произвольную директорию.</summary>
+    public SettingsService(string directory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(directory);
+        SettingsPath = Path.Combine(directory, SettingsFileName);
+        BackupPath = SettingsPath + ".bak";
+        IsPortable = true;
+    }
+
     public string SettingsPath { get; }
     public string BackupPath { get; }
     public bool IsPortable { get; }

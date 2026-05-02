@@ -8,7 +8,9 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Navigation;
+using FluxRoute.Core.Services;
 using FluxRoute.Services;
+using FluxRoute.Updater.Services;
 using FluxRoute.ViewModels;
 using Microsoft.Extensions.Logging;
 using WpfBinding = System.Windows.Data.Binding;
@@ -51,7 +53,13 @@ public partial class MainWindow : Window
     // Parameterless constructor is intentionally kept for the WPF designer
     // and as a safe fallback if the window is ever instantiated outside DI.
     public MainWindow()
-        : this(new MainViewModel(), new TrayIconService(), null)
+        : this(
+            new MainViewModel(
+                new SettingsService(),
+                new UpdaterService(),
+                new ConnectivityChecker()),
+            new TrayIconService(),
+            null)
     {
     }
 

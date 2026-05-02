@@ -1071,11 +1071,14 @@
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="26"/>
                                             <RowDefinition Height="26"/>
+                                            <RowDefinition Height="26"/>
                                         </Grid.RowDefinitions>
                                         <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Текущая версия:" d:IsLocked="True"/>
                                         <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding CurrentEngineVersion}" d:IsLocked="True"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Статус:" d:IsLocked="True"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding UpdateStatus}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Доступная версия:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.LatestRemoteVersion}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Lbl}" Text="Статус:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding UpdateStatus}" d:IsLocked="True"/>
                                     </Grid>
 
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,12" d:IsLocked="True">
@@ -1116,8 +1119,8 @@
                                                    Text="⚠️ При обновлении winws.exe будет остановлен. После установки нужно заново запустить профиль." d:IsLocked="True"/>
                                     </Border>
 
-                                    <TextBlock Style="{StaticResource SecH}" Text="ЛОГ ОБНОВЛЕНИЯ" Visibility="Collapsed" d:IsLocked="True"/>
-                                    <Border Style="{StaticResource LogArea}" Visibility="Collapsed" d:IsLocked="True">
+                                    <TextBlock Style="{StaticResource SecH}" Text="ЛОГ ОБНОВЛЕНИЯ" Margin="0,8,0,4" d:IsLocked="True"/>
+                                    <Border Style="{StaticResource LogArea}" MaxHeight="220" d:IsLocked="True">
                                         <ItemsControl ItemsSource="{Binding UpdateLogs}" d:IsLocked="True">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
@@ -1206,6 +1209,9 @@
                                                 Margin="0,0,8,8" Command="{Binding CopyDiagnosticsCommand}" d:IsLocked="True"/>
                                         <Button Content="📄 Экспорт логов" Style="{StaticResource TermBtn}"
                                                 Margin="0,0,8,8" Command="{Binding ExportLogsCommand}" d:IsLocked="True"/>
+                                        <Button Content="📦 Diagnostic Bundle" Style="{StaticResource TermBtn}"
+                                                Margin="0,0,8,8" Command="{Binding ExportDiagnosticBundleCommand}" d:IsLocked="True"
+                                                ToolTip="Сохранить ZIP-архив с логами, диагностикой и настройками"/>
                                     </WrapPanel>
 
                                     <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>

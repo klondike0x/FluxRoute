@@ -6,7 +6,31 @@ using FluxRoute.Core.Models;
 
 namespace FluxRoute.Core.Services;
 
-public static class ConnectivityChecker
+/// <summary>Имя именованного HttpClient для проверки связности.</summary>
+public static class HttpClientNames
+{
+    public const string Connectivity = "connectivity";
+}
+
+public interface IConnectivityChecker
+{
+    bool IsCurlAvailable { get; }
+
+    Task<CheckResult> CheckAsync(TargetEntry target, CancellationToken ct = default);
+    Task<CheckResult> CheckAsync(TargetEntry target, bool useCurlForHttp, CancellationToken ct = default);
+
+    Task<(double successRate, List<CheckResult> results)> CheckAllAsync(
+        IEnumerable<TargetEntry> targets,
+        CancellationToken ct = default);
+
+    Task<(double successRate, List<CheckResult> results)> CheckAllAsync(
+        IEnumerable<TargetEntry> targets,
+        bool useCurlForHttp,
+        int maxParallelChecks,
+        CancellationToken ct = default);
+}
+
+public sealed class ConnectivityChecker : IConnectivityChecker
 {
     private const int DefaultTimeoutSeconds = 8;
     private const int DefaultConnectTimeoutSeconds = 4;
@@ -17,20 +41,15 @@ public static class ConnectivityChecker
 
     private static readonly Lazy<bool> _curlAvailable = new(CheckCurlAvailable);
 
-    private static readonly HttpClient _http = new(new HttpClientHandler
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public ConnectivityChecker(IHttpClientFactory httpClientFactory)
     {
-        AllowAutoRedirect = true,
-        ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-    })
-    {
-        Timeout = TimeSpan.FromSeconds(DefaultTimeoutSeconds),
-        DefaultRequestHeaders =
-        {
-            { "User-Agent", BrowserUserAgent },
-            { "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" },
-            { "Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7" }
-        }
-    };
+        _httpClientFactory = httpClientFactory;
+    }
+
+    /// <summary>Fallback-конструктор для WPF designer и юнит-тестов.</summary>
+    public ConnectivityChecker() : this(DefaultHttpClientFactory.Instance) { }
 
     public static readonly Dictionary<string, List<TargetEntry>> BuiltinSites = new()
     {
@@ -68,14 +87,14 @@ public static class ConnectivityChecker
         ]
     };
 
-    public static bool IsCurlAvailable => _curlAvailable.Value;
+    public bool IsCurlAvailable => _curlAvailable.Value;
 
-    public static Task<CheckResult> CheckAsync(TargetEntry target, CancellationToken ct = default)
+    public Task<CheckResult> CheckAsync(TargetEntry target, CancellationToken ct = default)
     {
         return CheckAsync(target, useCurlForHttp: true, ct);
     }
 
-    public static async Task<CheckResult> CheckAsync(
+    public async Task<CheckResult> CheckAsync(
         TargetEntry target,
         bool useCurlForHttp,
         CancellationToken ct = default)
@@ -89,14 +108,14 @@ public static class ConnectivityChecker
         return await HttpClientAsync(target, ct).ConfigureAwait(false);
     }
 
-    public static Task<(double successRate, List<CheckResult> results)> CheckAllAsync(
+    public Task<(double successRate, List<CheckResult> results)> CheckAllAsync(
         IEnumerable<TargetEntry> targets,
         CancellationToken ct = default)
     {
         return CheckAllAsync(targets, useCurlForHttp: true, DefaultMaxParallelChecks, ct);
     }
 
-    public static async Task<(double successRate, List<CheckResult> results)> CheckAllAsync(
+    public async Task<(double successRate, List<CheckResult> results)> CheckAllAsync(
         IEnumerable<TargetEntry> targets,
         bool useCurlForHttp,
         int maxParallelChecks,
@@ -133,7 +152,7 @@ public static class ConnectivityChecker
         return (rate, results.ToList());
     }
 
-    private static async Task<CheckResult> CurlHttpAsync(TargetEntry target, CancellationToken ct)
+    private async Task<CheckResult> CurlHttpAsync(TargetEntry target, CancellationToken ct)
     {
         var sw = Stopwatch.StartNew();
         var value = NormalizeUrl(target.Value);
@@ -244,7 +263,7 @@ public static class ConnectivityChecker
         return Process.Start(psi);
     }
 
-    private static async Task<CheckResult> HttpClientAsync(TargetEntry target, CancellationToken ct)
+    private async Task<CheckResult> HttpClientAsync(TargetEntry target, CancellationToken ct)
     {
         var sw = Stopwatch.StartNew();
         var value = NormalizeUrl(target.Value);
@@ -254,8 +273,9 @@ public static class ConnectivityChecker
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(TimeSpan.FromSeconds(DefaultTimeoutSeconds));
 
+            using var http = _httpClientFactory.CreateClient(HttpClientNames.Connectivity);
             using var request = new HttpRequestMessage(HttpMethod.Get, value);
-            using var response = await _http.SendAsync(
+            using var response = await http.SendAsync(
                 request,
                 HttpCompletionOption.ResponseHeadersRead,
                 cts.Token).ConfigureAwait(false);

@@ -24,8 +24,8 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<string> OrchestratorLogs { get; } = new();
     public ObservableCollection<ProfileScore> ProfileScores { get; } = new();
     public ObservableCollection<string> RecentLogs { get; } = new();
-    public ObservableCollection<string> UpdateLogs { get; } = new();
-    public ObservableCollection<string> ServiceLogs { get; } = new();
+    public ObservableCollection<string> UpdateLogs => Updates.UpdateLogs;
+    public ObservableCollection<string> ServiceLogs => Service.ServiceLogs;
 
     // ── События ──
     public event EventHandler? OpenSettingsRequested;
@@ -108,22 +108,22 @@ public partial class MainViewModel : ObservableObject
     public string MainActionButtonText => IsRunning ? "⏹ Остановить" : "▶ Запустить";
     partial void OnIsRunningChanged(bool value) => OnPropertyChanged(nameof(MainActionButtonText));
 
-    // ── Диагностика ──
-    [ObservableProperty] private bool isAdmin;
-    public string AdminText => IsAdmin ? "✅ Да" : "❌ Нет";
-    partial void OnIsAdminChanged(bool value) => OnPropertyChanged(nameof(AdminText));
-    [ObservableProperty] private bool engineOk;
-    public string EngineText => EngineOk ? "✅ Найдено" : "❌ Не найдено";
-    partial void OnEngineOkChanged(bool value) => OnPropertyChanged(nameof(EngineText));
-    [ObservableProperty] private bool winwsOk;
-    public string WinwsText => WinwsOk ? "✅ Найдено" : "❌ Не найдено";
-    partial void OnWinwsOkChanged(bool value) => OnPropertyChanged(nameof(WinwsText));
-    [ObservableProperty] private bool winDivertDllOk;
-    public string WinDivertDllText => WinDivertDllOk ? "✅ Найдено" : "❌ Не найдено";
-    partial void OnWinDivertDllOkChanged(bool value) => OnPropertyChanged(nameof(WinDivertDllText));
-    [ObservableProperty] private bool winDivertDriverOk;
-    public string WinDivertDriverText => WinDivertDriverOk ? "✅ Найдено" : "❌ Не найдено";
-    partial void OnWinDivertDriverOkChanged(bool value) => OnPropertyChanged(nameof(WinDivertDriverText));
+    // ── Feature ViewModels ──
+    public UpdatesViewModel Updates { get; private set; } = null!;
+    public ServiceViewModel Service { get; private set; } = null!;
+    public DiagnosticsViewModel Diagnostics { get; private set; } = null!;
+
+    // ── Диагностика (wrappers → DiagnosticsViewModel) ──
+    public bool IsAdmin => Diagnostics.IsAdmin;
+    public string AdminText => Diagnostics.AdminText;
+    public bool EngineOk => Diagnostics.EngineOk;
+    public string EngineText => Diagnostics.EngineText;
+    public bool WinwsOk => Diagnostics.WinwsOk;
+    public string WinwsText => Diagnostics.WinwsText;
+    public bool WinDivertDllOk => Diagnostics.WinDivertDllOk;
+    public string WinDivertDllText => Diagnostics.WinDivertDllText;
+    public bool WinDivertDriverOk => Diagnostics.WinDivertDriverOk;
+    public string WinDivertDriverText => Diagnostics.WinDivertDriverText;
 
     // ── Оркестратор ──
     [ObservableProperty] private bool orchestratorRunning;
@@ -153,32 +153,17 @@ public partial class MainViewModel : ObservableObject
     private readonly OrchestratorService _orchestrator;
     private readonly DispatcherTimer _orchestratorUiTimer = new(DispatcherPriority.Render) { Interval = TimeSpan.FromSeconds(1) };
 
-    // ── Сервис ──
-    [ObservableProperty] private bool gameFilterEnabled;
-    [ObservableProperty] private string gameFilterProtocol = "TCP и UDP";
-    partial void OnGameFilterProtocolChanged(string value)
+    // ── Сервис (wrappers → ServiceViewModel) ──
+    public bool GameFilterEnabled => Service.GameFilterEnabled;
+    public string GameFilterProtocol
     {
-        SaveSettings();
-        if (GameFilterEnabled && _settingsLoaded)
-        {
-            try
-            {
-                var utilsDir = Path.GetDirectoryName(GameFilterFlagPath)!;
-                Directory.CreateDirectory(utilsDir);
-                File.WriteAllText(GameFilterFlagPath, ProtocolToFileValue(value));
-                AddServiceLog($"🎮 Game Filter протокол изменён на {value}");
-            }
-            catch (Exception ex)
-            {
-                AddServiceLog($"❌ Ошибка обновления Game Filter: {ex.Message}");
-            }
-        }
+        get => Service.GameFilterProtocol;
+        set { Service.GameFilterProtocol = value; SaveSettings(); }
     }
-    public List<string> GameFilterProtocols { get; } = ["TCP и UDP", "TCP", "UDP"];
-
-    [ObservableProperty] private string ipSetMode = "—";
-    [ObservableProperty] private string zapretServiceStatus = "—";
-    [ObservableProperty] private bool isServiceBusy;
+    public List<string> GameFilterProtocols => Service.GameFilterProtocols;
+    public string IpSetMode => Service.IpSetMode;
+    public string ZapretServiceStatus => Service.ZapretServiceStatus;
+    public bool IsServiceBusy => Service.IsServiceBusy;
 
     private string GameFilterFlagPath => Path.Combine(EngineDir, "utils", "game_filter.enabled");
     private string IpSetFilePath => Path.Combine(EngineDir, "lists", "ipset-all.txt");
@@ -200,8 +185,9 @@ public partial class MainViewModel : ObservableObject
     private WinEventProc? _winEventCallback;
     private string EngineDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "engine");
 
-    private readonly UpdaterService _updater = new();
-    private readonly SettingsService _settingsService = new();
+    private readonly IUpdaterService _updater;
+    private readonly ISettingsService _settingsService;
+    private readonly IConnectivityChecker _connectivity;
     private bool _settingsLoaded = false;
 
     // ── Обновления ──
@@ -222,15 +208,50 @@ public partial class MainViewModel : ObservableObject
     }
     [ObservableProperty] private bool minimizeToTray = true;
     partial void OnMinimizeToTrayChanged(bool value) => SaveSettings();
-    [ObservableProperty] private string updateStatus = "Не проверялось";
-    [ObservableProperty] private string currentEngineVersion = "—";
-    [ObservableProperty] private bool isUpdating;
-    [ObservableProperty] private bool isDownloadingEngine;
-    [ObservableProperty] private string engineDownloadStatus = "";
-    private UpdateInfo? _pendingUpdate;
+    // ── Обновления (wrappers → UpdatesViewModel) ──
+    public string UpdateStatus => Updates.UpdateStatus;
+    public string CurrentEngineVersion => Updates.CurrentEngineVersion;
+    public bool IsUpdating => Updates.IsUpdating;
+    public bool IsDownloadingEngine => Updates.IsDownloadingEngine;
+    public string EngineDownloadStatus => Updates.EngineDownloadStatus;
 
-    public MainViewModel()
+    public MainViewModel(ISettingsService settingsService, IUpdaterService updaterService, IConnectivityChecker connectivity)
     {
+        _settingsService = settingsService;
+        _updater = updaterService;
+        _connectivity = connectivity;
+
+        // ── Инициализация feature ViewModels ──
+        Diagnostics = new DiagnosticsViewModel(
+            getEngineDir: () => EngineDir,
+            getWinwsPath: () => WinwsPath,
+            getWinDivertDllPath: () => WinDivertDllPath,
+            getWinDivertSys64Path: () => WinDivertSys64Path,
+            getWinDivertSysPath: () => WinDivertSysPath,
+            addAppLog: msg => Logs.Add(msg));
+
+        Service = new ServiceViewModel(
+            getEngineDir: () => EngineDir,
+            getSelectedProfileDisplayName: () => SelectedProfile?.DisplayName,
+            addAppLog: msg => Logs.Add(msg));
+
+        Updates = new UpdatesViewModel(
+            updater: _updater,
+            getEngineDir: () => EngineDir,
+            getAutoUpdateEnabled: () => AutoUpdateEnabled,
+            getCurrentEngineVersion: () => Updates.CurrentEngineVersion,
+            setCurrentEngineVersion: v => Updates.CurrentEngineVersion = v,
+            stopEngine: Stop,
+            loadProfiles: LoadProfiles,
+            refreshDiagnostics: RefreshDiagnostics,
+            addAppLog: msg => Logs.Add(msg),
+            addRecentLog: AddToRecentLogs);
+
+        // Пробрасываем изменения из feature VMs наверх для XAML-совместимости
+        Diagnostics.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
+        Service.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
+        Updates.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
+
         Logs.Add("Приложение запущено.");
         AddToRecentLogs("🚀 Приложение запущено");
 
@@ -266,14 +287,14 @@ public partial class MainViewModel : ObservableObject
         {
             Logs.Add("⚠️ Папка engine/ не найдена. Скачиваем Flowseal...");
             AddToRecentLogs("⬇️ Скачивание Flowseal...");
-            _ = AutoDownloadEngineAsync();
+            _ = Updates.AutoDownloadEngineAsync();
         }
 
         DisableNativeUpdateCheck();
-        CurrentEngineVersion = _updater.GetLocalVersion(EngineDir);
-        _ = CheckUpdatesOnStartupAsync();
+        Updates.CurrentEngineVersion = _updater.GetLocalVersion(EngineDir);
+        _ = Updates.CheckOnStartupAsync();
         RefreshDiagnostics();
-        RefreshServiceStatus();
+        Service.Refresh();
 
         _uptimeTimer.Tick += (_, _) => UpdateRuntimeInfo();
         _uptimeTimer.Start();
@@ -284,7 +305,8 @@ public partial class MainViewModel : ObservableObject
             getActiveProfile: () => SelectedProfile,
             switchProfile: SwitchProfileAsync,
             getTargetsPath: () => TargetsPath,
-            notifyScoreUpdate: UpdateProfileScoreAsync
+            notifyScoreUpdate: UpdateProfileScoreAsync,
+            connectivity: _connectivity
         );
         _orchestrator.StatusChanged += OnOrchestratorStatus;
 

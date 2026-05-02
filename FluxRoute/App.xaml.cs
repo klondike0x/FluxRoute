@@ -1,7 +1,10 @@
 using System.IO;
+using System.Net.Http;
 using System.Security.Principal;
 using System.Windows;
+using FluxRoute.Core.Services;
 using FluxRoute.Services;
+using FluxRoute.Updater.Services;
 using FluxRoute.ViewModels;
 using FluxRoute.Views;
 using Microsoft.Extensions.DependencyInjection;
@@ -98,8 +101,29 @@ public partial class App : Application
 
     private static void ConfigureApplicationServices(IServiceCollection services)
     {
-        // UI composition root. Business services remain inside existing ViewModels for this first safe step.
-        // The next iterations will move those dependencies behind interfaces and inject them here.
+        // Named HttpClient для апдейтера с Polly стандартной resilience-стратегией:
+        // retry (3 попытки с экспоненциальной задержкой) + circuit breaker + таймаут.
+        services.AddHttpClient(FluxRoute.Updater.Services.HttpClientNames.Updater, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(60);
+            client.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-Updater");
+        })
+        .AddStandardResilienceHandler();
+
+        // Named HttpClient для проверки связности (оркестратор).
+        services.AddHttpClient(FluxRoute.Core.Services.HttpClientNames.Connectivity, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.Add("User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+            client.DefaultRequestHeaders.Add("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7");
+        })
+        .AddStandardResilienceHandler();
+
+        services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<IUpdaterService, UpdaterService>();
+        services.AddSingleton<IConnectivityChecker, ConnectivityChecker>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<TrayIconService>();
         services.AddSingleton<MainWindow>();

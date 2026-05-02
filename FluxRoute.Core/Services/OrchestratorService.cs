@@ -29,6 +29,7 @@ public sealed class OrchestratorService : IDisposable
     private readonly Func<string> _getTargetsPath;
     private readonly Func<string, int, Task> _notifyScoreUpdate;
     private readonly ProfileProbeService _probeService;
+    private readonly IConnectivityChecker _connectivity;
 
     private CancellationTokenSource? _cts;
     private int _consecutiveFailures;
@@ -40,14 +41,16 @@ public sealed class OrchestratorService : IDisposable
         Func<ProfileItem?> getActiveProfile,
         Func<ProfileItem?, Task> switchProfile,
         Func<string> getTargetsPath,
-        Func<string, int, Task> notifyScoreUpdate)
+        Func<string, int, Task> notifyScoreUpdate,
+        IConnectivityChecker connectivity)
     {
         _getProfiles = getProfiles;
         _getActiveProfile = getActiveProfile;
         _switchProfile = switchProfile;
         _getTargetsPath = getTargetsPath;
         _notifyScoreUpdate = notifyScoreUpdate;
-        _probeService = new ProfileProbeService(_switchProfile);
+        _connectivity = connectivity;
+        _probeService = new ProfileProbeService(_connectivity, _switchProfile);
     }
 
     public void Start()

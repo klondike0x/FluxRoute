@@ -6,9 +6,11 @@ namespace FluxRoute.Core.Services;
 public sealed class ProfileProbeService
 {
     private readonly Func<ProfileItem?, Task>? _switchProfile;
+    private readonly IConnectivityChecker _connectivity;
 
-    public ProfileProbeService(Func<ProfileItem?, Task>? switchProfile = null)
+    public ProfileProbeService(IConnectivityChecker connectivity, Func<ProfileItem?, Task>? switchProfile = null)
     {
+        _connectivity = connectivity;
         _switchProfile = switchProfile;
     }
 
@@ -29,7 +31,7 @@ public sealed class ProfileProbeService
             if (options.StartupWait > TimeSpan.Zero)
                 await Task.Delay(options.StartupWait, ct).ConfigureAwait(false);
 
-            return await ProbeCurrentCoreAsync(profile, targets, options, sw, ct).ConfigureAwait(false);
+            return await ProbeCurrentCoreAsync(_connectivity, profile, targets, options, sw, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -62,10 +64,11 @@ public sealed class ProfileProbeService
         };
 
         var sw = Stopwatch.StartNew();
-        return await ProbeCurrentCoreAsync(profile, targets, options, sw, ct).ConfigureAwait(false);
+        return await ProbeCurrentCoreAsync(_connectivity, profile, targets, options, sw, ct).ConfigureAwait(false);
     }
 
     private static async Task<ProfileProbeResult> ProbeCurrentCoreAsync(
+        IConnectivityChecker connectivity,
         ProfileItem? profile,
         IEnumerable<TargetEntry> targets,
         ProfileProbeOptions options,
@@ -99,7 +102,7 @@ public sealed class ProfileProbeService
             processIds = stableSnapshot.ProcessIds;
         }
 
-        var (successRate, checks) = await ConnectivityChecker.CheckAllAsync(
+        var (successRate, checks) = await connectivity.CheckAllAsync(
             targetList,
             options.UseCurlForHttp,
             options.MaxParallelChecks,
