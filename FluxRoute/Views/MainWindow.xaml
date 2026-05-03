@@ -21,6 +21,7 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <conv:InverseBooleanConverter x:Key="InvBool"/>
+        <conv:BoolToInstalledConverter x:Key="BoolToInstalled"/>
 
         <!-- ══════ TERMINAL BUTTON ══════ -->
         <Style x:Key="TermBtn" TargetType="Button">
@@ -1114,10 +1115,38 @@
                                               IsChecked="{Binding AutoUpdateEnabled}" Margin="0,0,0,12" d:IsLocked="True"/>
 
                                     <Border Background="#1C1500" BorderBrush="#5A4800" BorderThickness="1"
-                                            Padding="10,8" Margin="0,0,0,12" d:IsLocked="True">
+                                            Padding="10,8" Margin="0,0,0,16" d:IsLocked="True">
                                         <TextBlock TextWrapping="Wrap" FontFamily="Segoe UI" FontSize="11" Foreground="#FFD700"
                                                    Text="⚠️ При обновлении winws.exe будет остановлен. После установки нужно заново запустить профиль." d:IsLocked="True"/>
                                     </Border>
+
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+
+                                    <!-- TG WS PROXY -->
+                                    <TextBlock Style="{StaticResource SecH}" Text="TG WS PROXY" Margin="0,8,0,8" d:IsLocked="True"/>
+                                    <Grid Margin="0,0,0,10" d:IsLocked="True">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="26"/>
+                                            <RowDefinition Height="26"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Текущая версия:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding TgProxyVersion}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Установлен:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}"
+                                                   Text="{Binding TgProxyInstalled, Converter={StaticResource BoolToInstalled}}" d:IsLocked="True"/>
+                                    </Grid>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12" d:IsLocked="True">
+                                        <Button Content="🔍 Проверить обновления" Style="{StaticResource TermBtn}"
+                                                Margin="0,0,10,0"
+                                                Command="{Binding CheckTgProxyUpdatesCommand}"
+                                                IsEnabled="{Binding TgProxyInstalled}" d:IsLocked="True"/>
+                                    </StackPanel>
+
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
 
                                     <TextBlock Style="{StaticResource SecH}" Text="ЛОГ ОБНОВЛЕНИЯ" Margin="0,8,0,4" d:IsLocked="True"/>
                                     <Border Style="{StaticResource LogArea}" MaxHeight="220" d:IsLocked="True">
@@ -1657,9 +1686,6 @@
                                                 </Style>
                                             </Button.Style>
                                         </Button>
-                                        <Button Content="🔍 Обновления" Style="{StaticResource TermBtn}"
-                                                Command="{Binding CheckTgProxyUpdatesCommand}"
-                                                IsEnabled="{Binding TgProxyInstalled}" d:IsLocked="True"/>
                                         <Button Content="📲 Открыть в Telegram" Style="{StaticResource AccentBtn}" Margin="10,0,0,0"
                                                 Command="{Binding OpenInTelegramCommand}"
                                                 IsEnabled="{Binding TgProxyRunning}" d:IsLocked="True"/>
