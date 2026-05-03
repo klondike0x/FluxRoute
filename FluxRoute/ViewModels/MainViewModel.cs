@@ -186,6 +186,7 @@ public partial class MainViewModel : ObservableObject
     private string EngineDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "engine");
 
     private readonly IUpdaterService _updater;
+    private readonly IAppUpdaterService _appUpdater;
     private readonly ISettingsService _settingsService;
     private readonly IConnectivityChecker _connectivity;
     private bool _settingsLoaded = false;
@@ -215,11 +216,12 @@ public partial class MainViewModel : ObservableObject
     public bool IsDownloadingEngine => Updates.IsDownloadingEngine;
     public string EngineDownloadStatus => Updates.EngineDownloadStatus;
 
-    public MainViewModel(ISettingsService settingsService, IUpdaterService updaterService, IConnectivityChecker connectivity)
+    public MainViewModel(ISettingsService settingsService, IUpdaterService updaterService, IAppUpdaterService appUpdaterService, IConnectivityChecker connectivity)
     {
         _settingsService = settingsService;
         _updater = updaterService;
         _connectivity = connectivity;
+        _appUpdater = appUpdaterService;
 
         // ── Инициализация feature ViewModels ──
         Diagnostics = new DiagnosticsViewModel(
@@ -237,6 +239,7 @@ public partial class MainViewModel : ObservableObject
 
         Updates = new UpdatesViewModel(
             updater: _updater,
+            appUpdater: _appUpdater,
             getEngineDir: () => EngineDir,
             getAutoUpdateEnabled: () => AutoUpdateEnabled,
             getCurrentEngineVersion: () => Updates.CurrentEngineVersion,

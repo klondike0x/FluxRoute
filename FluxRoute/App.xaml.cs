@@ -123,6 +123,7 @@ public partial class App : Application
 
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IUpdaterService, UpdaterService>();
+        services.AddSingleton<IAppUpdaterService, AppUpdaterService>();
         services.AddSingleton<IConnectivityChecker, ConnectivityChecker>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<TrayIconService>();

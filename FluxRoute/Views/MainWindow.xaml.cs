@@ -57,6 +57,7 @@ public partial class MainWindow : Window
             new MainViewModel(
                 new SettingsService(),
                 new UpdaterService(),
+                new AppUpdaterService(),
                 new ConnectivityChecker()),
             new TrayIconService(),
             null)

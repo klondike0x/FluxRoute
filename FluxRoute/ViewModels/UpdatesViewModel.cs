@@ -17,6 +17,7 @@ namespace FluxRoute.ViewModels;
 public sealed partial class UpdatesViewModel : ObservableObject
 {
     private readonly IUpdaterService _updater;
+    private readonly IAppUpdaterService _appUpdater;
     private readonly Func<string> _getEngineDir;
     private readonly Func<bool> _getAutoUpdateEnabled;
     private readonly Func<string> _getCurrentEngineVersion;
@@ -28,6 +29,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
     private readonly Action<string> _addRecentLog;
 
     private UpdateInfo? _pendingUpdate;
+    private AppUpdateInfo? _pendingAppUpdate;
 
     public ObservableCollection<string> UpdateLogs { get; } = new();
 
@@ -39,8 +41,16 @@ public sealed partial class UpdatesViewModel : ObservableObject
     [ObservableProperty] private string latestRemoteVersion = "—";
     [ObservableProperty] private string releaseNotes = "";
 
+    // ── Обновление самого приложения ──────────────────────────────────────
+    [ObservableProperty] private string currentAppVersion = "—";
+    [ObservableProperty] private string latestAppVersion = "—";
+    [ObservableProperty] private string appUpdateStatus = "Не проверялось";
+    [ObservableProperty] private bool isCheckingAppUpdate;
+    [ObservableProperty] private bool hasAppUpdate;
+
     public UpdatesViewModel(
         IUpdaterService updater,
+        IAppUpdaterService appUpdater,
         Func<string> getEngineDir,
         Func<bool> getAutoUpdateEnabled,
         Func<string> getCurrentEngineVersion,
@@ -52,6 +62,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
         Action<string> addRecentLog)
     {
         _updater = updater;
+        _appUpdater = appUpdater;
         _getEngineDir = getEngineDir;
         _getAutoUpdateEnabled = getAutoUpdateEnabled;
         _getCurrentEngineVersion = getCurrentEngineVersion;
@@ -61,6 +72,8 @@ public sealed partial class UpdatesViewModel : ObservableObject
         _refreshDiagnostics = refreshDiagnostics;
         _addAppLog = addAppLog;
         _addRecentLog = addRecentLog;
+
+        CurrentAppVersion = _appUpdater.GetCurrentVersion();
     }
 
     private string EngineDir => _getEngineDir();
@@ -204,6 +217,88 @@ public sealed partial class UpdatesViewModel : ObservableObject
         }
 
         IsUpdating = false;
+    }
+
+    // ── Команды обновления приложения ────────────────────────────────────────
+
+    [RelayCommand]
+    private async Task CheckAppUpdate()
+    {
+        IsCheckingAppUpdate = true;
+        AppUpdateStatus = "🔍 Проверяем обновление FluxRoute...";
+        HasAppUpdate = false;
+        _pendingAppUpdate = null;
+
+        var (update, error) = await _appUpdater.CheckForAppUpdateAsync();
+
+        if (error is not null)
+        {
+            AppUpdateStatus = $"❌ {error}";
+            AddLog($"❌ FluxRoute: {error}");
+        }
+        else if (update is null)
+        {
+            AppUpdateStatus = $"✅ Актуальная версия FluxRoute ({CurrentAppVersion})";
+            LatestAppVersion = CurrentAppVersion;
+            AddLog("✅ FluxRoute: обновлений нет");
+        }
+        else
+        {
+            _pendingAppUpdate = update;
+            HasAppUpdate = true;
+            LatestAppVersion = update.Version;
+            AppUpdateStatus = $"⬆️ Доступна FluxRoute v{update.Version}";
+            AddLog($"⬆️ FluxRoute: доступна версия {update.Version}");
+        }
+
+        IsCheckingAppUpdate = false;
+    }
+
+    [RelayCommand]
+    private async Task InstallAppUpdate()
+    {
+        if (_pendingAppUpdate is null)
+        {
+            await CheckAppUpdate();
+            if (_pendingAppUpdate is null) return;
+        }
+
+        var update = _pendingAppUpdate;
+
+        if (!CustomDialog.Show(
+            "⬆️ Обновление FluxRoute",
+            $"Будет установлена FluxRoute v{update.Version}.\n\n" +
+            $"Приложение автоматически перезапустится после установки.\n\n" +
+            $"Установить сейчас?",
+            "Установить", "Отмена"))
+            return;
+
+        AppUpdateStatus = "⬇️ Загружаем...";
+        _addAppLog($"Установка FluxRoute v{update.Version}...");
+
+        var (success, error) = await _appUpdater.DownloadAndApplyAsync(
+            update,
+            msg =>
+            {
+                if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        AppUpdateStatus = msg;
+                        AddLog(msg);
+                        _addAppLog(msg);
+                    });
+            });
+
+        if (success)
+        {
+            AddLog($"✅ FluxRoute v{update.Version} установлен, перезапуск...");
+            Application.Current?.Dispatcher.Invoke(() => Application.Current.Shutdown());
+        }
+        else
+        {
+            AppUpdateStatus = $"❌ {error}";
+            AddLog($"❌ {error}");
+        }
     }
 
     public async Task AutoDownloadEngineAsync()

@@ -1122,6 +1122,59 @@
 
                                     <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
 
+                                    <!-- FLUXROUTE APP -->
+                                    <TextBlock Style="{StaticResource SecH}" Text="FLUXROUTE (ПРИЛОЖЕНИЕ)" Margin="0,8,0,8" d:IsLocked="True"/>
+                                    <Grid Margin="0,0,0,12" d:IsLocked="True">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="26"/>
+                                            <RowDefinition Height="26"/>
+                                            <RowDefinition Height="26"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Текущая версия:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.CurrentAppVersion}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Доступная версия:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.LatestAppVersion}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Lbl}" Text="Статус:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.AppUpdateStatus}" d:IsLocked="True"/>
+                                    </Grid>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12" d:IsLocked="True">
+                                        <Button Margin="0,0,10,0"
+                                                Command="{Binding Updates.CheckAppUpdateCommand}" d:IsLocked="True">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource TermBtn}">
+                                                    <Setter Property="Content" Value="🔍 Проверить"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Updates.IsCheckingAppUpdate}" Value="True">
+                                                            <Setter Property="IsEnabled" Value="False"/>
+                                                            <Setter Property="Content" Value="⏳ Проверка..."/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                        <Button Command="{Binding Updates.InstallAppUpdateCommand}" d:IsLocked="True">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource AccentBtn}">
+                                                    <Setter Property="Content" Value="⬆️ Установить"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Updates.HasAppUpdate}" Value="False">
+                                                            <Setter Property="IsEnabled" Value="False"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Updates.IsCheckingAppUpdate}" Value="True">
+                                                            <Setter Property="IsEnabled" Value="False"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </StackPanel>
+
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+
                                     <!-- TG WS PROXY -->
                                     <TextBlock Style="{StaticResource SecH}" Text="TG WS PROXY" Margin="0,8,0,8" d:IsLocked="True"/>
                                     <Grid Margin="0,0,0,10" d:IsLocked="True">
