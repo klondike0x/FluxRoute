@@ -314,6 +314,16 @@ public partial class MainViewModel : ObservableObject
         );
         _orchestrator.StatusChanged += OnOrchestratorStatus;
 
+        // Восстанавливаем кэш рейтинга — оркестратор пропустит сканирование при старте.
+        if (settings.ProfileRatings.Count > 0)
+        {
+            var saved = settings.ProfileRatings
+                .Select(r => (profile: Profiles.FirstOrDefault(p => p.FileName == r.FileName), r.Score))
+                .Where(x => x.profile is not null)
+                .Select(x => (x.profile!, x.Score));
+            _orchestrator.RestoreRankedProfiles(saved);
+        }
+
         _orchestratorUiTimer.Tick += (_, _) => UpdateOrchestratorNextCheck();
         _orchestratorUiTimer.Start();
     }

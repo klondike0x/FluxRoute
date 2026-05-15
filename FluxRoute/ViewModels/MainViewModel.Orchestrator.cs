@@ -159,6 +159,9 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task ScanProfiles()
     {
+        // Сбрасываем кэш — принудительное полное сканирование по запросу пользователя.
+        _orchestrator.ClearRankedProfiles();
+
         RebuildProfileScores();
         IsScanning = true;
         ScanProgressText = "Сканирование...";

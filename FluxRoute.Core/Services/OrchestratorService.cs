@@ -79,6 +79,30 @@ public sealed class OrchestratorService : IDisposable
         await ScanAndRankAsync(ct).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Восстанавливает кэш рейтинга из сохранённых настроек.
+    /// Если рейтинг не пустой — при следующем Start() сканирование будет пропущено.
+    /// </summary>
+    public void RestoreRankedProfiles(IEnumerable<(ProfileItem profile, int score)> saved)
+    {
+        _rankedProfiles = saved
+            .Where(x => x.score > 0)
+            .Select(x => (x.profile, x.score, (ProfileProbeResult?)null))
+            .OrderByDescending(x => x.score)
+            .ToList();
+
+        if (_rankedProfiles.Count > 0)
+            Notify($"📋 Рейтинг профилей восстановлен из кэша ({_rankedProfiles.Count} шт.), сканирование пропущено.");
+    }
+
+    /// <summary>
+    /// Сбрасывает кэш рейтинга — при следующем Start() будет выполнено полное сканирование.
+    /// </summary>
+    public void ClearRankedProfiles()
+    {
+        _rankedProfiles = [];
+    }
+
     private async Task LoopAsync(CancellationToken ct)
     {
         if (_rankedProfiles.Count == 0)
