@@ -190,6 +190,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ISettingsService _settingsService;
     private readonly IConnectivityChecker _connectivity;
     private bool _settingsLoaded = false;
+    private bool _suppressOrchestratorStop = false;
 
     // ── Обновления ──
     [ObservableProperty] private bool autoUpdateEnabled = false;

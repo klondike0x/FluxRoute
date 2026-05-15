@@ -138,6 +138,9 @@ public partial class MainViewModel
         CurrentStrategy = SelectedProfile?.DisplayName ?? "—";
         RunningScriptName = SelectedProfile?.FileName ?? "—";
         _runStartedAt = DateTimeOffset.Now;
+        _runningProcess = winws;
+        PidText = SafePidText(winws);
+        IsRunning = true;
 
         Logs.Add($"Прямой запуск winws.exe: {RunningScriptName}");
         Logs.Add($"winws.exe запущен как дочерний процесс FluxRoute, PID: {winws.Id}");
@@ -174,6 +177,7 @@ public partial class MainViewModel
         CurrentStrategy = SelectedProfile.DisplayName;
         RunningScriptName = SelectedProfile.FileName;
         _runStartedAt = DateTimeOffset.Now;
+        IsRunning = true;
 
         Logs.Add($"Запуск через BAT: {RunningScriptName}");
         AddToRecentLogs($"▶ Запуск: {RunningScriptName}");
@@ -208,13 +212,6 @@ public partial class MainViewModel
                     // Процесс мог завершиться между проверками.
                 }
             }
-
-            await RunOnUiThreadAsync(() =>
-            {
-                _runningProcess = winws;
-                PidText = SafePidText(winws);
-                IsRunning = !SafeHasExited(winws);
-            }).ConfigureAwait(false);
 
             await winws.WaitForExitAsync(ct).ConfigureAwait(false);
         }
@@ -299,6 +296,8 @@ public partial class MainViewModel
                 {
                     Logs.Add("winws.exe не найден после запуска BAT.");
                     AddToRecentLogs("❌ winws.exe не найден");
+                    StatusText = "Не запущено";
+                    IsRunning = false;
                 }).ConfigureAwait(false);
                 return;
             }
@@ -309,7 +308,6 @@ public partial class MainViewModel
             {
                 _runningProcess = winws;
                 PidText = SafePidText(winws);
-                IsRunning = !SafeHasExited(winws);
                 Logs.Add($"winws.exe запущен, PID: {winws.Id}");
                 AddToRecentLogs($"✅ Запущен (PID: {winws.Id})");
             }).ConfigureAwait(false);
@@ -420,6 +418,14 @@ public partial class MainViewModel
         UptimeText = "—";
         IsRunning = false;
         _runStartedAt = null;
+
+        // Баг 2: если оркестратор запущен, останавливаем его при ручной остановке Zapret.
+        if (!_suppressOrchestratorStop && _orchestrator.IsRunning)
+        {
+            _orchestrator.Stop();
+            OrchestratorRunning = false;
+            Logs.Add("[Оркестратор] Остановлен вместе с Zapret.");
+        }
 
         RefreshDiagnostics();
         UpdateRuntimeInfo();

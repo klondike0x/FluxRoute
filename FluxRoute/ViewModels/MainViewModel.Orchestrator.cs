@@ -83,7 +83,9 @@ public partial class MainViewModel
 
         void SwitchOnUi()
         {
+            _suppressOrchestratorStop = true;
             Stop();
+            _suppressOrchestratorStop = false;
 
             if (profile is not null)
             {
