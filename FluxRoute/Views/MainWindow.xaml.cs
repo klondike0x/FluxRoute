@@ -247,13 +247,7 @@ public partial class MainWindow : Window
 
     private void AnimateSidebar(bool expanded)
     {
-        var anim = new DoubleAnimation
-        {
-            To = expanded ? 165 : 48,
-            Duration = TimeSpan.FromMilliseconds(200),
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
-        };
-        SidebarBorder.BeginAnimation(WidthProperty, anim);
+        // No-op in v1.5.0: sidebar is fixed-width icon-only; no expand/collapse animation.
     }
 
     private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -312,13 +306,8 @@ public partial class MainWindow : Window
     {
         try
         {
-            AddLogsNavigationButton();
-            MoveAboutNavigationToBottom();
-
-            // В v15 вкладка логов уже материализована в XAML.
-            // Поэтому в нормальном сценарии используем существующую страницу,
-            // а не добавляем вторую поверх неё из code-behind. Иначе между
-            // прозрачными областями двух страниц могут просвечивать строки логов.
+            // v1.5.0 redesign: nav buttons and logs page are fully declared in XAML.
+            // Only locate the existing UnifiedLogsTextBox; no tree injection needed.
             var hasExistingLogsPage = TryUseExistingUnifiedLogsPage();
             if (!hasExistingLogsPage)
                 AddLogsPage();
@@ -365,62 +354,7 @@ public partial class MainWindow : Window
 
     private void MoveAboutNavigationToBottom()
     {
-        try
-        {
-            if (SidebarBorder.Child is WpfGrid { Tag: string tag } && tag == "SidebarWithBottomAbout")
-                return;
-
-            if (SidebarBorder.Child is not WpfStackPanel originalSidebar)
-                return;
-
-            var navGrid = originalSidebar.Children.OfType<WpfGrid>().FirstOrDefault();
-            var navStack = navGrid?.Children.OfType<WpfStackPanel>()
-                .FirstOrDefault(sp => sp.Children.OfType<WpfButton>().Any(IsAboutNavButton));
-
-            if (navGrid is null || navStack is null)
-                return;
-
-            var aboutButton = navStack.Children.OfType<WpfButton>().FirstOrDefault(IsAboutNavButton);
-            if (aboutButton is null)
-                return;
-
-            navStack.Children.Remove(aboutButton);
-
-            // Remove spacer left by older patched builds, if it exists.
-            foreach (var spacer in navStack.Children.OfType<FrameworkElement>()
-                         .Where(e => Equals(e.Tag, "AboutNavSpacer"))
-                         .ToList())
-            {
-                navStack.Children.Remove(spacer);
-            }
-
-            SidebarBorder.Child = null;
-
-            var sidebarLayout = new WpfGrid { Tag = "SidebarWithBottomAbout" };
-            sidebarLayout.RowDefinitions.Add(new WpfRowDefinition { Height = GridLength.Auto });
-            sidebarLayout.RowDefinitions.Add(new WpfRowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-            sidebarLayout.RowDefinitions.Add(new WpfRowDefinition { Height = GridLength.Auto });
-
-            WpfGrid.SetRow(originalSidebar, 0);
-            sidebarLayout.Children.Add(originalSidebar);
-
-            var bottomContainer = new WpfBorder
-            {
-                BorderBrush = BrushFrom("#21262D"),
-                BorderThickness = new Thickness(0, 1, 0, 0),
-                Padding = new Thickness(0, 4, 0, 4),
-                Background = BrushFrom("#0D1117")
-            };
-            bottomContainer.Child = aboutButton;
-            WpfGrid.SetRow(bottomContainer, 2);
-            sidebarLayout.Children.Add(bottomContainer);
-
-            SidebarBorder.Child = sidebarLayout;
-        }
-        catch (Exception ex)
-        {
-            _vm.Logs.Add($"[UI] Не удалось перенести пункт 'О программе' вниз: {ex.Message}");
-        }
+        // No-op in v1.5.0: the About nav item is already placed at the bottom in XAML.
     }
 
     private static bool IsAboutNavButton(WpfButton button)
@@ -472,20 +406,7 @@ public partial class MainWindow : Window
 
     private void AddLogsNavigationButton()
     {
-        if (SidebarBorder.Child is not WpfStackPanel sidebar)
-            return;
-
-        var navGrid = sidebar.Children.OfType<WpfGrid>().FirstOrDefault();
-        var navStack = navGrid?.Children.OfType<WpfStackPanel>()
-            .FirstOrDefault(sp => sp.Children.OfType<WpfButton>().Count() >= 6);
-
-        if (navStack is null)
-            return;
-
-        if (navStack.Children.OfType<WpfButton>().Any(b => Equals(b.CommandParameter, "7")))
-            return;
-
-        navStack.Children.Add(CreateLogsNavButton());
+        // No-op in v1.5.0: the Logs nav button is already declared in XAML.
     }
 
     private WpfButton CreateLogsNavButton()
