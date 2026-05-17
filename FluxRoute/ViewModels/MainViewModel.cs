@@ -10,6 +10,7 @@ using Application = System.Windows.Application;
 
 using FluxRoute.Core.Models;
 using FluxRoute.Core.Services;
+using FluxRoute.AI.Services;
 using FluxRoute.Services;
 using FluxRoute.Updater.Services;
 using FluxRoute.Views;
@@ -23,6 +24,8 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<ProfileItem> Profiles { get; } = new();
     public ObservableCollection<string> OrchestratorLogs { get; } = new();
     public ObservableCollection<ProfileScore> ProfileScores { get; } = new();
+    public ObservableCollection<AiStrategyRowVm> AiStrategyRows { get; } = new();
+    public int AiStrategyRowCount => AiStrategyRows.Count;
     public ObservableCollection<string> RecentLogs { get; } = new();
     public ObservableCollection<string> UpdateLogs => Updates.UpdateLogs;
     public ObservableCollection<string> ServiceLogs => Service.ServiceLogs;
@@ -78,16 +81,25 @@ public partial class MainViewModel : ObservableObject
         0 => "ГЛАВНАЯ",
         1 => "TG ПРОКСИ",
         2 => "ОРКЕСТРАТОР",
-        3 => "ОБНОВЛЕНИЕ",
-        4 => "ДИАГНОСТИКА",
-        5 => "СЕРВИС",
-        6 => "О ПРОГРАММЕ",
+        3 => "ИИ",
+        4 => "ОБНОВЛЕНИЕ",
+        5 => "ДИАГНОСТИКА",
+        6 => "СЕРВИС",
+        7 => "О ПРОГРАММЕ",
+        8 => "ЛОГИ",
         _ => ""
     };
     partial void OnSelectedTabIndexChanged(int value)
     {
         OnPropertyChanged(nameof(SelectedTabName));
         if (value == 1) OnTgProxyTabActivated();
+        if (value == 2) RebuildAiStrategyRows();
+        if (value == 3)
+        {
+            _aiOrchestrator.SyncRegistryFromEngine();
+            RefreshAiDashboard();
+            RebuildAiStrategyRows();
+        }
     }
 
     // ── Боковая панель ──
@@ -151,6 +163,10 @@ public partial class MainViewModel : ObservableObject
     partial void OnSiteTelegramChanged(bool value) => SaveSettings();
 
     private readonly OrchestratorService _orchestrator;
+    private readonly AiOrchestratorService _aiOrchestrator;
+    private readonly AiStrategyRegistry _aiRegistry;
+    private readonly AiHistoryStore _aiHistoryStore;
+    private readonly NetworkFingerprintProvider _aiFingerprints;
     private readonly DispatcherTimer _orchestratorUiTimer = new(DispatcherPriority.Render) { Interval = TimeSpan.FromSeconds(1) };
 
     // ── Сервис (wrappers → ServiceViewModel) ──
@@ -217,12 +233,26 @@ public partial class MainViewModel : ObservableObject
     public bool IsDownloadingEngine => Updates.IsDownloadingEngine;
     public string EngineDownloadStatus => Updates.EngineDownloadStatus;
 
-    public MainViewModel(ISettingsService settingsService, IUpdaterService updaterService, IAppUpdaterService appUpdaterService, IConnectivityChecker connectivity)
+    public MainViewModel(
+        ISettingsService settingsService,
+        IUpdaterService updaterService,
+        IAppUpdaterService appUpdaterService,
+        IConnectivityChecker connectivity,
+        NetworkFingerprintProvider aiFingerprints,
+        NetworkChangeWatcher aiNetworkWatcher,
+        AiStrategyRegistry aiRegistry,
+        AiHistoryStore aiHistoryStore,
+        BanditSelector aiBandit,
+        StrategyEvolver aiEvolver,
+        BatMaterializer aiMaterializer)
     {
         _settingsService = settingsService;
         _updater = updaterService;
         _connectivity = connectivity;
         _appUpdater = appUpdaterService;
+        _aiRegistry = aiRegistry;
+        _aiHistoryStore = aiHistoryStore;
+        _aiFingerprints = aiFingerprints;
 
         // ── Инициализация feature ViewModels ──
         Diagnostics = new DiagnosticsViewModel(
@@ -324,8 +354,31 @@ public partial class MainViewModel : ObservableObject
             _orchestrator.RestoreRankedProfiles(saved);
         }
 
+        _aiOrchestrator = new AiOrchestratorService(
+            () => Profiles,
+            () => SelectedProfile,
+            SwitchProfileAsync,
+            () => TargetsPath,
+            UpdateProfileScoreAsync,
+            () => EngineDir,
+            BuildAiSettingsSnapshot,
+            RefreshProfilesInternalAsync,
+            IsTrackedProcessRunning,
+            EnsureProtectionRunningAsync,
+            connectivity,
+            aiFingerprints,
+            aiNetworkWatcher,
+            aiRegistry,
+            aiHistoryStore,
+            aiBandit,
+            aiEvolver,
+            aiMaterializer);
+        _aiOrchestrator.StatusChanged += OnOrchestratorStatus;
+
         _orchestratorUiTimer.Tick += (_, _) => UpdateOrchestratorNextCheck();
         _orchestratorUiTimer.Start();
+        _aiOrchestrator.SyncRegistryFromEngine();
+        RebuildAiStrategyRows();
     }
 
     // ── Настройки ──
@@ -344,6 +397,9 @@ public partial class MainViewModel : ObservableObject
         MinimizeToTray = settings.MinimizeToTray;
         GameFilterProtocol = settings.GameFilterProtocol;
         ShowProfileSwitchWarning = settings.ShowProfileSwitchWarning;
+        settings.Ai ??= new AiSettings();
+        AiEnabled = settings.Ai.Enabled;
+        AiExplorationPermil = settings.Ai.ExplorationRatePermil;
 
         // TG Proxy — сбрасываем устаревшие дефолты
         TgProxyHost = string.IsNullOrWhiteSpace(settings.TgProxy.Host) || settings.TgProxy.Host == "0.0.0.0" ? "127.0.0.1" : settings.TgProxy.Host;
@@ -381,6 +437,7 @@ public partial class MainViewModel : ObservableObject
             MinimizeToTray = MinimizeToTray,
             GameFilterProtocol = GameFilterProtocol,
             ShowProfileSwitchWarning = ShowProfileSwitchWarning,
+            Ai = BuildAiSettingsSnapshot(),
             ProfileRatings = ProfileScores.Select(s => new ProfileRatingEntry
             {
                 FileName = s.FileName,
@@ -428,7 +485,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ShowLogs() => SelectedTabIndex = 3;
+    private void ShowLogs() => SelectedTabIndex = 8;
 
     [RelayCommand]
     private void ToggleSettings() => OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
@@ -460,6 +517,8 @@ public partial class MainViewModel : ObservableObject
     {
         if (_orchestrator.IsRunning)
             _orchestrator.Stop();
+        if (_aiOrchestrator.IsRunning)
+            _aiOrchestrator.Stop();
 
         _uptimeTimer?.Stop();
         _orchestratorUiTimer?.Stop();

@@ -45,6 +45,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\FluxRoute.AI\FluxRoute.AI.csproj" />
     <ProjectReference Include="..\FluxRoute.Core\FluxRoute.Core.csproj" />
     <ProjectReference Include="..\FluxRoute.Updater\FluxRoute.Updater.csproj" />
   </ItemGroup>

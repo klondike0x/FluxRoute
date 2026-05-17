@@ -178,20 +178,33 @@ public partial class MainViewModel
         if (!Directory.Exists(EngineDir)) { Logs.Add($"Папка engine не найдена: {EngineDir}"); SelectedProfile = null; return; }
 
         var excluded = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "service.bat", "service,.bat" };
+        var aiEvolvedDir = Path.Combine(EngineDir, "ai-evolved");
         var bats = Directory.EnumerateFiles(EngineDir, "*.bat", SearchOption.TopDirectoryOnly)
-            .Where(f => !excluded.Contains(Path.GetFileName(f)))
-            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
+            .Where(f => !excluded.Contains(Path.GetFileName(f)));
+        if (Directory.Exists(aiEvolvedDir))
+            bats = bats.Concat(Directory.EnumerateFiles(aiEvolvedDir, "*.bat", SearchOption.TopDirectoryOnly));
 
-        foreach (var bat in bats)
+        var batList = bats.OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
+
+        foreach (var bat in batList)
             Profiles.Add(new ProfileItem { FileName = Path.GetFileName(bat), DisplayName = Path.GetFileNameWithoutExtension(bat), FullPath = bat });
 
-        if (currentFileName is not null)
-            SelectedProfile = Profiles.FirstOrDefault(p => p.FileName == currentFileName)
-                              ?? Profiles.FirstOrDefault();
-        else
-            SelectedProfile ??= Profiles.FirstOrDefault();
+        _suppressProfileWarning = true;
+        try
+        {
+            if (currentFileName is not null)
+                SelectedProfile = Profiles.FirstOrDefault(p => p.FileName == currentFileName)
+                                  ?? Profiles.FirstOrDefault();
+            else
+                SelectedProfile ??= Profiles.FirstOrDefault();
+        }
+        finally
+        {
+            _suppressProfileWarning = false;
+        }
 
         Logs.Add($"Профили загружены: {Profiles.Count} (.bat)");
+        RebuildAiStrategyRows();
     }
 
     private string BuildDiagnosticsText() =>

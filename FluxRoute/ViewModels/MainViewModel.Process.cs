@@ -420,9 +420,10 @@ public partial class MainViewModel
         _runStartedAt = null;
 
         // Баг 2: если оркестратор запущен, останавливаем его при ручной остановке Zapret.
-        if (!_suppressOrchestratorStop && _orchestrator.IsRunning)
+        if (!_suppressOrchestratorStop && (_orchestrator.IsRunning || _aiOrchestrator.IsRunning))
         {
             _orchestrator.Stop();
+            _aiOrchestrator.Stop();
             OrchestratorRunning = false;
             Logs.Add("[Оркестратор] Остановлен вместе с Zapret.");
         }

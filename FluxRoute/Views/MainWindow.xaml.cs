@@ -1,3 +1,4 @@
+using System.IO;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
@@ -8,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Navigation;
+using FluxRoute.AI.Services;
 using FluxRoute.Core.Services;
 using FluxRoute.Services;
 using FluxRoute.Updater.Services;
@@ -53,15 +55,33 @@ public partial class MainWindow : Window
     // Parameterless constructor is intentionally kept for the WPF designer
     // and as a safe fallback if the window is ever instantiated outside DI.
     public MainWindow()
-        : this(
-            new MainViewModel(
-                new SettingsService(),
-                new UpdaterService(),
-                new AppUpdaterService(),
-                new ConnectivityChecker()),
-            new TrayIconService(),
-            null)
+        : this(CreateDesignTimeViewModel(), new TrayIconService(), null)
     {
+    }
+
+    private static MainViewModel CreateDesignTimeViewModel()
+    {
+        var settings = new SettingsService();
+        var dir = Path.GetDirectoryName(settings.SettingsPath)!;
+        var registry = new AiStrategyRegistry(Path.Combine(dir, "fluxroute-ai-strategies.json"));
+        registry.Load();
+        var history = new AiHistoryStore(Path.Combine(dir, "fluxroute-ai-history.jsonl"));
+        var materializer = new BatMaterializer();
+        var fingerprints = new NetworkFingerprintProvider();
+        return new MainViewModel(
+            settings,
+            new UpdaterService(),
+            new AppUpdaterService(),
+            new ConnectivityChecker(),
+            fingerprints,
+            new NetworkChangeWatcher(fingerprints),
+            registry,
+            history,
+            new BanditSelector(registry, new Random()),
+            new StrategyEvolver(registry, history, materializer,
+                () => Path.Combine(AppContext.BaseDirectory, "engine"),
+                () => settings.Load().Ai),
+            materializer);
     }
 
     public MainWindow(MainViewModel viewModel, TrayIconService trayIcon, ILogger<MainWindow>? logger = null)
@@ -225,9 +245,9 @@ public partial class MainWindow : Window
     private void AnimateNavIndicator(int tabIndex)
     {
         // The About page is pinned to the bottom of the sidebar.
-        // Logs use tab index 7, but visually they are placed right after Service
+        // Logs use tab index 8, but visually they are placed right after Service
         // because About was removed from the main navigation list.
-        if (tabIndex == 6)
+        if (tabIndex == 7)
         {
             SetNavIndicatorVisible(false);
             return;
@@ -235,7 +255,7 @@ public partial class MainWindow : Window
 
         SetNavIndicatorVisible(true);
 
-        var visualIndex = tabIndex > 6 ? tabIndex - 1 : tabIndex;
+        var visualIndex = tabIndex > 7 ? tabIndex - 1 : tabIndex;
         var animation = new DoubleAnimation
         {
             To = visualIndex * 36,
@@ -360,7 +380,7 @@ public partial class MainWindow : Window
     private static bool IsAboutNavButton(WpfButton button)
     {
         var parameter = button.CommandParameter?.ToString();
-        if (parameter == "6")
+        if (parameter == "7")
             return true;
 
         return ContainsText(button, "О программе");
@@ -414,7 +434,7 @@ public partial class MainWindow : Window
         var button = new WpfButton
         {
             Height = 36,
-            CommandParameter = "7"
+            CommandParameter = "8"
         };
 
         WpfBindingOperations.SetBinding(button, WpfButton.CommandProperty, new WpfBinding("SelectTabCommand"));
@@ -425,7 +445,7 @@ public partial class MainWindow : Window
             var trigger = new DataTrigger
             {
                 Binding = new WpfBinding("SelectedTabIndex"),
-                Value = 7
+                Value = 8
             };
             trigger.Setters.Add(new Setter(ForegroundProperty, BrushFrom("#E6EDF3")));
             trigger.Setters.Add(new Setter(BackgroundProperty, BrushFrom("#161B22")));
@@ -487,7 +507,7 @@ public partial class MainWindow : Window
         var trigger = new DataTrigger
         {
             Binding = new WpfBinding("SelectedTabIndex"),
-            Value = 7
+            Value = 8
         };
         trigger.Setters.Add(new Setter(VisibilityProperty, Visibility.Visible));
         trigger.Setters.Add(new Setter(OpacityProperty, 1d));
@@ -900,7 +920,7 @@ public partial class MainWindow : Window
         if (_pageTitleTextBlock is null)
             return;
 
-        if (_vm.SelectedTabIndex == 7)
+        if (_vm.SelectedTabIndex == 8)
         {
             _pageTitleTextBlock.SetCurrentValue(WpfTextBlock.TextProperty, "ЛОГИ");
         }
