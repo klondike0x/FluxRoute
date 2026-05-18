@@ -404,6 +404,16 @@ public partial class MainWindow : Window
         WindowState = WindowState.Minimized;
     }
 
+    private void MaximizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+
+        if (MaximizeIcon != null)
+            MaximizeIcon.Text = WindowState == WindowState.Maximized ? "\uE923" : "\uE922";
+    }
+
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
         Close();
