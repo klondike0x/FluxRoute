@@ -282,17 +282,18 @@ public partial class MainWindow : Window
         }
         else
         {
-            // Map logical tab index to visual position in StackPanel
-            // Order: 0,1,2,3,4,5,8(logs→6),6(settings→7)
+            // Map logical tab index to visual slot in StackPanel
+            // Slot order: 0,1,2,3,4,5, 8(logs)→6, 6(settings)→7
             int visualIndex = tabIndex switch
             {
                 8 => 6,
                 6 => 7,
                 _ => tabIndex
             };
-            // Each row: Height=36 + Margin 4+4=8 → 44px per slot
-            // StackPanel Margin top=8; pill center: 8 + visualIndex*44 + (44-20)/2
-            targetY = 8 + visualIndex * 44 + 12;
+            // Each slot: Height=36 + Margin top=4 + bottom=4 = 44px per slot
+            // Pill Margin.Top=20 already positions it at slot-0 center (8 top + 12 center offset)
+            // TranslateTransform.Y is additive offset from that base position
+            targetY = visualIndex * 44;
         }
 
         var animation = new DoubleAnimation
