@@ -598,9 +598,6 @@
                         <Button Style="{StaticResource TitleBtn}" Click="MinimizeButton_Click" d:IsLocked="True">
                             <TextBlock Text="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="9" Foreground="#4A5170" d:IsLocked="True"/>
                         </Button>
-                        <Button Style="{StaticResource TitleBtn}" Click="MaximizeButton_Click" d:IsLocked="True">
-                            <TextBlock x:Name="MaximizeIcon" Text="&#xE922;" FontFamily="Segoe MDL2 Assets" FontSize="9" Foreground="#4A5170" d:IsLocked="True"/>
-                        </Button>
                         <Button Style="{StaticResource CloseTitleBtn}" Click="CloseButton_Click" d:IsLocked="True">
                             <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="9" Foreground="#4A5170" d:IsLocked="True"/>
                         </Button>
