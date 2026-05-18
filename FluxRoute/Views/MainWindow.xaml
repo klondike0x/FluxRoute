@@ -94,12 +94,12 @@
         <!-- ══ NAV ICON BUTTON ══ -->
         <Style x:Key="NavIconBtn" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="Width" Value="52"/>
             <Setter Property="Height" Value="36"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Background">
-                <Setter.Value><SolidColorBrush Color="Transparent"/></Setter.Value>
-            </Setter>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
             <Setter Property="RenderTransform">
                 <Setter.Value>
