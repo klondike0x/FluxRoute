@@ -1465,134 +1465,114 @@
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
 
-                                    <!-- Card 1: Traffic chart -->
+                                    <!-- Card 1: Profile selector -->
                                     <Border Grid.Row="0" Background="#0E1120" BorderBrush="#1A1E30" BorderThickness="1"
                                         CornerRadius="12" Padding="12,10" d:IsLocked="True">
                                         <Grid d:IsLocked="True">
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="66"/>
-                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
 
-                                            <!-- Profile selector header -->
-                                            <Grid Grid.Row="0" Margin="0,0,0,6" d:IsLocked="True">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" FontFamily="Segoe MDL2 Assets" FontSize="13" Text="&#xEC05;"
+                                                   Foreground="#4A80CC" VerticalAlignment="Center" Margin="0,0,8,0" d:IsLocked="True"/>
 
-                                                <TextBlock Grid.Column="0" FontFamily="Segoe MDL2 Assets" FontSize="13" Text="&#xEC05;"
-                                                       Foreground="#4A80CC" VerticalAlignment="Center" Margin="0,0,7,0" d:IsLocked="True"/>
-
-                                                <ComboBox Grid.Column="1"
-                                                          ItemsSource="{Binding Profiles}"
-                                                          SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
-                                                          Height="22"
-                                                          Padding="4,2"
-                                                          Background="Transparent"
-                                                          BorderThickness="0"
-                                                          Foreground="#7A90B8"
-                                                          FontFamily="Segoe UI"
-                                                          FontSize="11.5"
-                                                          VerticalAlignment="Center">
-                                                    <ComboBox.Template>
-                                                        <ControlTemplate TargetType="ComboBox">
-                                                            <Grid>
-                                                                <Border x:Name="Bd" Background="Transparent" CornerRadius="6"
-                                                                        BorderThickness="0">
-                                                                    <Grid>
-                                                                        <Grid.ColumnDefinitions>
-                                                                            <ColumnDefinition Width="*"/>
-                                                                            <ColumnDefinition Width="16"/>
-                                                                        </Grid.ColumnDefinitions>
-                                                                        <ContentPresenter Grid.Column="0"
-                                                                            Content="{TemplateBinding SelectionBoxItem}"
-                                                                            ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
-                                                                            VerticalAlignment="Center"
-                                                                            Margin="0,0,2,0">
-                                                                            <ContentPresenter.Resources>
-                                                                                <Style TargetType="TextBlock">
-                                                                                    <Setter Property="Foreground" Value="#7A90B8"/>
-                                                                                    <Setter Property="FontFamily" Value="Segoe UI"/>
-                                                                                    <Setter Property="FontSize" Value="11.5"/>
-                                                                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                                                                </Style>
-                                                                            </ContentPresenter.Resources>
-                                                                        </ContentPresenter>
-                                                                        <TextBlock Grid.Column="1" Text="▾" Foreground="#2A3A5A"
-                                                                                   FontSize="10" HorizontalAlignment="Center"
-                                                                                   VerticalAlignment="Center"/>
-                                                                        <ToggleButton Grid.Column="0" Grid.ColumnSpan="2"
-                                                                                      IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
-                                                                                      Background="Transparent" BorderThickness="0"
-                                                                                      Cursor="Hand" Opacity="0"/>
-                                                                    </Grid>
+                                            <ComboBox Grid.Column="1"
+                                                      ItemsSource="{Binding Profiles}"
+                                                      SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
+                                                      Height="26"
+                                                      Padding="4,2"
+                                                      Background="Transparent"
+                                                      BorderThickness="0"
+                                                      Foreground="#8AA0C8"
+                                                      FontFamily="Segoe UI"
+                                                      FontSize="12"
+                                                      VerticalAlignment="Center">
+                                                <ComboBox.Template>
+                                                    <ControlTemplate TargetType="ComboBox">
+                                                        <Grid>
+                                                            <Border x:Name="Bd" Background="Transparent" CornerRadius="6" BorderThickness="0">
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="16"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <ContentPresenter Grid.Column="0"
+                                                                        Content="{TemplateBinding SelectionBoxItem}"
+                                                                        ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                                        VerticalAlignment="Center" Margin="0,0,2,0">
+                                                                        <ContentPresenter.Resources>
+                                                                            <Style TargetType="TextBlock">
+                                                                                <Setter Property="Foreground" Value="#8AA0C8"/>
+                                                                                <Setter Property="FontFamily" Value="Segoe UI"/>
+                                                                                <Setter Property="FontSize" Value="12"/>
+                                                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                                            </Style>
+                                                                        </ContentPresenter.Resources>
+                                                                    </ContentPresenter>
+                                                                    <TextBlock Grid.Column="1" Text="▾" Foreground="#3A5080"
+                                                                               FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    <ToggleButton Grid.Column="0" Grid.ColumnSpan="2"
+                                                                                  IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                                                                  Background="Transparent" BorderThickness="0"
+                                                                                  Cursor="Hand" Opacity="0"/>
+                                                                </Grid>
+                                                            </Border>
+                                                            <Popup IsOpen="{TemplateBinding IsDropDownOpen}"
+                                                                   AllowsTransparency="True" Focusable="False"
+                                                                   Placement="Bottom" PopupAnimation="Slide">
+                                                                <Border Background="#111828" BorderBrush="#1E2A40"
+                                                                        BorderThickness="1" CornerRadius="8" Margin="0,3,0,0"
+                                                                        MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+                                                                    <Border.Effect>
+                                                                        <DropShadowEffect Color="#000000" BlurRadius="18" ShadowDepth="4" Opacity="0.5"/>
+                                                                    </Border.Effect>
+                                                                    <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                                                                        <ItemsPresenter/>
+                                                                    </ScrollViewer>
                                                                 </Border>
-                                                                <Popup IsOpen="{TemplateBinding IsDropDownOpen}"
-                                                                       AllowsTransparency="True" Focusable="False"
-                                                                       Placement="Bottom" PopupAnimation="Slide">
-                                                                    <Border Background="#111828" BorderBrush="#1E2A40"
-                                                                            BorderThickness="1" CornerRadius="8" Margin="0,3,0,0"
-                                                                            MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
-                                                                        <Border.Effect>
-                                                                            <DropShadowEffect Color="#000000" BlurRadius="18" ShadowDepth="4" Opacity="0.5"/>
-                                                                        </Border.Effect>
-                                                                        <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto">
-                                                                            <ItemsPresenter/>
-                                                                        </ScrollViewer>
-                                                                    </Border>
-                                                                </Popup>
-                                                            </Grid>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="Bd" Property="Background" Value="#0E1830"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </ComboBox.Template>
-                                                    <ComboBox.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <TextBlock Text="{Binding DisplayName}"
-                                                                       FontFamily="Segoe UI" FontSize="11.5"
-                                                                       Foreground="#C8D4EC" Padding="6,4"
-                                                                       TextTrimming="CharacterEllipsis"/>
-                                                        </DataTemplate>
-                                                    </ComboBox.ItemTemplate>
-                                                </ComboBox>
-                                            </Grid>
-                                            <!-- Chart -->
-                                            <Border Grid.Row="1" Background="#060810" CornerRadius="8" ClipToBounds="True" d:IsLocked="True">
-                                                <Canvas ClipToBounds="True" d:IsLocked="True">
-                                                    <!-- Chart fill area -->
-                                                    <Polygon Opacity="0.18" Canvas.Left="0" Canvas.Top="0" d:IsLocked="True">
-                                                        <Polygon.Fill>
-                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                <GradientStop Color="#00E676" Offset="0"/>
-                                                                <GradientStop Color="#00000000" Offset="1"/>
-                                                            </LinearGradientBrush>
-                                                        </Polygon.Fill>
-                                                        <Polygon.Points>
-                                                            0,52 18,46 32,49 50,28 65,36 82,18 100,30 120,14 138,26 158,11 176,22 196,13 214,28 234,16 254,20 270,23 270,66 0,66
-                                                        </Polygon.Points>
-                                                    </Polygon>
-                                                    <!-- Chart line -->
-                                                    <Polyline StrokeThickness="2" StrokeLineJoin="Round"
-                                                          Canvas.Left="0" Canvas.Top="0" d:IsLocked="True">
-                                                        <Polyline.Stroke>
-                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                                <GradientStop Color="#00B86A" Offset="0"/>
-                                                                <GradientStop Color="#00E676" Offset="1"/>
-                                                            </LinearGradientBrush>
-                                                        </Polyline.Stroke>
-                                                        <Polyline.Points>
-                                                            0,52 18,46 32,49 50,28 65,36 82,18 100,30 120,14 138,26 158,11 176,22 196,13 214,28 234,16 254,20 270,23
-                                                        </Polyline.Points>
-                                                        <Polyline.Effect>
-                                                            <DropShadowEffect Color="#00E676" BlurRadius="6" ShadowDepth="0" Opacity="0.7"/>
-                                                        </Polyline.Effect>
-                                                    </Polyline>
-                                                </Canvas>
-                                            </Border>
+                                                            </Popup>
+                                                        </Grid>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="Bd" Property="Background" Value="#0E1830"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </ComboBox.Template>
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                   FontFamily="Segoe UI" FontSize="12"
+                                                                   Foreground="#C8D4EC" Padding="6,5"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+
+                                            <!-- Refresh profiles button -->
+                                            <Button Grid.Column="2"
+                                                    Command="{Binding LoadProfilesCommand}"
+                                                    Width="26" Height="26"
+                                                    Background="Transparent" BorderThickness="0"
+                                                    Cursor="Hand" ToolTip="Обновить список профилей"
+                                                    VerticalAlignment="Center" Margin="6,0,0,0">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="Bg" Background="Transparent" CornerRadius="6">
+                                                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72C;"
+                                                                       FontSize="13" Foreground="#3A5080"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="Bg" Property="Background" Value="#0E1830"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
                                         </Grid>
                                     </Border>
 
@@ -1654,94 +1634,53 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <!-- Card 3: Donut stats -->
+                                    <!-- Card 3: System status -->
                                     <Border Grid.Row="4" Background="#0E1120" BorderBrush="#1A1E30" BorderThickness="1"
-                                        CornerRadius="12" Padding="14,12" d:IsLocked="True">
-                                        <Grid d:IsLocked="True">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="72"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <!-- Donut -->
-                                            <Viewbox Grid.Column="0" Width="62" Height="62" VerticalAlignment="Center" d:IsLocked="True">
-                                                <Canvas Width="64" Height="64" d:IsLocked="True">
-                                                    <Ellipse Width="64" Height="64" StrokeThickness="8" Fill="Transparent"
-                                                         Stroke="#111828" d:IsLocked="True"/>
-                                                    <Path StrokeThickness="8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent" d:IsLocked="True">
-                                                        <Path.Stroke>
-                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                                <GradientStop Color="#4A80E2" Offset="0"/>
-                                                                <GradientStop Color="#5BADFF" Offset="1"/>
-                                                            </LinearGradientBrush>
-                                                        </Path.Stroke>
-                                                        <Path.Data>
-                                                            <PathGeometry>
-                                                                <PathFigure StartPoint="32,4" IsClosed="False">
-                                                                    <ArcSegment Point="60,32" Size="28,28"
-                                                                            SweepDirection="Clockwise" IsLargeArc="False"/>
-                                                                </PathFigure>
-                                                            </PathGeometry>
-                                                        </Path.Data>
-                                                        <Path.Effect>
-                                                            <DropShadowEffect Color="#4A80E2" BlurRadius="6" ShadowDepth="0" Opacity="0.5"/>
-                                                        </Path.Effect>
-                                                    </Path>
-                                                    <Path StrokeThickness="8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent" d:IsLocked="True">
-                                                        <Path.Stroke>
-                                                            <SolidColorBrush Color="#8040CC"/>
-                                                        </Path.Stroke>
-                                                        <Path.Data>
-                                                            <PathGeometry>
-                                                                <PathFigure StartPoint="60,32" IsClosed="False">
-                                                                    <ArcSegment Point="32,60" Size="28,28"
-                                                                            SweepDirection="Clockwise" IsLargeArc="False"/>
-                                                                </PathFigure>
-                                                            </PathGeometry>
-                                                        </Path.Data>
-                                                        <Path.Effect>
-                                                            <DropShadowEffect Color="#8040CC" BlurRadius="6" ShadowDepth="0" Opacity="0.5"/>
-                                                        </Path.Effect>
-                                                    </Path>
-                                                    <Path StrokeThickness="8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent" d:IsLocked="True">
-                                                        <Path.Stroke>
-                                                            <SolidColorBrush Color="#00C47A"/>
-                                                        </Path.Stroke>
-                                                        <Path.Data>
-                                                            <PathGeometry>
-                                                                <PathFigure StartPoint="32,60" IsClosed="False">
-                                                                    <ArcSegment Point="10,42" Size="28,28"
-                                                                            SweepDirection="Clockwise" IsLargeArc="False"/>
-                                                                </PathFigure>
-                                                            </PathGeometry>
-                                                        </Path.Data>
-                                                        <Path.Effect>
-                                                            <DropShadowEffect Color="#00C47A" BlurRadius="6" ShadowDepth="0" Opacity="0.5"/>
-                                                        </Path.Effect>
-                                                    </Path>
-                                                </Canvas>
-                                            </Viewbox>
-
-                                            <!-- Legend -->
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0" d:IsLocked="True">
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,7" d:IsLocked="True">
-                                                    <Ellipse Width="7" Height="7" Fill="#5BADFF" Margin="0,0,7,0" VerticalAlignment="Center" d:IsLocked="True"/>
-                                                    <TextBlock Text="{Binding AdminText}" FontFamily="Segoe UI"
-                                                           FontSize="11" Foreground="#7080A8" d:IsLocked="True"/>
-                                                </StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,7" d:IsLocked="True">
-                                                    <Ellipse Width="7" Height="7" Fill="#8040CC" Margin="0,0,7,0" VerticalAlignment="Center" d:IsLocked="True"/>
-                                                    <TextBlock Text="{Binding WinwsText}" FontFamily="Segoe UI"
-                                                           FontSize="11" Foreground="#7080A8" d:IsLocked="True"/>
-                                                </StackPanel>
-                                                <StackPanel Orientation="Horizontal" d:IsLocked="True">
-                                                    <Ellipse Width="7" Height="7" Fill="#00C47A" Margin="0,0,7,0" VerticalAlignment="Center" d:IsLocked="True"/>
-                                                    <TextBlock Text="{Binding CurrentEngineVersion, Mode=OneWay}" FontFamily="Segoe UI"
-                                                           FontSize="11" Foreground="#7080A8" d:IsLocked="True"/>
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </Grid>
+                                        CornerRadius="12" Padding="14,10" d:IsLocked="True">
+                                        <StackPanel d:IsLocked="True">
+                                            <!-- Row: Admin -->
+                                            <Grid Margin="0,0,0,7" d:IsLocked="True">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Ellipse Grid.Column="0" Width="7" Height="7" Fill="#5BADFF"
+                                                         Margin="0,0,8,0" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBlock Grid.Column="1" Text="Права доступа" FontFamily="Segoe UI"
+                                                       FontSize="11" Foreground="#4A5A7A" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding AdminText}" FontFamily="Segoe UI"
+                                                       FontSize="11" Foreground="#7A90B8" HorizontalAlignment="Right" d:IsLocked="True"/>
+                                            </Grid>
+                                            <!-- Row: WinDivert -->
+                                            <Grid Margin="0,0,0,7" d:IsLocked="True">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Ellipse Grid.Column="0" Width="7" Height="7" Fill="#8040CC"
+                                                         Margin="0,0,8,0" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBlock Grid.Column="1" Text="WinDivert" FontFamily="Segoe UI"
+                                                       FontSize="11" Foreground="#4A5A7A" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding WinwsText}" FontFamily="Segoe UI"
+                                                       FontSize="11" Foreground="#7A90B8" HorizontalAlignment="Right" d:IsLocked="True"/>
+                                            </Grid>
+                                            <!-- Row: Engine version -->
+                                            <Grid d:IsLocked="True">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Ellipse Grid.Column="0" Width="7" Height="7" Fill="#00C47A"
+                                                         Margin="0,0,8,0" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBlock Grid.Column="1" Text="Движок" FontFamily="Segoe UI"
+                                                       FontSize="11" Foreground="#4A5A7A" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding CurrentEngineVersion, Mode=OneWay}" FontFamily="Segoe UI"
+                                                       FontSize="11" Foreground="#7A90B8" HorizontalAlignment="Right" d:IsLocked="True"/>
+                                            </Grid>
+                                        </StackPanel>
                                     </Border>
                                 </Grid>
                             </Grid>
