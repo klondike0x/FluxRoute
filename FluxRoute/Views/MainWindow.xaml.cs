@@ -288,8 +288,8 @@ public partial class MainWindow : Window
             // Slot order: 0,1,2,3,4,5, 8(logs)→6, 6(settings)→7
             int visualIndex = tabIndex switch
             {
-                8 => 6,
-                6 => 7,
+                6 => 6,
+                8 => 7,
                 _ => tabIndex
             };
             // Each slot: Height=36 + Margin top=4 + bottom=4 = 44px per slot

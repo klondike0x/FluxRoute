@@ -972,7 +972,7 @@
                                     </Border.Style>
                                 </Border>
                                 <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="6" d:IsLocked="True">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE8EF;" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE9F5;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
