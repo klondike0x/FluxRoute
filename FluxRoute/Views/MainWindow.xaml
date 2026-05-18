@@ -356,22 +356,48 @@
             <Setter Property="Background" Value="#111520"/>
             <Setter Property="Foreground" Value="#C8D4EC"/>
             <Setter Property="BorderBrush" Value="#1E2235"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Padding" Value="8,5"/>
             <Setter Property="CaretBrush" Value="#C8D4EC"/>
+            <Setter Property="SelectionBrush" Value="#3355AAFF"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
-                        <Border Background="{TemplateBinding Background}"
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6">
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          Focusable="False"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          VerticalScrollBarVisibility="Hidden"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="Root" Property="BorderBrush" Value="#55AAFF"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Root" Property="Background" Value="#0D101A"/>
+                                <Setter TargetName="Root" Property="BorderBrush" Value="#161828"/>
+                                <Setter Property="Foreground" Value="#3D4260"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <Style.Triggers>
+                <Trigger Property="AcceptsReturn" Value="True">
+                    <Setter Property="VerticalContentAlignment" Value="Top"/>
+                    <Setter Property="Padding" Value="6,6"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <!-- ══ NAV ACTIVE BG ══ -->
@@ -383,8 +409,8 @@
     </Window.Resources>
 
     <!-- ROOT -->
-    <Border Background="#0c0f17" BorderBrush="#1C1F2E" BorderThickness="1" CornerRadius="12" ClipToBounds="True">
-        <Grid>
+    <Border Background="#0c0f17" BorderBrush="#1C1F2E" BorderThickness="1" CornerRadius="12" ClipToBounds="True" d:IsLocked="True">
+        <Grid d:IsLocked="True">
             <Grid.RowDefinitions>
                 <RowDefinition Height="40"/>
                 <RowDefinition Height="*"/>
@@ -392,14 +418,14 @@
 
             <!-- ═══════════ TITLE BAR ═══════════ -->
             <Border Grid.Row="0" Background="#0C0F17" CornerRadius="12,12,0,0"
-                    MouseLeftButtonDown="Header_MouseLeftButtonDown">
-                <Grid Margin="12,0">
+                    MouseLeftButtonDown="Header_MouseLeftButtonDown" d:IsLocked="True">
+                <Grid Margin="12,0" d:IsLocked="True">
                     <!-- Logo mark -->
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" d:IsLocked="True">
                         <Image Source="pack://application:,,,/FluxRoute;component/Resources/FluxRoute.png"
                                Width="22" Height="22" Margin="0,0,9,0"
-                               RenderOptions.BitmapScalingMode="HighQuality"/>
-                        <TextBlock VerticalAlignment="Center" FontFamily="Segoe UI" FontSize="13">
+                               RenderOptions.BitmapScalingMode="HighQuality" d:IsLocked="True"/>
+                        <TextBlock VerticalAlignment="Center" FontFamily="Segoe UI" FontSize="13" d:IsLocked="True">
                             <Run Text="FluxRoute" FontWeight="SemiBold" Foreground="#C8D4EC"/>
                             <Run Text=" v" Foreground="#C8D4EC" FontWeight="SemiBold"/><Run Text="{Binding AppVersion, Mode=OneWay}" Foreground="#C8D4EC" FontWeight="SemiBold"/>
                             <Run Text=" by klondike0x" Foreground="#3D4260" FontWeight="Normal"/>
@@ -407,19 +433,19 @@
                     </StackPanel>
 
                     <!-- Window controls -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-2,0">
-                        <Button Style="{StaticResource TitleBtn}" Click="MinimizeButton_Click">
-                            <TextBlock Text="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="9" Foreground="#4A5170"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-2,0" d:IsLocked="True">
+                        <Button Style="{StaticResource TitleBtn}" Click="MinimizeButton_Click" d:IsLocked="True">
+                            <TextBlock Text="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="9" Foreground="#4A5170" d:IsLocked="True"/>
                         </Button>
-                        <Button Style="{StaticResource CloseTitleBtn}" Click="CloseButton_Click">
-                            <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="9" Foreground="#4A5170"/>
+                        <Button Style="{StaticResource CloseTitleBtn}" Click="CloseButton_Click" d:IsLocked="True">
+                            <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="9" Foreground="#4A5170" d:IsLocked="True"/>
                         </Button>
                     </StackPanel>
                 </Grid>
             </Border>
 
             <!-- ═══════════ BODY ═══════════ -->
-            <Grid Grid.Row="1" Margin="0,0,10,10">
+            <Grid Grid.Row="1" Margin="0,0,10,10" d:IsLocked="True">
                 <Grid.RowDefinitions>
                     <RowDefinition/>
                     <RowDefinition Height="0*"/>
@@ -431,15 +457,15 @@
 
                 <!-- ─── SIDEBAR ─── -->
                 <Border Grid.Column="0" x:Name="SidebarBorder" Background="#0C0F17"
-                        BorderThickness="0">
+                        BorderThickness="0" d:IsLocked="True">
                     <!-- Gradient separator right edge -->
-                    <Grid>
+                    <Grid d:IsLocked="True">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <!-- Fade separator line -->
-                        <Rectangle Width="1" HorizontalAlignment="Right" VerticalAlignment="Stretch" Grid.RowSpan="2">
+                        <Rectangle Width="1" HorizontalAlignment="Right" VerticalAlignment="Stretch" Grid.RowSpan="2" d:IsLocked="True">
                             <Rectangle.Fill>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                     <GradientStop Color="#00181B28" Offset="0"/>
@@ -450,23 +476,35 @@
                             </Rectangle.Fill>
                         </Rectangle>
 
-                        <StackPanel Grid.Row="0" Margin="0,8,0,0">
+                        <StackPanel Grid.Row="0" Margin="0,8,0,0" d:IsLocked="True">
                             <!-- Nav: Главная (0) -->
-                            <Grid Margin="0,4,0,4">
-                                <Border x:Name="NavBg0" CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Grid Margin="0,4,0,4" d:IsLocked="True">
+                                <Border x:Name="NavBg0" CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
+                                            <Setter Property="Opacity" Value="1"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding SelectedTabIndex}" Value="0">
                                                     <Setter Property="Background" Value="{StaticResource NavActiveBrush}"/>
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut"/>
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
                                 </Border>
-                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="0">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE80F;">
+                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="0" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE80F;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
@@ -487,21 +525,32 @@
                             </Grid>
 
                             <!-- Nav: TG Прокси (1) -->
-                            <Grid Margin="0,4,0,4">
-                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Grid Margin="0,4,0,4" d:IsLocked="True">
+                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding SelectedTabIndex}" Value="1">
                                                     <Setter Property="Background" Value="{StaticResource NavActiveBrush}"/>
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut"/>
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
                                 </Border>
-                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="1">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE72E;">
+                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="1" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE72E;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
@@ -522,21 +571,32 @@
                             </Grid>
 
                             <!-- Nav: Оркестратор (2) -->
-                            <Grid Margin="0,4,0,4">
-                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Grid Margin="0,4,0,4" d:IsLocked="True">
+                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding SelectedTabIndex}" Value="2">
                                                     <Setter Property="Background" Value="{StaticResource NavActiveBrush}"/>
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut"/>
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
                                 </Border>
-                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="2">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE9F5;">
+                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="2" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE9F5;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
@@ -557,21 +617,32 @@
                             </Grid>
 
                             <!-- Nav: ИИ (3) -->
-                            <Grid Margin="0,4,0,4">
-                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Grid Margin="0,4,0,4" d:IsLocked="True">
+                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding SelectedTabIndex}" Value="3">
                                                     <Setter Property="Background" Value="{StaticResource NavActiveBrush}"/>
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut"/>
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
                                 </Border>
-                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="3">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE99A;">
+                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="3" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE99A;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
@@ -592,21 +663,32 @@
                             </Grid>
 
                             <!-- Nav: Обновление (4) -->
-                            <Grid Margin="0,4,0,4">
-                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Grid Margin="0,4,0,4" d:IsLocked="True">
+                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding SelectedTabIndex}" Value="4">
                                                     <Setter Property="Background" Value="{StaticResource NavActiveBrush}"/>
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut"/>
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
                                 </Border>
-                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="4">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE777;">
+                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="4" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE777;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
@@ -627,21 +709,32 @@
                             </Grid>
 
                             <!-- Nav: Диагностика (5) -->
-                            <Grid Margin="0,4,0,4">
-                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Grid Margin="0,4,0,4" d:IsLocked="True">
+                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding SelectedTabIndex}" Value="5">
                                                     <Setter Property="Background" Value="{StaticResource NavActiveBrush}"/>
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut"/>
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
                                 </Border>
-                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="5">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE9D9;">
+                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="5" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE9D9;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
@@ -662,21 +755,32 @@
                             </Grid>
 
                             <!-- Nav: Логи (8) -->
-                            <Grid Margin="0,4,0,4">
-                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Grid Margin="0,4,0,4" d:IsLocked="True">
+                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding SelectedTabIndex}" Value="8">
                                                     <Setter Property="Background" Value="{StaticResource NavActiveBrush}"/>
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut"/>
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
                                 </Border>
-                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="8">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE9D2;">
+                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="8" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE9D2;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
@@ -697,8 +801,8 @@
                             </Grid>
 
                             <!-- Nav: Настройки / Сервис (6) -->
-                            <Grid Margin="0,4,0,4">
-                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Grid Margin="0,4,0,4" d:IsLocked="True">
+                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
@@ -710,8 +814,8 @@
                                         </Style>
                                     </Border.Style>
                                 </Border>
-                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="6">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE713;">
+                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="6" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE713;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
@@ -733,10 +837,10 @@
                         </StackPanel>
 
                         <!-- Bottom nav: О программе (7) -->
-                        <StackPanel Margin="0,416,0,0">
-                            <Rectangle Height="1" Fill="#1E2235" Margin="8,4"/>
-                            <Grid Margin="0,4,0,4">
-                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <StackPanel Margin="0,416,0,0" d:IsLocked="True">
+                            <Rectangle Height="1" Fill="#1E2235" Margin="8,4" d:IsLocked="True"/>
+                            <Grid Margin="0,4,0,4" d:IsLocked="True">
+                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="Transparent"/>
@@ -748,8 +852,8 @@
                                         </Style>
                                     </Border.Style>
                                 </Border>
-                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="7">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE897;">
+                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="7" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE897;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
@@ -771,7 +875,7 @@
                         </StackPanel>
 
                         <!-- Hidden indicator for code-behind compat -->
-                        <Border x:Name="NavIndicatorBorder" Width="0" Height="0" Visibility="Collapsed">
+                        <Border x:Name="NavIndicatorBorder" Width="0" Height="0" Visibility="Collapsed" d:IsLocked="True">
                             <Border.RenderTransform>
                                 <TranslateTransform x:Name="NavIndicatorTransform"/>
                             </Border.RenderTransform>
@@ -781,17 +885,17 @@
 
                 <!-- ─── CONTENT ─── -->
                 <Border Grid.Column="1"
-                        BorderBrush="#1C2030" BorderThickness="1" CornerRadius="14" Margin="8,0,0,0">
+                        BorderBrush="#1C2030" BorderThickness="1" CornerRadius="14" Margin="8,0,0,0" d:IsLocked="True">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                             <GradientStop Color="#11131E" Offset="0"/>
                             <GradientStop Color="#0E1018" Offset="1"/>
                         </LinearGradientBrush>
                     </Border.Background>
-                    <Grid Margin="0,0,0,-1">
+                    <Grid Margin="0,0,0,-1" d:IsLocked="True">
 
                         <!-- ╔══════════ TAB 0: ГЛАВНАЯ ══════════╗ -->
-                        <Border>
+                        <Border d:IsLocked="True">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -812,7 +916,7 @@
                                 </Style>
                             </Border.Style>
 
-                            <Grid Margin="12,10,12,8">
+                            <Grid Margin="12,10,12,8" d:IsLocked="True">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="10"/>
@@ -820,7 +924,7 @@
                                 </Grid.ColumnDefinitions>
 
                                 <!-- ── LEFT: Power button area ── -->
-                                <Grid Grid.Column="0">
+                                <Grid Grid.Column="0" d:IsLocked="True">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="*"/>
                                         <RowDefinition Height="Auto"/>
@@ -833,20 +937,20 @@
                                     <Border Grid.Row="0" Background="#1C1800" BorderBrush="#4A3800" BorderThickness="1"
                                         CornerRadius="10" Padding="12,8"
                                         VerticalAlignment="Top"
-                                        Visibility="{Binding IsDownloadingEngine, Converter={StaticResource BoolToVis}}">
-                                        <StackPanel>
+                                        Visibility="{Binding IsDownloadingEngine, Converter={StaticResource BoolToVis}}" d:IsLocked="True">
+                                        <StackPanel d:IsLocked="True">
                                             <TextBlock Text="⬇  Первый запуск — скачиваем Flowseal..." FontFamily="Segoe UI"
-                                                   Foreground="#F0B429" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,3"/>
+                                                   Foreground="#F0B429" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,3" d:IsLocked="True"/>
                                             <TextBlock Text="{Binding EngineDownloadStatus}" FontFamily="Segoe UI"
-                                                   Foreground="#A07820" FontSize="11" TextWrapping="Wrap"/>
+                                                   Foreground="#A07820" FontSize="11" TextWrapping="Wrap" d:IsLocked="True"/>
                                         </StackPanel>
                                     </Border>
 
                                     <!-- POWER BUTTON — centered in Row 0 -->
-                                    <Grid Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <Grid Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" d:IsLocked="True">
 
                                         <!-- Deep background ambient glow -->
-                                        <Ellipse Width="310" Height="310">
+                                        <Ellipse Width="310" Height="310" d:IsLocked="True">
                                             <Ellipse.Fill>
                                                 <RadialGradientBrush GradientOrigin="0.5,0.5" Center="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
                                                     <GradientStop Color="#00000000" Offset="0.2"/>
@@ -858,7 +962,7 @@
                                         </Ellipse>
 
                                         <!-- Outer wide soft glow ring -->
-                                        <Ellipse Width="230" Height="230" StrokeThickness="20">
+                                        <Ellipse Width="230" Height="230" StrokeThickness="20" d:IsLocked="True">
                                             <Ellipse.Stroke>
                                                 <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
                                                     <GradientStop Color="#AA55AAFF" Offset="0"/>
@@ -871,8 +975,63 @@
                                             </Ellipse.Effect>
                                         </Ellipse>
 
+                                        <!-- Pulse ring (visible only when IsRunning) -->
+                                        <Ellipse x:Name="PulseRing"
+                                                 Width="212" Height="212"
+                                                 StrokeThickness="4"
+                                                 Opacity="0"
+                                                 RenderTransformOrigin="0.5,0.5" d:IsLocked="True">
+                                            <Ellipse.Stroke>
+                                                <SolidColorBrush Color="#00D68F"/>
+                                            </Ellipse.Stroke>
+                                            <Ellipse.Effect>
+                                                <BlurEffect Radius="10"/>
+                                            </Ellipse.Effect>
+                                            <Ellipse.RenderTransform>
+                                                <ScaleTransform x:Name="PulseScale" ScaleX="1" ScaleY="1"/>
+                                            </Ellipse.RenderTransform>
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                                            <DataTrigger.EnterActions>
+                                                                <BeginStoryboard x:Name="PulseStoryboard">
+                                                                    <Storyboard RepeatBehavior="Forever" AutoReverse="False">
+                                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                         From="0.7" To="0"
+                                                                                         Duration="0:0:1.4">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <SineEase EasingMode="EaseIn"/>
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
+                                                                                         From="1" To="1.18"
+                                                                                         Duration="0:0:1.4">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <SineEase EasingMode="EaseIn"/>
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                                                                         From="1" To="1.18"
+                                                                                         Duration="0:0:1.4">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <SineEase EasingMode="EaseIn"/>
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </DataTrigger.EnterActions>
+                                                            <DataTrigger.ExitActions>
+                                                                <StopStoryboard BeginStoryboardName="PulseStoryboard"/>
+                                                            </DataTrigger.ExitActions>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+
                                         <!-- Sharp crisp ring -->
-                                        <Ellipse Width="212" Height="212" StrokeThickness="3.5">
+                                        <Ellipse Width="212" Height="212" StrokeThickness="3.5" d:IsLocked="True">
                                             <Ellipse.Stroke>
                                                 <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
                                                     <GradientStop Color="#55AAFF" Offset="0"/>
@@ -883,7 +1042,7 @@
                                         </Ellipse>
 
                                         <!-- Inner dark disk -->
-                                        <Ellipse Width="196" Height="196">
+                                        <Ellipse Width="196" Height="196" d:IsLocked="True">
                                             <Ellipse.Fill>
                                                 <RadialGradientBrush>
                                                     <GradientStop Color="#1A1D2C" Offset="0"/>
@@ -893,10 +1052,10 @@
                                         </Ellipse>
 
                                         <!-- Subtle concentric inner outline -->
-                                        <Ellipse Width="196" Height="196" StrokeThickness="1" Stroke="#18FFFFFF"/>
+                                        <Ellipse Width="196" Height="196" StrokeThickness="1" Stroke="#18FFFFFF" d:IsLocked="True"/>
 
                                         <!-- Power icon button -->
-                                        <Button Width="196" Height="196" Command="{Binding ToggleStartStopCommand}" Cursor="Hand">
+                                        <Button Width="196" Height="196" Command="{Binding ToggleStartStopCommand}" Cursor="Hand" d:IsLocked="True">
                                             <Button.Template>
                                                 <ControlTemplate TargetType="Button">
                                                     <Border Background="Transparent" x:Name="Bd">
@@ -959,9 +1118,9 @@
                                     <!-- Row 1: Status pill -->
                                     <Border Grid.Row="1" HorizontalAlignment="Center"
                                         Background="#0A0D1A" BorderBrush="#1E2440" BorderThickness="1"
-                                        CornerRadius="16" Padding="24,7">
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Ellipse Width="7" Height="7" Margin="0,0,8,0" VerticalAlignment="Center">
+                                        CornerRadius="16" Padding="24,7" d:IsLocked="True">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" d:IsLocked="True">
+                                            <Ellipse Width="7" Height="7" Margin="0,0,8,0" VerticalAlignment="Center" d:IsLocked="True">
                                                 <Ellipse.Style>
                                                     <Style TargetType="Ellipse">
                                                         <Setter Property="Fill" Value="#CC3030"/>
@@ -976,7 +1135,7 @@
                                                     <DropShadowEffect ShadowDepth="0" BlurRadius="5" Color="#00D68F" Opacity="0.6"/>
                                                 </Ellipse.Effect>
                                             </Ellipse>
-                                            <TextBlock FontFamily="Segoe UI" FontSize="11.5" VerticalAlignment="Center" FontWeight="Medium">
+                                            <TextBlock FontFamily="Segoe UI" FontSize="11.5" VerticalAlignment="Center" FontWeight="Medium" d:IsLocked="True">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Text" Value="Защита не активна"/>
@@ -994,10 +1153,10 @@
                                     </Border>
 
                                     <!-- Row 3: Bottom stats strip -->
-                                    <Grid Grid.Row="3" Margin="0,0,0,8">
+                                    <Grid Grid.Row="3" Margin="0,0,0,8" d:IsLocked="True">
                                         <!-- Subtle top accent line -->
                                         <Rectangle Height="1" VerticalAlignment="Top"
-                                               HorizontalAlignment="Stretch" Margin="0,0,0,0" Opacity="0.5">
+                                               HorizontalAlignment="Stretch" Margin="0,0,0,0" Opacity="0.5" d:IsLocked="True">
                                             <Rectangle.Fill>
                                                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                                     <GradientStop Color="#00000000" Offset="0"/>
@@ -1010,7 +1169,7 @@
 
                                         <!-- Cards container -->
                                         <Border BorderBrush="#1A1E30"
-                                            BorderThickness="1" CornerRadius="14" Margin="0,4,0,0">
+                                            BorderThickness="1" CornerRadius="14" Margin="0,4,0,0" d:IsLocked="True">
                                             <Border.Background>
                                                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                                     <GradientStop Color="#0E1120" Offset="0"/>
@@ -1018,7 +1177,7 @@
                                                 </LinearGradientBrush>
                                             </Border.Background>
 
-                                            <Grid>
+                                            <Grid d:IsLocked="True">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="*"/>
@@ -1026,7 +1185,7 @@
                                                 </Grid.ColumnDefinitions>
 
                                                 <!-- ── Card: Profile ── -->
-                                                <Border Grid.Column="0" CornerRadius="14,0,0,14" Cursor="Hand">
+                                                <Border Grid.Column="0" CornerRadius="14,0,0,14" Cursor="Hand" d:IsLocked="True">
                                                     <Border.Style>
                                                         <Style TargetType="Border">
                                                             <Setter Property="Background" Value="Transparent"/>
@@ -1037,7 +1196,7 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
-                                                    <Grid Margin="14,0">
+                                                    <Grid Margin="14,0" d:IsLocked="True">
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="Auto"/>
                                                             <ColumnDefinition Width="*"/>
@@ -1045,7 +1204,7 @@
 
                                                         <!-- Icon badge -->
                                                         <Border Grid.Column="0" Width="36" Height="36" CornerRadius="10"
-                                                            VerticalAlignment="Center" Margin="0,0,10,0">
+                                                            VerticalAlignment="Center" Margin="0,0,10,0" d:IsLocked="True">
                                                             <Border.Background>
                                                                 <RadialGradientBrush>
                                                                     <GradientStop Color="#0E2020" Offset="0"/>
@@ -1058,7 +1217,7 @@
                                                             <Border.BorderThickness>1</Border.BorderThickness>
                                                             <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="16" Text="&#xEA18;"
                                                                    Foreground="#00C47A"
-                                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
                                                                 <TextBlock.Effect>
                                                                     <DropShadowEffect Color="#00D68F" BlurRadius="10" ShadowDepth="0" Opacity="0.6"/>
                                                                 </TextBlock.Effect>
@@ -1066,21 +1225,21 @@
                                                         </Border>
 
                                                         <!-- Text -->
-                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,0,0">
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,0,0" d:IsLocked="True">
                                                             <TextBlock Text="{Binding SelectedScriptName}"
                                                                    FontFamily="Segoe UI" FontSize="11"
                                                                    Foreground="#C0CEEC" FontWeight="SemiBold"
-                                                                   TextTrimming="CharacterEllipsis" MaxWidth="90"/>
+                                                                   TextTrimming="CharacterEllipsis" MaxWidth="90" d:IsLocked="True"/>
                                                             <TextBlock Text="Профиль"
                                                                    FontFamily="Segoe UI" FontSize="9.5"
-                                                                   Foreground="#2E3C5A" Margin="0,2,0,0"/>
+                                                                   Foreground="#2E3C5A" Margin="0,2,0,0" d:IsLocked="True"/>
                                                         </StackPanel>
                                                     </Grid>
                                                 </Border>
 
                                                 <!-- Separator -->
                                                 <Rectangle Grid.Column="0" Width="1" HorizontalAlignment="Right"
-                                                       Margin="0,12">
+                                                       Margin="0,12" d:IsLocked="True">
                                                     <Rectangle.Fill>
                                                         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                                             <GradientStop Color="#00000000" Offset="0"/>
@@ -1091,7 +1250,7 @@
                                                 </Rectangle>
 
                                                 <!-- ── Card: Uptime ── -->
-                                                <Border Grid.Column="1" Cursor="Hand">
+                                                <Border Grid.Column="1" Cursor="Hand" d:IsLocked="True">
                                                     <Border.Style>
                                                         <Style TargetType="Border">
                                                             <Setter Property="Background" Value="Transparent"/>
@@ -1102,7 +1261,7 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
-                                                    <Grid HorizontalAlignment="Center">
+                                                    <Grid HorizontalAlignment="Center" d:IsLocked="True">
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="Auto"/>
                                                             <ColumnDefinition Width="*"/>
@@ -1110,7 +1269,7 @@
 
                                                         <!-- Icon badge -->
                                                         <Border Grid.Column="0" Width="36" Height="36" CornerRadius="10"
-                                                            VerticalAlignment="Center" Margin="0,0,10,0">
+                                                            VerticalAlignment="Center" Margin="0,0,10,0" d:IsLocked="True">
                                                             <Border.Background>
                                                                 <RadialGradientBrush>
                                                                     <GradientStop Color="#130E28" Offset="0"/>
@@ -1123,7 +1282,7 @@
                                                             <Border.BorderThickness>1</Border.BorderThickness>
                                                             <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="16" Text="&#xE9F5;"
                                                                    Foreground="#8040CC"
-                                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
                                                                 <TextBlock.Effect>
                                                                     <DropShadowEffect Color="#9B5DE5" BlurRadius="10" ShadowDepth="0" Opacity="0.6"/>
                                                                 </TextBlock.Effect>
@@ -1131,20 +1290,20 @@
                                                         </Border>
 
                                                         <!-- Text -->
-                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" d:IsLocked="True">
                                                             <TextBlock Text="{Binding UptimeText, Mode=OneWay}"
                                                                    FontFamily="Segoe UI" FontSize="11"
-                                                                   Foreground="#C0CEEC" FontWeight="SemiBold"/>
+                                                                   Foreground="#C0CEEC" FontWeight="SemiBold" d:IsLocked="True"/>
                                                             <TextBlock Text="Uptime"
                                                                    FontFamily="Segoe UI" FontSize="9.5"
-                                                                   Foreground="#2E3C5A" Margin="0,2,0,0"/>
+                                                                   Foreground="#2E3C5A" Margin="0,2,0,0" d:IsLocked="True"/>
                                                         </StackPanel>
                                                     </Grid>
                                                 </Border>
 
                                                 <!-- Separator -->
                                                 <Rectangle Grid.Column="1" Width="1" HorizontalAlignment="Right"
-                                                       Margin="0,12">
+                                                       Margin="0,12" d:IsLocked="True">
                                                     <Rectangle.Fill>
                                                         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                                             <GradientStop Color="#00000000" Offset="0"/>
@@ -1155,7 +1314,7 @@
                                                 </Rectangle>
 
                                                 <!-- ── Card: PID ── -->
-                                                <Border Grid.Column="2" CornerRadius="0,14,14,0" Cursor="Hand">
+                                                <Border Grid.Column="2" CornerRadius="0,14,14,0" Cursor="Hand" d:IsLocked="True">
                                                     <Border.Style>
                                                         <Style TargetType="Border">
                                                             <Setter Property="Background" Value="Transparent"/>
@@ -1166,7 +1325,7 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
-                                                    <Grid HorizontalAlignment="Center">
+                                                    <Grid HorizontalAlignment="Center" d:IsLocked="True">
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="Auto"/>
                                                             <ColumnDefinition Width="*"/>
@@ -1174,7 +1333,7 @@
 
                                                         <!-- Icon badge -->
                                                         <Border Grid.Column="0" Width="36" Height="36" CornerRadius="10"
-                                                            VerticalAlignment="Center" Margin="0,0,10,0">
+                                                            VerticalAlignment="Center" Margin="0,0,10,0" d:IsLocked="True">
                                                             <Border.Background>
                                                                 <RadialGradientBrush>
                                                                     <GradientStop Color="#1C1608" Offset="0"/>
@@ -1187,7 +1346,7 @@
                                                             <Border.BorderThickness>1</Border.BorderThickness>
                                                             <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="16" Text="&#xE945;"
                                                                    Foreground="#D4A020"
-                                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
                                                                 <TextBlock.Effect>
                                                                     <DropShadowEffect Color="#F0B429" BlurRadius="10" ShadowDepth="0" Opacity="0.5"/>
                                                                 </TextBlock.Effect>
@@ -1195,13 +1354,13 @@
                                                         </Border>
 
                                                         <!-- Text -->
-                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" d:IsLocked="True">
                                                             <TextBlock Text="{Binding PidText, Mode=OneWay}"
                                                                    FontFamily="Segoe UI" FontSize="11"
-                                                                   Foreground="#C0CEEC" FontWeight="SemiBold"/>
+                                                                   Foreground="#C0CEEC" FontWeight="SemiBold" d:IsLocked="True"/>
                                                             <TextBlock Text="PID"
                                                                    FontFamily="Segoe UI" FontSize="9.5"
-                                                                   Foreground="#2E3C5A" Margin="0,2,0,0"/>
+                                                                   Foreground="#2E3C5A" Margin="0,2,0,0" d:IsLocked="True"/>
                                                         </StackPanel>
                                                     </Grid>
                                                 </Border>
@@ -1212,7 +1371,7 @@
                                 </Grid>
 
                                 <!-- ── RIGHT: Cards ── -->
-                                <Grid Grid.Column="2">
+                                <Grid Grid.Column="2" d:IsLocked="True">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="8"/>
@@ -1223,29 +1382,29 @@
 
                                     <!-- Card 1: Traffic chart -->
                                     <Border Grid.Row="0" Background="#0E1120" BorderBrush="#1A1E30" BorderThickness="1"
-                                        CornerRadius="12" Padding="12,10">
-                                        <Grid>
+                                        CornerRadius="12" Padding="12,10" d:IsLocked="True">
+                                        <Grid d:IsLocked="True">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="66"/>
                                             </Grid.RowDefinitions>
-                                            <Grid Grid.Row="0" Margin="0,0,0,6">
-                                                <StackPanel Orientation="Horizontal">
+                                            <Grid Grid.Row="0" Margin="0,0,0,6" d:IsLocked="True">
+                                                <StackPanel Orientation="Horizontal" d:IsLocked="True">
                                                     <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="13" Text="&#xEC05;"
-                                                           Foreground="#4A80CC" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                                           Foreground="#4A80CC" VerticalAlignment="Center" Margin="0,0,7,0" d:IsLocked="True"/>
                                                     <TextBlock Text="{Binding SelectedScriptName}" FontFamily="Segoe UI"
                                                            FontSize="11.5" Foreground="#7A90B8" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" MaxWidth="145"/>
+                                                           TextTrimming="CharacterEllipsis" MaxWidth="145" d:IsLocked="True"/>
                                                 </StackPanel>
                                                 <TextBlock Text="···" FontFamily="Segoe UI" FontSize="14"
                                                        Foreground="#2A3450" HorizontalAlignment="Right"
-                                                       VerticalAlignment="Center"/>
+                                                       VerticalAlignment="Center" d:IsLocked="True"/>
                                             </Grid>
                                             <!-- Chart -->
-                                            <Border Grid.Row="1" Background="#060810" CornerRadius="8" ClipToBounds="True">
-                                                <Canvas ClipToBounds="True">
+                                            <Border Grid.Row="1" Background="#060810" CornerRadius="8" ClipToBounds="True" d:IsLocked="True">
+                                                <Canvas ClipToBounds="True" d:IsLocked="True">
                                                     <!-- Chart fill area -->
-                                                    <Polygon Opacity="0.18" Canvas.Left="0" Canvas.Top="0">
+                                                    <Polygon Opacity="0.18" Canvas.Left="0" Canvas.Top="0" d:IsLocked="True">
                                                         <Polygon.Fill>
                                                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                                                 <GradientStop Color="#00E676" Offset="0"/>
@@ -1258,7 +1417,7 @@
                                                     </Polygon>
                                                     <!-- Chart line -->
                                                     <Polyline StrokeThickness="2" StrokeLineJoin="Round"
-                                                          Canvas.Left="0" Canvas.Top="0">
+                                                          Canvas.Left="0" Canvas.Top="0" d:IsLocked="True">
                                                         <Polyline.Stroke>
                                                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                                                 <GradientStop Color="#00B86A" Offset="0"/>
@@ -1279,66 +1438,66 @@
 
                                     <!-- Card 2: Toggles -->
                                     <Border Grid.Row="2" Background="#0E1120" BorderBrush="#1A1E30" BorderThickness="1"
-                                        CornerRadius="12" Padding="14,12">
-                                        <StackPanel>
+                                        CornerRadius="12" Padding="14,12" d:IsLocked="True">
+                                        <StackPanel d:IsLocked="True">
                                             <!-- GameFilter -->
-                                            <Grid Margin="0,0,0,11">
+                                            <Grid Margin="0,0,0,11" d:IsLocked="True">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="26"/>
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <Border Grid.Column="0" Width="22" Height="22" CornerRadius="6"
-                                                    Background="#0E1428" BorderBrush="#1A2244" BorderThickness="1">
+                                                    Background="#0E1428" BorderBrush="#1A2244" BorderThickness="1" d:IsLocked="True">
                                                     <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="12" Text="&#xEA18;"
-                                                           Foreground="#4A7ECC" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                           Foreground="#4A7ECC" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True"/>
                                                 </Border>
                                                 <TextBlock Grid.Column="1" Text="Game Filter" FontFamily="Segoe UI"
-                                                       FontSize="11.5" Foreground="#8090B8" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                                       FontSize="11.5" Foreground="#8090B8" VerticalAlignment="Center" Margin="8,0,0,0" d:IsLocked="True"/>
                                                 <CheckBox Grid.Column="2" Style="{StaticResource ToggleSwitch}"
-                                                      IsChecked="{Binding GameFilterEnabled, Mode=OneWay}"/>
+                                                      IsChecked="{Binding GameFilterEnabled, Mode=OneWay}" d:IsLocked="True"/>
                                             </Grid>
                                             <!-- Orchestrator -->
-                                            <Grid Margin="0,0,0,11">
+                                            <Grid Margin="0,0,0,11" d:IsLocked="True">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="26"/>
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <Border Grid.Column="0" Width="22" Height="22" CornerRadius="6"
-                                                    Background="#100E28" BorderBrush="#201840" BorderThickness="1">
+                                                    Background="#100E28" BorderBrush="#201840" BorderThickness="1" d:IsLocked="True">
                                                     <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="12" Text="&#xE8C8;"
-                                                           Foreground="#8040D8" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                           Foreground="#8040D8" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True"/>
                                                 </Border>
                                                 <TextBlock Grid.Column="1" Text="Оркестратор" FontFamily="Segoe UI"
-                                                       FontSize="11.5" Foreground="#8090B8" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                                       FontSize="11.5" Foreground="#8090B8" VerticalAlignment="Center" Margin="8,0,0,0" d:IsLocked="True"/>
                                                 <CheckBox Grid.Column="2" Style="{StaticResource ToggleSwitch}"
-                                                      IsChecked="{Binding OrchestratorRunning}"/>
+                                                      IsChecked="{Binding OrchestratorRunning}" d:IsLocked="True"/>
                                             </Grid>
                                             <!-- AutoStart -->
-                                            <Grid>
+                                            <Grid d:IsLocked="True">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="26"/>
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <Border Grid.Column="0" Width="22" Height="22" CornerRadius="6"
-                                                    Background="#0A1420" BorderBrush="#142030" BorderThickness="1">
+                                                    Background="#0A1420" BorderBrush="#142030" BorderThickness="1" d:IsLocked="True">
                                                     <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="12" Text="&#xE909;"
-                                                           Foreground="#3A9090" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                           Foreground="#3A9090" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True"/>
                                                 </Border>
                                                 <TextBlock Grid.Column="1" Text="Автозапуск" FontFamily="Segoe UI"
-                                                       FontSize="11.5" Foreground="#8090B8" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                                       FontSize="11.5" Foreground="#8090B8" VerticalAlignment="Center" Margin="8,0,0,0" d:IsLocked="True"/>
                                                 <CheckBox Grid.Column="2" Style="{StaticResource ToggleSwitch}"
-                                                      IsChecked="{Binding AutoStartEnabled}"/>
+                                                      IsChecked="{Binding AutoStartEnabled}" d:IsLocked="True"/>
                                             </Grid>
                                         </StackPanel>
                                     </Border>
 
                                     <!-- Card 3: Donut stats -->
                                     <Border Grid.Row="4" Background="#0E1120" BorderBrush="#1A1E30" BorderThickness="1"
-                                        CornerRadius="12" Padding="14,12">
-                                        <Grid>
+                                        CornerRadius="12" Padding="14,12" d:IsLocked="True">
+                                        <Grid d:IsLocked="True">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="72"/>
                                                 <ColumnDefinition Width="*"/>
@@ -1346,11 +1505,11 @@
                                             </Grid.ColumnDefinitions>
 
                                             <!-- Donut -->
-                                            <Viewbox Grid.Column="0" Width="62" Height="62" VerticalAlignment="Center">
-                                                <Canvas Width="64" Height="64">
+                                            <Viewbox Grid.Column="0" Width="62" Height="62" VerticalAlignment="Center" d:IsLocked="True">
+                                                <Canvas Width="64" Height="64" d:IsLocked="True">
                                                     <Ellipse Width="64" Height="64" StrokeThickness="8" Fill="Transparent"
-                                                         Stroke="#111828"/>
-                                                    <Path StrokeThickness="8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent">
+                                                         Stroke="#111828" d:IsLocked="True"/>
+                                                    <Path StrokeThickness="8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent" d:IsLocked="True">
                                                         <Path.Stroke>
                                                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                                                                 <GradientStop Color="#4A80E2" Offset="0"/>
@@ -1369,7 +1528,7 @@
                                                             <DropShadowEffect Color="#4A80E2" BlurRadius="6" ShadowDepth="0" Opacity="0.5"/>
                                                         </Path.Effect>
                                                     </Path>
-                                                    <Path StrokeThickness="8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent">
+                                                    <Path StrokeThickness="8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent" d:IsLocked="True">
                                                         <Path.Stroke>
                                                             <SolidColorBrush Color="#8040CC"/>
                                                         </Path.Stroke>
@@ -1385,7 +1544,7 @@
                                                             <DropShadowEffect Color="#8040CC" BlurRadius="6" ShadowDepth="0" Opacity="0.5"/>
                                                         </Path.Effect>
                                                     </Path>
-                                                    <Path StrokeThickness="8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent">
+                                                    <Path StrokeThickness="8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent" d:IsLocked="True">
                                                         <Path.Stroke>
                                                             <SolidColorBrush Color="#00C47A"/>
                                                         </Path.Stroke>
@@ -1405,21 +1564,21 @@
                                             </Viewbox>
 
                                             <!-- Legend -->
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,7">
-                                                    <Ellipse Width="7" Height="7" Fill="#5BADFF" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0" d:IsLocked="True">
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,7" d:IsLocked="True">
+                                                    <Ellipse Width="7" Height="7" Fill="#5BADFF" Margin="0,0,7,0" VerticalAlignment="Center" d:IsLocked="True"/>
                                                     <TextBlock Text="{Binding AdminText}" FontFamily="Segoe UI"
-                                                           FontSize="11" Foreground="#7080A8"/>
+                                                           FontSize="11" Foreground="#7080A8" d:IsLocked="True"/>
                                                 </StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,7">
-                                                    <Ellipse Width="7" Height="7" Fill="#8040CC" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,7" d:IsLocked="True">
+                                                    <Ellipse Width="7" Height="7" Fill="#8040CC" Margin="0,0,7,0" VerticalAlignment="Center" d:IsLocked="True"/>
                                                     <TextBlock Text="{Binding WinwsText}" FontFamily="Segoe UI"
-                                                           FontSize="11" Foreground="#7080A8"/>
+                                                           FontSize="11" Foreground="#7080A8" d:IsLocked="True"/>
                                                 </StackPanel>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Ellipse Width="7" Height="7" Fill="#00C47A" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" d:IsLocked="True">
+                                                    <Ellipse Width="7" Height="7" Fill="#00C47A" Margin="0,0,7,0" VerticalAlignment="Center" d:IsLocked="True"/>
                                                     <TextBlock Text="{Binding CurrentEngineVersion, Mode=OneWay}" FontFamily="Segoe UI"
-                                                           FontSize="11" Foreground="#7080A8"/>
+                                                           FontSize="11" Foreground="#7080A8" d:IsLocked="True"/>
                                                 </StackPanel>
                                             </StackPanel>
                                         </Grid>
@@ -1429,7 +1588,7 @@
                         </Border>
 
                         <!-- ╔══════════ TAB 1: TG ПРОКСИ ══════════╗ -->
-                        <Border>
+                        <Border d:IsLocked="True">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -1448,10 +1607,10 @@
                                     </Style.Triggers>
                                 </Style>
                             </Border.Style>
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel Margin="16,12">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" d:IsLocked="True">
+                                <StackPanel Margin="16,12" d:IsLocked="True">
                                     <Border Background="#1C1800" BorderBrush="#4A3800" BorderThickness="1" CornerRadius="8"
-                                        Padding="10,8" Margin="0,0,0,12">
+                                        Padding="10,8" Margin="0,0,0,12" d:IsLocked="True">
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -1466,27 +1625,27 @@
                                                 </Style.Triggers>
                                             </Style>
                                         </Border.Style>
-                                        <StackPanel>
+                                        <StackPanel d:IsLocked="True">
                                             <TextBlock FontFamily="Segoe UI" Foreground="#F0B429" FontSize="12" FontWeight="SemiBold"
-                                                   Margin="0,0,0,4" Text="TG WS Proxy не установлен"/>
+                                                   Margin="0,0,0,4" Text="TG WS Proxy не установлен" d:IsLocked="True"/>
                                             <Button Content="Установить TG WS Proxy" Style="{StaticResource ActionBtnAccent}"
                                                 HorizontalAlignment="Left" Margin="0,6,0,0"
-                                                Command="{Binding DownloadTgProxyCommand}"/>
+                                                Command="{Binding DownloadTgProxyCommand}" d:IsLocked="True"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Background="#0D1F0D" BorderBrush="#1A4A1A" BorderThickness="1" CornerRadius="8"
                                         Padding="10,8" Margin="0,0,0,12"
-                                        Visibility="{Binding IsTgProxyDownloading, Converter={StaticResource BoolToVis}}">
-                                        <StackPanel>
+                                        Visibility="{Binding IsTgProxyDownloading, Converter={StaticResource BoolToVis}}" d:IsLocked="True">
+                                        <StackPanel d:IsLocked="True">
                                             <TextBlock FontFamily="Segoe UI" Foreground="#66BB6A" FontSize="12" FontWeight="SemiBold"
-                                                   Margin="0,0,0,4" Text="Установка TG WS Proxy..."/>
+                                                   Margin="0,0,0,4" Text="Установка TG WS Proxy..." d:IsLocked="True"/>
                                             <TextBlock Text="{Binding TgProxyDownloadStatus}" FontFamily="Segoe UI"
-                                                   Foreground="#A5D6A7" FontSize="11" TextWrapping="Wrap"/>
+                                                   Foreground="#A5D6A7" FontSize="11" TextWrapping="Wrap" d:IsLocked="True"/>
                                         </StackPanel>
                                     </Border>
-                                    <TextBlock Style="{StaticResource SecH}" Text="УПРАВЛЕНИЕ" Margin="0,0,0,8"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                        <Button Margin="0,0,10,0" Command="{Binding ToggleTgProxyCommand}" IsEnabled="{Binding TgProxyInstalled}">
+                                    <TextBlock Style="{StaticResource SecH}" Text="УПРАВЛЕНИЕ" Margin="0,0,0,8" d:IsLocked="True"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6" d:IsLocked="True">
+                                        <Button Margin="0,0,10,0" Command="{Binding ToggleTgProxyCommand}" IsEnabled="{Binding TgProxyInstalled}" d:IsLocked="True">
                                             <Button.Style>
                                                 <Style TargetType="Button" BasedOn="{StaticResource ActionBtnGreen}">
                                                     <Setter Property="Content" Value="Запустить прокси"/>
@@ -1501,79 +1660,79 @@
                                             </Button.Style>
                                         </Button>
                                         <Button Content="Открыть в Telegram" Style="{StaticResource ActionBtnAccent}" Margin="0,0,10,0"
-                                            Command="{Binding OpenInTelegramCommand}" IsEnabled="{Binding TgProxyRunning}"/>
+                                            Command="{Binding OpenInTelegramCommand}" IsEnabled="{Binding TgProxyRunning}" d:IsLocked="True"/>
                                         <Button Content="Скопировать ссылку" Style="{StaticResource ActionBtn}"
-                                            Command="{Binding CopyTgLinkCommand}" IsEnabled="{Binding TgProxyInstalled}"/>
+                                            Command="{Binding CopyTgLinkCommand}" IsEnabled="{Binding TgProxyInstalled}" d:IsLocked="True"/>
                                     </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                        <TextBlock Style="{StaticResource Lbl}" Text="Версия: " Margin="0,0,4,0"/>
-                                        <TextBlock Style="{StaticResource Val}" Text="{Binding TgProxyVersion}"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12" d:IsLocked="True">
+                                        <TextBlock Style="{StaticResource Lbl}" Text="Версия: " Margin="0,0,4,0" d:IsLocked="True"/>
+                                        <TextBlock Style="{StaticResource Val}" Text="{Binding TgProxyVersion}" d:IsLocked="True"/>
                                     </StackPanel>
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <TextBlock Style="{StaticResource SecH}" Text="ПОДКЛЮЧЕНИЕ" Margin="0,0,0,8"/>
-                                    <Grid Margin="0,0,0,10">
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource SecH}" Text="ПОДКЛЮЧЕНИЕ" Margin="0,0,0,8" d:IsLocked="True"/>
+                                    <Grid Margin="0,0,0,10" d:IsLocked="True">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="10"/>
                                             <ColumnDefinition Width="100"/>
                                         </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Style="{StaticResource Lbl}" Text="IP-адрес" Margin="0,0,0,4"/>
-                                            <TextBox Text="{Binding TgProxyHost, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center"/>
+                                        <StackPanel Grid.Column="0" d:IsLocked="True">
+                                            <TextBlock Style="{StaticResource Lbl}" Text="IP-адрес" Margin="0,0,0,4" d:IsLocked="True"/>
+                                            <TextBox Text="{Binding TgProxyHost, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center" d:IsLocked="True"/>
                                         </StackPanel>
-                                        <StackPanel Grid.Column="2">
-                                            <TextBlock Style="{StaticResource Lbl}" Text="Порт" Margin="0,0,0,4"/>
-                                            <TextBox Text="{Binding TgProxyPort, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center"/>
+                                        <StackPanel Grid.Column="2" d:IsLocked="True">
+                                            <TextBlock Style="{StaticResource Lbl}" Text="Порт" Margin="0,0,0,4" d:IsLocked="True"/>
+                                            <TextBox Text="{Binding TgProxyPort, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center" d:IsLocked="True"/>
                                         </StackPanel>
                                     </Grid>
-                                    <Grid Margin="0,0,0,4">
+                                    <Grid Margin="0,0,0,4" d:IsLocked="True">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="6"/>
                                             <ColumnDefinition Width="36"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBox Grid.Column="0" Text="{Binding TgProxySecret, UpdateSourceTrigger=PropertyChanged}"
-                                             Height="30" VerticalContentAlignment="Center" FontFamily="Consolas"/>
+                                             Height="30" VerticalContentAlignment="Center" FontFamily="Consolas" d:IsLocked="True"/>
                                         <Button Grid.Column="2" Height="30" Width="36" Style="{StaticResource ActionBtnAccent}"
-                                            Padding="0" Command="{Binding GenerateTgProxySecretCommand}">
-                                            <TextBlock Text="↻" FontSize="14"/>
+                                            Padding="0" Command="{Binding GenerateTgProxySecretCommand}" d:IsLocked="True">
+                                            <TextBlock Text="↻" FontSize="14" d:IsLocked="True"/>
                                         </Button>
                                     </Grid>
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <TextBlock Style="{StaticResource SecH}" Text="ДАТАЦЕНТРЫ TELEGRAM (DC → IP)" Margin="0,0,0,6"/>
-                                    <TextBlock Style="{StaticResource Lbl}" Text="Формат: номер:IP" Margin="0,0,0,4"/>
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource SecH}" Text="ДАТАЦЕНТРЫ TELEGRAM (DC → IP)" Margin="0,0,0,6" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource Lbl}" Text="Формат: номер:IP" Margin="0,0,0,4" d:IsLocked="True"/>
                                     <TextBox Text="{Binding TgProxyDcIps, UpdateSourceTrigger=PropertyChanged}"
                                          AcceptsReturn="True" MinHeight="56" MaxHeight="100"
                                          VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="11"
-                                         VerticalContentAlignment="Top" Padding="6" Margin="0,0,0,12"/>
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <TextBlock Style="{StaticResource SecH}" Text="CLOUDFLARE PROXY" Margin="0,0,0,8"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                        <CheckBox Content="Включить CF-прокси" IsChecked="{Binding TgProxyCfEnabled}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                                        <CheckBox Content="Приоритет" IsChecked="{Binding TgProxyCfPriority}" IsEnabled="{Binding TgProxyCfEnabled}" VerticalAlignment="Center"/>
+                                         VerticalContentAlignment="Top" Padding="6" Margin="0,0,0,12" d:IsLocked="True"/>
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource SecH}" Text="CLOUDFLARE PROXY" Margin="0,0,0,8" d:IsLocked="True"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8" d:IsLocked="True">
+                                        <CheckBox Content="Включить CF-прокси" IsChecked="{Binding TgProxyCfEnabled}" Margin="0,0,16,0" VerticalAlignment="Center" d:IsLocked="True"/>
+                                        <CheckBox Content="Приоритет" IsChecked="{Binding TgProxyCfPriority}" IsEnabled="{Binding TgProxyCfEnabled}" VerticalAlignment="Center" d:IsLocked="True"/>
                                     </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                        <CheckBox IsChecked="{Binding TgProxyCfDomainEnabled}" IsEnabled="{Binding TgProxyCfEnabled}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12" d:IsLocked="True">
+                                        <CheckBox IsChecked="{Binding TgProxyCfDomainEnabled}" IsEnabled="{Binding TgProxyCfEnabled}" VerticalAlignment="Center" Margin="0,0,8,0" d:IsLocked="True"/>
                                         <TextBox Text="{Binding TgProxyCfDomain, UpdateSourceTrigger=PropertyChanged}"
                                              Height="30" VerticalContentAlignment="Center" FontSize="12" Width="260"
-                                             IsEnabled="{Binding TgProxyCfDomainEnabled}"/>
+                                             IsEnabled="{Binding TgProxyCfDomainEnabled}" d:IsLocked="True"/>
                                     </StackPanel>
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <TextBlock Style="{StaticResource SecH}" Text="ЛОГИ И ПРОИЗВОДИТЕЛЬНОСТЬ" Margin="0,0,0,8"/>
-                                    <CheckBox Content="Подробное логирование (verbose)" IsChecked="{Binding TgProxyVerbose}" Margin="0,0,0,8"/>
-                                    <TextBlock Style="{StaticResource Lbl}" Text="Буфер, КБ" Margin="0,0,0,4"/>
-                                    <TextBox Text="{Binding TgProxyBufKb, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center" Margin="0,0,0,8"/>
-                                    <TextBlock Style="{StaticResource Lbl}" Text="Пул WebSocket-сессий" Margin="0,0,0,4"/>
-                                    <TextBox Text="{Binding TgProxyPoolSize, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center" Margin="0,0,0,8"/>
-                                    <TextBlock Style="{StaticResource Lbl}" Text="Макс. размер лога, МБ" Margin="0,0,0,4"/>
-                                    <TextBox Text="{Binding TgProxyLogMaxMb, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center" Margin="0,0,0,8"/>
-                                    <CheckBox Content="Предпочитать IPv4" IsChecked="{Binding TgProxyPreferIPv4}" Margin="0,0,0,12"/>
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource SecH}" Text="ЛОГИ И ПРОИЗВОДИТЕЛЬНОСТЬ" Margin="0,0,0,8" d:IsLocked="True"/>
+                                    <CheckBox Content="Подробное логирование (verbose)" IsChecked="{Binding TgProxyVerbose}" Margin="0,0,0,8" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource Lbl}" Text="Буфер, КБ" Margin="0,0,0,4" d:IsLocked="True"/>
+                                    <TextBox Text="{Binding TgProxyBufKb, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center" Margin="0,0,0,8" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource Lbl}" Text="Пул WebSocket-сессий" Margin="0,0,0,4" d:IsLocked="True"/>
+                                    <TextBox Text="{Binding TgProxyPoolSize, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center" Margin="0,0,0,8" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource Lbl}" Text="Макс. размер лога, МБ" Margin="0,0,0,4" d:IsLocked="True"/>
+                                    <TextBox Text="{Binding TgProxyLogMaxMb, UpdateSourceTrigger=PropertyChanged}" Height="30" VerticalContentAlignment="Center" Margin="0,0,0,8" d:IsLocked="True"/>
+                                    <CheckBox Content="Предпочитать IPv4" IsChecked="{Binding TgProxyPreferIPv4}" Margin="0,0,0,12" d:IsLocked="True"/>
                                 </StackPanel>
                             </ScrollViewer>
                         </Border>
 
                         <!-- ╔══════════ TAB 2: ОРКЕСТРАТОР ══════════╗ -->
-                        <Border>
+                        <Border d:IsLocked="True">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -1592,11 +1751,11 @@
                                     </Style.Triggers>
                                 </Style>
                             </Border.Style>
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel Margin="16,12">
-                                    <TextBlock Style="{StaticResource SecH}" Text="УПРАВЛЕНИЕ" Margin="0,0,0,8"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                        <Button Margin="0,0,10,0" Command="{Binding ToggleOrchestratorCommand}">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" d:IsLocked="True">
+                                <StackPanel Margin="16,12" d:IsLocked="True">
+                                    <TextBlock Style="{StaticResource SecH}" Text="УПРАВЛЕНИЕ" Margin="0,0,0,8" d:IsLocked="True"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10" d:IsLocked="True">
+                                        <Button Margin="0,0,10,0" Command="{Binding ToggleOrchestratorCommand}" d:IsLocked="True">
                                             <Button.Style>
                                                 <Style TargetType="Button" BasedOn="{StaticResource ActionBtn}">
                                                     <Setter Property="Content" Value="Запустить оркестратор"/>
@@ -1610,29 +1769,29 @@
                                                 </Style>
                                             </Button.Style>
                                         </Button>
-                                        <Button Content="Проверить сейчас" Style="{StaticResource ActionBtn}" Command="{Binding CheckNowCommand}"/>
+                                        <Button Content="Проверить сейчас" Style="{StaticResource ActionBtn}" Command="{Binding CheckNowCommand}" d:IsLocked="True"/>
                                     </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                        <TextBlock Style="{StaticResource Lbl}" Text="Интервал (мин): " Margin="0,0,8,0"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4" d:IsLocked="True">
+                                        <TextBlock Style="{StaticResource Lbl}" Text="Интервал (мин): " Margin="0,0,8,0" d:IsLocked="True"/>
                                         <TextBox Text="{Binding OrchestratorInterval, UpdateSourceTrigger=PropertyChanged}"
-                                             Width="50" Height="28" VerticalContentAlignment="Center"/>
+                                             Width="50" Height="28" VerticalContentAlignment="Center" d:IsLocked="True"/>
                                     </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                        <TextBlock Style="{StaticResource Lbl}" Text="Следующая проверка: " Margin="0,0,4,0"/>
-                                        <TextBlock Style="{StaticResource Val}" Text="{Binding OrchestratorNextCheck}"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0" d:IsLocked="True">
+                                        <TextBlock Style="{StaticResource Lbl}" Text="Следующая проверка: " Margin="0,0,4,0" d:IsLocked="True"/>
+                                        <TextBlock Style="{StaticResource Val}" Text="{Binding OrchestratorNextCheck}" d:IsLocked="True"/>
                                     </StackPanel>
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <TextBlock Style="{StaticResource SecH}" Text="САЙТЫ ДЛЯ ПРОВЕРКИ"/>
-                                    <WrapPanel Margin="0,0,0,8">
-                                        <CheckBox Content="YouTube"   IsChecked="{Binding SiteYouTube}"   Margin="0,4,16,4"/>
-                                        <CheckBox Content="Discord"   IsChecked="{Binding SiteDiscord}"   Margin="0,4,16,4"/>
-                                        <CheckBox Content="Google"    IsChecked="{Binding SiteGoogle}"    Margin="0,4,16,4"/>
-                                        <CheckBox Content="Twitch"    IsChecked="{Binding SiteTwitch}"    Margin="0,4,16,4"/>
-                                        <CheckBox Content="Instagram" IsChecked="{Binding SiteInstagram}" Margin="0,4,16,4"/>
-                                        <CheckBox Content="Telegram"  IsChecked="{Binding SiteTelegram}"  Margin="0,4,16,4"/>
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource SecH}" Text="САЙТЫ ДЛЯ ПРОВЕРКИ" d:IsLocked="True"/>
+                                    <WrapPanel Margin="0,0,0,8" d:IsLocked="True">
+                                        <CheckBox Content="YouTube"   IsChecked="{Binding SiteYouTube}"   Margin="0,4,16,4" d:IsLocked="True"/>
+                                        <CheckBox Content="Discord"   IsChecked="{Binding SiteDiscord}"   Margin="0,4,16,4" d:IsLocked="True"/>
+                                        <CheckBox Content="Google"    IsChecked="{Binding SiteGoogle}"    Margin="0,4,16,4" d:IsLocked="True"/>
+                                        <CheckBox Content="Twitch"    IsChecked="{Binding SiteTwitch}"    Margin="0,4,16,4" d:IsLocked="True"/>
+                                        <CheckBox Content="Instagram" IsChecked="{Binding SiteInstagram}" Margin="0,4,16,4" d:IsLocked="True"/>
+                                        <CheckBox Content="Telegram"  IsChecked="{Binding SiteTelegram}"  Margin="0,4,16,4" d:IsLocked="True"/>
                                     </WrapPanel>
 
-                                    <Border Margin="0,0,0,8">
+                                    <Border Margin="0,0,0,8" d:IsLocked="True">
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -1643,11 +1802,11 @@
                                                 </Style.Triggers>
                                             </Style>
                                         </Border.Style>
-                                        <StackPanel>
-                                            <TextBlock Style="{StaticResource SecH}" Text="СТРАТЕГИИ ИИ"/>
+                                        <StackPanel d:IsLocked="True">
+                                            <TextBlock Style="{StaticResource SecH}" Text="СТРАТЕГИИ ИИ" d:IsLocked="True"/>
                                             <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E" TextWrapping="Wrap" Margin="0,0,0,8"
-                                                       Text="Снимите галочку, чтобы исключить стратегию из подбора ИИ и эволюции."/>
-                                            <ItemsControl ItemsSource="{Binding AiStrategyRows}">
+                                                       Text="Снимите галочку, чтобы исключить стратегию из подбора ИИ и эволюции." d:IsLocked="True"/>
+                                            <ItemsControl ItemsSource="{Binding AiStrategyRows}" d:IsLocked="True">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
                                                         <Border Background="#111520" Padding="10,6" Margin="0,2">
@@ -1680,9 +1839,9 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <TextBlock Style="{StaticResource SecH}" Text="РЕЙТИНГ ПРОФИЛЕЙ"/>
-                                    <Button HorizontalAlignment="Left" Margin="0,0,0,10" Command="{Binding ScanProfilesCommand}">
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource SecH}" Text="РЕЙТИНГ ПРОФИЛЕЙ" d:IsLocked="True"/>
+                                    <Button HorizontalAlignment="Left" Margin="0,0,0,10" Command="{Binding ScanProfilesCommand}" d:IsLocked="True">
                                         <Button.Style>
                                             <Style TargetType="Button" BasedOn="{StaticResource ActionBtnAccent}">
                                                 <Setter Property="Content" Value="Сканировать все профили"/>
@@ -1697,8 +1856,8 @@
                                     </Button>
                                     <TextBlock Text="{Binding ScanProgressText}" FontFamily="Segoe UI" Foreground="#4A90E2"
                                            FontSize="12" Margin="0,0,0,8"
-                                           Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}"/>
-                                    <ItemsControl ItemsSource="{Binding ProfileScores}">
+                                           Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}" d:IsLocked="True"/>
+                                    <ItemsControl ItemsSource="{Binding ProfileScores}" d:IsLocked="True">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <Border Background="#111520" CornerRadius="6" Padding="10,6" Margin="0,2">
@@ -1722,7 +1881,7 @@
                         </Border>
 
                         <!-- ╔══════════ TAB 3: ИИ ══════════╗ -->
-                        <Border>
+                        <Border d:IsLocked="True">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -1741,17 +1900,17 @@
                                     </Style.Triggers>
                                 </Style>
                             </Border.Style>
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel Margin="16,12">
-                                    <TextBlock Style="{StaticResource SecH}" Text="РЕЖИМ ИИ" Margin="0,0,0,8"/>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" d:IsLocked="True">
+                                <StackPanel Margin="16,12" d:IsLocked="True">
+                                    <TextBlock Style="{StaticResource SecH}" Text="РЕЖИМ ИИ" Margin="0,0,0,8" d:IsLocked="True"/>
                                     <CheckBox Content="Включить самообучаемый подбор стратегий (оркестратор использует ИИ)"
-                                              IsChecked="{Binding AiEnabled}" Margin="0,0,0,10"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                        <TextBlock Style="{StaticResource Lbl}" Text="Exploration (‰): " VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                              IsChecked="{Binding AiEnabled}" Margin="0,0,0,10" d:IsLocked="True"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10" d:IsLocked="True">
+                                        <TextBlock Style="{StaticResource Lbl}" Text="Exploration (‰): " VerticalAlignment="Center" Margin="0,0,8,0" d:IsLocked="True"/>
                                         <TextBox Text="{Binding AiExplorationPermil, UpdateSourceTrigger=PropertyChanged}"
-                                                 Width="60" Height="26" VerticalContentAlignment="Center"/>
+                                                 Width="60" Height="26" VerticalContentAlignment="Center" d:IsLocked="True"/>
                                     </StackPanel>
-                                    <Grid Margin="0,0,0,12">
+                                    <Grid Margin="0,0,0,12" d:IsLocked="True">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="140"/>
                                             <ColumnDefinition Width="*"/>
@@ -1761,34 +1920,34 @@
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
-                                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Сеть:"/>
-                                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AiNetworkLabel}"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Поколение:"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AiGenerationText}"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Lbl}" Text="Проб в истории:"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AiProbeCountText}"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Сеть:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AiNetworkLabel}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Поколение:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AiGenerationText}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Lbl}" Text="Проб в истории:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AiProbeCountText}" d:IsLocked="True"/>
                                     </Grid>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10" d:IsLocked="True">
                                         <Button Content="⚗ Эволюция сейчас" Style="{StaticResource AccentBtn}"
-                                                Margin="0,0,10,0" Command="{Binding RunAiEvolutionCommand}"/>
+                                                Margin="0,0,10,0" Command="{Binding RunAiEvolutionCommand}" d:IsLocked="True"/>
                                         <Button Content="↺ Сброс модели" Style="{StaticResource TermBtn}"
-                                                Margin="0,0,10,0" Command="{Binding ResetAiModelCommand}"/>
+                                                Margin="0,0,10,0" Command="{Binding ResetAiModelCommand}" d:IsLocked="True"/>
                                         <Button Content="📁 ai-evolved" Style="{StaticResource TermBtn}"
-                                                Command="{Binding OpenAiEvolvedFolderCommand}"/>
+                                                Command="{Binding OpenAiEvolvedFolderCommand}" d:IsLocked="True"/>
                                     </StackPanel>
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                        <TextBlock Style="{StaticResource SecH}" Text="СТРАТЕГИИ"/>
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8" d:IsLocked="True">
+                                        <TextBlock Style="{StaticResource SecH}" Text="СТРАТЕГИИ" d:IsLocked="True"/>
                                         <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E" Margin="12,2,0,0"
-                                                   Text="{Binding AiStrategyRowCount, StringFormat='({0})'}"/>
+                                                   Text="{Binding AiStrategyRowCount, StringFormat='({0})'}" d:IsLocked="True"/>
                                     </StackPanel>
                                     <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E" TextWrapping="Wrap" Margin="0,0,0,8"
-                                               Text="Галочки и ручная проверка — на вкладке «Оркестратор»."/>
-                                    <Border MaxHeight="360" BorderBrush="#30363D" BorderThickness="1" CornerRadius="6" Margin="0,0,0,8">
-                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                               Text="Галочки и ручная проверка — на вкладке «Оркестратор»." d:IsLocked="True"/>
+                                    <Border MaxHeight="360" BorderBrush="#30363D" BorderThickness="1" CornerRadius="6" Margin="0,0,0,8" d:IsLocked="True">
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto" d:IsLocked="True">
                                             <ListBox ItemsSource="{Binding AiStrategyRows}"
                                                      Background="Transparent" BorderThickness="0"
-                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" d:IsLocked="True">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
                                                         <Border Background="#111520" Padding="10,6" Margin="0,2">
@@ -1813,13 +1972,13 @@
                                     </Border>
                                     <TextBlock Margin="0,12,0,0" FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
                                                TextWrapping="Wrap"
-                                               Text="ИИ использует оркестратор проверок на вкладке «Оркестратор». Новые стратегии сохраняются в engine/ai-evolved."/>
+                                               Text="ИИ использует оркестратор проверок на вкладке «Оркестратор». Новые стратегии сохраняются в engine/ai-evolved." d:IsLocked="True"/>
                                 </StackPanel>
                             </ScrollViewer>
                         </Border>
 
                         <!-- ╔══════════ TAB 4: ОБНОВЛЕНИЕ ══════════╗ -->
-                        <Border>
+                        <Border d:IsLocked="True">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -1838,10 +1997,10 @@
                                     </Style.Triggers>
                                 </Style>
                             </Border.Style>
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel Margin="16,12">
-                                    <TextBlock Style="{StaticResource SecH}" Text="FLOWSEAL ZAPRET" Margin="0,0,0,8"/>
-                                    <Grid Margin="0,0,0,12">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" d:IsLocked="True">
+                                <StackPanel Margin="16,12" d:IsLocked="True">
+                                    <TextBlock Style="{StaticResource SecH}" Text="FLOWSEAL ZAPRET" Margin="0,0,0,8" d:IsLocked="True"/>
+                                    <Grid Margin="0,0,0,12" d:IsLocked="True">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="160"/>
                                             <ColumnDefinition Width="*"/>
@@ -1851,15 +2010,15 @@
                                             <RowDefinition Height="26"/>
                                             <RowDefinition Height="26"/>
                                         </Grid.RowDefinitions>
-                                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Текущая версия:"/>
-                                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding CurrentEngineVersion}"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Доступная версия:"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.LatestRemoteVersion}"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Lbl}" Text="Статус:"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding UpdateStatus}"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Текущая версия:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding CurrentEngineVersion}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Доступная версия:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.LatestRemoteVersion}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Lbl}" Text="Статус:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding UpdateStatus}" d:IsLocked="True"/>
                                     </Grid>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                        <Button Margin="0,0,10,0" Command="{Binding CheckUpdatesCommand}">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12" d:IsLocked="True">
+                                        <Button Margin="0,0,10,0" Command="{Binding CheckUpdatesCommand}" d:IsLocked="True">
                                             <Button.Style>
                                                 <Style TargetType="Button" BasedOn="{StaticResource ActionBtn}">
                                                     <Setter Property="Content" Value="Проверить"/>
@@ -1872,7 +2031,7 @@
                                                 </Style>
                                             </Button.Style>
                                         </Button>
-                                        <Button Command="{Binding InstallUpdatesCommand}">
+                                        <Button Command="{Binding InstallUpdatesCommand}" d:IsLocked="True">
                                             <Button.Style>
                                                 <Style TargetType="Button" BasedOn="{StaticResource ActionBtnAccent}">
                                                     <Setter Property="Content" Value="Обновить"/>
@@ -1885,15 +2044,15 @@
                                             </Button.Style>
                                         </Button>
                                     </StackPanel>
-                                    <CheckBox Content="Автоматически проверять при запуске" IsChecked="{Binding AutoUpdateEnabled}" Margin="0,0,0,12"/>
+                                    <CheckBox Content="Автоматически проверять при запуске" IsChecked="{Binding AutoUpdateEnabled}" Margin="0,0,0,12" d:IsLocked="True"/>
                                     <Border Background="#1C1800" BorderBrush="#4A3800" BorderThickness="1" CornerRadius="8"
-                                        Padding="10,8" Margin="0,0,0,16">
+                                        Padding="10,8" Margin="0,0,0,16" d:IsLocked="True">
                                         <TextBlock TextWrapping="Wrap" FontFamily="Segoe UI" FontSize="11" Foreground="#F0B429"
-                                               Text="При обновлении winws.exe будет остановлен. После установки нужно заново запустить профиль."/>
+                                               Text="При обновлении winws.exe будет остановлен. После установки нужно заново запустить профиль." d:IsLocked="True"/>
                                     </Border>
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <TextBlock Style="{StaticResource SecH}" Text="FLUXROUTE (ПРИЛОЖЕНИЕ)" Margin="0,8,0,8"/>
-                                    <Grid Margin="0,0,0,12">
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource SecH}" Text="FLUXROUTE (ПРИЛОЖЕНИЕ)" Margin="0,8,0,8" d:IsLocked="True"/>
+                                    <Grid Margin="0,0,0,12" d:IsLocked="True">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="160"/>
                                             <ColumnDefinition Width="*"/>
@@ -1903,15 +2062,15 @@
                                             <RowDefinition Height="26"/>
                                             <RowDefinition Height="26"/>
                                         </Grid.RowDefinitions>
-                                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Текущая версия:"/>
-                                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.CurrentAppVersion}"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Доступная версия:"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.LatestAppVersion}"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Lbl}" Text="Статус:"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.AppUpdateStatus}"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Текущая версия:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.CurrentAppVersion}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Доступная версия:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.LatestAppVersion}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Lbl}" Text="Статус:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.AppUpdateStatus}" d:IsLocked="True"/>
                                     </Grid>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                        <Button Margin="0,0,10,0" Command="{Binding Updates.CheckAppUpdateCommand}">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12" d:IsLocked="True">
+                                        <Button Margin="0,0,10,0" Command="{Binding Updates.CheckAppUpdateCommand}" d:IsLocked="True">
                                             <Button.Style>
                                                 <Style TargetType="Button" BasedOn="{StaticResource ActionBtn}">
                                                     <Setter Property="Content" Value="Проверить"/>
@@ -1924,7 +2083,7 @@
                                                 </Style>
                                             </Button.Style>
                                         </Button>
-                                        <Button Command="{Binding Updates.InstallAppUpdateCommand}">
+                                        <Button Command="{Binding Updates.InstallAppUpdateCommand}" d:IsLocked="True">
                                             <Button.Style>
                                                 <Style TargetType="Button" BasedOn="{StaticResource ActionBtnAccent}">
                                                     <Setter Property="Content" Value="Установить"/>
@@ -1940,9 +2099,9 @@
                                             </Button.Style>
                                         </Button>
                                     </StackPanel>
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <TextBlock Style="{StaticResource SecH}" Text="TG WS PROXY" Margin="0,8,0,8"/>
-                                    <Grid Margin="0,0,0,10">
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource SecH}" Text="TG WS PROXY" Margin="0,8,0,8" d:IsLocked="True"/>
+                                    <Grid Margin="0,0,0,10" d:IsLocked="True">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="160"/>
                                             <ColumnDefinition Width="*"/>
@@ -1951,20 +2110,20 @@
                                             <RowDefinition Height="26"/>
                                             <RowDefinition Height="26"/>
                                         </Grid.RowDefinitions>
-                                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Текущая версия:"/>
-                                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding TgProxyVersion}"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Установлен:"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Текущая версия:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding TgProxyVersion}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Установлен:" d:IsLocked="True"/>
                                         <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}"
-                                               Text="{Binding TgProxyInstalled, Converter={StaticResource BoolToInstalled}}"/>
+                                               Text="{Binding TgProxyInstalled, Converter={StaticResource BoolToInstalled}}" d:IsLocked="True"/>
                                     </Grid>
                                     <Button Content="Проверить обновления TG Proxy" Style="{StaticResource ActionBtn}"
                                         HorizontalAlignment="Left" Margin="0,0,0,12"
                                         Command="{Binding CheckTgProxyUpdatesCommand}"
-                                        IsEnabled="{Binding TgProxyInstalled}"/>
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <TextBlock Style="{StaticResource SecH}" Text="ЛОГ ОБНОВЛЕНИЯ" Margin="0,8,0,4"/>
-                                    <Border Style="{StaticResource LogArea}" MaxHeight="220">
-                                        <ItemsControl ItemsSource="{Binding UpdateLogs}">
+                                        IsEnabled="{Binding TgProxyInstalled}" d:IsLocked="True"/>
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource SecH}" Text="ЛОГ ОБНОВЛЕНИЯ" Margin="0,8,0,4" d:IsLocked="True"/>
+                                    <Border Style="{StaticResource LogArea}" MaxHeight="220" d:IsLocked="True">
+                                        <ItemsControl ItemsSource="{Binding UpdateLogs}" d:IsLocked="True">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <TextBlock Text="{Binding}" Foreground="#4A5170" FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
@@ -1977,7 +2136,7 @@
                         </Border>
 
                         <!-- ╔══════════ TAB 5: ДИАГНОСТИКА ══════════╗ -->
-                        <Border>
+                        <Border d:IsLocked="True">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -1996,14 +2155,14 @@
                                     </Style.Triggers>
                                 </Style>
                             </Border.Style>
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel Margin="16,12">
-                                    <TextBlock Style="{StaticResource SecH}" Text="СИСТЕМНЫЕ НАСТРОЙКИ" Margin="0,0,0,8"/>
-                                    <CheckBox Content="Запускать FluxRoute при входе в Windows" IsChecked="{Binding AutoStartEnabled}" Margin="0,4,0,4"/>
-                                    <CheckBox Content="Показывать предупреждение при смене профиля" IsChecked="{Binding ShowProfileSwitchWarning}" Margin="0,4,0,12"/>
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <TextBlock Style="{StaticResource SecH}" Text="КОМПОНЕНТЫ"/>
-                                    <Grid Margin="0,0,0,12">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" d:IsLocked="True">
+                                <StackPanel Margin="16,12" d:IsLocked="True">
+                                    <TextBlock Style="{StaticResource SecH}" Text="СИСТЕМНЫЕ НАСТРОЙКИ" Margin="0,0,0,8" d:IsLocked="True"/>
+                                    <CheckBox Content="Запускать FluxRoute при входе в Windows" IsChecked="{Binding AutoStartEnabled}" Margin="0,4,0,4" d:IsLocked="True"/>
+                                    <CheckBox Content="Показывать предупреждение при смене профиля" IsChecked="{Binding ShowProfileSwitchWarning}" Margin="0,4,0,12" d:IsLocked="True"/>
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource SecH}" Text="КОМПОНЕНТЫ" d:IsLocked="True"/>
+                                    <Grid Margin="0,0,0,12" d:IsLocked="True">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="180"/>
                                             <ColumnDefinition Width="*"/>
@@ -2016,32 +2175,32 @@
                                             <RowDefinition Height="26"/>
                                             <RowDefinition Height="26"/>
                                         </Grid.RowDefinitions>
-                                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Права администратора:"/>
-                                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AdminText}"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="engine/:"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding EngineText}"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Lbl}" Text="winws.exe:"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding WinwsText}"/>
-                                        <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource Lbl}" Text="WinDivert.dll:"/>
-                                        <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding WinDivertDllText}"/>
-                                        <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource Lbl}" Text="WinDivert.sys:"/>
-                                        <TextBlock Grid.Row="4" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding WinDivertDriverText}"/>
-                                        <TextBlock Grid.Row="5" Grid.Column="0" Style="{StaticResource Lbl}" Text="Версия приложения:"/>
-                                        <TextBlock Grid.Row="5" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AppVersion}"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Права администратора:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AdminText}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="engine/:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding EngineText}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Lbl}" Text="winws.exe:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding WinwsText}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource Lbl}" Text="WinDivert.dll:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding WinDivertDllText}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource Lbl}" Text="WinDivert.sys:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="4" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding WinDivertDriverText}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="5" Grid.Column="0" Style="{StaticResource Lbl}" Text="Версия приложения:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="5" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AppVersion}" d:IsLocked="True"/>
                                     </Grid>
-                                    <WrapPanel>
-                                        <Button Content="Обновить"         Style="{StaticResource ActionBtn}" Margin="0,0,8,8" Command="{Binding RefreshProfilesCommand}"/>
-                                        <Button Content="Скопировать"      Style="{StaticResource ActionBtn}" Margin="0,0,8,8" Command="{Binding CopyDiagnosticsCommand}"/>
-                                        <Button Content="Экспорт логов"    Style="{StaticResource ActionBtn}" Margin="0,0,8,8" Command="{Binding ExportLogsCommand}"/>
+                                    <WrapPanel d:IsLocked="True">
+                                        <Button Content="Обновить"         Style="{StaticResource ActionBtn}" Margin="0,0,8,8" Command="{Binding RefreshProfilesCommand}" d:IsLocked="True"/>
+                                        <Button Content="Скопировать"      Style="{StaticResource ActionBtn}" Margin="0,0,8,8" Command="{Binding CopyDiagnosticsCommand}" d:IsLocked="True"/>
+                                        <Button Content="Экспорт логов"    Style="{StaticResource ActionBtn}" Margin="0,0,8,8" Command="{Binding ExportLogsCommand}" d:IsLocked="True"/>
                                         <Button Content="Diagnostic Bundle" Style="{StaticResource ActionBtn}" Margin="0,0,8,8" Command="{Binding ExportDiagnosticBundleCommand}"
-                                            ToolTip="Сохранить ZIP-архив с логами, диагностикой и настройками"/>
+                                            ToolTip="Сохранить ZIP-архив с логами, диагностикой и настройками" d:IsLocked="True"/>
                                     </WrapPanel>
                                 </StackPanel>
                             </ScrollViewer>
                         </Border>
 
                         <!-- ╔══════════ TAB 6: СЕРВИС ══════════╗ -->
-                        <Border>
+                        <Border d:IsLocked="True">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -2060,12 +2219,12 @@
                                     </Style.Triggers>
                                 </Style>
                             </Border.Style>
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel Margin="16,12">
-                                    <TextBlock Style="{StaticResource SecH}" Text="GAME FILTER" Margin="0,0,0,8"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                        <TextBlock Style="{StaticResource Lbl}" Text="Статус: " Margin="0,0,4,0"/>
-                                        <TextBlock FontFamily="Segoe UI" FontSize="12" VerticalAlignment="Center">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" d:IsLocked="True">
+                                <StackPanel Margin="16,12" d:IsLocked="True">
+                                    <TextBlock Style="{StaticResource SecH}" Text="GAME FILTER" Margin="0,0,0,8" d:IsLocked="True"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4" d:IsLocked="True">
+                                        <TextBlock Style="{StaticResource Lbl}" Text="Статус: " Margin="0,0,4,0" d:IsLocked="True"/>
+                                        <TextBlock FontFamily="Segoe UI" FontSize="12" VerticalAlignment="Center" d:IsLocked="True">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Text" Value="Выключен"/>
@@ -2081,9 +2240,9 @@
                                         </TextBlock>
                                     </StackPanel>
                                     <TextBlock FontFamily="Segoe UI" Foreground="#2E3550" FontSize="11" Margin="0,2,0,8" TextWrapping="Wrap"
-                                           Text="Расширяет диапазон портов (1024-65535) для обхода в играх."/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                        <Button Command="{Binding ToggleGameFilterCommand}">
+                                           Text="Расширяет диапазон портов (1024-65535) для обхода в играх." d:IsLocked="True"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8" d:IsLocked="True">
+                                        <Button Command="{Binding ToggleGameFilterCommand}" d:IsLocked="True">
                                             <Button.Style>
                                                 <Style TargetType="Button" BasedOn="{StaticResource ActionBtn}">
                                                     <Setter Property="Content" Value="Включить"/>
@@ -2096,19 +2255,19 @@
                                             </Button.Style>
                                         </Button>
                                         <ComboBox ItemsSource="{Binding GameFilterProtocols}" SelectedItem="{Binding GameFilterProtocol}"
-                                              Width="120" Margin="10,0,0,0"/>
+                                              Width="120" Margin="10,0,0,0" d:IsLocked="True"/>
                                     </StackPanel>
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <TextBlock Style="{StaticResource SecH}" Text="IPSET FILTER"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                        <TextBlock Style="{StaticResource Lbl}" Text="Режим: " Margin="0,0,4,0"/>
-                                        <TextBlock Style="{StaticResource Val}" Text="{Binding IpSetMode}"/>
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource SecH}" Text="IPSET FILTER" d:IsLocked="True"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4" d:IsLocked="True">
+                                        <TextBlock Style="{StaticResource Lbl}" Text="Режим: " Margin="0,0,4,0" d:IsLocked="True"/>
+                                        <TextBlock Style="{StaticResource Val}" Text="{Binding IpSetMode}" d:IsLocked="True"/>
                                     </StackPanel>
                                     <TextBlock FontFamily="Segoe UI" Foreground="#2E3550" FontSize="11" Margin="0,2,0,8" TextWrapping="Wrap"
-                                           Text="loaded — фильтрация по списку IP · none — отключена · any — все адреса"/>
-                                    <StackPanel Orientation="Horizontal">
-                                        <Button Content="Переключить режим" Style="{StaticResource ActionBtn}" Margin="0,0,10,0" Command="{Binding CycleIpSetModeCommand}"/>
-                                        <Button Command="{Binding UpdateIpSetListCommand}">
+                                           Text="loaded — фильтрация по списку IP · none — отключена · any — все адреса" d:IsLocked="True"/>
+                                    <StackPanel Orientation="Horizontal" d:IsLocked="True">
+                                        <Button Content="Переключить режим" Style="{StaticResource ActionBtn}" Margin="0,0,10,0" Command="{Binding CycleIpSetModeCommand}" d:IsLocked="True"/>
+                                        <Button Command="{Binding UpdateIpSetListCommand}" d:IsLocked="True">
                                             <Button.Style>
                                                 <Style TargetType="Button" BasedOn="{StaticResource ActionBtnAccent}">
                                                     <Setter Property="Content" Value="Обновить IPSet"/>
@@ -2121,11 +2280,11 @@
                                             </Button.Style>
                                         </Button>
                                     </StackPanel>
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <TextBlock Style="{StaticResource SecH}" Text="HOSTS FILE"/>
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource SecH}" Text="HOSTS FILE" d:IsLocked="True"/>
                                     <TextBlock FontFamily="Segoe UI" Foreground="#2E3550" FontSize="11" Margin="0,0,0,8" TextWrapping="Wrap"
-                                           Text="Проверяет и обновляет системный hosts файл."/>
-                                    <Button Content="Проверить / обновить Hosts" HorizontalAlignment="Left" Command="{Binding UpdateHostsFileCommand}">
+                                           Text="Проверяет и обновляет системный hosts файл." d:IsLocked="True"/>
+                                    <Button Content="Проверить / обновить Hosts" HorizontalAlignment="Left" Command="{Binding UpdateHostsFileCommand}" d:IsLocked="True">
                                         <Button.Style>
                                             <Style TargetType="Button" BasedOn="{StaticResource ActionBtn}">
                                                 <Style.Triggers>
@@ -2136,25 +2295,25 @@
                                             </Style>
                                         </Button.Style>
                                     </Button>
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <TextBlock Style="{StaticResource SecH}" Text="СЛУЖБА ZAPRET"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                        <TextBlock Style="{StaticResource Lbl}" Text="Статус: " Margin="0,0,4,0"/>
-                                        <TextBlock Style="{StaticResource Val}" Text="{Binding ZapretServiceStatus}"/>
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource SecH}" Text="СЛУЖБА ZAPRET" d:IsLocked="True"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4" d:IsLocked="True">
+                                        <TextBlock Style="{StaticResource Lbl}" Text="Статус: " Margin="0,0,4,0" d:IsLocked="True"/>
+                                        <TextBlock Style="{StaticResource Val}" Text="{Binding ZapretServiceStatus}" d:IsLocked="True"/>
                                     </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                        <Button Content="Установить"  Style="{StaticResource ActionBtnGreen}" Margin="0,0,10,0" Command="{Binding InstallZapretServiceCommand}"/>
-                                        <Button Content="Остановить"  Style="{StaticResource ActionBtnRed}"   Margin="0,0,10,0" Command="{Binding ForceStopZapretServiceCommand}"/>
-                                        <Button Content="↻"           Style="{StaticResource ActionBtn}"      Command="{Binding RefreshServiceInfoCommand}"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0" d:IsLocked="True">
+                                        <Button Content="Установить"  Style="{StaticResource ActionBtnGreen}" Margin="0,0,10,0" Command="{Binding InstallZapretServiceCommand}" d:IsLocked="True"/>
+                                        <Button Content="Остановить"  Style="{StaticResource ActionBtnRed}"   Margin="0,0,10,0" Command="{Binding ForceStopZapretServiceCommand}" d:IsLocked="True"/>
+                                        <Button Content="↻"           Style="{StaticResource ActionBtn}"      Command="{Binding RefreshServiceInfoCommand}" d:IsLocked="True"/>
                                     </StackPanel>
                                     <Border Background="#1C1800" BorderBrush="#4A3800" BorderThickness="1" CornerRadius="8"
-                                        Padding="10,8" Margin="0,12,0,0">
+                                        Padding="10,8" Margin="0,12,0,0" d:IsLocked="True">
                                         <TextBlock TextWrapping="Wrap" FontFamily="Segoe UI" FontSize="11" Foreground="#F0B429"
-                                               Text="Установка службы запускает service.bat с правами администратора."/>
+                                               Text="Установка службы запускает service.bat с правами администратора." d:IsLocked="True"/>
                                     </Border>
-                                    <Border Style="{StaticResource LogArea}" x:Name="ServiceLogContainer" Visibility="Collapsed">
-                                        <ScrollViewer VerticalScrollBarVisibility="Auto" x:Name="ServiceLogScroll">
-                                            <ItemsControl ItemsSource="{Binding ServiceLogs}">
+                                    <Border Style="{StaticResource LogArea}" x:Name="ServiceLogContainer" Visibility="Collapsed" d:IsLocked="True">
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto" x:Name="ServiceLogScroll" d:IsLocked="True">
+                                            <ItemsControl ItemsSource="{Binding ServiceLogs}" d:IsLocked="True">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
                                                         <TextBlock Text="{Binding}" Foreground="#4A5170" FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
@@ -2168,7 +2327,7 @@
                         </Border>
 
                         <!-- ╔══════════ TAB 7: О ПРОГРАММЕ ══════════╗ -->
-                        <Border>
+                        <Border d:IsLocked="True">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -2187,55 +2346,55 @@
                                     </Style.Triggers>
                                 </Style>
                             </Border.Style>
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel Margin="16,12">
-                                    <TextBlock Style="{StaticResource SecH}" Text="ДЛЯ ЧЕГО СОЗДАН ПРОЕКТ" Margin="0,0,0,8"/>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" d:IsLocked="True">
+                                <StackPanel Margin="16,12" d:IsLocked="True">
+                                    <TextBlock Style="{StaticResource SecH}" Text="ДЛЯ ЧЕГО СОЗДАН ПРОЕКТ" Margin="0,0,0,8" d:IsLocked="True"/>
                                     <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" TextWrapping="Wrap" FontSize="12"
-                                           Text="FluxRoute создан как удобный desktop-интерфейс для управления сетевыми профилями и сценариями обхода ограничений. Главная цель — упростить запуск и переключение стратегий без ручного редактирования bat-файлов."/>
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <TextBlock Style="{StaticResource SecH}" Text="КАК РАБОТАЕТ"/>
+                                           Text="FluxRoute создан как удобный desktop-интерфейс для управления сетевыми профилями и сценариями обхода ограничений. Главная цель — упростить запуск и переключение стратегий без ручного редактирования bat-файлов." d:IsLocked="True"/>
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource SecH}" Text="КАК РАБОТАЕТ" d:IsLocked="True"/>
                                     <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" TextWrapping="Wrap" FontSize="12"
-                                           Text="Приложение загружает профили из каталога engine, запускает выбранный сценарий, отслеживает статус процесса и диагностику. Оркестратор анализирует доступность целей и переключает профиль на более стабильный."/>
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <TextBlock Style="{StaticResource SecH}" Text="ОСНОВА ENGINE"/>
+                                           Text="Приложение загружает профили из каталога engine, запускает выбранный сценарий, отслеживает статус процесса и диагностику. Оркестратор анализирует доступность целей и переключает профиль на более стабильный." d:IsLocked="True"/>
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource SecH}" Text="ОСНОВА ENGINE" d:IsLocked="True"/>
                                     <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3"
-                                           Text="FluxRoute использует экосистему проектов:"/>
-                                    <StackPanel Margin="8,8,0,0">
-                                        <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+                                           Text="FluxRoute использует экосистему проектов:" d:IsLocked="True"/>
+                                    <StackPanel Margin="8,8,0,0" d:IsLocked="True">
+                                        <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3" d:IsLocked="True">
                                         <Run Text="• "/>
                                         <Hyperlink NavigateUri="https://github.com/basil00/WinDivert" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4A90E2">WinDivert</Hyperlink>
                                         <Run Text=" — низкоуровневая основа"/>
                                         </TextBlock>
-                                        <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+                                        <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3" d:IsLocked="True">
                                         <Run Text="• "/>
                                         <Hyperlink NavigateUri="https://github.com/bol-van/zapret" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4A90E2">bol-van/zapret</Hyperlink>
                                         <Run Text=" — оригинальный проект"/>
                                         </TextBlock>
-                                        <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+                                        <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3" d:IsLocked="True">
                                         <Run Text="• "/>
                                         <Hyperlink NavigateUri="https://github.com/Flowseal/zapret-discord-youtube" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4A90E2">Flowseal/zapret-discord-youtube</Hyperlink>
                                         <Run Text=" — основа engine"/>
                                         </TextBlock>
                                     </StackPanel>
-                                    <Rectangle Style="{StaticResource Sep}"/>
-                                    <TextBlock Style="{StaticResource SecH}" Text="ПОЛЕЗНЫЕ ССЫЛКИ"/>
-                                    <StackPanel Margin="8,0,0,0">
-                                        <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+                                    <TextBlock Style="{StaticResource SecH}" Text="ПОЛЕЗНЫЕ ССЫЛКИ" d:IsLocked="True"/>
+                                    <StackPanel Margin="8,0,0,0" d:IsLocked="True">
+                                        <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3" d:IsLocked="True">
                                         <Run Text="• "/>
                                         <Hyperlink NavigateUri="https://github.com/klondike0x/FluxRoute" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4A90E2">FluxRoute на GitHub</Hyperlink>
                                         <Run Text=" — репозиторий проекта"/>
                                         </TextBlock>
-                                        <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+                                        <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3" d:IsLocked="True">
                                         <Run Text="• "/>
                                         <Hyperlink NavigateUri="https://github.com/klondike0x/FluxRoute/releases" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4A90E2">Релизы</Hyperlink>
                                         <Run Text=" — скачать последнюю версию"/>
                                         </TextBlock>
-                                        <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+                                        <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3" d:IsLocked="True">
                                         <Run Text="• "/>
                                         <Hyperlink NavigateUri="https://github.com/klondike0x/FluxRoute/issues" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4A90E2">Issues</Hyperlink>
                                         <Run Text=" — баг-репорты и предложения"/>
                                         </TextBlock>
-                                        <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+                                        <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3" d:IsLocked="True">
                                         <Run Text="• "/>
                                         <Hyperlink NavigateUri="https://github.com/klondike0x" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4A90E2">klondike0x</Hyperlink>
                                         <Run Text=" — страница автора на GitHub"/>
@@ -2246,7 +2405,7 @@
                         </Border>
 
                         <!-- ╔══════════ TAB 8: ЛОГИ ══════════╗ -->
-                        <Border>
+                        <Border d:IsLocked="True">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -2259,42 +2418,42 @@
                                     </Style.Triggers>
                                 </Style>
                             </Border.Style>
-                            <Grid Margin="16,12">
+                            <Grid Margin="16,12" d:IsLocked="True">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
                                 <Border Grid.Row="0" Background="#111520" BorderBrush="#1E2235" BorderThickness="1"
-                                    CornerRadius="10" Padding="12" Margin="0,0,0,10">
-                                    <StackPanel>
-                                        <TextBlock Text="Логи" Foreground="#4A90E2" FontSize="14" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    CornerRadius="10" Padding="12" Margin="0,0,0,10" d:IsLocked="True">
+                                    <StackPanel d:IsLocked="True">
+                                        <TextBlock Text="Логи" Foreground="#4A90E2" FontSize="14" FontWeight="Bold" Margin="0,0,0,4" d:IsLocked="True"/>
                                         <TextBlock Text="События приложения, оркестратора, winws.exe, TG WS Proxy, обновлений и сервиса."
-                                               Foreground="#4A5170" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10"/>
-                                        <WrapPanel VerticalAlignment="Center">
-                                            <TextBlock Text="Тип:" Foreground="#4A5170" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                               Foreground="#4A5170" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10" d:IsLocked="True"/>
+                                        <WrapPanel VerticalAlignment="Center" d:IsLocked="True">
+                                            <TextBlock Text="Тип:" Foreground="#4A5170" VerticalAlignment="Center" Margin="0,0,6,0" d:IsLocked="True"/>
                                             <ComboBox Width="200" Height="28" Margin="0,0,10,6"
                                                   ItemsSource="{Binding LogCategoryFilters}"
-                                                  SelectedItem="{Binding SelectedLogCategory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                            <TextBlock Text="Поиск:" Foreground="#4A5170" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                  SelectedItem="{Binding SelectedLogCategory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" d:IsLocked="True"/>
+                                            <TextBlock Text="Поиск:" Foreground="#4A5170" VerticalAlignment="Center" Margin="0,0,6,0" d:IsLocked="True"/>
                                             <TextBox Width="200" Height="28" Margin="0,0,10,6" VerticalContentAlignment="Center"
-                                                 Text="{Binding LogSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                                 Text="{Binding LogSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" d:IsLocked="True"/>
                                             <CheckBox Content="Только ошибки" Foreground="#9BB0D0" Margin="0,4,12,6"
-                                                  VerticalAlignment="Center" IsChecked="{Binding LogsErrorsOnly, Mode=TwoWay}"/>
+                                                  VerticalAlignment="Center" IsChecked="{Binding LogsErrorsOnly, Mode=TwoWay}" d:IsLocked="True"/>
                                             <CheckBox Content="Автопрокрутка" Foreground="#9BB0D0" Margin="0,4,12,6"
-                                                  VerticalAlignment="Center" IsChecked="{Binding LogsAutoScroll, Mode=TwoWay}"/>
-                                            <Button Content="Очистить"   Style="{StaticResource ActionBtn}" Height="28" Padding="10,0" Margin="0,0,6,6" Command="{Binding ClearUnifiedLogsCommand}"/>
-                                            <Button Content="Скопировать" Style="{StaticResource ActionBtn}" Height="28" Padding="10,0" Margin="0,0,6,6" Command="{Binding CopyUnifiedLogsCommand}"/>
-                                            <Button Content="Сохранить"  Style="{StaticResource ActionBtn}" Height="28" Padding="10,0" Margin="0,0,6,6" Command="{Binding SaveUnifiedLogsCommand}"/>
+                                                  VerticalAlignment="Center" IsChecked="{Binding LogsAutoScroll, Mode=TwoWay}" d:IsLocked="True"/>
+                                            <Button Content="Очистить"   Style="{StaticResource ActionBtn}" Height="28" Padding="10,0" Margin="0,0,6,6" Command="{Binding ClearUnifiedLogsCommand}" d:IsLocked="True"/>
+                                            <Button Content="Скопировать" Style="{StaticResource ActionBtn}" Height="28" Padding="10,0" Margin="0,0,6,6" Command="{Binding CopyUnifiedLogsCommand}" d:IsLocked="True"/>
+                                            <Button Content="Сохранить"  Style="{StaticResource ActionBtn}" Height="28" Padding="10,0" Margin="0,0,6,6" Command="{Binding SaveUnifiedLogsCommand}" d:IsLocked="True"/>
                                         </WrapPanel>
                                     </StackPanel>
                                 </Border>
-                                <Border Grid.Row="1" Background="#080B12" BorderBrush="#1E2235" BorderThickness="1" CornerRadius="8">
+                                <Border Grid.Row="1" Background="#080B12" BorderBrush="#1E2235" BorderThickness="1" CornerRadius="8" d:IsLocked="True">
                                     <TextBox x:Name="UnifiedLogsTextBox"
                                          Background="Transparent" Foreground="#9BB0D0" BorderThickness="0"
                                          FontFamily="Consolas" FontSize="12" Padding="10,8" IsReadOnly="True" IsUndoEnabled="False"
                                          AcceptsReturn="True" TextWrapping="Wrap"
                                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                         Text="{Binding UnifiedLogsText, Mode=OneWay}"/>
+                                         Text="{Binding UnifiedLogsText, Mode=OneWay}" d:IsLocked="True"/>
                                 </Border>
                             </Grid>
                         </Border>
