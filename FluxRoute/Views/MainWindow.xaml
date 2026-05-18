@@ -1473,17 +1473,92 @@
                                                 <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="66"/>
                                             </Grid.RowDefinitions>
+
+                                            <!-- Profile selector header -->
                                             <Grid Grid.Row="0" Margin="0,0,0,6" d:IsLocked="True">
-                                                <StackPanel Orientation="Horizontal" d:IsLocked="True">
-                                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="13" Text="&#xEC05;"
-                                                           Foreground="#4A80CC" VerticalAlignment="Center" Margin="0,0,7,0" d:IsLocked="True"/>
-                                                    <TextBlock Text="{Binding SelectedScriptName}" FontFamily="Segoe UI"
-                                                           FontSize="11.5" Foreground="#7A90B8" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" MaxWidth="145" d:IsLocked="True"/>
-                                                </StackPanel>
-                                                <TextBlock Text="···" FontFamily="Segoe UI" FontSize="14"
-                                                       Foreground="#2A3450" HorizontalAlignment="Right"
-                                                       VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0" FontFamily="Segoe MDL2 Assets" FontSize="13" Text="&#xEC05;"
+                                                       Foreground="#4A80CC" VerticalAlignment="Center" Margin="0,0,7,0" d:IsLocked="True"/>
+
+                                                <ComboBox Grid.Column="1"
+                                                          ItemsSource="{Binding Profiles}"
+                                                          SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
+                                                          Height="22"
+                                                          Padding="4,2"
+                                                          Background="Transparent"
+                                                          BorderThickness="0"
+                                                          Foreground="#7A90B8"
+                                                          FontFamily="Segoe UI"
+                                                          FontSize="11.5"
+                                                          VerticalAlignment="Center">
+                                                    <ComboBox.Template>
+                                                        <ControlTemplate TargetType="ComboBox">
+                                                            <Grid>
+                                                                <Border x:Name="Bd" Background="Transparent" CornerRadius="6"
+                                                                        BorderThickness="0">
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*"/>
+                                                                            <ColumnDefinition Width="16"/>
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <ContentPresenter Grid.Column="0"
+                                                                            Content="{TemplateBinding SelectionBoxItem}"
+                                                                            ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                                            VerticalAlignment="Center"
+                                                                            Margin="0,0,2,0">
+                                                                            <ContentPresenter.Resources>
+                                                                                <Style TargetType="TextBlock">
+                                                                                    <Setter Property="Foreground" Value="#7A90B8"/>
+                                                                                    <Setter Property="FontFamily" Value="Segoe UI"/>
+                                                                                    <Setter Property="FontSize" Value="11.5"/>
+                                                                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                                                </Style>
+                                                                            </ContentPresenter.Resources>
+                                                                        </ContentPresenter>
+                                                                        <TextBlock Grid.Column="1" Text="▾" Foreground="#2A3A5A"
+                                                                                   FontSize="10" HorizontalAlignment="Center"
+                                                                                   VerticalAlignment="Center"/>
+                                                                        <ToggleButton Grid.Column="0" Grid.ColumnSpan="2"
+                                                                                      IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                                                                      Background="Transparent" BorderThickness="0"
+                                                                                      Cursor="Hand" Opacity="0"/>
+                                                                    </Grid>
+                                                                </Border>
+                                                                <Popup IsOpen="{TemplateBinding IsDropDownOpen}"
+                                                                       AllowsTransparency="True" Focusable="False"
+                                                                       Placement="Bottom" PopupAnimation="Slide">
+                                                                    <Border Background="#111828" BorderBrush="#1E2A40"
+                                                                            BorderThickness="1" CornerRadius="8" Margin="0,3,0,0"
+                                                                            MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+                                                                        <Border.Effect>
+                                                                            <DropShadowEffect Color="#000000" BlurRadius="18" ShadowDepth="4" Opacity="0.5"/>
+                                                                        </Border.Effect>
+                                                                        <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto">
+                                                                            <ItemsPresenter/>
+                                                                        </ScrollViewer>
+                                                                    </Border>
+                                                                </Popup>
+                                                            </Grid>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="Bd" Property="Background" Value="#0E1830"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </ComboBox.Template>
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding DisplayName}"
+                                                                       FontFamily="Segoe UI" FontSize="11.5"
+                                                                       Foreground="#C8D4EC" Padding="6,4"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
                                             </Grid>
                                             <!-- Chart -->
                                             <Border Grid.Row="1" Background="#060810" CornerRadius="8" ClipToBounds="True" d:IsLocked="True">
