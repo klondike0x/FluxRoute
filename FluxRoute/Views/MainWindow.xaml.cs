@@ -51,6 +51,13 @@ public partial class MainWindow : Window
     private WpfTextBlock? _pageTitleTextBlock;
     private WpfBorder? _navIndicatorBorder;
 
+    // ── Wave pulse animation (Zapret-Hub style) ──
+    private readonly System.Windows.Threading.DispatcherTimer _idlePulseTimer = new()
+    {
+        Interval = TimeSpan.FromMilliseconds(1480)
+    };
+    private bool _waveBusy = false;
+
 
     // Parameterless constructor is intentionally kept for the WPF designer
     // and as a safe fallback if the window is ever instantiated outside DI.
@@ -240,6 +247,29 @@ public partial class MainWindow : Window
 
         if (e.PropertyName == nameof(MainViewModel.IsSidebarExpanded))
             AnimateSidebar(_vm.IsSidebarExpanded);
+
+        if (e.PropertyName == nameof(MainViewModel.IsRunning))
+        {
+            if (_vm.IsRunning)
+            {
+                // Burst: кольца расходятся наружу при включении
+                PlayWave(outward: true, strength: 0.65, duration: 1400);
+                // После burst-волны — запускаем idle-пульс с задержкой
+                var startDelay = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(1500)
+                };
+                startDelay.Tick += (_, _) => { startDelay.Stop(); StartIdlePulse(); };
+                startDelay.Start();
+            }
+            else
+            {
+                // Сначала останавливаем idle
+                StopIdlePulse();
+                // Burst: кольца схлопываются внутрь при выключении
+                PlayWave(outward: false, strength: 0.65, duration: 1400);
+            }
+        }
     }
 
     private void AnimateNavIndicator(int tabIndex)
@@ -268,6 +298,87 @@ public partial class MainWindow : Window
     private void AnimateSidebar(bool expanded)
     {
         // No-op in v1.5.0: sidebar is fixed-width icon-only; no expand/collapse animation.
+    }
+
+    // ── Wave pulse (Zapret-Hub style) ────────────────────────────────────────
+
+    /// <summary>
+    /// Plays a 3-ring expanding (outward=true) or contracting (outward=false) wave.
+    /// strength: 0..1 opacity peak. duration: ms.
+    /// </summary>
+    private void PlayWave(bool outward, double strength, int duration)
+    {
+        if (WaveRing1 == null) return;
+
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        double startScale = outward ? 0.85 : 1.22;
+        double endScale   = outward ? 1.22 : 0.78;
+
+        // Stagger: ring 2 offset +80ms, ring 3 offset +160ms
+        int[] delays = { 0, 80, 160 };
+        double[] alphas = { strength, strength * 0.78, strength * 0.52 };
+
+        var rings = new[] { WaveRing1, WaveRing2, WaveRing3 };
+        var scales = new[] { WaveRing1Scale, WaveRing2Scale, WaveRing3Scale };
+
+        for (int i = 0; i < 3; i++)
+        {
+            var ring = rings[i];
+            var scale = scales[i];
+            double alpha = alphas[i];
+            int delay = delays[i];
+
+            ring.BeginAnimation(UIElement.OpacityProperty, null);
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+            ring.Opacity = 0;
+            scale.ScaleX = startScale;
+            scale.ScaleY = startScale;
+
+            var opacityAnim = new DoubleAnimationUsingKeyFrames();
+            opacityAnim.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(delay))));
+            opacityAnim.KeyFrames.Add(new EasingDoubleKeyFrame(alpha, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(delay + duration * 0.08)), new CubicEase { EasingMode = EasingMode.EaseOut }));
+            opacityAnim.KeyFrames.Add(new EasingDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(delay + duration)), new CubicEase { EasingMode = EasingMode.EaseIn }));
+            ring.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+
+            var scaleXAnim = new DoubleAnimation(startScale, endScale,
+                new Duration(TimeSpan.FromMilliseconds(duration)))
+            {
+                BeginTime = TimeSpan.FromMilliseconds(delay),
+                EasingFunction = ease
+            };
+            var scaleYAnim = new DoubleAnimation(startScale, endScale,
+                new Duration(TimeSpan.FromMilliseconds(duration)))
+            {
+                BeginTime = TimeSpan.FromMilliseconds(delay),
+                EasingFunction = ease
+            };
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleXAnim);
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleYAnim);
+        }
+    }
+
+    private void StartIdlePulse()
+    {
+        _idlePulseTimer.Stop();
+        _idlePulseTimer.Interval = TimeSpan.FromMilliseconds(2400);
+        _idlePulseTimer.Tick -= OnIdlePulseTick;
+        _idlePulseTimer.Tick += OnIdlePulseTick;
+        _idlePulseTimer.Start();
+        // Fire immediately
+        PlayWave(outward: true, strength: 0.38, duration: 2200);
+    }
+
+    private void StopIdlePulse()
+    {
+        _idlePulseTimer.Stop();
+        _idlePulseTimer.Tick -= OnIdlePulseTick;
+    }
+
+    private void OnIdlePulseTick(object? sender, EventArgs e)
+    {
+        if (_vm.IsRunning)
+            PlayWave(outward: true, strength: 0.38, duration: 2200);
     }
 
     private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

@@ -97,16 +97,49 @@
             <Setter Property="Width" Value="52"/>
             <Setter Property="Height" Value="36"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Background">
+                <Setter.Value><SolidColorBrush Color="Transparent"/></Setter.Value>
+            </Setter>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                </Setter.Value>
+            </Setter>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8" Margin="0">
+                        <Border x:Name="Bd" CornerRadius="8" Margin="0">
+                            <Border.Background><SolidColorBrush x:Name="BdBrush" Color="Transparent"/></Border.Background>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#151A30"/>
+                            <EventTrigger RoutedEvent="Border.MouseEnter" SourceName="Bd">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBrush"
+                                                        Storyboard.TargetProperty="Color"
+                                                        To="#151A30" Duration="0:0:0.18">
+                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                        </ColorAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="Border.MouseLeave" SourceName="Bd">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBrush"
+                                                        Storyboard.TargetProperty="Color"
+                                                        To="Transparent" Duration="0:0:0.22">
+                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                        </ColorAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="RenderTransform">
+                                    <Setter.Value><ScaleTransform ScaleX="0.88" ScaleY="0.88"/></Setter.Value>
+                                </Setter>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -164,20 +197,57 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value><ScaleTransform ScaleX="1" ScaleY="1"/></Setter.Value>
+            </Setter>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6" x:Name="Bd">
+                        <Border CornerRadius="6" x:Name="Bd">
+                            <Border.Background><SolidColorBrush x:Name="BdBg" Color="#111520"/></Border.Background>
+                            <Border.BorderBrush><SolidColorBrush x:Name="BdBorder" Color="#1E2235"/></Border.BorderBrush>
+                            <Border.BorderThickness><Thickness>1</Thickness></Border.BorderThickness>
                             <ContentPresenter Margin="{TemplateBinding Padding}"
                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#4A90E2"/>
-                                <Setter Property="Foreground" Value="#E2E8F8"/>
+                            <EventTrigger RoutedEvent="Border.MouseEnter" SourceName="Bd">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBorder"
+                                                        Storyboard.TargetProperty="Color"
+                                                        To="#4A90E2" Duration="0:0:0.18">
+                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                        </ColorAnimation>
+                                        <ColorAnimation Storyboard.TargetName="BdBg"
+                                                        Storyboard.TargetProperty="Color"
+                                                        To="#161C2E" Duration="0:0:0.18">
+                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                        </ColorAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="Border.MouseLeave" SourceName="Bd">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBorder"
+                                                        Storyboard.TargetProperty="Color"
+                                                        To="#1E2235" Duration="0:0:0.22">
+                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                        </ColorAnimation>
+                                        <ColorAnimation Storyboard.TargetName="BdBg"
+                                                        Storyboard.TargetProperty="Color"
+                                                        To="#111520" Duration="0:0:0.22">
+                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                        </ColorAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="RenderTransform">
+                                    <Setter.Value><ScaleTransform ScaleX="0.95" ScaleY="0.95"/></Setter.Value>
+                                </Setter>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.4"/>
@@ -368,10 +438,10 @@
                     <ControlTemplate TargetType="TextBox">
                         <Border x:Name="Root"
                                 Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="6"
                                 Padding="{TemplateBinding Padding}">
+                            <Border.BorderBrush><SolidColorBrush x:Name="RootBorder" Color="#1E2235"/></Border.BorderBrush>
                             <ScrollViewer x:Name="PART_ContentHost"
                                           Focusable="False"
                                           HorizontalScrollBarVisibility="Hidden"
@@ -380,13 +450,30 @@
                                           TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsFocused" Value="True">
-                                <Setter TargetName="Root" Property="BorderBrush" Value="#55AAFF"/>
-                            </Trigger>
+                            <EventTrigger RoutedEvent="UIElement.GotFocus">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="RootBorder"
+                                                        Storyboard.TargetProperty="Color"
+                                                        To="#55AAFF" Duration="0:0:0.18">
+                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                        </ColorAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="UIElement.LostFocus">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="RootBorder"
+                                                        Storyboard.TargetProperty="Color"
+                                                        To="#1E2235" Duration="0:0:0.22">
+                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
+                                        </ColorAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Root" Property="Background" Value="#0D101A"/>
-                                <Setter TargetName="Root" Property="BorderBrush" Value="#161828"/>
-                                <Setter Property="Foreground" Value="#3D4260"/>
+                                <Setter TargetName="Root" Property="Opacity" Value="0.45"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -950,7 +1037,7 @@
                                     <Grid Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" d:IsLocked="True">
 
                                         <!-- Deep background ambient glow -->
-                                        <Ellipse Width="310" Height="310" d:IsLocked="True">
+                                        <Ellipse Width="240" Height="240" d:IsLocked="True">
                                             <Ellipse.Fill>
                                                 <RadialGradientBrush GradientOrigin="0.5,0.5" Center="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
                                                     <GradientStop Color="#00000000" Offset="0.2"/>
@@ -962,7 +1049,7 @@
                                         </Ellipse>
 
                                         <!-- Outer wide soft glow ring -->
-                                        <Ellipse Width="230" Height="230" StrokeThickness="20" d:IsLocked="True">
+                                        <Ellipse Width="182" Height="182" StrokeThickness="16" d:IsLocked="True">
                                             <Ellipse.Stroke>
                                                 <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
                                                     <GradientStop Color="#AA55AAFF" Offset="0"/>
@@ -975,63 +1062,61 @@
                                             </Ellipse.Effect>
                                         </Ellipse>
 
-                                        <!-- Pulse ring (visible only when IsRunning) -->
-                                        <Ellipse x:Name="PulseRing"
-                                                 Width="212" Height="212"
-                                                 StrokeThickness="4"
+                                        <!-- Wave rings (animated from code-behind on IsRunning change) -->
+                                        <Ellipse x:Name="WaveRing1"
+                                                 Width="168" Height="168"
+                                                 StrokeThickness="14"
                                                  Opacity="0"
-                                                 RenderTransformOrigin="0.5,0.5" d:IsLocked="True">
+                                                 RenderTransformOrigin="0.5,0.5">
                                             <Ellipse.Stroke>
-                                                <SolidColorBrush Color="#00D68F"/>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                    <GradientStop Color="#55AAFF" Offset="0"/>
+                                                    <GradientStop Color="#AA44FF" Offset="0.5"/>
+                                                    <GradientStop Color="#FF3399" Offset="1"/>
+                                                </LinearGradientBrush>
                                             </Ellipse.Stroke>
-                                            <Ellipse.Effect>
-                                                <BlurEffect Radius="10"/>
-                                            </Ellipse.Effect>
+                                            <Ellipse.Effect><BlurEffect Radius="9"/></Ellipse.Effect>
                                             <Ellipse.RenderTransform>
-                                                <ScaleTransform x:Name="PulseScale" ScaleX="1" ScaleY="1"/>
+                                                <ScaleTransform x:Name="WaveRing1Scale" ScaleX="1" ScaleY="1"/>
                                             </Ellipse.RenderTransform>
-                                            <Ellipse.Style>
-                                                <Style TargetType="Ellipse">
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                                            <DataTrigger.EnterActions>
-                                                                <BeginStoryboard x:Name="PulseStoryboard">
-                                                                    <Storyboard RepeatBehavior="Forever" AutoReverse="False">
-                                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                                         From="0.7" To="0"
-                                                                                         Duration="0:0:1.4">
-                                                                            <DoubleAnimation.EasingFunction>
-                                                                                <SineEase EasingMode="EaseIn"/>
-                                                                            </DoubleAnimation.EasingFunction>
-                                                                        </DoubleAnimation>
-                                                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
-                                                                                         From="1" To="1.18"
-                                                                                         Duration="0:0:1.4">
-                                                                            <DoubleAnimation.EasingFunction>
-                                                                                <SineEase EasingMode="EaseIn"/>
-                                                                            </DoubleAnimation.EasingFunction>
-                                                                        </DoubleAnimation>
-                                                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
-                                                                                         From="1" To="1.18"
-                                                                                         Duration="0:0:1.4">
-                                                                            <DoubleAnimation.EasingFunction>
-                                                                                <SineEase EasingMode="EaseIn"/>
-                                                                            </DoubleAnimation.EasingFunction>
-                                                                        </DoubleAnimation>
-                                                                    </Storyboard>
-                                                                </BeginStoryboard>
-                                                            </DataTrigger.EnterActions>
-                                                            <DataTrigger.ExitActions>
-                                                                <StopStoryboard BeginStoryboardName="PulseStoryboard"/>
-                                                            </DataTrigger.ExitActions>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Ellipse.Style>
+                                        </Ellipse>
+                                        <Ellipse x:Name="WaveRing2"
+                                                 Width="168" Height="168"
+                                                 StrokeThickness="9"
+                                                 Opacity="0"
+                                                 RenderTransformOrigin="0.5,0.5">
+                                            <Ellipse.Stroke>
+                                                <LinearGradientBrush StartPoint="0,1" EndPoint="1,0">
+                                                    <GradientStop Color="#9933DD" Offset="0"/>
+                                                    <GradientStop Color="#4488FF" Offset="0.5"/>
+                                                    <GradientStop Color="#FF44AA" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Ellipse.Stroke>
+                                            <Ellipse.Effect><BlurEffect Radius="6"/></Ellipse.Effect>
+                                            <Ellipse.RenderTransform>
+                                                <ScaleTransform x:Name="WaveRing2Scale" ScaleX="1" ScaleY="1"/>
+                                            </Ellipse.RenderTransform>
+                                        </Ellipse>
+                                        <Ellipse x:Name="WaveRing3"
+                                                 Width="168" Height="168"
+                                                 StrokeThickness="5"
+                                                 Opacity="0"
+                                                 RenderTransformOrigin="0.5,0.5">
+                                            <Ellipse.Stroke>
+                                                <LinearGradientBrush StartPoint="1,0" EndPoint="0,1">
+                                                    <GradientStop Color="#FF3399" Offset="0"/>
+                                                    <GradientStop Color="#9933DD" Offset="0.5"/>
+                                                    <GradientStop Color="#55AAFF" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Ellipse.Stroke>
+                                            <Ellipse.Effect><BlurEffect Radius="3"/></Ellipse.Effect>
+                                            <Ellipse.RenderTransform>
+                                                <ScaleTransform x:Name="WaveRing3Scale" ScaleX="1" ScaleY="1"/>
+                                            </Ellipse.RenderTransform>
                                         </Ellipse>
 
                                         <!-- Sharp crisp ring -->
-                                        <Ellipse Width="212" Height="212" StrokeThickness="3.5" d:IsLocked="True">
+                                        <Ellipse Width="168" Height="168" StrokeThickness="3.5" d:IsLocked="True">
                                             <Ellipse.Stroke>
                                                 <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
                                                     <GradientStop Color="#55AAFF" Offset="0"/>
@@ -1042,7 +1127,7 @@
                                         </Ellipse>
 
                                         <!-- Inner dark disk -->
-                                        <Ellipse Width="196" Height="196" d:IsLocked="True">
+                                        <Ellipse Width="152" Height="152" d:IsLocked="True">
                                             <Ellipse.Fill>
                                                 <RadialGradientBrush>
                                                     <GradientStop Color="#1A1D2C" Offset="0"/>
@@ -1052,15 +1137,15 @@
                                         </Ellipse>
 
                                         <!-- Subtle concentric inner outline -->
-                                        <Ellipse Width="196" Height="196" StrokeThickness="1" Stroke="#18FFFFFF" d:IsLocked="True"/>
+                                        <Ellipse Width="152" Height="152" StrokeThickness="1" Stroke="#18FFFFFF" d:IsLocked="True"/>
 
                                         <!-- Power icon button -->
-                                        <Button Width="196" Height="196" Command="{Binding ToggleStartStopCommand}" Cursor="Hand" d:IsLocked="True">
+                                        <Button Width="152" Height="152" Command="{Binding ToggleStartStopCommand}" Cursor="Hand" d:IsLocked="True">
                                             <Button.Template>
                                                 <ControlTemplate TargetType="Button">
                                                     <Border Background="Transparent" x:Name="Bd">
                                                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                                            <Viewbox Width="68" Height="68">
+                                                            <Viewbox Width="54" Height="54">
                                                                 <Canvas Width="24" Height="24">
                                                                     <!-- Arc (300°) -->
                                                                     <Path x:Name="Arc" StrokeThickness="1.5" Fill="Transparent"
