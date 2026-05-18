@@ -189,35 +189,9 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" CornerRadius="6">
-                            <Border.Background><SolidColorBrush x:Name="BdBrush" Color="Transparent"/></Border.Background>
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard Name="TitleHoverEnter">
-                                        <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="BdBrush" Storyboard.TargetProperty="Color"
-                                                            To="#1A2040" Duration="0:0:0.15" FillBehavior="HoldEnd">
-                                                <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
-                                            </ColorAnimation>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <StopStoryboard BeginStoryboardName="TitleHoverEnter"/>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="BdBrush" Storyboard.TargetProperty="Color"
-                                                            To="Transparent" Duration="0:0:0.2" FillBehavior="HoldEnd">
-                                                <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ColorAnimation.EasingFunction>
-                                            </ColorAnimation>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -595,11 +569,33 @@
 
                     <!-- Window controls -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-2,0" d:IsLocked="True">
-                        <Button Style="{StaticResource TitleBtn}" Click="MinimizeButton_Click" d:IsLocked="True">
-                            <TextBlock Text="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="9" Foreground="#4A5170" d:IsLocked="True"/>
+                        <Button x:Name="MinimizeBtn" Style="{StaticResource TitleBtn}" Click="MinimizeButton_Click" d:IsLocked="True">
+                            <TextBlock Text="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="9" d:IsLocked="True">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#4A5170"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsMouseOver, ElementName=MinimizeBtn}" Value="True">
+                                                <Setter Property="Foreground" Value="#C0C8E8"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </Button>
-                        <Button Style="{StaticResource CloseTitleBtn}" Click="CloseButton_Click" d:IsLocked="True">
-                            <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="9" Foreground="#4A5170" d:IsLocked="True"/>
+                        <Button x:Name="CloseBtn" Style="{StaticResource CloseTitleBtn}" Click="CloseButton_Click" d:IsLocked="True">
+                            <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="9" d:IsLocked="True">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#4A5170"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsMouseOver, ElementName=CloseBtn}" Value="True">
+                                                <Setter Property="Foreground" Value="#E8C0C0"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </Button>
                     </StackPanel>
                 </Grid>
