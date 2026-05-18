@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="FluxRoute.Core.Tests/FluxRoute.Core.Tests.csproj" />
+  <Project Path="FluxRoute.AI/FluxRoute.AI.csproj" />
   <Project Path="FluxRoute.Core/FluxRoute.Core.csproj" />
   <Project Path="FluxRoute.Updater/FluxRoute.Updater.csproj" />
   <Project Path="FluxRoute/FluxRoute.csproj" />

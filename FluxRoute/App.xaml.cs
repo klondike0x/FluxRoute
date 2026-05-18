@@ -2,6 +2,8 @@ using System.IO;
 using System.Net.Http;
 using System.Security.Principal;
 using System.Windows;
+using FluxRoute.AI.Services;
+using FluxRoute.Core.Models;
 using FluxRoute.Core.Services;
 using FluxRoute.Services;
 using FluxRoute.Updater.Services;
@@ -125,6 +127,37 @@ public partial class App : Application
         services.AddSingleton<IUpdaterService, UpdaterService>();
         services.AddSingleton<IAppUpdaterService, AppUpdaterService>();
         services.AddSingleton<IConnectivityChecker, ConnectivityChecker>();
+
+        services.AddSingleton<NetworkFingerprintProvider>();
+        services.AddSingleton(sp =>
+        {
+            var settingsService = sp.GetRequiredService<ISettingsService>();
+            var dir = Path.GetDirectoryName(settingsService.SettingsPath)!;
+            var registryPath = Path.Combine(dir, "fluxroute-ai-strategies.json");
+            var registry = new AiStrategyRegistry(registryPath);
+            registry.Load();
+            return registry;
+        });
+        services.AddSingleton(sp =>
+        {
+            var settingsService = sp.GetRequiredService<ISettingsService>();
+            var dir = Path.GetDirectoryName(settingsService.SettingsPath)!;
+            return new AiHistoryStore(Path.Combine(dir, "fluxroute-ai-history.jsonl"));
+        });
+        services.AddSingleton<BatMaterializer>();
+        services.AddSingleton(sp =>
+            new BanditSelector(sp.GetRequiredService<AiStrategyRegistry>(), new Random()));
+        services.AddSingleton(sp =>
+            new StrategyEvolver(
+                sp.GetRequiredService<AiStrategyRegistry>(),
+                sp.GetRequiredService<AiHistoryStore>(),
+                sp.GetRequiredService<BatMaterializer>(),
+                () => Path.Combine(AppContext.BaseDirectory, "engine"),
+                () => sp.GetRequiredService<ISettingsService>().Load().Ai));
+
+        services.AddSingleton(sp =>
+            new NetworkChangeWatcher(sp.GetRequiredService<NetworkFingerprintProvider>()));
+
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<TrayIconService>();
         services.AddSingleton<MainWindow>();

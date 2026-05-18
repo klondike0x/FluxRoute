@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using FluxRoute.Core.Models;
 
 namespace FluxRoute.Core.Services;
 
@@ -38,6 +39,8 @@ public sealed class AppSettings
 
     // TG WS Proxy
     public TgProxySettings TgProxy { get; set; } = new();
+
+    public AiSettings Ai { get; set; } = new();
 }
 
 public sealed class TgProxySettings
@@ -249,6 +252,7 @@ public sealed class SettingsService : ISettingsService
     {
         settings.ProfileRatings ??= new List<ProfileRatingEntry>();
         settings.TgProxy ??= new TgProxySettings();
+        settings.Ai ??= new AiSettings();
 
         // Миграция: сброс старого дефолтного домена www.google.com.
         // fake-tls-domain требует домен, указывающий на IP самого прокси.
