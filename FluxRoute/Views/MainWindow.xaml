@@ -753,7 +753,7 @@
                                     </Border.Style>
                                 </Border>
                                 <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="1" d:IsLocked="True">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE709;" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE724;" d:IsLocked="True">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="#4A5170"/>
@@ -957,6 +957,41 @@
                                 </Button>
                             </Grid>
 
+                            <!-- Nav: Настройки / Сервис (6) -->
+                            <Grid Margin="0,4,0,4" d:IsLocked="True">
+                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="6">
+                                                    <Setter Property="Background" Value="{StaticResource NavActiveBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                </Border>
+                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="6" d:IsLocked="True">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE8EF;" d:IsLocked="True">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#4A5170"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedTabIndex}" Value="6">
+                                                        <Setter Property="Foreground" Value="#E9E9F8"/>
+                                                        <Setter Property="Effect">
+                                                            <Setter.Value>
+                                                                <DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9"/>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Button>
+                            </Grid>
+
                             <!-- Nav: Логи (8) -->
                             <Grid Margin="0,4,0,4" d:IsLocked="True">
                                 <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
@@ -989,41 +1024,6 @@
                                                 <Setter Property="Foreground" Value="#4A5170"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding SelectedTabIndex}" Value="8">
-                                                        <Setter Property="Foreground" Value="#E9E9F8"/>
-                                                        <Setter Property="Effect">
-                                                            <Setter.Value>
-                                                                <DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9"/>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </Button>
-                            </Grid>
-
-                            <!-- Nav: Настройки / Сервис (6) -->
-                            <Grid Margin="0,4,0,4" d:IsLocked="True">
-                                <Border CornerRadius="8" Width="52" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Background" Value="Transparent"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="6">
-                                                    <Setter Property="Background" Value="{StaticResource NavActiveBrush}"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                </Border>
-                                <Button Style="{StaticResource NavIconBtn}" Command="{Binding SelectTabCommand}" CommandParameter="6" d:IsLocked="True">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE8EF;" d:IsLocked="True">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Foreground" Value="#4A5170"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding SelectedTabIndex}" Value="6">
                                                         <Setter Property="Foreground" Value="#E9E9F8"/>
                                                         <Setter Property="Effect">
                                                             <Setter.Value>
