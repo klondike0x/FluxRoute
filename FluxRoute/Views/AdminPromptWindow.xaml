@@ -4,16 +4,17 @@
         Title="FluxRoute"
         Height="240" Width="460"
         WindowStartupLocation="CenterScreen"
-        Background="#0D1117"
+        Background="Transparent"
         ResizeMode="NoResize"
         ShowInTaskbar="True"
-        WindowStyle="None">
+        WindowStyle="None"
+        AllowsTransparency="True">
 
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="0" ResizeBorderThickness="0" GlassFrameThickness="0"/>
     </WindowChrome.WindowChrome>
 
-    <Border Background="#0D1117" BorderBrush="#30363D" BorderThickness="1" CornerRadius="4">
+    <Border Background="#0C0F17" BorderBrush="#1C1F2E" BorderThickness="1" CornerRadius="12">
         <Grid Margin="24,20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -23,17 +24,17 @@
             </Grid.RowDefinitions>
 
             <!-- Header -->
-            <TextBlock Grid.Row="0" Text="⚠️ Требуются права администратора"
-                       FontFamily="Segoe UI" Foreground="#FFD700" FontSize="15"
+            <TextBlock Grid.Row="0" Text="Требуются права администратора"
+                       FontFamily="Segoe UI" Foreground="#C8D4EC" FontSize="15"
                        FontWeight="SemiBold" Margin="0,0,0,12"/>
 
             <!-- Description -->
             <TextBlock Grid.Row="1" TextWrapping="Wrap" FontFamily="Segoe UI"
-                       Foreground="#E6EDF3" FontSize="13" Margin="0,0,0,8"
+                       Foreground="#C8D4EC" FontSize="13" Margin="0,0,0,8"
                        Text="Для корректной работы FluxRoute (запуск winws.exe, управление сетевыми фильтрами) необходимы права администратора."/>
 
             <TextBlock Grid.Row="2" TextWrapping="Wrap" FontFamily="Segoe UI"
-                       Foreground="#8B949E" FontSize="12" VerticalAlignment="Center"
+                       Foreground="#7E89A8" FontSize="12" VerticalAlignment="Center"
                        Text="Вы можете продолжить без прав, но функциональность будет ограничена."/>
 
             <!-- Buttons -->
@@ -92,9 +93,9 @@
                     </Button.Template>
                 </Button>
 
-                <Button Content="🔒 Перезапустить с правами" Click="RestartAsAdminButton_Click"
-                        FontFamily="Segoe UI" Foreground="#4FC3F7" Background="Transparent"
-                        BorderThickness="1" BorderBrush="#264F78"
+                <Button Content="Перезапустить с правами" Click="RestartAsAdminButton_Click"
+                        FontFamily="Segoe UI" Foreground="#4A90E2" Background="Transparent"
+                        BorderThickness="1" BorderBrush="#1E3A7A"
                         Padding="16,8" FontSize="13" FontWeight="SemiBold" Cursor="Hand">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">

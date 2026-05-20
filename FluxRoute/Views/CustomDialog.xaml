@@ -3,10 +3,11 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="FluxRoute"
         WindowStartupLocation="CenterOwner"
-        Background="#0D1117"
+        Background="Transparent"
         WindowStyle="None"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
+        AllowsTransparency="True"
         SizeToContent="WidthAndHeight">
 
     <WindowChrome.WindowChrome>
@@ -18,10 +19,10 @@
         <Style x:Key="DialogCancelBtn" TargetType="Button">
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Foreground" Value="#8B949E"/>
+            <Setter Property="Foreground" Value="#7E89A8"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#30363D"/>
+            <Setter Property="BorderBrush" Value="#1E2235"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="16,8"/>
             <Setter Property="Margin" Value="0,0,10,0"/>
@@ -146,10 +147,10 @@
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#4FC3F7"/>
+            <Setter Property="Foreground" Value="#4A90E2"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#264F78"/>
+            <Setter Property="BorderBrush" Value="#1E3A7A"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="16,8"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -205,15 +206,15 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="#0D1117" BorderBrush="#30363D" BorderThickness="1" CornerRadius="4"
+    <Border Background="#0C0F17" BorderBrush="#1C1F2E" BorderThickness="1" CornerRadius="12"
             MinWidth="340" MaxWidth="440"
             MouseLeftButtonDown="Card_MouseLeftButtonDown">
         <StackPanel Margin="24,20">
             <TextBlock x:Name="TitleText"
-                       FontFamily="Segoe UI" Foreground="#E6EDF3" FontSize="15"
+                       FontFamily="Segoe UI" Foreground="#C8D4EC" FontSize="15"
                        FontWeight="SemiBold" Margin="0,0,0,8"/>
             <TextBlock x:Name="MessageText"
-                       FontFamily="Segoe UI" Foreground="#8B949E" FontSize="13"
+                       FontFamily="Segoe UI" Foreground="#7E89A8" FontSize="13"
                        TextWrapping="Wrap" Margin="0,0,0,20"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button x:Name="CancelBtn" Content="Отмена" Click="Cancel_Click"

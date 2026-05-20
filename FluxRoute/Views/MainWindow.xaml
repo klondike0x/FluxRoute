@@ -1376,17 +1376,7 @@
                                                 </Grid.ColumnDefinitions>
 
                                                 <!-- ── Card: Profile ── -->
-                                                <Border Grid.Column="0" CornerRadius="14,0,0,14" Cursor="Hand" d:IsLocked="True">
-                                                    <Border.Style>
-                                                        <Style TargetType="Border">
-                                                            <Setter Property="Background" Value="Transparent"/>
-                                                            <Style.Triggers>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter Property="Background" Value="#0E1428"/>
-                                                                </Trigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Border.Style>
+                                                <Border Grid.Column="0" CornerRadius="14,0,0,14" Cursor="Arrow" Background="Transparent" d:IsLocked="True">
                                                     <Grid Margin="14,0" d:IsLocked="True">
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="Auto"/>
@@ -1433,17 +1423,7 @@
                                                 </Rectangle>
 
                                                 <!-- ── Card: Uptime ── -->
-                                                <Border Grid.Column="1" Cursor="Hand" d:IsLocked="True">
-                                                    <Border.Style>
-                                                        <Style TargetType="Border">
-                                                            <Setter Property="Background" Value="Transparent"/>
-                                                            <Style.Triggers>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter Property="Background" Value="#0E1428"/>
-                                                                </Trigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Border.Style>
+                                                <Border Grid.Column="1" Cursor="Arrow" Background="Transparent" d:IsLocked="True">
                                                     <Grid HorizontalAlignment="Left" Margin="14,0" d:IsLocked="True">
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="Auto"/>
@@ -1455,10 +1435,12 @@
                                                               VerticalAlignment="Center" Margin="0,0,12,0" d:IsLocked="True">
                                                             <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" d:IsLocked="True">
                                                                 <Grid Width="16" Height="16">
-                                                                    <Rectangle Width="12" Height="3" RadiusX="0.8" RadiusY="0.8" Stroke="#8040CC" StrokeThickness="1.4" Fill="Transparent" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,1.5,0,0"/>
+                                                                    <Rectangle Width="12" Height="3" RadiusX="0.8" RadiusY="0.8" Stroke="#8040CC" StrokeThickness="1.4" Fill="Transparent" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,1,0,0"/>
                                                                     <Rectangle Width="12" Height="3" RadiusX="0.8" RadiusY="0.8" Stroke="#8040CC" StrokeThickness="1.4" Fill="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                    <Ellipse Width="1.5" Height="1.5" Fill="#8040CC" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="3.3,2.6,0,0"/>
+                                                                    <Rectangle Width="12" Height="3" RadiusX="0.8" RadiusY="0.8" Stroke="#8040CC" StrokeThickness="1.4" Fill="Transparent" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,1"/>
+                                                                    <Ellipse Width="1.5" Height="1.5" Fill="#8040CC" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="3.3,2.2,0,0"/>
                                                                     <Ellipse Width="1.5" Height="1.5" Fill="#8040CC" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3.3,0,0,0"/>
+                                                                    <Ellipse Width="1.5" Height="1.5" Fill="#8040CC" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="3.3,0,0,2.2"/>
                                                                     <Grid.Effect>
                                                                         <DropShadowEffect Color="#9B5DE5" BlurRadius="10" ShadowDepth="0" Opacity="0.6"/>
                                                                     </Grid.Effect>
@@ -1491,17 +1473,7 @@
                                                 </Rectangle>
 
                                                 <!-- ── Card: PID ── -->
-                                                <Border Grid.Column="2" CornerRadius="0,14,14,0" Cursor="Hand" d:IsLocked="True">
-                                                    <Border.Style>
-                                                        <Style TargetType="Border">
-                                                            <Setter Property="Background" Value="Transparent"/>
-                                                            <Style.Triggers>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter Property="Background" Value="#0E1428"/>
-                                                                </Trigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Border.Style>
+                                                <Border Grid.Column="2" CornerRadius="0,14,14,0" Cursor="Arrow" Background="Transparent" d:IsLocked="True">
                                                     <Grid HorizontalAlignment="Left" Margin="14,0" d:IsLocked="True">
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="Auto"/>
