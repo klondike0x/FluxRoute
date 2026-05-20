@@ -494,8 +494,6 @@ public partial class MainViewModel
 
             _winEventHook = IntPtr.Zero;
         }
-
-        _winEventCallback = null;
     }
 
     private static bool SafeHasExited(Process process)

@@ -49,8 +49,11 @@ public partial class MainViewModel : ObservableObject
                 "Продолжить", "Отмена", isDanger: true))
             {
                 _suppressProfileWarning = true;
-                SelectedProfile = oldValue;
-                _suppressProfileWarning = false;
+                Application.Current.Dispatcher.BeginInvoke(() =>
+                {
+                    SelectedProfile = oldValue;
+                    _suppressProfileWarning = false;
+                }, DispatcherPriority.Background);
                 return;
             }
         }
@@ -198,7 +201,6 @@ public partial class MainViewModel : ObservableObject
     private CancellationTokenSource? _hideWindowsCts;
     private volatile HashSet<uint> _trackedPids = [];
     private IntPtr _winEventHook;
-    private WinEventProc? _winEventCallback;
     private string EngineDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "engine");
 
     private readonly IUpdaterService _updater;

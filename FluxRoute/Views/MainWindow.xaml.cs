@@ -49,14 +49,12 @@ public partial class MainWindow : Window
     private bool _isClosingConfirmed;
     private WpfTextBox? _unifiedLogsTextBox;
     private WpfTextBlock? _pageTitleTextBlock;
-    private WpfBorder? _navIndicatorBorder;
 
     // ── Wave pulse animation (Zapret-Hub style) ──
     private readonly System.Windows.Threading.DispatcherTimer _idlePulseTimer = new()
     {
         Interval = TimeSpan.FromMilliseconds(1480)
     };
-    private bool _waveBusy = false;
 
 
     // Parameterless constructor is intentionally kept for the WPF designer
