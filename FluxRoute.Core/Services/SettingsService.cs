@@ -51,6 +51,7 @@ public sealed class TgProxySettings
     public string Domain { get; set; } = "";
     public bool Verbose { get; set; } = false;
     public bool PreferIPv4 { get; set; } = true;
+    public bool AutoStartOnAppLaunch { get; set; } = true;
 
     // DC → IP
     public string DcIps { get; set; } = "2:149.154.167.220\n4:149.154.167.220";

@@ -143,7 +143,8 @@ public sealed class SettingsServiceTests : IDisposable
                 Port = 9090,
                 Secret = "ddeadbeef00112233445566778899aabb",
                 Verbose = true,
-                CfProxyEnabled = false
+                CfProxyEnabled = false,
+                AutoStartOnAppLaunch = false
             }
         };
 
@@ -155,6 +156,7 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal("ddeadbeef00112233445566778899aabb", loaded.TgProxy.Secret);
         Assert.True(loaded.TgProxy.Verbose);
         Assert.False(loaded.TgProxy.CfProxyEnabled);
+        Assert.False(loaded.TgProxy.AutoStartOnAppLaunch);
     }
 
     // ── ProfileRatings round-trip ──

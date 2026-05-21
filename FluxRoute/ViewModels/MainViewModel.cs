@@ -381,6 +381,7 @@ public partial class MainViewModel : ObservableObject
         _orchestratorUiTimer.Start();
         _aiOrchestrator.SyncRegistryFromEngine();
         RebuildAiStrategyRows();
+        InitializeTgProxyOnStartup();
     }
 
     // ── Настройки ──
@@ -415,6 +416,7 @@ public partial class MainViewModel : ObservableObject
         TgProxyCfPriority = settings.TgProxy.CfProxyPriority;
         TgProxyCfDomainEnabled = settings.TgProxy.CfDomainEnabled;
         TgProxyCfDomain = settings.TgProxy.CfDomain;
+        TgProxyAutoStartOnAppLaunch = settings.TgProxy.AutoStartOnAppLaunch;
         TgProxyBufKb = settings.TgProxy.BufKb == 0 ? "256" : settings.TgProxy.BufKb.ToString();
         TgProxyPoolSize = settings.TgProxy.PoolSize == 0 ? "4" : settings.TgProxy.PoolSize.ToString();
         TgProxyLogMaxMb = settings.TgProxy.LogMaxMb == 0 ? "5.0" : settings.TgProxy.LogMaxMb.ToString();
@@ -459,6 +461,7 @@ public partial class MainViewModel : ObservableObject
                 CfProxyPriority = TgProxyCfPriority,
                 CfDomainEnabled = TgProxyCfDomainEnabled,
                 CfDomain = TgProxyCfDomain,
+                AutoStartOnAppLaunch = TgProxyAutoStartOnAppLaunch,
                 BufKb = int.TryParse(TgProxyBufKb, out var bufKb) ? bufKb : 256,
                 PoolSize = int.TryParse(TgProxyPoolSize, out var poolSize) ? poolSize : 4,
                 LogMaxMb = double.TryParse(TgProxyLogMaxMb, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var logMb) ? logMb : 5.0

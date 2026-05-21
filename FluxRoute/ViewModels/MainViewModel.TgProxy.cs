@@ -82,6 +82,10 @@ public partial class MainViewModel
     private bool tgProxyPreferIPv4 = true;
     partial void OnTgProxyPreferIPv4Changed(bool value) => SaveSettings();
 
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
+    private bool tgProxyAutoStartOnAppLaunch = true;
+    partial void OnTgProxyAutoStartOnAppLaunchChanged(bool value) => SaveSettings();
+
     // DC → IP
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
     private string tgProxyDcIps = "2:149.154.167.220\n4:149.154.167.220";
@@ -130,7 +134,7 @@ public partial class MainViewModel
             return;
 
         _tgProxyTabVisited = true;
-        TgProxyInstalled = File.Exists(PythonExe) && File.Exists(ProxyScript);
+        EnsureTgProxyStateInitialized();
 
         if (!TgProxyInstalled)
         {
@@ -149,10 +153,28 @@ public partial class MainViewModel
                 });
             }
         }
-        else
+    }
+
+    public void InitializeTgProxyOnStartup()
+    {
+        EnsureTgProxyStateInitialized();
+
+        if (!TgProxyAutoStartOnAppLaunch || !TgProxyInstalled || TgProxyRunning)
+            return;
+
+        if (string.IsNullOrWhiteSpace(TgProxySecret))
         {
-            TgProxyVersion = GetTgProxyLocalVersion();
+            AddTgProxyLog("⏭ TG WS Proxy автозапуск пропущен: secret не задан.");
+            return;
         }
+
+        StartTgProxy();
+    }
+
+    private void EnsureTgProxyStateInitialized()
+    {
+        TgProxyInstalled = File.Exists(PythonExe) && File.Exists(ProxyScript);
+        TgProxyVersion = TgProxyInstalled ? GetTgProxyLocalVersion() : "—";
     }
 
     // ── Установка ──
