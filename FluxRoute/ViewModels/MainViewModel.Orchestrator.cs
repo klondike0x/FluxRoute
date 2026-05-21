@@ -181,7 +181,6 @@ public partial class MainViewModel
                 _suppressProfileWarning = true;
                 SelectedProfile = profile;
                 _suppressProfileWarning = false;
-                Start();
             }
         }
 
@@ -189,6 +188,20 @@ public partial class MainViewModel
             SwitchOnUi();
         else
             await dispatcher.InvokeAsync(SwitchOnUi).Task.ConfigureAwait(false);
+
+        // Даём время на завершение WinDivert и winws.exe
+        await Task.Delay(1500).ConfigureAwait(false);
+
+        void StartOnUi()
+        {
+            if (profile is not null)
+                Start();
+        }
+
+        if (dispatcher.CheckAccess())
+            StartOnUi();
+        else
+            await dispatcher.InvokeAsync(StartOnUi).Task.ConfigureAwait(false);
     }
 
     private Task UpdateProfileScoreAsync(string fileName, int score)
