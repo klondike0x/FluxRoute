@@ -445,24 +445,11 @@ public partial class MainViewModel
         }
     }
 
-    private void TryStartOrchestratorIfEnabled()
-    {
-        if (!OrchestratorEnabled) return;
-        if (_orchestrator.IsRunning || _aiOrchestrator.IsRunning) return;
-        ToggleOrchestrator();
-    }
-
-    [RelayCommand]
-    private void ToggleOrchestrator()
+    // ── Запуск сервисов оркестратора (вызывается только когда Zapret уже работает) ──
+    private void StartOrchestratorServices()
     {
         if (_orchestrator.IsRunning || _aiOrchestrator.IsRunning)
-        {
-            _orchestrator.Stop();
-            _aiOrchestrator.Stop();
-            OrchestratorRunning = false;
-            StopProcessMonitor();
             return;
-        }
 
         if (int.TryParse(OrchestratorInterval, out var mins) && mins >= 1)
         {
@@ -479,28 +466,74 @@ public partial class MainViewModel
         if (AiEnabled)
         {
             _aiOrchestrator.Start();
-            OrchestratorRunning = true;
-            StartProcessMonitor();
-            return;
         }
-
-        if (!IsTrackedProcessRunning())
+        else
         {
-            if (SelectedProfile is not null)
-            {
-                Logs.Add("[Оркестратор] Автозапуск профиля...");
-                Start();
-            }
-            else
-            {
-                Logs.Add("[Оркестратор] Профиль не выбран.");
-                return;
-            }
+            _orchestrator.Start();
         }
 
-        _orchestrator.Start();
         OrchestratorRunning = true;
         StartProcessMonitor();
+        Logs.Add("[Оркестратор] Запущен в автоматическом режиме.");
+    }
+
+    // ── Остановка сервисов оркестратора без изменения флага OrchestratorEnabled ──
+    private void StopOrchestratorServices()
+    {
+        if (!_orchestrator.IsRunning && !_aiOrchestrator.IsRunning)
+            return;
+
+        _orchestrator.Stop();
+        _aiOrchestrator.Stop();
+        OrchestratorRunning = false;
+        StopProcessMonitor();
+        Logs.Add("[Оркестратор] Остановлен.");
+    }
+
+    // ── Применяем состояние OrchestratorEnabled ──
+    // Вызывается при изменении флага через чекбокс/кнопку и при старте/стопе Zapret.
+    internal void ApplyOrchestratorEnabledState()
+    {
+        if (OrchestratorEnabled)
+        {
+            // "Вооружён": если Zapret уже работает — сразу запускаем сервисы.
+            if (IsRunning)
+                StartOrchestratorServices();
+            else
+                Logs.Add("[Оркестратор] Режим авто: ожидаю запуск Zapret...");
+        }
+        else
+        {
+            // "Разоружён": останавливаем сервисы.
+            // Если Zapret работает — перезапускаем его в ручном режиме.
+            var wasRunning = IsRunning;
+            StopOrchestratorServices();
+
+            if (wasRunning)
+            {
+                Logs.Add("[Оркестратор] Переход в ручной режим — перезапуск Zapret...");
+                _suppressOrchestratorStop = true;
+                Stop();
+                _suppressOrchestratorStop = false;
+                Start();
+            }
+        }
+    }
+
+    // ── Кнопка "Запустить/Остановить оркестратор" на вкладке ──
+    [RelayCommand]
+    private void ToggleOrchestrator()
+    {
+        OrchestratorEnabled = !OrchestratorEnabled;
+        SaveSettings();
+        ApplyOrchestratorEnabledState();
+    }
+
+    // ── Вызывается из StartWinwsDirect/StartViaBatFallback после успешного старта ──
+    private void TryStartOrchestratorIfEnabled()
+    {
+        if (OrchestratorEnabled)
+            StartOrchestratorServices();
     }
 
     [RelayCommand]

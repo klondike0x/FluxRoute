@@ -1933,10 +1933,10 @@
                                         <Button Margin="0,0,10,0" Command="{Binding ToggleOrchestratorCommand}" d:IsLocked="True">
                                             <Button.Style>
                                                 <Style TargetType="Button" BasedOn="{StaticResource ActionBtn}">
-                                                    <Setter Property="Content" Value="Запустить оркестратор"/>
+                                                    <Setter Property="Content" Value="▶ Включить оркестратор"/>
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding OrchestratorRunning}" Value="True">
-                                                            <Setter Property="Content" Value="Остановить оркестратор"/>
+                                                        <DataTrigger Binding="{Binding OrchestratorEnabled}" Value="True">
+                                                            <Setter Property="Content" Value="⏹ Отключить оркестратор"/>
                                                             <Setter Property="BorderBrush" Value="#6B1A1A"/>
                                                             <Setter Property="Foreground" Value="#E74C3C"/>
                                                         </DataTrigger>
@@ -1950,6 +1950,23 @@
                                         <TextBlock Style="{StaticResource Lbl}" Text="Интервал (мин): " Margin="0,0,8,0" d:IsLocked="True"/>
                                         <TextBox Text="{Binding OrchestratorInterval, UpdateSourceTrigger=PropertyChanged}"
                                              Width="50" Height="28" VerticalContentAlignment="Center" d:IsLocked="True"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0" d:IsLocked="True">
+                                        <TextBlock Style="{StaticResource Lbl}" Text="Режим: " Margin="0,0,4,0" d:IsLocked="True"/>
+                                        <TextBlock d:IsLocked="True">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource Val}">
+                                                    <Setter Property="Text" Value="ручной"/>
+                                                    <Setter Property="Foreground" Value="#4A5170"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding OrchestratorEnabled}" Value="True">
+                                                            <Setter Property="Text" Value="автоматический"/>
+                                                            <Setter Property="Foreground" Value="#00D68F"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0" d:IsLocked="True">
                                         <TextBlock Style="{StaticResource Lbl}" Text="Следующая проверка: " Margin="0,0,4,0" d:IsLocked="True"/>

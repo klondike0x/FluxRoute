@@ -421,15 +421,9 @@ public partial class MainViewModel
         IsRunning = false;
         _runStartedAt = null;
 
-        // Останавливаем оркестратор вместе с Zapret (если он запущен).
-        if (!_suppressOrchestratorStop && (_orchestrator.IsRunning || _aiOrchestrator.IsRunning))
-        {
-            _orchestrator.Stop();
-            _aiOrchestrator.Stop();
-            OrchestratorRunning = false;
-            StopProcessMonitor();
-            Logs.Add("[Оркестратор] Остановлен вместе с Zapret.");
-        }
+        // Останавливаем сервисы оркестратора вместе с Zapret (флаг OrchestratorEnabled не меняем).
+        if (!_suppressOrchestratorStop)
+            StopOrchestratorServices();
 
         RefreshDiagnostics();
         UpdateRuntimeInfo();

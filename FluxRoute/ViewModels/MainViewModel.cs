@@ -239,7 +239,13 @@ public partial class MainViewModel : ObservableObject
     // ── Оркестратор ──
     [ObservableProperty] private bool orchestratorRunning;
     [ObservableProperty] private bool orchestratorEnabled;
-    partial void OnOrchestratorEnabledChanged(bool value) => SaveSettings();
+    partial void OnOrchestratorEnabledChanged(bool value)
+    {
+        SaveSettings();
+        // Не реагируем на изменения во время загрузки настроек
+        if (_settingsLoaded)
+            ApplyOrchestratorEnabledState();
+    }
     [ObservableProperty] private string orchestratorStatus = "Не запущен";
     [ObservableProperty] private string orchestratorNextCheck = "—";
     [ObservableProperty] private string orchestratorInterval = "1";
