@@ -585,11 +585,23 @@ public sealed partial class ServiceViewModel : ObservableObject
         await Application.Current.Dispatcher.InvokeAsync(() => AutoTuneRunning = true);
         var checker = new FluxRoute.Core.Services.ConnectivityChecker();
 
-        // Все комбинации: ipSet × protocol
-        var ipSets = new[] { "loaded", "none", "any" };
-        var protocols = new[] { "Выкл", "TCP", "UDP", "TCP и UDP" };
-        var combos = (from ip in ipSets from pr in protocols select (ip, pr)).ToList();
-        int total = combos.Count;
+        // Комбинации: приоритетные первыми (наиболее вероятные рабочие)
+        var combos = new[]
+        {
+            ("loaded", "TCP и UDP"),
+            ("loaded", "Выкл"),
+            ("none",   "TCP и UDP"),
+            ("none",   "Выкл"),
+            ("any",    "TCP и UDP"),
+            ("loaded", "TCP"),
+            ("loaded", "UDP"),
+            ("none",   "TCP"),
+            ("none",   "UDP"),
+            ("any",    "TCP"),
+            ("any",    "UDP"),
+            ("any",    "Выкл"),
+        };
+        int total = combos.Length;
 
         // Сохраняем исходные настройки
         string origIpSet = "";
@@ -602,11 +614,17 @@ public sealed partial class ServiceViewModel : ObservableObject
             origProtocol = GameFilterProtocol;
         });
 
+        // Получаем цели один раз — не более 5 штук для скорости
+        var targets = GetAutoTuneTargets?.Invoke()?.Take(5).ToList()
+                      ?? FluxRoute.Core.Services.ConnectivityChecker.BuiltinSites
+                          .SelectMany(kv => kv.Value).Take(5).ToList();
+
         (string ipSet, string protocol, int success, int count, double ms) best = ("", "", -1, 0, double.MaxValue);
+        bool foundPerfect = false;
 
         try
         {
-            for (int i = 0; i < combos.Count; i++)
+            for (int i = 0; i < combos.Length && !foundPerfect; i++)
             {
                 if (ct.IsCancellationRequested) break;
 
@@ -622,21 +640,16 @@ public sealed partial class ServiceViewModel : ObservableObject
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                     ApplyPresetState(gfEnabled, gfEnabled ? pr : "TCP и UDP", ip));
 
-                // Ждём чтобы winws успел подхватить изменения
-                try { await Task.Delay(1200, ct); } catch (OperationCanceledException) { break; }
+                // Короткая пауза — winws перечитывает файлы быстро
+                try { await Task.Delay(400, ct); } catch (OperationCanceledException) { break; }
                 if (ct.IsCancellationRequested) break;
-
-                // Получаем цели для проверки
-                var targets = GetAutoTuneTargets?.Invoke()?.ToList()
-                              ?? FluxRoute.Core.Services.ConnectivityChecker.BuiltinSites
-                                  .SelectMany(kv => kv.Value).Take(8).ToList();
 
                 if (targets.Count == 0) continue;
 
                 var sw = System.Diagnostics.Stopwatch.StartNew();
-                // Таймаут на каждую проверку — не более 10 сек
+                // Таймаут — 4 секунды на комбинацию
                 using var checkCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                checkCts.CancelAfter(TimeSpan.FromSeconds(10));
+                checkCts.CancelAfter(TimeSpan.FromSeconds(4));
                 IReadOnlyList<FluxRoute.Core.Models.CheckResult> results;
                 try
                 {
@@ -655,6 +668,10 @@ public sealed partial class ServiceViewModel : ObservableObject
 
                 if (successCount > best.success || (successCount == best.success && ms < best.ms))
                     best = (ip, pr, successCount, results.Count, ms);
+
+                // Ранний выход: все цели прошли
+                if (successCount == targets.Count && targets.Count > 0)
+                    foundPerfect = true;
             }
         }
         catch (OperationCanceledException) { }
@@ -674,7 +691,9 @@ public sealed partial class ServiceViewModel : ObservableObject
                     BestSuccessCount = best.success;
                     BestTotalCount = best.count;
                     BestTimeMs = Math.Round(best.ms / 1000, 2);
-                    AutoTuneStatusText = "Лучшая комбинация найдена.";
+                    AutoTuneStatusText = foundPerfect
+                        ? "Найдена идеальная комбинация (все цели)."
+                        : "Лучшая комбинация найдена.";
                     AutoTuneResultVisible = true;
                 }
                 else
