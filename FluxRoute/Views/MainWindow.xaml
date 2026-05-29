@@ -2772,16 +2772,16 @@
                     d:IsLocked="True" />
                                     </StackPanel>
                                     <TextBlock FontFamily="Segoe UI" FontSize="11"
-                Foreground="#8B949E" TextWrapping="Wrap" Margin="0,0,0,8"
-                Text="Снимите галочку, чтобы исключить стратегию из подбора ИИ и эволюции. Нажмите 🗑 для удаления эволюционированных стратегий."
-                d:IsLocked="True" />
+                                        Foreground="#8B949E" TextWrapping="Wrap" Margin="0,0,0,8"
+                                        Text="Снимите галочку, чтобы исключить стратегию из подбора ИИ и эволюции. Нажмите 🗑 для удаления эволюционированных стратегий."
+                                        d:IsLocked="True" />
                                     <Border MaxHeight="360" BorderBrush="#30363D"
                 BorderThickness="1" CornerRadius="6" Margin="0,0,0,8"
                 d:IsLocked="True">
                                         <ScrollViewer VerticalScrollBarVisibility="Auto"
-                    d:IsLocked="True">
+                                            d:IsLocked="True">
                                             <ItemsControl ItemsSource="{Binding AiStrategyRows}"
-                        d:IsLocked="True">
+                                                d:IsLocked="True">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
                                                         <Border Background="#111520" Padding="10,6"
@@ -2794,25 +2794,25 @@
                                                                     <ColumnDefinition Width="Auto" />
                                                                 </Grid.ColumnDefinitions>
                                                                 <StackPanel Grid.Column="0"
-                                            Orientation="Horizontal"
-                                            VerticalAlignment="Center"
-                                            Margin="0,0,10,0">
+                                                                    Orientation="Horizontal"
+                                                                    VerticalAlignment="Center"
+                                                                    Margin="0,0,10,0">
                                                                     <CheckBox
-                                                IsChecked="{Binding IsEnabled}"
-                                                VerticalAlignment="Center"
-                                                Margin="0,0,6,0" />
+                                                                        IsChecked="{Binding IsEnabled}"
+                                                                        VerticalAlignment="Center"
+                                                                        Margin="0,0,6,0" />
                                                                     <Button Content="🗑"
-                                                Style="{StaticResource RedBtn}"
-                                                Width="28" Height="28"
-                                                Padding="0" FontSize="12"
-                                                Visibility="{Binding CanDelete, Converter={StaticResource BoolToVis}}"
-                                                Command="{Binding DataContext.DeleteAiStrategyCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                CommandParameter="{Binding}"
-                                                ToolTip="Удалить эволюционированную стратегию" />
+                                                                        Style="{StaticResource RedBtn}"
+                                                                        Width="28" Height="28"
+                                                                        Padding="0" FontSize="12"
+                                                                        Visibility="{Binding CanDelete, Converter={StaticResource BoolToVis}}"
+                                                                        Command="{Binding DataContext.DeleteAiStrategyCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                        CommandParameter="{Binding}"
+                                                                        ToolTip="Удалить эволюционированную стратегию" />
                                                                 </StackPanel>
                                                                 <StackPanel Grid.Column="1"
-                                            Orientation="Vertical"
-                                            VerticalAlignment="Center">
+                                                                    Orientation="Vertical"
+                                                                    VerticalAlignment="Center">
                                                                     <TextBlock
                                                 Text="{Binding DisplayName}"
                                                 FontFamily="Segoe UI"
@@ -2825,20 +2825,20 @@
                                                 FontSize="11" />
                                                                 </StackPanel>
                                                                 <TextBlock Grid.Column="2"
-                                            Text="{Binding WilsonText}"
-                                            ToolTip="{Binding WilsonToolTip}"
-                                            FontFamily="Segoe UI"
-                                            Foreground="#4FC3F7"
-                                            FontSize="12"
-                                            VerticalAlignment="Center"
-                                            Margin="8,0,8,0" />
+                                                                    Text="{Binding WilsonText}"
+                                                                    ToolTip="{Binding WilsonToolTip}"
+                                                                    FontFamily="Segoe UI"
+                                                                    Foreground="#4FC3F7"
+                                                                    FontSize="12"
+                                                                    VerticalAlignment="Center"
+                                                                    Margin="8,0,8,0" />
                                                                 <TextBlock Grid.Column="3"
-                                            Text="{Binding VerificationText}"
-                                            ToolTip="{Binding VerificationToolTip}"
-                                            FontFamily="Segoe UI"
-                                            Foreground="#79C0FF"
-                                            FontSize="12"
-                                            VerticalAlignment="Center" />
+                                                                    Text="{Binding VerificationText}"
+                                                                    ToolTip="{Binding VerificationToolTip}"
+                                                                    FontFamily="Segoe UI"
+                                                                    Foreground="#79C0FF"
+                                                                    FontSize="12"
+                                                                    VerticalAlignment="Center" />
                                                             </Grid>
                                                         </Border>
                                                     </DataTemplate>
