@@ -8,4 +8,6 @@ public sealed class AiSettings
     public int EvolutionIntervalMinutes { get; set; } = 60;
     public int MinProbesBeforeEvolve { get; set; } = 6;
     public int KeepHistoryDays { get; set; } = 14;
+    /// <summary>Порог процента успеха, ниже которого эволюционированная стратегия автоматически удаляется.</summary>
+    public int AutoDeleteBelowScore { get; set; } = 60;
 }

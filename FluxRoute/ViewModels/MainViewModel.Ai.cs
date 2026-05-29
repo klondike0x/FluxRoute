@@ -21,6 +21,9 @@ public partial class MainViewModel
     [ObservableProperty] private int aiExplorationPermil = 100;
     partial void OnAiExplorationPermilChanged(int value) => SaveSettings();
 
+    [ObservableProperty] private int aiAutoDeleteBelowScore = 60;
+    partial void OnAiAutoDeleteBelowScoreChanged(int value) => SaveSettings();
+
     [ObservableProperty] private string aiNetworkLabel = "—";
     [ObservableProperty] private string aiGenerationText = "—";
     [ObservableProperty] private string aiProbeCountText = "—";
@@ -30,6 +33,7 @@ public partial class MainViewModel
         var s = _settingsService.Load().Ai;
         s.Enabled = AiEnabled;
         s.ExplorationRatePermil = AiExplorationPermil;
+        s.AutoDeleteBelowScore = AiAutoDeleteBelowScore;
         return s;
     }
 

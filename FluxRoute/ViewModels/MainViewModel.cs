@@ -7,7 +7,6 @@ using CommunityToolkit.Mvvm.Input;
 using System.Windows;
 using System.Windows.Threading;
 using Application = System.Windows.Application;
-
 using FluxRoute.Core.Models;
 using FluxRoute.Core.Services;
 using FluxRoute.AI.Services;
@@ -242,7 +241,6 @@ public partial class MainViewModel : ObservableObject
     partial void OnOrchestratorEnabledChanged(bool value)
     {
         SaveSettings();
-        // Не реагируем на изменения во время загрузки настроек
         if (_settingsLoaded)
             ApplyOrchestratorEnabledState();
     }
@@ -336,6 +334,7 @@ public partial class MainViewModel : ObservableObject
     }
     [ObservableProperty] private bool minimizeToTray = true;
     partial void OnMinimizeToTrayChanged(bool value) => SaveSettings();
+
     // ── Обновления (wrappers → UpdatesViewModel) ──
     public string UpdateStatus => Updates.UpdateStatus;
     public string CurrentEngineVersion => Updates.CurrentEngineVersion;
@@ -405,7 +404,6 @@ public partial class MainViewModel : ObservableObject
             addAppLog: msg => Logs.Add(msg),
             addRecentLog: AddToRecentLogs);
 
-        // Пробрасываем изменения из feature VMs наверх для XAML-совместимости
         Diagnostics.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
         Service.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
         Updates.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
@@ -468,7 +466,6 @@ public partial class MainViewModel : ObservableObject
         );
         _orchestrator.StatusChanged += OnOrchestratorStatus;
 
-        // Восстанавливаем кэш рейтинга — оркестратор пропустит сканирование при старте.
         if (settings.ProfileRatings.Count > 0)
         {
             var saved = settings.ProfileRatings
@@ -524,9 +521,11 @@ public partial class MainViewModel : ObservableObject
         MinimizeToTray = settings.MinimizeToTray;
         GameFilterProtocol = settings.GameFilterProtocol;
         ShowProfileSwitchWarning = settings.ShowProfileSwitchWarning;
+
         settings.Ai ??= new AiSettings();
         AiEnabled = settings.Ai.Enabled;
         AiExplorationPermil = settings.Ai.ExplorationRatePermil;
+        AiAutoDeleteBelowScore = settings.Ai.AutoDeleteBelowScore;
 
         // TG Proxy — сбрасываем устаревшие дефолты
         TgProxyHost = string.IsNullOrWhiteSpace(settings.TgProxy.Host) || settings.TgProxy.Host == "0.0.0.0" ? "127.0.0.1" : settings.TgProxy.Host;

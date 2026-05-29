@@ -2713,6 +2713,15 @@
                                             Width="60" Height="26" VerticalContentAlignment="Center"
                                             d:IsLocked="True" />
                                     </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10" d:IsLocked="True">
+                                        <TextBlock Style="{StaticResource Lbl}"
+               Text="Авто-удаление ниже (%): " VerticalAlignment="Center"
+               Margin="0,0,8,0" d:IsLocked="True" />
+                                        <TextBox
+        Text="{Binding AiAutoDeleteBelowScore, UpdateSourceTrigger=PropertyChanged}"
+        Width="60" Height="26" VerticalContentAlignment="Center"
+        d:IsLocked="True" />
+                                    </StackPanel>
                                     <Grid Margin="0,0,0,12" d:IsLocked="True">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="140" />

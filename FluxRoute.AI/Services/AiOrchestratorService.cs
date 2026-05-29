@@ -123,17 +123,19 @@ public sealed class AiOrchestratorService : IDisposable
             var fp = _fingerprints.Capture();
             _registry.MarkNetworkSeen(fp.Hash);
             _registry.Save();
-
             var list = _registry.GetActiveGenomes().ToList();
             if (list.Count == 0)
             {
                 Notify("ИИ: нет отмеченных стратегий для проверки.");
                 return;
             }
-
             Notify($"ИИ: ручная проверка {list.Count} стратегий...");
             foreach (var g in list)
-                await TryProbeAndPersistGenomeAsync(g, fp, ct, isFreshlyEvolved: false).ConfigureAwait(false);
+            {
+                var deleted = await TryProbeAndPersistGenomeAsync(g, fp, ct, isFreshlyEvolved: false).ConfigureAwait(false);
+                if (deleted && _currentGenome?.Id == g.Id)
+                    _currentGenome = null;
+            }
         }
         finally
         {
@@ -141,7 +143,6 @@ public sealed class AiOrchestratorService : IDisposable
                 await _switchProfile(previousProfile).ConfigureAwait(false);
             else if (wasRunning)
                 await _ensureProtectionRunning().ConfigureAwait(false);
-
             _currentGenome = previousGenome;
         }
     }
@@ -458,10 +459,11 @@ public sealed class AiOrchestratorService : IDisposable
         var previousGenome = _currentGenome;
         var previousProfile = _getActiveProfile();
         var wasRunning = _isWinwsRunning();
+        var deleted = false;
         try
         {
             await _refreshProfiles().ConfigureAwait(false);
-            await TryProbeAndPersistGenomeAsync(child, fp, ct, isFreshlyEvolved: true).ConfigureAwait(false);
+            deleted = await TryProbeAndPersistGenomeAsync(child, fp, ct, isFreshlyEvolved: true).ConfigureAwait(false);
         }
         finally
         {
@@ -469,21 +471,20 @@ public sealed class AiOrchestratorService : IDisposable
                 await _switchProfile(previousProfile).ConfigureAwait(false);
             else if (wasRunning)
                 await _ensureProtectionRunning().ConfigureAwait(false);
-
-            _currentGenome = previousGenome;
+            // Если удалили проверяемую стратегию и она была активной — сбрасываем текущий геном
+            _currentGenome = deleted && _currentGenome?.Id == child.Id ? null : previousGenome;
         }
     }
 
-    private async Task TryProbeAndPersistGenomeAsync(StrategyGenome g, NetworkFingerprint fp, CancellationToken ct,
+    private async Task<bool> TryProbeAndPersistGenomeAsync(StrategyGenome g, NetworkFingerprint fp, CancellationToken ct,
         bool isFreshlyEvolved)
     {
         var testProfile = ResolveProfile(g);
         if (testProfile is null)
         {
             Notify($"ИИ: не удалось проверить «{g.DisplayName}».");
-            return;
+            return false;
         }
-
         Notify(isFreshlyEvolved
             ? $"ИИ: проверка новой стратегии «{g.DisplayName}»..."
             : $"ИИ: ручная проверка «{g.DisplayName}»...");
@@ -496,17 +497,14 @@ public sealed class AiOrchestratorService : IDisposable
             StopAfterProbe = false,
         };
         var result = await _probeService.ProbeAsync(testProfile, targets, probeOptions, ct).ConfigureAwait(false);
-
         var failedKeys = result.FailedChecks.Select(x => x.Key).ToList();
         var avgLat = result.Checks.Where(x => x.ElapsedMs.HasValue).Select(x => x.ElapsedMs!.Value).DefaultIfEmpty(0)
             .Average();
-
         var failureSig = !result.ProcessStable
             ? "winws_failed"
             : result.Score < (int)Math.Round(FailThreshold * 100)
                 ? "network_failed"
                 : null;
-
         var outcome = new ProbeOutcome
         {
             GenomeId = g.Id,
@@ -519,16 +517,14 @@ public sealed class AiOrchestratorService : IDisposable
             FailedTargetKeys = failedKeys,
             FailureSignature = failureSig,
         };
-
         _history.Append(outcome);
-
         if (result.IsWorking(FailThreshold))
         {
             _registry.RecordBanditSuccess(g.Id, fp.Hash);
             _bandit.RegisterSuccess(g.Id);
             Notify(isFreshlyEvolved
-                    ? $"✅ ИИ: новая стратегия «{g.DisplayName}» ок ({result.Score}%)."
-                    : $"✅ ИИ: «{g.DisplayName}» ок ({result.Score}%).",
+                ? $"✅ ИИ: новая стратегия «{g.DisplayName}» ок ({result.Score}%)."
+                : $"✅ ИИ: «{g.DisplayName}» ок ({result.Score}%).",
                 result: result);
         }
         else
@@ -536,17 +532,27 @@ public sealed class AiOrchestratorService : IDisposable
             _registry.RecordBanditFailure(g.Id, fp.Hash);
             _bandit.RegisterFailure(g, failureSig);
             Notify(isFreshlyEvolved
-                    ? $"⚠️ ИИ: новая стратегия «{g.DisplayName}» {result.Score}% ({result.Summary})"
-                    : $"⚠️ ИИ: «{g.DisplayName}» {result.Score}% ({result.Summary})",
+                ? $"⚠️ ИИ: новая стратегия «{g.DisplayName}» {result.Score}% ({result.Summary})"
+                : $"⚠️ ИИ: «{g.DisplayName}» {result.Score}% ({result.Summary})",
                 result: result);
         }
-
         await _notifyScoreUpdate(testProfile.FileName, result.Score).ConfigureAwait(false);
-
         g.LastVerificationScore = result.Score;
         g.LastVerifiedAt = DateTimeOffset.UtcNow;
         _registry.Upsert(g);
         _registry.Save();
+
+        // ═══ АВТОУДАЛЕНИЕ НЕУДАЧНЫХ ЭВОЛЮЦИОНИРОВАННЫХ СТРАТЕГИЙ ═══
+        var threshold = _aiSettings().AutoDeleteBelowScore;
+        if (g.Origin == StrategyOrigin.Evolved && result.Score < threshold)
+        {
+            Notify($"🗑 ИИ: стратегия «{g.DisplayName}» ({result.Score}%) ниже порога {threshold}% — удалена автоматически.", result: result);
+            TryDeleteGenomeBatFile(g);
+            _registry.Remove(g.Id);
+            _registry.Save();
+            return true;
+        }
+        return false;
     }
 
     private void SyncBuiltins()
@@ -584,6 +590,18 @@ public sealed class AiOrchestratorService : IDisposable
         }
 
         _registry.Save();
+    }
+
+    private static void TryDeleteGenomeBatFile(StrategyGenome g)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(g.SourceBatPath) && File.Exists(g.SourceBatPath))
+                File.Delete(g.SourceBatPath);
+        }
+        catch
+        {
+        }
     }
 
     private List<TargetEntry> BuildTargets()
