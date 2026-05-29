@@ -2463,8 +2463,8 @@
                                                 <BeginStoryboard>
                                                     <Storyboard>
                                                         <DoubleAnimation
-                                                            Storyboard.TargetProperty="Opacity"
-                                                            From="0" To="1" Duration="0:0:0.25" />
+                                    Storyboard.TargetProperty="Opacity"
+                                    From="0" To="1" Duration="0:0:0.25" />
                                                     </Storyboard>
                                                 </BeginStoryboard>
                                             </DataTrigger.EnterActions>
@@ -2475,64 +2475,64 @@
                             <ScrollViewer VerticalScrollBarVisibility="Auto" d:IsLocked="True">
                                 <StackPanel Margin="16,12" d:IsLocked="True">
                                     <TextBlock Style="{StaticResource SecH}" Text="УПРАВЛЕНИЕ"
-                                        Margin="0,0,0,8" d:IsLocked="True" />
+                Margin="0,0,0,8" d:IsLocked="True" />
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10"
-                                        d:IsLocked="True">
+                d:IsLocked="True">
                                         <Button Margin="0,0,10,0"
-                                            Command="{Binding ToggleOrchestratorCommand}"
-                                            d:IsLocked="True">
+                    Command="{Binding ToggleOrchestratorCommand}"
+                    d:IsLocked="True">
                                             <Button.Style>
                                                 <Style TargetType="Button"
-                                                    BasedOn="{StaticResource ActionBtn}">
+                            BasedOn="{StaticResource ActionBtn}">
                                                     <Setter Property="Content"
-                                                        Value="▶ Включить оркестратор" />
+                                Value="▶ Включить оркестратор" />
                                                     <Style.Triggers>
                                                         <DataTrigger
-                                                            Binding="{Binding OrchestratorEnabled}"
-                                                            Value="True">
+                                    Binding="{Binding OrchestratorEnabled}"
+                                    Value="True">
                                                             <Setter Property="Content"
-                                                                Value="⏹ Отключить оркестратор" />
+                                        Value="⏹ Отключить оркестратор" />
                                                             <Setter Property="BorderBrush"
-                                                                Value="#6B1A1A" />
+                                        Value="#6B1A1A" />
                                                             <Setter Property="Foreground"
-                                                                Value="#E74C3C" />
+                                        Value="#E74C3C" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </Button.Style>
                                         </Button>
                                         <Button Content="Проверить сейчас"
-                                            Style="{StaticResource ActionBtn}"
-                                            Command="{Binding CheckNowCommand}" d:IsLocked="True" />
+                    Style="{StaticResource ActionBtn}"
+                    Command="{Binding CheckNowCommand}" d:IsLocked="True" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4"
-                                        d:IsLocked="True">
+                d:IsLocked="True">
                                         <TextBlock Style="{StaticResource Lbl}"
-                                            Text="Интервал (мин): " Margin="0,0,8,0"
-                                            d:IsLocked="True" />
+                    Text="Интервал (мин): " Margin="0,0,8,0"
+                    d:IsLocked="True" />
                                         <TextBox
-                                            Text="{Binding OrchestratorInterval, UpdateSourceTrigger=PropertyChanged}"
-                                            Width="50" Height="28" VerticalContentAlignment="Center"
-                                            d:IsLocked="True" />
+                    Text="{Binding OrchestratorInterval, UpdateSourceTrigger=PropertyChanged}"
+                    Width="50" Height="28" VerticalContentAlignment="Center"
+                    d:IsLocked="True" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0"
-                                        d:IsLocked="True">
+                d:IsLocked="True">
                                         <TextBlock Style="{StaticResource Lbl}" Text="Режим: "
-                                            Margin="0,0,4,0" d:IsLocked="True" />
+                    Margin="0,0,4,0" d:IsLocked="True" />
                                         <TextBlock d:IsLocked="True">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock"
-                                                    BasedOn="{StaticResource Val}">
+                            BasedOn="{StaticResource Val}">
                                                     <Setter Property="Text" Value="ручной" />
                                                     <Setter Property="Foreground" Value="#4A5170" />
                                                     <Style.Triggers>
                                                         <DataTrigger
-                                                            Binding="{Binding OrchestratorEnabled}"
-                                                            Value="True">
+                                    Binding="{Binding OrchestratorEnabled}"
+                                    Value="True">
                                                             <Setter Property="Text"
-                                                                Value="автоматический" />
+                                        Value="автоматический" />
                                                             <Setter Property="Foreground"
-                                                                Value="#00D68F" />
+                                        Value="#00D68F" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -2540,32 +2540,32 @@
                                         </TextBlock>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0"
-                                        d:IsLocked="True">
+                d:IsLocked="True">
                                         <TextBlock Style="{StaticResource Lbl}"
-                                            Text="Следующая проверка: " Margin="0,0,4,0"
-                                            d:IsLocked="True" />
+                    Text="Следующая проверка: " Margin="0,0,4,0"
+                    d:IsLocked="True" />
                                         <TextBlock Style="{StaticResource Val}"
-                                            Text="{Binding OrchestratorNextCheck}" d:IsLocked="True" />
+                    Text="{Binding OrchestratorNextCheck}" d:IsLocked="True" />
                                     </StackPanel>
                                     <Rectangle Style="{StaticResource Sep}" d:IsLocked="True" />
 
                                     <!-- ── ЖУРНАЛ ОРКЕСТРАТОРА ── -->
                                     <TextBlock Style="{StaticResource SecH}" Text="ЖУРНАЛ"
-                                        Margin="0,0,0,4" d:IsLocked="True" />
+                Margin="0,0,0,4" d:IsLocked="True" />
                                     <Border Background="#0A0E17" BorderBrush="#21262D"
-                                        BorderThickness="1"
-                                        CornerRadius="4" Margin="0,0,0,8" d:IsLocked="True">
+                BorderThickness="1"
+                CornerRadius="4" Margin="0,0,0,8" d:IsLocked="True">
                                         <ScrollViewer x:Name="OrchestratorLogScroll"
-                                            Height="140" VerticalScrollBarVisibility="Auto"
-                                            Padding="6,4" d:IsLocked="True">
+                    Height="140" VerticalScrollBarVisibility="Auto"
+                    Padding="6,4" d:IsLocked="True">
                                             <ItemsControl ItemsSource="{Binding OrchestratorLogs}"
-                                                d:IsLocked="True">
+                        d:IsLocked="True">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
                                                         <TextBlock Text="{Binding}"
-                                                            FontFamily="Consolas" FontSize="11"
-                                                            Foreground="#C9D1D9" TextWrapping="Wrap"
-                                                            Margin="0,1" />
+                                    FontFamily="Consolas" FontSize="11"
+                                    Foreground="#C9D1D9" TextWrapping="Wrap"
+                                    Margin="0,1" />
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
@@ -2574,182 +2574,96 @@
 
                                     <Rectangle Style="{StaticResource Sep}" d:IsLocked="True" />
                                     <TextBlock Style="{StaticResource SecH}"
-                                        Text="САЙТЫ ДЛЯ ПРОВЕРКИ" d:IsLocked="True" />
+                Text="САЙТЫ ДЛЯ ПРОВЕРКИ" d:IsLocked="True" />
                                     <WrapPanel Margin="0,0,0,8" d:IsLocked="True">
                                         <CheckBox Content="YouTube"
-                                            IsChecked="{Binding SiteYouTube}" Margin="0,4,16,4"
-                                            d:IsLocked="True" />
+                    IsChecked="{Binding SiteYouTube}" Margin="0,4,16,4"
+                    d:IsLocked="True" />
                                         <CheckBox Content="Discord"
-                                            IsChecked="{Binding SiteDiscord}" Margin="0,4,16,4"
-                                            d:IsLocked="True" />
+                    IsChecked="{Binding SiteDiscord}" Margin="0,4,16,4"
+                    d:IsLocked="True" />
                                         <CheckBox Content="Google" IsChecked="{Binding SiteGoogle}"
-                                            Margin="0,4,16,4" d:IsLocked="True" />
+                    Margin="0,4,16,4" d:IsLocked="True" />
                                         <CheckBox Content="Twitch" IsChecked="{Binding SiteTwitch}"
-                                            Margin="0,4,16,4" d:IsLocked="True" />
+                    Margin="0,4,16,4" d:IsLocked="True" />
                                         <CheckBox Content="Instagram"
-                                            IsChecked="{Binding SiteInstagram}" Margin="0,4,16,4"
-                                            d:IsLocked="True" />
+                    IsChecked="{Binding SiteInstagram}" Margin="0,4,16,4"
+                    d:IsLocked="True" />
                                         <CheckBox Content="Telegram"
-                                            IsChecked="{Binding SiteTelegram}" Margin="0,4,16,4"
-                                            d:IsLocked="True" />
+                    IsChecked="{Binding SiteTelegram}" Margin="0,4,16,4"
+                    d:IsLocked="True" />
                                     </WrapPanel>
 
                                     <Rectangle Style="{StaticResource Sep}" d:IsLocked="True" />
                                     <TextBlock Style="{StaticResource SecH}" Text="СВОИ САЙТЫ"
-                                        d:IsLocked="True" />
+                d:IsLocked="True" />
                                     <TextBlock FontFamily="Segoe UI" FontSize="11"
-                                        Foreground="#8B949E" TextWrapping="Wrap"
-                                        Margin="0,0,0,6" d:IsLocked="True"
-                                        Text="Добавьте свои сайты для проверки доступности — по одному на строку. Поддерживаются URL (https://...) и домены (example.com)." />
+                Foreground="#8B949E" TextWrapping="Wrap"
+                Margin="0,0,0,6" d:IsLocked="True"
+                Text="Добавьте свои сайты для проверки доступности — по одному на строку. Поддерживаются URL (https://...) и домены (example.com)." />
                                     <TextBox
-                                        Text="{Binding UserCustomSitesText, UpdateSourceTrigger=PropertyChanged}"
-                                        AcceptsReturn="True" TextWrapping="Wrap"
-                                        MinHeight="80" MaxHeight="180"
-                                        VerticalScrollBarVisibility="Auto"
-                                        FontFamily="Consolas" FontSize="12"
-                                        Margin="0,0,0,8" Padding="6,4"
-                                        Background="#0D1117" Foreground="#C9D1D9"
-                                        CaretBrush="#C9D1D9"
-                                        BorderBrush="#30363D" BorderThickness="1"
-                                        ToolTip="Один сайт на строку. Например:&#10;example.com&#10;https://mysite.ru"
-                                        d:IsLocked="True" />
+                Text="{Binding UserCustomSitesText, UpdateSourceTrigger=PropertyChanged}"
+                AcceptsReturn="True" TextWrapping="Wrap"
+                MinHeight="80" MaxHeight="180"
+                VerticalScrollBarVisibility="Auto"
+                FontFamily="Consolas" FontSize="12"
+                Margin="0,0,0,8" Padding="6,4"
+                Background="#0D1117" Foreground="#C9D1D9"
+                CaretBrush="#C9D1D9"
+                BorderBrush="#30363D" BorderThickness="1"
+                ToolTip="Один сайт на строку. Например:&#10;example.com&#10;https://mysite.ru"
+                d:IsLocked="True" />
 
-                                    <Border Margin="0,0,0,8" d:IsLocked="True">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding AiEnabled}"
-                                                        Value="True">
-                                                        <Setter Property="Visibility"
-                                                            Value="Visible" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <StackPanel d:IsLocked="True">
-                                            <TextBlock Style="{StaticResource SecH}"
-                                                Text="СТРАТЕГИИ ИИ" d:IsLocked="True" />
-                                            <TextBlock FontFamily="Segoe UI" FontSize="11"
-                                                Foreground="#8B949E" TextWrapping="Wrap"
-                                                Margin="0,0,0,8"
-                                                Text="Снимите галочку, чтобы исключить стратегию из подбора ИИ и эволюции."
-                                                d:IsLocked="True" />
-                                            <ItemsControl ItemsSource="{Binding AiStrategyRows}"
-                                                d:IsLocked="True">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Border Background="#111520" Padding="10,6"
-                                                            Margin="0,2">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                    <ColumnDefinition Width="*" />
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                </Grid.ColumnDefinitions>
-                                                                <StackPanel Grid.Column="0"
-                                                                    Orientation="Horizontal"
-                                                                    VerticalAlignment="Center"
-                                                                    Margin="0,0,10,0">
-                                                                    <CheckBox
-                                                                        IsChecked="{Binding IsEnabled}"
-                                                                        VerticalAlignment="Center"
-                                                                        Margin="0,0,6,0" />
-                                                                    <Button Content="🗑"
-                                                                        Style="{StaticResource RedBtn}"
-                                                                        Width="28" Height="28"
-                                                                        Padding="0" FontSize="12"
-                                                                        Visibility="{Binding CanDelete, Converter={StaticResource BoolToVis}}"
-                                                                        Command="{Binding DataContext.DeleteAiStrategyCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                        CommandParameter="{Binding}"
-                                                                        ToolTip="Удалить эволюционированную стратегию" />
-                                                                </StackPanel>
-                                                                <StackPanel Grid.Column="1"
-                                                                    Orientation="Vertical"
-                                                                    VerticalAlignment="Center">
-                                                                    <TextBlock
-                                                                        Text="{Binding DisplayName}"
-                                                                        FontFamily="Segoe UI"
-                                                                        Foreground="#C8D4EC"
-                                                                        FontSize="13" />
-                                                                    <TextBlock
-                                                                        Text="{Binding OriginTag}"
-                                                                        FontFamily="Segoe UI"
-                                                                        Foreground="#8B949E"
-                                                                        FontSize="11" />
-                                                                </StackPanel>
-                                                                <TextBlock Grid.Column="2"
-                                                                    Text="{Binding WilsonText}"
-                                                                    ToolTip="{Binding WilsonToolTip}"
-                                                                    FontFamily="Segoe UI"
-                                                                    Foreground="#4FC3F7"
-                                                                    FontSize="12"
-                                                                    VerticalAlignment="Center"
-                                                                    Margin="8,0,8,0" />
-                                                                <TextBlock Grid.Column="3"
-                                                                    Text="{Binding VerificationText}"
-                                                                    ToolTip="{Binding VerificationToolTip}"
-                                                                    FontFamily="Segoe UI"
-                                                                    Foreground="#79C0FF"
-                                                                    FontSize="12"
-                                                                    VerticalAlignment="Center" />
-                                                            </Grid>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </StackPanel>
-                                    </Border>
+                                    <!-- Блок СТРАТЕГИИ ИИ УДАЛЁН — теперь на вкладке ИИ -->
 
                                     <Rectangle Style="{StaticResource Sep}" d:IsLocked="True" />
                                     <TextBlock Style="{StaticResource SecH}" Text="РЕЙТИНГ ПРОФИЛЕЙ"
-                                        d:IsLocked="True" />
+                d:IsLocked="True" />
                                     <Button HorizontalAlignment="Left" Margin="0,0,0,10"
-                                        Command="{Binding ScanProfilesCommand}" d:IsLocked="True">
+                Command="{Binding ScanProfilesCommand}" d:IsLocked="True">
                                         <Button.Style>
                                             <Style TargetType="Button"
-                                                BasedOn="{StaticResource ActionBtnAccent}">
+                        BasedOn="{StaticResource ActionBtnAccent}">
                                                 <Setter Property="Content"
-                                                    Value="Сканировать все профили" />
+                            Value="Сканировать все профили" />
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsScanning}"
-                                                        Value="True">
+                                Value="True">
                                                         <Setter Property="IsEnabled" Value="False" />
                                                         <Setter Property="Content"
-                                                            Value="Сканирование..." />
+                                    Value="Сканирование..." />
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </Button.Style>
                                     </Button>
                                     <TextBlock Text="{Binding ScanProgressText}"
-                                        FontFamily="Segoe UI" Foreground="#4A90E2"
-                                        FontSize="12" Margin="0,0,0,8"
-                                        Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}"
-                                        d:IsLocked="True" />
+                FontFamily="Segoe UI" Foreground="#4A90E2"
+                FontSize="12" Margin="0,0,0,8"
+                Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}"
+                d:IsLocked="True" />
                                     <ItemsControl ItemsSource="{Binding ProfileScores}"
-                                        d:IsLocked="True">
+                d:IsLocked="True">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <Border Background="#111520" CornerRadius="6"
-                                                    Padding="10,6" Margin="0,2">
+                            Padding="10,6" Margin="0,2">
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="*" />
                                                             <ColumnDefinition Width="Auto" />
                                                         </Grid.ColumnDefinitions>
                                                         <TextBlock Grid.Column="0"
-                                                            Text="{Binding DisplayName}"
-                                                            FontFamily="Segoe UI"
-                                                            Foreground="#C8D4EC" FontSize="12"
-                                                            VerticalAlignment="Center" />
+                                    Text="{Binding DisplayName}"
+                                    FontFamily="Segoe UI"
+                                    Foreground="#C8D4EC" FontSize="12"
+                                    VerticalAlignment="Center" />
                                                         <TextBlock Grid.Column="1"
-                                                            Text="{Binding ScoreText}"
-                                                            FontFamily="Segoe UI"
-                                                            Foreground="#4A90E2" FontSize="12"
-                                                            FontWeight="Bold"
-                                                            VerticalAlignment="Center" />
+                                    Text="{Binding ScoreText}"
+                                    FontFamily="Segoe UI"
+                                    Foreground="#4A90E2" FontSize="12"
+                                    FontWeight="Bold"
+                                    VerticalAlignment="Center" />
                                                     </Grid>
                                                 </Border>
                                             </DataTemplate>
@@ -2772,8 +2686,8 @@
                                                 <BeginStoryboard>
                                                     <Storyboard>
                                                         <DoubleAnimation
-                                                            Storyboard.TargetProperty="Opacity"
-                                                            From="0" To="1" Duration="0:0:0.25" />
+                                    Storyboard.TargetProperty="Opacity"
+                                    From="0" To="1" Duration="0:0:0.25" />
                                                     </Storyboard>
                                                 </BeginStoryboard>
                                             </DataTrigger.EnterActions>
@@ -2784,20 +2698,20 @@
                             <ScrollViewer VerticalScrollBarVisibility="Auto" d:IsLocked="True">
                                 <StackPanel Margin="16,12" d:IsLocked="True">
                                     <TextBlock Style="{StaticResource SecH}" Text="РЕЖИМ ИИ"
-                                        Margin="0,0,0,8" d:IsLocked="True" />
+                Margin="0,0,0,8" d:IsLocked="True" />
                                     <CheckBox
-                                        Content="Включить самообучаемый подбор стратегий (оркестратор использует ИИ)"
-                                        IsChecked="{Binding AiEnabled}" Margin="0,0,0,10"
-                                        d:IsLocked="True" />
+                Content="Включить самообучаемый подбор стратегий (оркестратор использует ИИ)"
+                IsChecked="{Binding AiEnabled}" Margin="0,0,0,10"
+                d:IsLocked="True" />
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10"
-                                        d:IsLocked="True">
+                d:IsLocked="True">
                                         <TextBlock Style="{StaticResource Lbl}"
-                                            Text="Exploration (‰): " VerticalAlignment="Center"
-                                            Margin="0,0,8,0" d:IsLocked="True" />
+                    Text="Exploration (‰): " VerticalAlignment="Center"
+                    Margin="0,0,8,0" d:IsLocked="True" />
                                         <TextBox
-                                            Text="{Binding AiExplorationPermil, UpdateSourceTrigger=PropertyChanged}"
-                                            Width="60" Height="26" VerticalContentAlignment="Center"
-                                            d:IsLocked="True" />
+                    Text="{Binding AiExplorationPermil, UpdateSourceTrigger=PropertyChanged}"
+                    Width="60" Height="26" VerticalContentAlignment="Center"
+                    d:IsLocked="True" />
                                     </StackPanel>
                                     <Grid Margin="0,0,0,12" d:IsLocked="True">
                                         <Grid.ColumnDefinitions>
@@ -2810,115 +2724,133 @@
                                             <RowDefinition Height="Auto" />
                                         </Grid.RowDefinitions>
                                         <TextBlock Grid.Row="0" Grid.Column="0"
-                                            Style="{StaticResource Lbl}" Text="Сеть:"
-                                            d:IsLocked="True" />
+                    Style="{StaticResource Lbl}" Text="Сеть:"
+                    d:IsLocked="True" />
                                         <TextBlock Grid.Row="0" Grid.Column="1"
-                                            Style="{StaticResource Val}"
-                                            Text="{Binding AiNetworkLabel}" d:IsLocked="True" />
+                    Style="{StaticResource Val}"
+                    Text="{Binding AiNetworkLabel}" d:IsLocked="True" />
                                         <TextBlock Grid.Row="1" Grid.Column="0"
-                                            Style="{StaticResource Lbl}" Text="Поколение:"
-                                            d:IsLocked="True" />
+                    Style="{StaticResource Lbl}" Text="Поколение:"
+                    d:IsLocked="True" />
                                         <TextBlock Grid.Row="1" Grid.Column="1"
-                                            Style="{StaticResource Val}"
-                                            Text="{Binding AiGenerationText}" d:IsLocked="True" />
+                    Style="{StaticResource Val}"
+                    Text="{Binding AiGenerationText}" d:IsLocked="True" />
                                         <TextBlock Grid.Row="2" Grid.Column="0"
-                                            Style="{StaticResource Lbl}" Text="Проб в истории:"
-                                            d:IsLocked="True" />
+                    Style="{StaticResource Lbl}" Text="Проб в истории:"
+                    d:IsLocked="True" />
                                         <TextBlock Grid.Row="2" Grid.Column="1"
-                                            Style="{StaticResource Val}"
-                                            Text="{Binding AiProbeCountText}" d:IsLocked="True" />
+                    Style="{StaticResource Val}"
+                    Text="{Binding AiProbeCountText}" d:IsLocked="True" />
                                     </Grid>
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10"
-                                        d:IsLocked="True">
+                d:IsLocked="True">
                                         <Button Content="⚗ Эволюция сейчас"
-                                            Style="{StaticResource AccentBtn}"
-                                            Margin="0,0,10,0"
-                                            Command="{Binding RunAiEvolutionCommand}"
-                                            d:IsLocked="True" />
+                    Style="{StaticResource AccentBtn}"
+                    Margin="0,0,10,0"
+                    Command="{Binding RunAiEvolutionCommand}"
+                    d:IsLocked="True" />
                                         <Button Content="↺ Сброс модели"
-                                            Style="{StaticResource TermBtn}"
-                                            Margin="0,0,10,0"
-                                            Command="{Binding ResetAiModelCommand}"
-                                            d:IsLocked="True" />
+                    Style="{StaticResource TermBtn}"
+                    Margin="0,0,10,0"
+                    Command="{Binding ResetAiModelCommand}"
+                    d:IsLocked="True" />
                                         <Button Content="📁 ai-evolved"
-                                            Style="{StaticResource TermBtn}"
-                                            Command="{Binding OpenAiEvolvedFolderCommand}"
-                                            d:IsLocked="True" />
+                    Style="{StaticResource TermBtn}"
+                    Command="{Binding OpenAiEvolvedFolderCommand}"
+                    d:IsLocked="True" />
                                     </StackPanel>
                                     <Rectangle Style="{StaticResource Sep}" d:IsLocked="True" />
+
+                                    <!-- ── СТРАТЕГИИ (перенесено с вкладки Оркестратор) ── -->
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8"
-                                        d:IsLocked="True">
+                d:IsLocked="True">
                                         <TextBlock Style="{StaticResource SecH}" Text="СТРАТЕГИИ"
-                                            d:IsLocked="True" />
+                    d:IsLocked="True" />
                                         <TextBlock FontFamily="Segoe UI" FontSize="12"
-                                            Foreground="#8B949E" Margin="12,2,0,0"
-                                            Text="{Binding AiStrategyRowCount, StringFormat='({0})'}"
-                                            d:IsLocked="True" />
+                    Foreground="#8B949E" Margin="12,2,0,0"
+                    Text="{Binding AiStrategyRowCount, StringFormat='({0})'}"
+                    d:IsLocked="True" />
                                     </StackPanel>
                                     <TextBlock FontFamily="Segoe UI" FontSize="11"
-                                        Foreground="#8B949E" TextWrapping="Wrap" Margin="0,0,0,8"
-                                        Text="Галочки и ручная проверка — на вкладке «Оркестратор»."
-                                        d:IsLocked="True" />
+                Foreground="#8B949E" TextWrapping="Wrap" Margin="0,0,0,8"
+                Text="Снимите галочку, чтобы исключить стратегию из подбора ИИ и эволюции. Нажмите 🗑 для удаления эволюционированных стратегий."
+                d:IsLocked="True" />
                                     <Border MaxHeight="360" BorderBrush="#30363D"
-                                        BorderThickness="1" CornerRadius="6" Margin="0,0,0,8"
-                                        d:IsLocked="True">
+                BorderThickness="1" CornerRadius="6" Margin="0,0,0,8"
+                d:IsLocked="True">
                                         <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                            d:IsLocked="True">
-                                            <ListBox ItemsSource="{Binding AiStrategyRows}"
-                                                Background="Transparent" BorderThickness="0"
-                                                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                d:IsLocked="True">
-                                                <ListBox.ItemTemplate>
+                    d:IsLocked="True">
+                                            <ItemsControl ItemsSource="{Binding AiStrategyRows}"
+                        d:IsLocked="True">
+                                                <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
                                                         <Border Background="#111520" Padding="10,6"
-                                                            Margin="0,2">
+                                    Margin="0,2">
                                                             <Grid>
                                                                 <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto" />
                                                                     <ColumnDefinition Width="*" />
                                                                     <ColumnDefinition Width="Auto" />
                                                                     <ColumnDefinition Width="Auto" />
                                                                 </Grid.ColumnDefinitions>
                                                                 <StackPanel Grid.Column="0"
-                                                                    Orientation="Vertical"
-                                                                    VerticalAlignment="Center">
-                                                                    <TextBlock
-                                                                        Text="{Binding DisplayName}"
-                                                                        FontFamily="Segoe UI"
-                                                                        Foreground="#C8D4EC"
-                                                                        FontSize="13" />
-                                                                    <TextBlock
-                                                                        Text="{Binding OriginTag}"
-                                                                        FontFamily="Segoe UI"
-                                                                        Foreground="#8B949E"
-                                                                        FontSize="11" />
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center"
+                                            Margin="0,0,10,0">
+                                                                    <CheckBox
+                                                IsChecked="{Binding IsEnabled}"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,6,0" />
+                                                                    <Button Content="🗑"
+                                                Style="{StaticResource RedBtn}"
+                                                Width="28" Height="28"
+                                                Padding="0" FontSize="12"
+                                                Visibility="{Binding CanDelete, Converter={StaticResource BoolToVis}}"
+                                                Command="{Binding DataContext.DeleteAiStrategyCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip="Удалить эволюционированную стратегию" />
                                                                 </StackPanel>
-                                                                <TextBlock Grid.Column="1"
-                                                                    Text="{Binding WilsonText}"
-                                                                    ToolTip="{Binding WilsonToolTip}"
-                                                                    FontFamily="Segoe UI"
-                                                                    Foreground="#4FC3F7"
-                                                                    FontSize="12"
-                                                                    VerticalAlignment="Center"
-                                                                    Margin="8,0,8,0" />
+                                                                <StackPanel Grid.Column="1"
+                                            Orientation="Vertical"
+                                            VerticalAlignment="Center">
+                                                                    <TextBlock
+                                                Text="{Binding DisplayName}"
+                                                FontFamily="Segoe UI"
+                                                Foreground="#C8D4EC"
+                                                FontSize="13" />
+                                                                    <TextBlock
+                                                Text="{Binding OriginTag}"
+                                                FontFamily="Segoe UI"
+                                                Foreground="#8B949E"
+                                                FontSize="11" />
+                                                                </StackPanel>
                                                                 <TextBlock Grid.Column="2"
-                                                                    Text="{Binding VerificationText}"
-                                                                    ToolTip="{Binding VerificationToolTip}"
-                                                                    FontFamily="Segoe UI"
-                                                                    Foreground="#79C0FF"
-                                                                    FontSize="12"
-                                                                    VerticalAlignment="Center" />
+                                            Text="{Binding WilsonText}"
+                                            ToolTip="{Binding WilsonToolTip}"
+                                            FontFamily="Segoe UI"
+                                            Foreground="#4FC3F7"
+                                            FontSize="12"
+                                            VerticalAlignment="Center"
+                                            Margin="8,0,8,0" />
+                                                                <TextBlock Grid.Column="3"
+                                            Text="{Binding VerificationText}"
+                                            ToolTip="{Binding VerificationToolTip}"
+                                            FontFamily="Segoe UI"
+                                            Foreground="#79C0FF"
+                                            FontSize="12"
+                                            VerticalAlignment="Center" />
                                                             </Grid>
                                                         </Border>
                                                     </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
                                         </ScrollViewer>
                                     </Border>
                                     <TextBlock Margin="0,12,0,0" FontFamily="Segoe UI" FontSize="11"
-                                        Foreground="#8B949E"
-                                        TextWrapping="Wrap"
-                                        Text="ИИ использует оркестратор проверок на вкладке «Оркестратор». Новые стратегии сохраняются в engine/ai-evolved."
-                                        d:IsLocked="True" />
+                Foreground="#8B949E"
+                TextWrapping="Wrap"
+                Text="ИИ использует оркестратор проверок на вкладке «Оркестратор». Новые стратегии сохраняются в engine/ai-evolved."
+                d:IsLocked="True" />
                                 </StackPanel>
                             </ScrollViewer>
                         </Border>
