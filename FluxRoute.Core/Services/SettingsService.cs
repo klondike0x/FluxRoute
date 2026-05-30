@@ -28,6 +28,18 @@ public sealed class AppSettings
     // Пользовательские сайты для проверки
     public List<string> UserSites { get; set; } = new();
 
+    // ═══ НОВЫЕ СВОЙСТВА ДЛЯ МЕНЕДЖЕРА ДОМЕНОВ ═══
+    /// <summary>
+    /// Список доменов для проверки (включения).
+    /// </summary>
+    public List<string> CustomTargetDomains { get; set; } = new();
+
+    /// <summary>
+    /// Список доменов для исключения из проверки.
+    /// </summary>
+    public List<string> CustomExcludeDomains { get; set; } = new();
+    // ═══════════════════════════════════════════
+
     // Рейтинг профилей
     public List<ProfileRatingEntry> ProfileRatings { get; set; } = new();
 

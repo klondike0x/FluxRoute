@@ -2189,7 +2189,7 @@
                                                     HorizontalAlignment="Right" d:IsLocked="True" />
                                             </Grid>
                                             <!-- Row: Engine version -->
-                                            <Grid d:IsLocked="True">
+                                            <Grid Margin="0,0,0,7" d:IsLocked="True">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="*" />
@@ -2205,6 +2205,27 @@
                                                     VerticalAlignment="Center" d:IsLocked="True" />
                                                 <TextBlock Grid.Column="2"
                                                     Text="{Binding CurrentEngineVersion, Mode=OneWay}"
+                                                    FontFamily="Segoe UI"
+                                                    FontSize="11" Foreground="#7A90B8"
+                                                    HorizontalAlignment="Right" d:IsLocked="True" />
+                                            </Grid>
+                                            <!-- Row: TG WS Proxy version -->
+                                            <Grid d:IsLocked="True">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Ellipse Grid.Column="0" Width="7" Height="7"
+                                                    Fill="#2FC8D8"
+                                                    Margin="0,0,8,0" VerticalAlignment="Center"
+                                                    d:IsLocked="True" />
+                                                <TextBlock Grid.Column="1" Text="TG WS Proxy"
+                                                    FontFamily="Segoe UI"
+                                                    FontSize="11" Foreground="#4A5A7A"
+                                                    VerticalAlignment="Center" d:IsLocked="True" />
+                                                <TextBlock Grid.Column="2"
+                                                    Text="{Binding TgProxyVersion}"
                                                     FontFamily="Segoe UI"
                                                     FontSize="11" Foreground="#7A90B8"
                                                     HorizontalAlignment="Right" d:IsLocked="True" />
@@ -2595,24 +2616,242 @@
                                     </WrapPanel>
 
                                     <Rectangle Style="{StaticResource Sep}" d:IsLocked="True" />
-                                    <TextBlock Style="{StaticResource SecH}" Text="СВОИ САЙТЫ"
-                                        d:IsLocked="True" />
-                                    <TextBlock FontFamily="Segoe UI" FontSize="11"
-                                        Foreground="#8B949E" TextWrapping="Wrap"
-                                        Margin="0,0,0,6" d:IsLocked="True"
-                                        Text="Добавьте свои сайты для проверки доступности — по одному на строку. Поддерживаются URL (https://...) и домены (example.com)." />
-                                    <TextBox
-                                        Text="{Binding UserCustomSitesText, UpdateSourceTrigger=PropertyChanged}"
-                                        AcceptsReturn="True" TextWrapping="Wrap"
-                                        MinHeight="80" MaxHeight="180"
-                                        VerticalScrollBarVisibility="Auto"
-                                        FontFamily="Consolas" FontSize="12"
-                                        Margin="0,0,0,8" Padding="6,4"
-                                        Background="#0D1117" Foreground="#C9D1D9"
-                                        CaretBrush="#C9D1D9"
-                                        BorderBrush="#30363D" BorderThickness="1"
-                                        ToolTip="Один сайт на строку. Например:&#10;example.com&#10;https://mysite.ru"
-                                        d:IsLocked="True" />
+
+                                    <!-- ═══════════ МЕНЕДЖЕР ДОМЕНОВ (ЗАМЕНА СТАРОГО "СВОИ САЙТЫ") ═══════════ -->
+                                    <Border Background="#0D1117" BorderBrush="#21262D" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8" d:IsLocked="True">
+                                        <StackPanel>
+                                            <!-- Заголовок + переключатель режимов -->
+                                            <Grid Margin="0,0,0,10">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0" Text="МЕНЕДЖЕР ДОМЕНОВ"
+                       FontFamily="Segoe UI" FontSize="11" FontWeight="SemiBold"
+                       Foreground="#4A90E2" VerticalAlignment="Center" />
+
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                                    <Button Content="✅ Домены" Height="26" Width="90" Margin="0,0,5,0" Padding="0"
+                        FontSize="11"
+                        Command="{Binding SetDomainsModeCommand}">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button" BasedOn="{StaticResource ActionBtnAccent}">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding SelectedTabMode}" Value="Exclusions">
+                                                                        <Setter Property="Foreground" Value="#4A5170" />
+                                                                        <Setter Property="BorderBrush" Value="#1E2235" />
+                                                                        <Setter Property="Background" Value="#111520" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                    </Button>
+                                                    <Button Content="🚫 Исключения" Height="26" Width="90" Padding="0"
+                        FontSize="11"
+                        Command="{Binding SetExclusionsModeCommand}">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button" BasedOn="{StaticResource ActionBtnRed}">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding SelectedTabMode}" Value="Domains">
+                                                                        <Setter Property="Foreground" Value="#4A5170" />
+                                                                        <Setter Property="BorderBrush" Value="#1E2235" />
+                                                                        <Setter Property="Background" Value="#111520" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- Описание -->
+                                            <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E" TextWrapping="Wrap" Margin="0,0,0,8">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="Домены для проверки доступности при сканировании профилей. Добавляйте по одному (example.com)." />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SelectedTabMode}" Value="Exclusions">
+                                                                <Setter Property="Text" Value="Домены-исключения. Они НЕ будут проверяться оркестратором и ИИ." />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+
+                                            <!-- Поле ввода + кнопка добавления -->
+                                            <Grid Margin="0,0,0,8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBox Grid.Column="0" Height="30" VerticalContentAlignment="Center"
+                     Text="{Binding NewSiteInput, UpdateSourceTrigger=PropertyChanged}"
+                     Background="#161B22" Foreground="#C9D1D9" BorderBrush="#30363D"
+                     BorderThickness="1" Padding="8,0"
+                     FontFamily="Consolas" FontSize="12"
+                     CaretBrush="#C9D1D9">
+                                                    <TextBox.InputBindings>
+                                                        <KeyBinding Key="Return" Command="{Binding AddCustomDomainCommand}" />
+                                                    </TextBox.InputBindings>
+                                                    <TextBox.ToolTip>
+                                                        <TextBlock>
+                        <Run Text="Введите домен: " />
+                        <Run Text="example.com" FontWeight="Bold" />
+                        <LineBreak />
+                        <Run Text="Enter — добавить" />
+                                                        </TextBlock>
+                                                    </TextBox.ToolTip>
+                                                </TextBox>
+
+                                                <Button Grid.Column="1" Content="＋ Добавить" Height="30" Width="90" Margin="6,0,0,0"
+                    Style="{StaticResource ActionBtnGreen}"
+                    Command="{Binding AddCustomDomainCommand}" />
+
+                                                <Button Grid.Column="2" Content="🗑" Height="30" Width="30" Margin="4,0,0,0"
+                    Style="{StaticResource RedBtn}" Padding="0" FontSize="12"
+                    Command="{Binding ClearDomainListCommand}"
+                    ToolTip="Очистить текущий список" />
+                                            </Grid>
+
+                                            <!-- Список доменов/исключений -->
+                                            <Border Background="#161B22" BorderBrush="#21262D" BorderThickness="1" CornerRadius="4" MaxHeight="180">
+                                                <Grid>
+                                                    <!-- Список ДОМЕНОВ (виден когда SelectedTabMode == Domains) -->
+                                                    <ItemsControl ItemsSource="{Binding CustomTargetDomains}">
+                                                        <ItemsControl.Style>
+                                                            <Style TargetType="ItemsControl">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding SelectedTabMode}" Value="Exclusions">
+                                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </ItemsControl.Style>
+                                                        <ItemsControl.Template>
+                                                            <ControlTemplate>
+                                                                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="2">
+                                                                    <ItemsPresenter />
+                                                                </ScrollViewer>
+                                                            </ControlTemplate>
+                                                        </ItemsControl.Template>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border BorderBrush="#30363D" BorderThickness="0,0,0,1" Padding="8,5" Margin="2,1">
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                            <ColumnDefinition Width="*" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <Ellipse Grid.Column="0" Width="6" Height="6" Fill="#00D68F"
+                                             VerticalAlignment="Center" Margin="0,0,8,0" />
+                                                                        <TextBlock Grid.Column="1" Text="{Binding}"
+                                               FontFamily="Consolas" FontSize="12" Foreground="#C9D1D9"
+                                               VerticalAlignment="Center" />
+                                                                        <Button Grid.Column="2" Content="✕"
+                                            Style="{StaticResource RedBtn}" Width="22" Height="22"
+                                            Padding="0" FontSize="10"
+                                            Command="{Binding DataContext.RemoveCustomDomainCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip="Удалить из списка проверки" />
+                                                                    </Grid>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+
+                                                    <!-- Список ИСКЛЮЧЕНИЙ (виден когда SelectedTabMode == Exclusions) -->
+                                                    <ItemsControl ItemsSource="{Binding CustomExcludeDomains}">
+                                                        <ItemsControl.Style>
+                                                            <Style TargetType="ItemsControl">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding SelectedTabMode}" Value="Exclusions">
+                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </ItemsControl.Style>
+                                                        <ItemsControl.Template>
+                                                            <ControlTemplate>
+                                                                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="2">
+                                                                    <ItemsPresenter />
+                                                                </ScrollViewer>
+                                                            </ControlTemplate>
+                                                        </ItemsControl.Template>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border BorderBrush="#30363D" BorderThickness="0,0,0,1" Padding="8,5" Margin="2,1">
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                            <ColumnDefinition Width="*" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <Ellipse Grid.Column="0" Width="6" Height="6" Fill="#E74C3C"
+                                             VerticalAlignment="Center" Margin="0,0,8,0" />
+                                                                        <TextBlock Grid.Column="1" Text="{Binding}"
+                                               FontFamily="Consolas" FontSize="12" Foreground="#C9D1D9"
+                                               VerticalAlignment="Center" />
+                                                                        <Button Grid.Column="2" Content="✕"
+                                            Style="{StaticResource RedBtn}" Width="22" Height="22"
+                                            Padding="0" FontSize="10"
+                                            Command="{Binding DataContext.RemoveCustomDomainCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip="Убрать из исключений" />
+                                                                    </Grid>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+
+                                                    <!-- Пустое состояние -->
+                                                    <TextBlock Text="Список пуст. Добавьте домен выше."
+                           Foreground="#4A5170" FontSize="11" FontStyle="Italic"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Padding="0,20">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                <Style.Triggers>
+                                                                    <MultiDataTrigger>
+                                                                        <MultiDataTrigger.Conditions>
+                                                                            <Condition Binding="{Binding SelectedTabMode}" Value="Domains" />
+                                                                            <Condition Binding="{Binding CustomTargetDomains.Count}" Value="0" />
+                                                                        </MultiDataTrigger.Conditions>
+                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                    </MultiDataTrigger>
+                                                                    <MultiDataTrigger>
+                                                                        <MultiDataTrigger.Conditions>
+                                                                            <Condition Binding="{Binding SelectedTabMode}" Value="Exclusions" />
+                                                                            <Condition Binding="{Binding CustomExcludeDomains.Count}" Value="0" />
+                                                                        </MultiDataTrigger.Conditions>
+                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                    </MultiDataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Grid>
+                                            </Border>
+
+                                            <!-- Счётчик -->
+                                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                <TextBlock FontFamily="Segoe UI" FontSize="10" Foreground="#4A5170">
+                <Run Text="Доменов: " />
+                <Run Text="{Binding CustomTargetDomains.Count, Mode=OneWay}" Foreground="#00D68F" FontWeight="SemiBold" />
+                <Run Text="   ·   Исключений: " />
+                <Run Text="{Binding CustomExcludeDomains.Count, Mode=OneWay}" Foreground="#E74C3C" FontWeight="SemiBold" />
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                    <!-- ═══════════ КОНЕЦ МЕНЕДЖЕРА ДОМЕНОВ ═══════════ -->
 
                                     <!-- Блок СТРАТЕГИИ ИИ УДАЛЁН — теперь на вкладке ИИ -->
 

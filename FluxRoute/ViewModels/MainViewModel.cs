@@ -1,18 +1,19 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using FluxRoute.AI.Services;
+using FluxRoute.Core.Models;
+using FluxRoute.Core.Services;
+using FluxRoute.Services;
+using FluxRoute.Updater.Services;
+using FluxRoute.Views;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
+using System.Text;
 using System.Windows;
 using System.Windows.Threading;
 using Application = System.Windows.Application;
-using FluxRoute.Core.Models;
-using FluxRoute.Core.Services;
-using FluxRoute.AI.Services;
-using FluxRoute.Services;
-using FluxRoute.Updater.Services;
-using FluxRoute.Views;
 
 namespace FluxRoute.ViewModels;
 
@@ -29,9 +30,18 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<string> UpdateLogs => Updates.UpdateLogs;
     public ObservableCollection<string> ServiceLogs => Service.ServiceLogs;
 
+    // Коллекции для менеджера доменов (UI)
+
     // ── Пресеты конфигурации ──
     public ObservableCollection<ConfigPreset> Presets { get; } = new();
     public ObservableCollection<string> RunningProcesses { get; } = new();
+
+    // ── Менеджер доменов ──
+    [ObservableProperty] private string selectedTabMode = "Domains";
+    [ObservableProperty] private string newSiteInput = "";
+
+    public ObservableCollection<string> CustomTargetDomains { get; } = new();
+    public ObservableCollection<string> CustomExcludeDomains { get; } = new();
 
     [ObservableProperty] private string newPresetName = "";
     [ObservableProperty] private string newPresetTrigger = "";
@@ -125,6 +135,79 @@ public partial class MainViewModel : ObservableObject
         SaveSettings();
     }
 
+    // ── Команды менеджера доменов ──
+    [RelayCommand]
+    private void AddCustomDomain()
+    {
+        var input = NewSiteInput.Trim();
+        if (string.IsNullOrEmpty(input)) return;
+
+        // Нормализация: убираем протоколы и www
+        input = input.Replace("http://", "").Replace("https://", "").Replace("www.", "").TrimEnd('/');
+        if (string.IsNullOrEmpty(input)) return;
+
+        var list = SelectedTabMode == "Exclusions" ? CustomExcludeDomains : CustomTargetDomains;
+
+        if (!list.Contains(input, StringComparer.OrdinalIgnoreCase))
+        {
+            list.Add(input);
+            NewSiteInput = "";
+            SaveSettings();
+            SyncCustomHostlist();
+            AddToRecentLogs($"✅ Добавлен домен: {input} ({(SelectedTabMode == "Exclusions" ? "исключение" : "проверка")})");
+        }
+        else
+        {
+            NewSiteInput = "";
+        }
+    }
+
+    [RelayCommand]
+    private void RemoveCustomDomain(string domain)
+    {
+        if (string.IsNullOrEmpty(domain)) return;
+        var list = SelectedTabMode == "Exclusions" ? CustomExcludeDomains : CustomTargetDomains;
+        if (list.Contains(domain))
+        {
+            list.Remove(domain);
+            SaveSettings();
+            SyncCustomHostlist();
+            AddToRecentLogs($"🗑 Удалён домен: {domain}");
+        }
+    }
+
+    [RelayCommand]
+    private void SetDomainsMode()
+    {
+        SelectedTabMode = "Domains";
+        NewSiteInput = "";
+    }
+
+    [RelayCommand]
+    private void SetExclusionsMode()
+    {
+        SelectedTabMode = "Exclusions";
+        NewSiteInput = "";
+    }
+
+    [RelayCommand]
+    private void ClearDomainList()
+    {
+        var list = SelectedTabMode == "Exclusions" ? CustomExcludeDomains : CustomTargetDomains;
+        if (list.Count == 0) return;
+        var modeName = SelectedTabMode == "Exclusions" ? "исключений" : "доменов";
+        if (CustomDialog.Show(
+            "🗑 Очистить список",
+            $"Удалить все {list.Count} записей из списка {modeName}?",
+            "Очистить", "Отмена", isDanger: true))
+        {
+            list.Clear();
+            SaveSettings();
+            SyncCustomHostlist();
+            AddToRecentLogs($"🗑 Список {modeName} очищен");
+        }
+    }
+
     // ── События ──
     public event EventHandler? OpenSettingsRequested;
     public event EventHandler? OpenAboutRequested;
@@ -202,6 +285,8 @@ public partial class MainViewModel : ObservableObject
 
     // ── Боковая панель ──
     [ObservableProperty] private bool isSidebarExpanded = true;
+
+
 
     [RelayCommand]
     private void ToggleSidebar() => IsSidebarExpanded = !IsSidebarExpanded;
@@ -516,6 +601,29 @@ public partial class MainViewModel : ObservableObject
         SiteInstagram = settings.SiteInstagram;
         SiteTelegram = settings.SiteTelegram;
         UserCustomSitesText = string.Join("\n", settings.UserSites ?? new());
+
+        // Миграция старых данных в новые списки менеджера доменов
+        CustomTargetDomains.Clear();
+        CustomExcludeDomains.Clear();
+
+        if (settings.CustomTargetDomains?.Count > 0)
+        {
+            foreach (var s in settings.CustomTargetDomains) CustomTargetDomains.Add(s);
+        }
+        else if (settings.UserSites?.Count > 0)
+        {
+            foreach (var s in settings.UserSites.Where(x => !x.StartsWith("!"))) CustomTargetDomains.Add(s);
+        }
+
+        if (settings.CustomExcludeDomains?.Count > 0)
+        {
+            foreach (var s in settings.CustomExcludeDomains) CustomExcludeDomains.Add(s);
+        }
+        else if (settings.UserSites?.Count > 0)
+        {
+            foreach (var s in settings.UserSites.Where(x => x.StartsWith("!"))) CustomExcludeDomains.Add(s.TrimStart('!'));
+        }
+
         AutoUpdateEnabled = settings.AutoUpdateEnabled;
         AutoStartEnabled = settings.AutoStartEnabled;
         MinimizeToTray = settings.MinimizeToTray;
@@ -565,9 +673,11 @@ public partial class MainViewModel : ObservableObject
             SiteInstagram = SiteInstagram,
             SiteTelegram = SiteTelegram,
             UserSites = UserCustomSitesText
-                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .ToList(),
+    .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    .Where(s => !string.IsNullOrWhiteSpace(s))
+    .ToList(),
+            CustomTargetDomains = CustomTargetDomains.ToList(),
+            CustomExcludeDomains = CustomExcludeDomains.ToList(),
             AutoUpdateEnabled = AutoUpdateEnabled,
             AutoStartEnabled = AutoStartEnabled,
             MinimizeToTray = MinimizeToTray,
@@ -641,12 +751,70 @@ public partial class MainViewModel : ObservableObject
         else Start();
     }
 
+
     private void AddToRecentLogs(string message)
     {
         RecentLogs.Add(message);
         while (RecentLogs.Count > 10)
             RecentLogs.RemoveAt(0);
         LastStatusMessage = message;
+    }
+
+    // ── Синхронизация пользовательских доменов с движком (winws.exe) ──
+    // ── Синхронизация пользовательских доменов с движком (winws.exe) ──
+    private void SyncCustomHostlist()
+    {
+        try
+        {
+            var listsDir = Path.Combine(EngineDir, "lists");
+            Directory.CreateDirectory(listsDir);
+            var userHostlistPath = Path.Combine(listsDir, "list-general-user.txt");
+
+            var domains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // 1. Берем домены из нового Менеджера доменов (вкладка "Домены")
+            foreach (var d in CustomTargetDomains)
+            {
+                if (!string.IsNullOrWhiteSpace(d))
+                    domains.Add(d.Trim());
+            }
+
+            // 2. Подхватываем из старого TextBox (для обратной совместимости)
+            if (!string.IsNullOrWhiteSpace(UserCustomSitesText))
+            {
+                var legacy = UserCustomSitesText
+                    .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Where(s => !s.StartsWith("!"));
+                foreach (var d in legacy)
+                    domains.Add(d.Trim());
+            }
+
+            // Записываем в файл
+            if (domains.Count > 0)
+            {
+                // Используем явное удаление + запись, чтобы избежать кэширования
+                if (File.Exists(userHostlistPath))
+                {
+                    try { File.SetAttributes(userHostlistPath, FileAttributes.Normal); } catch { }
+                }
+                File.WriteAllLines(userHostlistPath, domains.OrderBy(x => x), new UTF8Encoding(false));
+                Logs.Add($"[Sync] Записано {domains.Count} доменов в list-general-user.txt");
+            }
+            else
+            {
+                // Пустой список — удаляем файл или пишем комментарий
+                if (File.Exists(userHostlistPath))
+                    File.Delete(userHostlistPath);
+                else
+                    File.WriteAllText(userHostlistPath, "# custom domains empty\n", new UTF8Encoding(false));
+                Logs.Add("[Sync] list-general-user.txt очищен");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"❌ Ошибка записи list-general-user.txt: {ex.Message}");
+            Logs.Add($"   Stack: {ex.StackTrace?.Split('\n')[0]}");
+        }
     }
 
     // ── Cleanup ──

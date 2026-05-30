@@ -379,11 +379,31 @@ public partial class MainViewModel
         _orchestrator.EnabledSites = sites;
         _aiOrchestrator.EnabledSites = sites;
 
-        var userTargets = UserCustomSitesText
+        var userTargets = new List<TargetEntry>();
+
+        // Берем домены из менеджера, ИСКЛЮЧАЯ те, что во вкладке "Исключения"
+        foreach (var domain in CustomTargetDomains)
+        {
+            if (!string.IsNullOrWhiteSpace(domain) &&
+                !CustomExcludeDomains.Contains(domain, StringComparer.OrdinalIgnoreCase))
+            {
+                userTargets.Add(BuildUserTargetEntry(domain));
+            }
+        }
+
+        // Fallback на старый TextBox
+        var legacyTargets = UserCustomSitesText
             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(s => !string.IsNullOrWhiteSpace(s))
-            .Select(s => BuildUserTargetEntry(s))
-            .ToList();
+            .Where(s => !string.IsNullOrWhiteSpace(s) && !s.StartsWith("!") &&
+                        !CustomExcludeDomains.Contains(s, StringComparer.OrdinalIgnoreCase))
+            .Select(s => BuildUserTargetEntry(s));
+
+        foreach (var t in legacyTargets)
+        {
+            if (!userTargets.Any(x => x.Key == t.Key))
+                userTargets.Add(t);
+        }
+
         _orchestrator.UserSiteTargets = userTargets;
         _aiOrchestrator.UserSiteTargets = userTargets;
     }

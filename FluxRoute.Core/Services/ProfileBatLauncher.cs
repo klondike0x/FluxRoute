@@ -84,6 +84,32 @@ public static class ProfileBatLauncher
                     .Where(a => !string.IsNullOrWhiteSpace(a) && a != "^")
                     .ToList();
 
+                // ═══ ИНЪЕКЦИЯ ПОЛЬЗОВАТЕЛЬСКИХ ДОМЕНОВ ИЗ МЕНЕДЖЕРА ═══
+                // Автоматически добавляем list-general-user.txt в аргументы winws.exe,
+                // чтобы домены из UI FluxRoute работали без ручного редактирования BAT-файлов.
+                var userHostlistPath = Path.Combine(engineDir, "lists", "list-general-user.txt");
+                if (File.Exists(userHostlistPath) && new FileInfo(userHostlistPath).Length > 10)
+                {
+                    bool hasUserList = args.Any(a => a.Contains("list-general-user", StringComparison.OrdinalIgnoreCase));
+                    if (!hasUserList)
+                    {
+                        args.Add("--hostlist");
+                        args.Add(userHostlistPath); // Передаем абсолютный путь
+                    }
+                }
+
+                var userExcludePath = Path.Combine(engineDir, "lists", "list-exclude-user.txt");
+                if (File.Exists(userExcludePath) && new FileInfo(userExcludePath).Length > 10)
+                {
+                    bool hasExclude = args.Any(a => a.Contains("list-exclude-user", StringComparison.OrdinalIgnoreCase));
+                    if (!hasExclude)
+                    {
+                        args.Add("--hostlist-exclude");
+                        args.Add(userExcludePath);
+                    }
+                }
+                // ═══════════════════════════════════════════════════════
+
                 if (args.Count == 0)
                 {
                     lastCandidateError = "В BAT найден winws.exe, но не найдены аргументы запуска.";

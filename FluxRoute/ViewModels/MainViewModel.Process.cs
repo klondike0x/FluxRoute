@@ -109,6 +109,7 @@ public partial class MainViewModel
 
         try
         {
+            SyncCustomHostlist();
             ProfileBatLauncher.PrepareRuntime(EngineDir);
 
             if (ProfileBatLauncher.TryCreateLaunchPlan(SelectedProfile.FullPath, EngineDir, out var plan, out var parseError) && plan is not null)
