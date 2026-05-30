@@ -2189,7 +2189,7 @@
                                                     HorizontalAlignment="Right" d:IsLocked="True" />
                                             </Grid>
                                             <!-- Row: Engine version -->
-                                            <Grid d:IsLocked="True">
+                                            <Grid Margin="0,0,0,7" d:IsLocked="True">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="*" />
@@ -2205,6 +2205,27 @@
                                                     VerticalAlignment="Center" d:IsLocked="True" />
                                                 <TextBlock Grid.Column="2"
                                                     Text="{Binding CurrentEngineVersion, Mode=OneWay}"
+                                                    FontFamily="Segoe UI"
+                                                    FontSize="11" Foreground="#7A90B8"
+                                                    HorizontalAlignment="Right" d:IsLocked="True" />
+                                            </Grid>
+                                            <!-- Row: TG WS Proxy version -->
+                                            <Grid d:IsLocked="True">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Ellipse Grid.Column="0" Width="7" Height="7"
+                                                    Fill="#2FC8D8"
+                                                    Margin="0,0,8,0" VerticalAlignment="Center"
+                                                    d:IsLocked="True" />
+                                                <TextBlock Grid.Column="1" Text="TG WS Proxy"
+                                                    FontFamily="Segoe UI"
+                                                    FontSize="11" Foreground="#4A5A7A"
+                                                    VerticalAlignment="Center" d:IsLocked="True" />
+                                                <TextBlock Grid.Column="2"
+                                                    Text="{Binding TgProxyVersion}"
                                                     FontFamily="Segoe UI"
                                                     FontSize="11" Foreground="#7A90B8"
                                                     HorizontalAlignment="Right" d:IsLocked="True" />
