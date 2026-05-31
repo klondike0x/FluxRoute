@@ -52,9 +52,7 @@ public partial class MainViewModel
     //"utils.py"
     //];
 
-    private const string ProxyRawBase = "https://raw.githubusercontent.com/Flowseal/tg-ws-proxy/main/proxy/";
     private const string TgProxyReleasesAtomUrl = "https://github.com/Flowseal/tg-ws-proxy/releases.atom";
-    private const string TgProxyLatestReleaseUrl = "https://github.com/Flowseal/tg-ws-proxy/releases/latest";
 
     // ── Состояние ──
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]

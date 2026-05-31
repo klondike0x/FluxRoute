@@ -185,22 +185,6 @@ public partial class App : Application
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<TrayIconService>();
         services.AddSingleton<MainWindow>();
-
-        // ... существующий код ...
-
-        // Named HttpClient для скачивания TG WS Proxy с правильной SSL-конфигурацией
-        services.AddHttpClient("TgProxyDownloader", client =>
-        {
-            client.Timeout = TimeSpan.FromMinutes(5);
-            client.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-Desktop/1.0");
-        })
-        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-        {
-            AllowAutoRedirect = true,
-            AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
-            SslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13,
-        })
-        .AddStandardResilienceHandler();
     }
 
     private static LoggerConfiguration ConfigureSerilog(LoggerConfiguration loggerConfiguration)
