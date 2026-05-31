@@ -187,15 +187,15 @@ flowchart LR
 
 | Главное окно | Запущено |
 |:---:|:---:|
-| <img width="760" height="530" alt="FluxRoute_2TjfigppDJ" src="https://github.com/user-attachments/assets/2766d05f-e455-46c7-9517-1c284625d12c" /> | <img width="760" height="530" alt="FluxRoute_PtjD6uwyNa" src="https://github.com/user-attachments/assets/7e9971c5-049e-4409-9400-bd27ad97f032" /> |
+| <img width="860" height="520" alt="FluxRoute_2TjfigppDJ" src="https://github.com/user-attachments/assets/70dda58d-cbf3-43f8-b8ae-72b7fad3d88e" /> | <img width="860" height="520" alt="FluxRoute_PtjD6uwyNa" src="https://github.com/user-attachments/assets/5c6711d3-93b9-4219-9640-73758e1e46b7" /> |
 
 | Оркестратор | Обновления |
 |:---:|:---:|
-| <img width="760" height="530" alt="FluxRoute_ydu1FOkwjG" src="https://github.com/user-attachments/assets/65e23cc4-bbd2-4134-87be-d161f86715b8" /> | <img width="760" height="530" alt="FluxRoute_tEVm5fefzY" src="https://github.com/user-attachments/assets/f3cac7f0-3f8a-4615-8264-75c9c02a7a7a" /> |
+| <img width="860" height="520" alt="FluxRoute_ydu1FOkwjG" src="https://github.com/user-attachments/assets/bf33cffb-6d56-4055-8f8e-8c807f57d9a7" /> | <img width="860" height="520" alt="FluxRoute_tEVm5fefzY" src="https://github.com/user-attachments/assets/a51c1477-a560-450f-b6ac-ef05ccbec4d2" /> |
 
 | Сервис |
 |:---:|
-| <img width="760" height="530" alt="FluxRoute_qTDTBLMl7M" src="https://github.com/user-attachments/assets/73af680b-d21c-467e-b550-ca38f9ee5a87" /> |
+| <img width="860" height="520" alt="FluxRoute_k7pxUqE7aa" src="https://github.com/user-attachments/assets/4bdf02a2-83dc-4e39-847a-5c133bfbe6a9" /> |
 
 ---
 
@@ -476,15 +476,15 @@ Evolved profiles on disk: **`engine/ai-evolved/`**.
 
 | Main Window | Running |
 |:---:|:---:|
-| <img width="760" height="530" alt="FluxRoute_2TjfigppDJ" src="https://github.com/user-attachments/assets/2766d05f-e455-46c7-9517-1c284625d12c" /> | <img width="760" height="530" alt="FluxRoute_PtjD6uwyNa" src="https://github.com/user-attachments/assets/7e9971c5-049e-4409-9400-bd27ad97f032" /> |
+| <img width="860" height="520" alt="FluxRoute_2TjfigppDJ" src="https://github.com/user-attachments/assets/70dda58d-cbf3-43f8-b8ae-72b7fad3d88e" /> | <img width="860" height="520" alt="FluxRoute_PtjD6uwyNa" src="https://github.com/user-attachments/assets/5c6711d3-93b9-4219-9640-73758e1e46b7" /> |
 
 | Orchestrator | Updates |
 |:---:|:---:|
-| <img width="760" height="530" alt="FluxRoute_ydu1FOkwjG" src="https://github.com/user-attachments/assets/65e23cc4-bbd2-4134-87be-d161f86715b8" /> | <img width="760" height="530" alt="FluxRoute_tEVm5fefzY" src="https://github.com/user-attachments/assets/f3cac7f0-3f8a-4615-8264-75c9c02a7a7a" /> |
+| <img width="860" height="520" alt="FluxRoute_ydu1FOkwjG" src="https://github.com/user-attachments/assets/bf33cffb-6d56-4055-8f8e-8c807f57d9a7" /> | <img width="860" height="520" alt="FluxRoute_tEVm5fefzY" src="https://github.com/user-attachments/assets/a51c1477-a560-450f-b6ac-ef05ccbec4d2" /> |
 
 | Service |
 |:---:|
-| <img width="760" height="530" alt="FluxRoute_qTDTBLMl7M" src="https://github.com/user-attachments/assets/73af680b-d21c-467e-b550-ca38f9ee5a87" /> |
+| <img width="860" height="520" alt="FluxRoute_k7pxUqE7aa" src="https://github.com/user-attachments/assets/4bdf02a2-83dc-4e39-847a-5c133bfbe6a9" /> |
 
 ---
 
