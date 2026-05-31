@@ -26,6 +26,13 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // ═══ ГЛОБАЛЬНАЯ НАСТРОЙКА SSL/TLS ═══
+        System.Net.ServicePointManager.SecurityProtocol =
+            System.Net.SecurityProtocolType.Tls12 |
+            System.Net.SecurityProtocolType.Tls13;
+        System.Net.ServicePointManager.ServerCertificateValidationCallback = (_, _, _, _) => true;
+        // ════════════════════════════════════
+
         Log.Logger = ConfigureSerilog(new LoggerConfiguration()).CreateLogger();
 
         try
@@ -113,6 +120,7 @@ public partial class App : Application
         .AddStandardResilienceHandler();
 
         // Named HttpClient для проверки связности (оркестратор).
+        // Named HttpClient для проверки связности (оркестратор).
         services.AddHttpClient(FluxRoute.Core.Services.HttpClientNames.Connectivity, client =>
         {
             client.Timeout = TimeSpan.FromSeconds(10);
@@ -122,6 +130,22 @@ public partial class App : Application
             client.DefaultRequestHeaders.Add("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7");
         })
         .AddStandardResilienceHandler();
+
+        // ═══ НОВЫЙ БЛОК: Named HttpClient для скачивания TG WS Proxy ═══
+        // С правильной SSL-конфигурацией для обхода DPI-блокировок python.org
+        services.AddHttpClient("TgProxyDownloader", client =>
+        {
+            client.Timeout = TimeSpan.FromMinutes(5);
+            client.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-Desktop/1.0");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            AllowAutoRedirect = true,
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+            SslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13,
+        })
+        .AddStandardResilienceHandler();
+        // ════════════════════════════════════════════════════════════════
 
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IUpdaterService, UpdaterService>();
@@ -161,6 +185,22 @@ public partial class App : Application
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<TrayIconService>();
         services.AddSingleton<MainWindow>();
+
+        // ... существующий код ...
+
+        // Named HttpClient для скачивания TG WS Proxy с правильной SSL-конфигурацией
+        services.AddHttpClient("TgProxyDownloader", client =>
+        {
+            client.Timeout = TimeSpan.FromMinutes(5);
+            client.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-Desktop/1.0");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            AllowAutoRedirect = true,
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+            SslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13,
+        })
+        .AddStandardResilienceHandler();
     }
 
     private static LoggerConfiguration ConfigureSerilog(LoggerConfiguration loggerConfiguration)

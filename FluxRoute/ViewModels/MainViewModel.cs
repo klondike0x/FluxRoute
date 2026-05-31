@@ -10,6 +10,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Windows;
 using System.Windows.Threading;
@@ -426,7 +427,7 @@ public partial class MainViewModel : ObservableObject
     public bool IsUpdating => Updates.IsUpdating;
     public bool IsDownloadingEngine => Updates.IsDownloadingEngine;
     public string EngineDownloadStatus => Updates.EngineDownloadStatus;
-
+    private readonly IHttpClientFactory _httpClientFactory;
     public MainViewModel(
         ISettingsService settingsService,
         IUpdaterService updaterService,
@@ -438,7 +439,9 @@ public partial class MainViewModel : ObservableObject
         AiHistoryStore aiHistoryStore,
         BanditSelector aiBandit,
         StrategyEvolver aiEvolver,
-        BatMaterializer aiMaterializer)
+        BatMaterializer aiMaterializer,
+        IHttpClientFactory httpClientFactory)
+
     {
         _settingsService = settingsService;
         _updater = updaterService;
@@ -447,6 +450,7 @@ public partial class MainViewModel : ObservableObject
         _aiRegistry = aiRegistry;
         _aiHistoryStore = aiHistoryStore;
         _aiFingerprints = aiFingerprints;
+        _httpClientFactory = httpClientFactory;
 
         // ── Инициализация feature ViewModels ──
         Diagnostics = new DiagnosticsViewModel(

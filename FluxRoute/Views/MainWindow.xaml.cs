@@ -73,11 +73,15 @@ public partial class MainWindow : Window
         var history = new AiHistoryStore(Path.Combine(dir, "fluxroute-ai-history.jsonl"));
         var materializer = new BatMaterializer();
         var fingerprints = new NetworkFingerprintProvider();
+
+        // ✅ Фабрика для design-time (чтобы не ломался конструктор MainViewModel)
+        var httpClientFactory = FluxRoute.Core.Services.DefaultHttpClientFactory.Instance;
+
         return new MainViewModel(
             settings,
-            new UpdaterService(),
-            new AppUpdaterService(),
-            new ConnectivityChecker(),
+            new UpdaterService(httpClientFactory),
+            new AppUpdaterService(httpClientFactory),
+            new ConnectivityChecker(httpClientFactory),
             fingerprints,
             new NetworkChangeWatcher(fingerprints),
             registry,
@@ -86,7 +90,8 @@ public partial class MainWindow : Window
             new StrategyEvolver(registry, history, materializer,
                 () => Path.Combine(AppContext.BaseDirectory, "engine"),
                 () => settings.Load().Ai),
-            materializer);
+            materializer,
+            httpClientFactory);  // ✅ Новый параметр
     }
 
     public MainWindow(MainViewModel viewModel, TrayIconService trayIcon, ILogger<MainWindow>? logger = null)
