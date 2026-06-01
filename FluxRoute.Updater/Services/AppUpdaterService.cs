@@ -20,7 +20,8 @@ public interface IAppUpdaterService
     /// <summary>Возвращает текущую версию из сборки (например "1.4.0").</summary>
     string GetCurrentVersion();
 
-    /// <summary>Проверяет наличие нового релиза FluxRoute через редирект GitHub Releases (без API, без лимитов).</summary>
+    /// <summary>Проверяет наличие нового релиза FluxRoute через Atom-ленту GitHub (без API, без лимитов).
+    /// Результат кэшируется на 1 час — повторные вызовы не делают HTTP-запрос.</summary>
     Task<(AppUpdateInfo? update, string? error)> CheckForAppUpdateAsync(CancellationToken ct = default);
 
     /// <summary>Скачивает новый exe и запускает bat-замену, затем завершает текущий процесс.</summary>
@@ -33,16 +34,18 @@ public sealed class AppUpdaterService : IAppUpdaterService
     private const string ReleasesAtomUrl =
         "https://github.com/klondike0x/FluxRoute/releases.atom";
 
-    // Имя asset в релизе: FluxRoute-v1.4.1-portable.zip
-    private const string AssetNameTemplate = "FluxRoute-{0}-portable.zip";
-
     // Прямой URL скачивания (не API, CDN GitHub — лимитов нет)
     private const string DownloadUrlTemplate =
         "https://github.com/klondike0x/FluxRoute/releases/download/{0}/FluxRoute-{0}-portable.zip";
 
-    private const string UserAgent = "FluxRoute-AppUpdater";
+    // Не делать HTTP-запрос чаще одного раза в час
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(1);
 
     private readonly IHttpClientFactory _httpClientFactory;
+
+    // In-memory кэш: сохраняем результат последней проверки
+    private (AppUpdateInfo? update, string? error) _cachedResult;
+    private DateTime _cacheExpiresAt = DateTime.MinValue;
 
     public AppUpdaterService(IHttpClientFactory httpClientFactory)
     {
@@ -61,36 +64,49 @@ public sealed class AppUpdaterService : IAppUpdaterService
 
     public async Task<(AppUpdateInfo? update, string? error)> CheckForAppUpdateAsync(CancellationToken ct = default)
     {
+        // Возвращаем кэш если TTL не истёк
+        if (DateTime.UtcNow < _cacheExpiresAt)
+            return _cachedResult;
+
         try
         {
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-            http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
-
+            using var http = _httpClientFactory.CreateClient(HttpClientNames.AppUpdater);
             var xml = await http.GetStringAsync(ReleasesAtomUrl, ct);
 
-            // Парсим Atom XML — первый <id> в <entry> содержит тег:
-            // tag:github.com,2008:Repository/123456789/v1.4.1
             var tagName = ParseLatestTagFromAtom(xml);
             if (string.IsNullOrWhiteSpace(tagName))
-                return (null, "Не удалось найти последний релиз в Atom-ленте");
+            {
+                _cachedResult = (null, "Не удалось найти последний релиз в Atom-ленте");
+                _cacheExpiresAt = DateTime.UtcNow + CacheTtl;
+                return _cachedResult;
+            }
 
             var remoteVersion = tagName.TrimStart('v', 'V');
             var localVersion  = GetCurrentVersion();
 
-            // Корректное сравнение через Version, не строковое
             if (!System.Version.TryParse(remoteVersion, out var remote) ||
                 !System.Version.TryParse(localVersion,  out var local))
-                return (null, $"Не удалось распознать версии: remote={remoteVersion}, local={localVersion}");
+            {
+                _cachedResult = (null, $"Не удалось распознать версии: remote={remoteVersion}, local={localVersion}");
+                _cacheExpiresAt = DateTime.UtcNow + CacheTtl;
+                return _cachedResult;
+            }
 
             if (remote <= local)
-                return (null, null); // актуальная версия
+            {
+                _cachedResult = (null, null); // актуальная версия
+                _cacheExpiresAt = DateTime.UtcNow + CacheTtl;
+                return _cachedResult;
+            }
 
-            return (new AppUpdateInfo
+            _cachedResult = (new AppUpdateInfo
             {
                 Version     = remoteVersion,
                 TagName     = tagName,
                 DownloadUrl = string.Format(DownloadUrlTemplate, tagName)
             }, null);
+            _cacheExpiresAt = DateTime.UtcNow + CacheTtl;
+            return _cachedResult;
         }
         catch (HttpRequestException ex)
         {
@@ -117,21 +133,16 @@ public sealed class AppUpdaterService : IAppUpdaterService
         const string idOpen    = "<id>tag:github.com,";
         const string idClose   = "</id>";
 
-        // Ищем первый <entry> — это самый свежий релиз
         var entryStart = xml.IndexOf(entryOpen, StringComparison.Ordinal);
         if (entryStart < 0) return null;
 
-        // Ищем <id> внутри этого entry
         var idStart = xml.IndexOf(idOpen, entryStart, StringComparison.Ordinal);
         if (idStart < 0) return null;
 
         var idEnd = xml.IndexOf(idClose, idStart, StringComparison.Ordinal);
         if (idEnd < 0) return null;
 
-        // Берём содержимое тега: "<id>tag:github.com,2008:Repository/123456789/v1.4.1"
         var idContent = xml[idStart..idEnd];
-
-        // Тег — всё после последнего '/'
         var lastSlash = idContent.LastIndexOf('/');
         if (lastSlash < 0) return null;
 
@@ -147,6 +158,16 @@ public sealed class AppUpdaterService : IAppUpdaterService
         if (string.IsNullOrWhiteSpace(exePath))
             return (false, "Не удалось определить путь к исполняемому файлу");
 
+        // Предварительная проверка: exe доступен для чтения
+        try
+        {
+            using var testStream = File.Open(exePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Нет доступа к исполняемому файлу: {ex.Message}");
+        }
+
         var exeDir   = Path.GetDirectoryName(exePath)!;
         var tempZip  = Path.Combine(Path.GetTempPath(), $"FluxRoute_{update.Version}.zip");
         var tempDir  = Path.Combine(Path.GetTempPath(), $"FluxRoute_{update.Version}_extracted");
@@ -157,12 +178,7 @@ public sealed class AppUpdaterService : IAppUpdaterService
             // ── 1. Скачиваем zip ──────────────────────────────────────────
             onProgress($"⬇️ Скачиваем FluxRoute v{update.Version}...");
 
-            // Создаём отдельный клиент с авто-редиректами (GitHub → CDN) и большим таймаутом
-            using var http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = true })
-            {
-                Timeout = TimeSpan.FromMinutes(5)
-            };
-            http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
+            using var http = _httpClientFactory.CreateClient(HttpClientNames.AppUpdater);
 
             using var response = await http.GetAsync(update.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!response.IsSuccessStatusCode)
@@ -172,6 +188,11 @@ public sealed class AppUpdaterService : IAppUpdaterService
             await using (var file   = File.Create(tempZip))
                 await stream.CopyToAsync(file, ct);
 
+            // Проверяем что ZIP не пустой
+            var zipInfo = new FileInfo(tempZip);
+            if (!zipInfo.Exists || zipInfo.Length < 1024)
+                return (false, $"Скачанный файл повреждён или пуст (размер: {zipInfo.Length} байт)");
+
             var hash = Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(tempZip, ct)));
             onProgress($"🔒 SHA-256: {hash}");
             onProgress("✅ Загрузка завершена");
@@ -180,9 +201,8 @@ public sealed class AppUpdaterService : IAppUpdaterService
             onProgress("📦 Распаковываем архив...");
             if (Directory.Exists(tempDir))
                 Directory.Delete(tempDir, recursive: true);
-            System.IO.Compression.ZipFile.ExtractToDirectory(tempZip, tempDir);
+            ZipFile.ExtractToDirectory(tempZip, tempDir);
 
-            // Ищем FluxRoute.exe внутри архива (может быть в подпапке)
             var extractedExe = Directory.GetFiles(tempDir, "FluxRoute.exe", SearchOption.AllDirectories)
                                          .FirstOrDefault();
             if (extractedExe is null)
@@ -194,8 +214,6 @@ public sealed class AppUpdaterService : IAppUpdaterService
             var pid        = Process.GetCurrentProcess().Id;
             var newExeName = Path.GetFileName(exePath);
             var newExePath = Path.Combine(exeDir, newExeName);
-
-            // Папка внутри архива, где лежит FluxRoute.exe — копируем ВСЁ из неё
             var extractedSourceDir = Path.GetDirectoryName(extractedExe)!;
 
             var bat = $"""
@@ -231,7 +249,7 @@ public sealed class AppUpdaterService : IAppUpdaterService
             await File.WriteAllTextAsync(batPath, bat, System.Text.Encoding.UTF8, ct);
             onProgress("🚀 Запускаем установщик...");
 
-            // ── 4. Запускаем bat через ShellExecute (обязательно для WindowStyle.Hidden + start) ──
+            // ── 4. Запускаем bat через ShellExecute ───────────────────────
             var psi = new ProcessStartInfo
             {
                 FileName        = batPath,
@@ -247,5 +265,4 @@ public sealed class AppUpdaterService : IAppUpdaterService
             return (false, $"Ошибка обновления: {ex.Message}");
         }
     }
-
-    }
+}
