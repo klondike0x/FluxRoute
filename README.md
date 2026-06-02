@@ -8,7 +8,7 @@
 
 # [FluxRoute Desktop](https://github.com/klondike0x/FluxRoute)
 
-**Language:** Русский | [English](README.en.md)
+**Language:** 🇷🇺 Русский | [🇬🇧 English](README.en.md)
 
 ### Windows GUI с **самообучающимся ИИ-оркестратором** для zapret-профилей Flowseal
 
