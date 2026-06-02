@@ -1,201 +1,127 @@
-# FluxRoute Desktop
+<div align="center">
+
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./assets/FluxRoute-white.svg">
+    <source media="(prefers-color-scheme: light)" srcset="./assets/FluxRoute-dark.svg">
+    <img width="750" alt="FluxRoute" src="./assets/FluxRoute-dark.svg" />
+</picture>
+
+# [FluxRoute Desktop](https://github.com/klondike0x/FluxRoute)
+
+**Language:** Русский | [English](README.en.md)
+
+### Windows GUI с **самообучающимся ИИ-оркестратором** для zapret-профилей Flowseal
+
+⭐️ **Поставьте звезду этому репозиторию — это лучшая бесплатная поддержка проекта!**
+
+**Автор:** [klondike0x](https://github.com/klondike0x) · [📥 Релизы](https://github.com/klondike0x/FluxRoute/releases) · [🐛 Issues](https://github.com/klondike0x/FluxRoute/issues) · [💬 Discussions](https://github.com/klondike0x/FluxRoute/discussions)
 
 <p align="center">
-  <b>Language:</b> <a href="#-fluxroute-desktop-ru">🇷🇺 Русский</a> | <a href="#-fluxroute-desktop-en">🇬🇧 English</a>
+    <a href="https://github.com/klondike0x/FluxRoute"><img src="https://img.shields.io/badge/Original_Project-✅_klondike0x-00D68F?logo=github&logoColor=white&style=for-the-badge" alt="Original Project" /></a>
+    <a href="https://github.com/klondike0x/FluxRoute"><img src="https://img.shields.io/github/stars/klondike0x/FluxRoute?style=for-the-badge&logo=github&color=FFD700" alt="Stars" /></a>
+    <a href="https://github.com/klondike0x/FluxRoute/releases"><img src="https://img.shields.io/github/v/release/klondike0x/FluxRoute?include_prereleases&sort=semver&logo=github&label=version&style=for-the-badge" alt="Version" /></a>
+    <a href="https://github.com/klondike0x/FluxRoute/releases"><img src="https://img.shields.io/github/downloads/klondike0x/FluxRoute/total?logo=github&label=downloads&style=for-the-badge" alt="Downloads" /></a>
+    <a href="https://github.com/klondike0x/FluxRoute/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/klondike0x/FluxRoute/release.yml?style=for-the-badge&logo=github-actions&label=build" alt="Build" /></a>
+    <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&style=for-the-badge" alt=".NET 10" /></a>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge" alt="License" /></a>
 </p>
+
+</div>
 
 ---
 
-<a id="-fluxroute-desktop-ru"></a>
+> [!IMPORTANT]
+> **Это оригинальный репозиторий FluxRoute Desktop.**
+>
+> Все производные проекты (форки) основаны на этом коде. GitHub автоматически помечает их надписью `forked from klondike0x/FluxRoute`.
 
-## FluxRoute Desktop [RU]
+**FluxRoute Desktop** — современная GUI-оболочка для управления профилями [`Flowseal/zapret-discord-youtube`](https://github.com/Flowseal/zapret-discord-youtube) с уникальным **ИИ-оркестратором** на основе Thompson Sampling и генетической эволюции стратегий.
 
-<p align="center">
-    <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="./assets/FluxRoute-white.svg">
-        <source media="(prefers-color-scheme: light)" srcset="./assets/FluxRoute-dark.svg">
-        <img width="750" alt="FluxRoute" src="./assets/FluxRoute-dark.svg" />
-    </picture>
-</p>
-
-<p align="center">
-    <a href="https://dotnet.microsoft.com/">
-        <img src="https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&style=for-the-badge" /></a>
-    <a href="https://github.com/klondike0x/FluxRoute/releases">
-        <img src="https://img.shields.io/github/downloads/klondike0x/FluxRoute/total?logo=github&label=downloads&style=for-the-badge" /></a>
-    <a href="https://github.com/klondike0x/FluxRoute/releases">
-        <img src="https://img.shields.io/github/v/release/klondike0x/FluxRoute?include_prereleases&sort=semver&logo=github&label=version&style=for-the-badge" /></a>
-    <a href="./LICENSE">
-        <img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge" /></a>
-</p>
-
-<p align="center">
-  ⚡ Автоматизация zapret-профилей с умным переключением и самообучаемым ИИ<br/><br/>
-  <b>FluxRoute Desktop — Windows GUI и оркестратор для Flowseal zapret-discord-youtube</b><br/>
-  Управляет BAT-профилями через удобный интерфейс, автоматически подбирает рабочие конфигурации<br/>
-  и эволюционирует новые стратегии обхода под вашу сеть.
-</p>
-
-> FluxRoute Desktop — GUI-оболочка для Flowseal `zapret-discord-youtube`: запуск и обновление профилей в одном окне.
-
----
-
-## ⭐ Поддержать проект
-
-Если FluxRoute оказался полезным, пожалуйста, поддержи проект:
-
-- поставь **Star** на GitHub;
-- расскажи о проекте друзьям или в тематических чатах;
-- открой **Issue** с идеями и обратной связью;
-- предложи улучшения через **Pull Request**.
-
-Твоя поддержка помогает развивать FluxRoute быстрее и делать его лучше для всех 💙
-
----
-
-## ❓ Почему FluxRoute
-
-- **Удобный GUI** вместо ручного запуска BAT-файлов
-- **Автообновление `engine/`** из GitHub Releases
-- **Оркестратор профилей** — автоматически тестирует соединение и переключает лучший вариант при сбое
-- **ИИ-оркестратор** — Thompson-sampling, эволюция BAT-стратегий и память политики для каждой сети
-- **Скрытый запуск** BAT-файлов и `winws.exe` без лишних консольных окон
-- **Диагностика и логи** под рукой, без прыжков между окнами
+Запускайте, обновляйте и переключайте профили в одном окне — без ручного редактирования BAT-файлов.
 
 ---
 
 ## ✨ Возможности
 
-- **Компактный интерфейс** — одна кнопка Запуск/Стоп, статус и логи всегда на виду
-- **Оркестратор** — автоматически тестирует все профили, выставляет рейтинг и переключается на лучший при сбоях (подробнее см. раздел **Оркестратор** ниже)
-- **ИИ-оркестратор** — самообучаемый подбор и эволюция стратегий: bandit-выбор, Wilson-оценка, отпечаток сети, папка `engine/ai-evolved` (см. раздел **ИИ-оркестратор**)
-- **TG WS Proxy (новое в 1.4.0)** — дополнительный прокси-канал, интегрированный в общий сценарий запуска
-- **Автообновление** — при запуске проверяет новые релизы Flowseal на GitHub и обновляет `engine/` в один клик
-- **Окно настроек** — выбор профиля, управление оркестратором, сайты для проверки, диагностика
-- **Скрытые окна** — BAT-файлы и `winws.exe` запускаются в фоне без лишних консолей
+### 🧠 Интеллект и автоматизация
+
+| Фича                            | Описание                                                                                    |
+| ------------------------------- | ------------------------------------------------------------------------------------------- |
+| 🎯 **ИИ-оркестратор**           | Thompson Sampling для самообучаемого подбора стратегий под вашу сеть                        |
+| 🧬 **Генетическая эволюция**    | Скрещивание лучших стратегий + мутации параметров zapret → новые BAT в `engine/ai-evolved/` |
+| 🌐 **Network Fingerprint**      | Адаптация ИИ-политики под каждую сеть (Wi-Fi ↔ Ethernet, разные DNS)                        |
+| 📊 **Классический оркестратор** | Сканирование всех профилей, рейтинг 0-100%, автопереключение на лучший при сбое             |
+| ⚙️ **Auto-Tune**                | Автоматический подбор оптимальной комбинации IPSet × GameFilter                             |
+| 🎮 **Процесс-триггеры**         | Автопереключение пресетов при запуске игр/приложений (например, `rocketleague.exe`)         |
+
+### 🔌 Интеграции
+
+| Фича                             | Описание                                                                           |
+| -------------------------------- | ---------------------------------------------------------------------------------- |
+| 📡 **TG WS Proxy**               | Встроенная установка Telegram-прокси с fallback-зеркалом (astral-sh mirror)        |
+| 🔄 **Автообновление engine/**    | Проверка новых релизов Flowseal через GitHub Releases (Atom feed, без API-лимитов) |
+| 🆙 **Автообновление приложения** | Скачивание и атомарная установка новых версий FluxRoute с SHA-256 верификацией     |
+| 🌍 **Менеджер доменов**          | Добавление своих сайтов и исключений для проверки оркестратором через UI           |
+
+### 🎨 Интерфейс
+
+| Фича                                   | Описание                                                                      |
+| -------------------------------------- | ----------------------------------------------------------------------------- |
+| 💎 **Компактный UI**                   | Одна кнопка Start/Stop, статус и логи всегда на виду — без перегруженных меню |
+| 🖥 **Работа в трее**                   | Сворачивание в трей с balloon-уведомлениями о статусе                         |
+| 🛡 **Скрытый запуск**                  | BAT-файлы и `winws.exe` работают в фоне без консольных окон                   |
+| 🚀 **Автозапуск с Windows**            | Регистрация в реестре (`HKCU\...\Run`) с флагом `--autostart`                 |
+| ⚡ **Автозапуск профиля** _(в планах)_ | Автоматический запуск последнего профиля при старте системы                   |
+
+### 🛡️ Безопасность
+
+| Фича                                | Описание                                                                      |
+| ----------------------------------- | ----------------------------------------------------------------------------- |
+| 🔒 **GitHub Actions**               | Прозрачная CI/CD-сборка — каждый релиз собирается автоматически из исходников |
+| ✅ **SHA-256 верификация**          | Хеши релизов логируются для проверки целостности скачанных файлов             |
+| 🔄 **Атомарные обновления**         | Staging → backup → rollback при ошибках (никаких "поломанных" установок)      |
+| 👮 **Проверка прав администратора** | UAC elevation prompt при запуске + понятные сообщения об ошибках              |
+
+### 🔧 Диагностика
+
+| Фича                           | Описание                                                                     |
+| ------------------------------ | ---------------------------------------------------------------------------- |
+| 📊 **Расширенная диагностика** | Проверка WinDivert, BFE, TCP timestamps, VPN, AdGuard, DNS, провайдера       |
+| 💾 **Диагностический бандл**   | Экспорт ZIP со всеми логами, настройками и системной информацией для отладки |
+| 📋 **Логи в реальном времени** | Вкладка "Логи" с фильтрацией, экспортом и историей                           |
+| 🌐 **Проверка доступности**    | Тест YouTube, Discord, Google, Twitch, Instagram, Telegram и других сайтов   |
+
+### 🎨 Экосистема
+
+| Фича                         | Описание                                                |
+| ---------------------------- | ------------------------------------------------------- |
+| 📦 **Portable**              | Работает из любой папки без установки                   |
+| 🧪 **Unit-тесты**            | Покрытие для bandit, evolver, parser, fingerprint       |
+| 📖 **Открытый исходный код** | GPL-3.0 — каждый может проверить, что делает приложение |
+| 🚫 **Без телеметрии**        | FluxRoute не собирает данные пользователей              |
 
 ---
 
-## 🤖 Оркестратор
+## 🆚 Чем FluxRoute отличается от других GUI
 
-Оркестратор — это автоматическое управление профилями без ручного перебора.
+FluxRoute — **единственный** GUI с полноценной ИИ-подсистемой:
 
-В версии **1.4.0** он также работает в связке с **TG WS Proxy** как дополнительным прокси-каналом (при использовании соответствующего сценария).
+| Категория                             | FluxRoute | Zapret-Hub | Zapret-GUI | Zapret2 GUI | ZapretControl |
+| ------------------------------------- | :-------: | :--------: | :--------: | :---------: | :-----------: |
+| 🧠 ИИ-оркестратор (Thompson Sampling) |    ✅     |     ❌     |     ❌     |     ❌      |      ❌       |
+| 🧬 Генетическая эволюция стратегий    |    ✅     |     ❌     |     ❌     |     ❌      |      ❌       |
+| 🎮 Process-triggers (авто по .exe)    |    ✅     |     ❌     |     ❌     |     ❌      |      ❌       |
+| ⚙️ Auto-Tune (IPSet × GameFilter)     |    ✅     |     ❌     |     ❌     |     ❌      |      ❌       |
+| 📡 TG WS Proxy встроенный             |    ✅     |     ✅     |     ❌     |     ❌      |      ❌       |
+| 🤖 AI DNS (ChatGPT, Claude, Gemini)   |    ❌     |     ❌     |     ✅     |     ✅      |      ❌       |
+| 💬 Разблокировка Telegram Desktop     |    ❌     |     ❌     |     ✅     |     ❌      |      ❌       |
+| 📚 80+ стратегий из коробки           |    ❌     |     ❌     |     ❌     |     ✅      |      ❌       |
+| 🎨 Темы (5+) и многоязычность         |    ❌     |     ✅     |     ✅     |     ❌      |      ❌       |
+| 📦 Portable + установщик              |    ❌     |     ✅     |     ❌     |     ❌      |      ❌       |
+| 🔒 GitHub Actions (прозрачная сборка) |    ✅     |     ❌     |     ❌     |     ❌      |      ❌       |
+| 🔄 Атомарные обновления engine        |    ✅     |     ⚠️     |     ✅     |     ❌      |      ❌       |
 
-При включённом **режиме ИИ** (вкладка **ИИ**) вместо классического рейтинга профилей работает **ИИ-оркестратор**: он выбирает стратегии из геномного пула, записывает результаты проб и при необходимости переключает защиту на другую стратегию.
-
-Как он работает:
-
-1. **Сканирует** доступные профили (кнопка «Сканировать профили»)
-2. **Проверяет** доступность выбранных сайтов
-3. **Оценивает** каждый профиль по рейтингу от `0` до `100%`
-4. **Запускает лучший** профиль после сканирования (автоматически применяет топ результата)
-5. **Переключается** на лучший профиль, если текущий перестал работать
-6. **Повторно проверяет** соединение через заданный интервал  
-   По умолчанию — **каждые 20 минут**
-
-На вкладке **Оркестратор** при активном ИИ отображается блок **«Стратегии ИИ»**: галочки включают/исключают стратегии из подбора и эволюции, кнопка 🗑 удаляет эволюционированные варианты.
-
-Это позволяет держать рабочий профиль активным почти без ручного вмешательства.
-
----
-
-## 🧠 ИИ-оркестратор
-
-Модуль **FluxRoute.AI** добавляет адаптивный движок стратегий поверх обычного оркестратора. ИИ не заменяет zapret — он **управляет тем, какой BAT-профиль запускать**, накапливает опыт по сети и **создаёт новые варианты** на основе удачных конфигураций.
-
-### Возможности
-
-| Компонент | Назначение |
-|:---|:---|
-| **Strategy Genome** | Типизированное представление стратегии (фильтры, desync, split, fake TLS и др.), извлекается из BAT |
-| **Bandit Selector** | Выбор стратегии через **Thompson Sampling** с настраиваемым exploration (‰) |
-| **Strategy Evolver** | Скрещивание лучших геномов по **нижней границе Wilson**; мутации параметров zapret |
-| **Network Fingerprint** | Отпечаток сети (DNS, шлюз, интерфейсы) — отдельная политика на каждую сеть |
-| **AiHistoryStore** | Журнал проб в `fluxroute-ai-history.jsonl` |
-| **AiStrategyRegistry** | Реестр геномов, bandit-состояние, счётчик поколений |
-| **BatMaterializer** | Запись эволюционированных стратегий в `engine/ai-evolved/*.bat` |
-
-### Как это работает
-
-```mermaid
-flowchart LR
-    A[Отпечаток сети] --> B{Режим ИИ}
-    B -->|вкл| C[Bandit: выбор генома]
-    C --> D[Применить BAT / winws]
-    D --> E[Проба сайтов]
-    E --> F[История + Wilson]
-    F --> G{Пора эволюции?}
-    G -->|да| H[Strategy Evolver]
-    H --> I[ai-evolved/*.bat]
-    I --> C
-    F --> C
-    B -->|выкл| J[Классический оркестратор]
-```
-
-1. При старте оркестратора ИИ синхронизирует встроенные профили `engine/` в реестр геномов.
-2. По **отпечатку текущей сети** выбирается стратегия (exploitation через Thompson или exploration — редкие варианты).
-3. После каждой проверки результат сохраняется; при серии сбоев — переключение на другую стратегию.
-4. Периодически (или по кнопке **«Эволюция сейчас»**) эволютор создаёт потомка от лучших родителей и материализует новый BAT.
-5. При смене сети (Wi‑Fi ↔ Ethernet, другой DNS) отпечаток меняется — ИИ подстраивает выбор под новую среду.
-
-### Вкладка «ИИ»
-
-| Элемент | Описание |
-|:---|:---|
-| **Включить самообучаемый подбор** | Оркестратор использует ИИ вместо простого рейтинга профилей |
-| **Exploration (‰)** | Доля «исследования» редких стратегий (по умолчанию `100` = 10%) |
-| **Сеть / Поколение / Проб** | Текущий отпечаток сети, номер поколения эволюции, записей в истории |
-| **⚗ Эволюция сейчас** | Принудительный запуск эволюции и обновление списка стратегий |
-| **↺ Сброс модели** | Очистка реестра, bandit-состояния и истории проб |
-| **📁 ai-evolved** | Открыть папку с сгенерированными BAT-файлами |
-| **Список стратегий** | Имя, происхождение (builtin / evolved), Wilson-оценка, последняя верификация |
-
-Ручное включение стратегий и удаление эволюционированных — на вкладке **Оркестратор** (блок «Стратегии ИИ»).
-
-### Быстрый сценарий
-
-1. Обновите `engine/` на вкладке **Обновления**.
-2. Включите **режим ИИ** на вкладке **ИИ**.
-3. На вкладке **Оркестратор** задайте сайты для проверки и нажмите **Запустить оркестратор** (или сначала **Сканировать профили**).
-4. Дождитесь нескольких циклов проверки — в списке стратегий появятся Wilson-оценки.
-5. При необходимости нажмите **Эволюция сейчас** — новые BAT появятся в `engine/ai-evolved/`.
-
-### Параметры (файл настроек)
-
-| Параметр | По умолчанию | Смысл |
-|:---|:---:|:---|
-| `Enabled` | `false` | Режим ИИ в UI |
-| `ExplorationRatePermil` | `100` | Exploration в промилле (‰) |
-| `MaxEvolvedStrategies` | `24` | Лимит эволюционированных стратегий |
-| `EvolutionIntervalMinutes` | `60` | Минимальный интервал авто-эволюции |
-| `MinProbesBeforeEvolve` | `6` | Проб до первой авто-эволюции |
-| `KeepHistoryDays` | `14` | Срок хранения истории проб |
-
-### Файлы данных
-
-Рядом с настройками приложения (каталог `%AppData%` / локальный конфиг):
-
-- `fluxroute-ai-strategies.json` — реестр геномов и bandit
-- `fluxroute-ai-history.jsonl` — журнал проб (сеть, геном, score, время)
-
-Эволюционированные профили на диске: **`engine/ai-evolved/`**.
-
----
-
-## 📸 Скриншоты
-
-| Главное окно | Запущено |
-|:---:|:---:|
-| <img width="860" height="520" alt="FluxRoute_2TjfigppDJ" src="https://github.com/user-attachments/assets/70dda58d-cbf3-43f8-b8ae-72b7fad3d88e" /> | <img width="860" height="520" alt="FluxRoute_PtjD6uwyNa" src="https://github.com/user-attachments/assets/5c6711d3-93b9-4219-9640-73758e1e46b7" /> |
-
-| Оркестратор | Обновления |
-|:---:|:---:|
-| <img width="860" height="520" alt="FluxRoute_ydu1FOkwjG" src="https://github.com/user-attachments/assets/bf33cffb-6d56-4055-8f8e-8c807f57d9a7" /> | <img width="860" height="520" alt="FluxRoute_tEVm5fefzY" src="https://github.com/user-attachments/assets/a51c1477-a560-450f-b6ac-ef05ccbec4d2" /> |
-
-| Сервис |
-|:---:|
-| <img width="860" height="520" alt="FluxRoute_k7pxUqE7aa" src="https://github.com/user-attachments/assets/4bdf02a2-83dc-4e39-847a-5c133bfbe6a9" /> |
+> **Главное отличие:** FluxRoute — единственный проект, где ИИ **сам подбирает и эволюционирует** стратегии под вашу сеть через Thompson Sampling и генетический алгоритм. Остальные GUI — это удобные обёртки со статическими профилями или специфичными фичами (AI DNS, Telegram, моды).
 
 ---
 
@@ -204,382 +130,251 @@ flowchart LR
 ### Требования
 
 - **Windows 10/11 x64**
-- **Права администратора** для корректной работы `winws.exe`
+- **Права администратора** (для работы `winws.exe` и WinDivert)
 
-### Первый запуск
+### Установка
 
-1. Скачай последний релиз в разделе [Releases](https://github.com/klondike0x/FluxRoute/releases)
-2. Распакуй ZIP в любую удобную папку
-3. Запусти `FluxRoute.exe` **от имени администратора**
-4. Открой вкладку **Обновления** и нажми **Проверить** → **Обновить**
-5. После загрузки актуального `engine/` выбери профиль и нажми **▶ Запустить**
-6. *(опционально)* Включи **режим ИИ** на вкладке **ИИ** и запусти **оркестратор** для адаптивного подбора стратегий
+1. Скачайте последний релиз: [**Releases**](https://github.com/klondike0x/FluxRoute/releases)
+2. Распакуйте ZIP в любую папку (например, `C:\FluxRoute\`)
+3. Запустите `FluxRoute.exe` **от имени администратора**
+4. Дождитесь автоматической загрузки `engine/` с Flowseal
+5. Выберите профиль и нажмите **▶ Запустить**
+
+### Первый запуск с ИИ
+
+1. Обновите `engine/` на вкладке **Обновления**
+2. Включите **режим ИИ** на вкладке **ИИ**
+3. Запустите **оркестратор** на вкладке **Оркестратор**
+4. Готово — ИИ автоматически подберёт лучшую стратегию под вашу сеть
 
 ---
 
-## 📁 Структура проекта
+## 🧠 ИИ-оркестратор
+
+Уникальная подсистема `FluxRoute.AI`, которой нет в других GUI:
+
+| Компонент               | Назначение                                                                 |
+| ----------------------- | -------------------------------------------------------------------------- |
+| **Strategy Genome**     | Типизированное представление стратегии (фильтры, desync, split, fake TLS)  |
+| **Bandit Selector**     | Выбор стратегии через Thompson Sampling с настраиваемым exploration        |
+| **Strategy Evolver**    | Скрещивание лучших геномов по нижней границе Wilson; мутации параметров    |
+| **Network Fingerprint** | Отпечаток сети (DNS, шлюз, интерфейсы) — отдельная политика на каждую сеть |
+| **AiHistoryStore**      | Журнал проб в `fluxroute-ai-history.jsonl`                                 |
+| **AiStrategyRegistry**  | Реестр геномов, bandit-состояние, счётчик поколений                        |
+| **BatMaterializer**     | Запись эволюционированных стратегий в `engine/ai-evolved/*.bat`            |
+
+### Как работает ИИ-оркестратор
+
+```mermaid
+flowchart LR
+    A["🌐 Отпечаток сети<br/>(DNS, шлюз, интерфейсы)"] --> B{Режим ИИ}
+
+    B -->|вкл| C["🎰 Bandit Selector<br/>(Thompson Sampling)"]
+    C --> D["⚡ Применить BAT / winws"]
+    D --> E["🔍 Проба сайтов<br/>(YouTube, Discord, ...)"]
+    E --> F["📊 История + Wilson<br/>(нижняя граница)"]
+
+    F --> G{Пора эволюции?}
+    G -->|да| H["🧬 Strategy Evolver<br/>(скрещивание + мутации)"]
+    H --> I["📁 ai-evolved/*.bat"]
+    I --> C
+
+    F -->|нет| C
+
+    B -->|выкл| J["📋 Классический<br/>оркестратор<br/>(простой рейтинг)"]
+
+    style A fill:#1a2e66,stroke:#55aaff,color:#fff
+    style C fill:#1a4a2e,stroke:#00d68f,color:#fff
+    style H fill:#4a1a66,stroke:#9933dd,color:#fff
+    style I fill:#4a3800,stroke:#f0b429,color:#fff
+    style J fill:#2e2e2e,stroke:#888,color:#ccc
+```
+
+### Цикл работы
+
+1. 🌐 **Отпечаток сети** — фиксируем DNS, шлюз, интерфейсы
+2. 🎰 **Bandit Selector** — выбираем стратегию через Thompson Sampling
+3. ⚡ **Применяем BAT** — запускаем `winws.exe` с параметрами стратегии
+4. 🔍 **Проба сайтов** — проверяем доступность YouTube, Discord и др.
+5. 📊 **История + Wilson** — обновляем статистику успешности
+6. 🧬 **Эволюция** — периодически скрещиваем лучшие стратегии
+7. 📁 **`ai-evolved/`** — новые BAT-файлы сохраняются автоматически
+
+---
+
+## 📸 Интерфейс
+
+<table>
+<tr>
+<td><img src="https://github.com/user-attachments/assets/70dda58d-cbf3-43f8-b8ae-72b7fad3d88e" alt="Главное окно" width="860"/></td>
+<td><img src="https://github.com/user-attachments/assets/a51c1477-a560-450f-b6ac-ef05ccbec4d2" alt="Обновления" width="860"/></td>
+</tr>
+<tr>
+<td><img src="https://github.com/user-attachments/assets/bf33cffb-6d56-4055-8f8e-8c807f57d9a7" alt="Оркестратор" width="860"/></td>
+<td><img src="https://github.com/user-attachments/assets/4bdf02a2-83dc-4e39-847a-5c133bfbe6a9" alt="Сервис" width="860"/></td>
+</tr>
+</table>
+
+---
+
+## 🔧 Troubleshooting
+
+> [!IMPORTANT]
+> При любых проблемах попробуйте:
+>
+> 1. Запустить от имени **администратора**
+> 2. Обновить `engine/` на вкладке **Обновления**
+> 3. Запустить **Сканировать все профили** на вкладке **Оркестратор**
+> 4. Включить **Auto-Tune** на вкладке **Сервис**
+
+### ❌ TG WS Proxy не устанавливается (SSL-ошибка)
+
+В сетях с DPI-блокировками `python.org` используйте **Firefox** для ручной загрузки:
+
+1. Скачайте: `https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip`
+2. Распакуйте в `tg-proxy\python\`
+3. В FluxRoute: вкладка **TG Прокси** → **Установить TG WS Proxy**
+
+**После выхода v1.5.1** — автоматический fallback на `astral-sh` mirror (GitHub CDN).
+
+### ❌ `ModuleNotFoundError: No module named 'proxy.pool'`
+
+Старая версия установщика не скачивала новые файлы. Решение:
+
+1. Скачайте `https://github.com/Flowseal/tg-ws-proxy/archive/main.zip`
+2. Скопируйте папку `proxy/` в `tg-proxy\proxy\`
+3. Перезапустите прокси
+
+**После выхода v1.5.1** — установщик скачивает весь репозиторий ZIP-архивом.
+
+### ❌ Профиль не работает (0%)
+
+1. Убедитесь, что **GameFilter** = `TCP и UDP`
+2. **IPSet Mode** = `loaded`
+3. Запустите **Auto-Tune** на вкладке **Сервис**
+4. Проверьте расширенную диагностику (вкладка **Диагностика**)
+
+### ❌ Порт 1443 занят (TG Proxy)
+
+```cmd
+netstat -ano | findstr :1443
+taskkill /PID <число> /F
+```
+
+---
+
+## ⚠️ WinDivert и антивирусы
+
+> [!WARNING]
+> В проекте используется **WinDivert** — легитимный инструмент для перехвата трафика, необходимый для работы zapret.
+>
+> Сам по себе он **не является вирусом**, но антивирусы могут классифицировать его как `Not-a-virus:RiskTool.Multi.WinDivert` или `HackTool`.
+
+**Что делать:**
+
+- Добавьте папку FluxRoute в **исключения антивируса**
+- Отключите детект **PUA** (потенциально нежелательных приложений)
+- В Kaspersky: снимите галочку _"Обнаруживать легальные приложения, которые злоумышленники часто используют"_
+
+---
+
+## 🔒 Безопасность
+
+- ✅ **GitHub Actions** — все релизы собираются автоматически, прозрачно
+- ✅ **SHA-256 хеши** — каждая загрузка верифицируется в логах
+- ✅ **Открытый исходный код** — каждый может проверить, что делает приложение
+- ✅ **Нет телеметрии** — FluxRoute не собирает данные пользователей
+- ✅ **Портативный** — не требует установки, работает из папки
+- ✅ **Атомарные обновления** — staging → backup → rollback при ошибках
+
+> [!TIP]
+> Обновления приложения всегда приходят только с официального репозитория `klondike0x/FluxRoute` — URL зашит в `AppUpdaterService`. Это гарантирует, что даже пользователи форков в итоге получают оригинальную версию.
+
+---
+
+## 🛠 Для разработчиков
+
+### Требования
+
+- .NET 10 SDK
+- Visual Studio 2022/2026 или JetBrains Rider
+
+### Сборка из исходников
+
+```bash
+git clone https://github.com/klondike0x/FluxRoute.git
+cd FluxRoute
+dotnet build
+dotnet run --project FluxRoute
+```
+
+### Структура проекта
 
 ```
 FluxRoute/
 ├── FluxRoute/              — UI (WPF, Views, ViewModels, вкладка «ИИ»)
-├── FluxRoute.Core/         — Оркестратор, проверка связи, AiSettings
+├── FluxRoute.Core/         — Логика (Оркестратор, Проверка связи, Модели)
 ├── FluxRoute.AI/           — ИИ-движок (bandit, evolver, fingerprint, registry)
 ├── FluxRoute.Core.Tests/   — Unit-тесты (bandit, evolver, parser, fingerprint)
 ├── FluxRoute.Updater/      — Автообновление engine/ с GitHub
 └── engine/                 — Скрипты Flowseal (скачиваются автоматически)
-    └── ai-evolved/         — BAT-стратегии, созданные эволюцией (при работе ИИ)
+    └── ai-evolved/         — BAT-стратегии, созданные эволюцией
 ```
+
+### Вклад в проект
+
+1. Форкните репозиторий
+2. Создайте ветку: `git checkout -b feature/my-feature`
+3. Сделайте коммит: `git commit -m "feat: add my feature"`
+4. Запушьте: `git push origin feature/my-feature`
+5. Откройте **Pull Request**
 
 ---
 
-## 🛠️ Сборка из исходников
+## 🌳 Экосистема
 
-**Требования:**
-- .NET 10 SDK
-- Visual Studio 2026
+FluxRoute использует экосистему проектов:
 
-```bash
-git clone https://github.com/klondike0x/FluxRoute.git
-cd FluxRoute
-dotnet build
-```
+- **[WinDivert](https://github.com/basil00/WinDivert)** — низкоуровневая Windows-основа
+- **[bol-van/zapret](https://github.com/bol-van/zapret)** — оригинальный проект
+- **[bol-van/zapret-win-bundle](https://github.com/bol-van/zapret-win-bundle)** — Windows-бандл с `winws.exe`
+- **[Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube)** — основа `engine/`, используемая в FluxRoute
+- **[Flowseal/tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy)** — Telegram WebSocket прокси
+
+### Проекты, которые вдохновили
+
+- **[Zapret-GUI](https://github.com/medvedeff-true/Zapret-GUI)** — от `medvedeff-true`
+- **[ZapretControl](https://github.com/Virenbar/ZapretControl)** — от `Virenbar`
+- **[Zapret-Hub](https://github.com/goshkow/Zapret-Hub)** — от `goshkow`
+- **[zapret](https://github.com/youtubediscord/zapret)** — от `youtubediscord`
 
 ---
 
-## ⚠️ Дисклеймер
+## 🌟 Производные проекты
 
-FluxRoute Desktop является **GUI-оболочкой** для проекта [Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube).
+| Проект               | Автор                                        | Статус                           |
+| -------------------- | -------------------------------------------- | -------------------------------- |
+| **FluxRoute** (этот) | [klondike0x](https://github.com/klondike0x)  | ✅ Оригинал, активно развивается |
+| FluxRoute_AI         | [mx57](https://github.com/mx57/FluxRoute_AI) | Форк с AI-расширениями           |
 
-Все права на `zapret`, `winws.exe` и связанные с ними скрипты принадлежат их авторам.  
+Если вы создали форк или расширение — откройте Issue, чтобы добавить его в список.
+
+---
+
+## 📜 Лицензия
+
+Проект распространяется по лицензии **GNU General Public License v3.0**.
+
+Подробности — в файле [LICENSE](LICENSE).
+
+FluxRoute Desktop является **GUI-оболочкой** для проекта `Flowseal/zapret-discord-youtube`.
+Все права на `zapret`, `winws.exe` и связанные с ними скрипты принадлежат их авторам.
 Этот репозиторий не претендует на авторство оригинальной низкоуровневой сетевой части.
 
 ---
 
-## 🐞 Нашёл баг?
+<div align="center">
 
-Если что-то работает не так, открой [Issue](https://github.com/klondike0x/FluxRoute/issues) и по возможности укажи:
+**Сделано с ❤️ для сообщества** · Автор: [klondike0x](https://github.com/klondike0x) · [⭐ Поставить звезду](https://github.com/klondike0x/FluxRoute) · [🐛 Сообщить о баге](https://github.com/klondike0x/FluxRoute/issues) · [💬 Задать вопрос](https://github.com/klondike0x/FluxRoute/discussions)
 
-- что произошло;
-- что ты ожидал увидеть;
-- как это воспроизвести;
-- какой профиль был выбран;
-- что написано в логах или диагностике.
-
-Чем точнее описание, тем быстрее получится разобраться.
-
----
-
-## 🧩 Основа engine
-
-FluxRoute использует следующую экосистему проектов:
-
-- [**WinDivert**](https://github.com/basil00/WinDivert) — низкоуровневая Windows-основа
-- [**bol-van/zapret**](https://github.com/bol-van/zapret) — оригинальный проект
-- [**bol-van/zapret-win-bundle**](https://github.com/bol-van/zapret-win-bundle) — Windows-бандл с `winws.exe`
-- [**Flowseal/zapret-discord-youtube**](https://github.com/Flowseal/zapret-discord-youtube) — непосредственная основа `engine/`, используемая в FluxRoute
-
----
-
-## 💡 Вдохновение
-
-Проекты, которые вдохновили на создание FluxRoute Desktop:
-
-- [**Zapret-GUI**](https://github.com/medvedeff-true/Zapret-GUI) — от `medvedeff-true`
-- [**ZapretControl**](https://github.com/Virenbar/ZapretControl) — от `Virenbar`
-- [**zapret**](https://github.com/youtubediscord/zapret) — от `youtubediscord`
-
----
-
-## 📄 Лицензия
-
-Проект распространяется по лицензии **GNU General Public License v3.0**.  
-Подробности — в файле [LICENSE](./LICENSE).
-
----
-
-<a id="-fluxroute-desktop-en"></a>
-
-## FluxRoute Desktop [EN]
-
-<p align="center">
-    <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="./assets/FluxRoute-white.svg">
-        <source media="(prefers-color-scheme: light)" srcset="./assets/FluxRoute-dark.svg">
-        <img width="750" alt="FluxRoute" src="./assets/FluxRoute-dark.svg" />
-    </picture>
-</p>
-
-<p align="center">
-    <a href="https://dotnet.microsoft.com/">
-        <img src="https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&style=for-the-badge" /></a>
-    <a href="https://github.com/klondike0x/FluxRoute/releases">
-        <img src="https://img.shields.io/github/downloads/klondike0x/FluxRoute/total?logo=github&label=downloads&style=for-the-badge" /></a>
-    <a href="https://github.com/klondike0x/FluxRoute/releases">
-        <img src="https://img.shields.io/github/v/release/klondike0x/FluxRoute?include_prereleases&sort=semver&logo=github&label=version&style=for-the-badge" /></a>
-    <a href="./LICENSE">
-        <img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge" /></a>
-</p>
-
-<p align="center">
-  ⚡ Smart automation for zapret profile switching with self-learning AI<br/><br/>
-  <b>FluxRoute Desktop — Windows GUI and orchestrator for Flowseal zapret-discord-youtube</b><br/>
-  Manages BAT profiles through a clean interface, automatically selects working configurations,<br/>
-  and evolves new bypass strategies tailored to your network.
-</p>
-
-> FluxRoute Desktop is a GUI wrapper for Flowseal `zapret-discord-youtube`, allowing users to launch and update profiles from a single window.
-
----
-
-## ⭐ Support the Project
-
-If FluxRoute is useful for you, please support the project:
-
-- leave a **Star** on GitHub;
-- share the project with friends or community chats;
-- open an **Issue** with feedback and ideas;
-- contribute improvements via **Pull Request**.
-
-Your support helps FluxRoute grow faster and become better for everyone 💙
-
----
-
-## ❓ Why FluxRoute
-
-- **Convenient GUI** instead of manually launching BAT files
-- **Automatic `engine/` updates** directly from GitHub Releases
-- **Profile orchestrator** — automatically tests connectivity and switches to the best option on failure
-- **AI orchestrator** — Thompson sampling, BAT strategy evolution, and per-network policy memory
-- **Hidden launch** of BAT files and `winws.exe` without extra console windows
-- **Diagnostics and logs** always available without jumping between windows
-
----
-
-## ✨ Features
-
-- **Compact interface** — a single Start/Stop button, status, and logs always in view
-- **Orchestrator** — automatically tests all profiles, assigns ratings, and switches to the best one on failures (see the **Orchestrator** section below for details)
-- **AI orchestrator** — self-learning strategy selection and evolution: bandit picking, Wilson scoring, network fingerprinting, `engine/ai-evolved` folder (see **AI Orchestrator**)
-- **TG WS Proxy (new in 1.4.0)** — an additional proxy channel integrated into the overall launch workflow
-- **Auto-update** — checks new Flowseal releases on GitHub and updates `engine/` in one click
-- **Settings window** — profile selection, orchestrator control, test websites, and diagnostics
-- **Hidden windows** — BAT files and `winws.exe` run in the background without unnecessary consoles
-
----
-
-## 🤖 Orchestrator
-
-The orchestrator is an automatic profile management system that removes the need for manual switching.
-
-When **AI mode** is enabled ( **AI** tab), the **AI orchestrator** replaces the classic profile ranking: it picks strategies from a genome pool, records probe outcomes, and switches protection when needed.
-
-How it works:
-
-1. **Scans** available profiles (**Scan profiles** button)
-2. **Checks** the availability of selected websites
-3. **Scores** each profile with a rating from `0` to `100%`
-4. **Starts the best** profile after a scan (top result is applied automatically)
-5. **Switches** to the best profile if the current one stops working
-6. **Re-checks** connectivity at a specified interval  
-   By default — **every 20 minutes**
-
-On the **Orchestrator** tab with AI active, the **AI Strategies** block lets you enable/disable strategies for selection and evolution, and delete evolved variants.
-
-This helps keep a working profile active with minimal manual intervention.
-
----
-
-## 🧠 AI Orchestrator
-
-The **FluxRoute.AI** module adds an adaptive strategy engine on top of the regular orchestrator. AI does not replace zapret — it **decides which BAT profile to run**, learns per network, and **generates new variants** from successful configurations.
-
-### Capabilities
-
-| Component | Purpose |
-|:---|:---|
-| **Strategy Genome** | Typed strategy representation (filters, desync, split, fake TLS, etc.) parsed from BAT files |
-| **Bandit Selector** | **Thompson Sampling** strategy pick with configurable exploration (‰) |
-| **Strategy Evolver** | Crosses top genomes by **Wilson lower bound**; mutates zapret parameters |
-| **Network Fingerprint** | Network signature (DNS, gateway, interfaces) — separate policy per network |
-| **AiHistoryStore** | Probe log in `fluxroute-ai-history.jsonl` |
-| **AiStrategyRegistry** | Genome registry, bandit state, generation counter |
-| **BatMaterializer** | Writes evolved strategies to `engine/ai-evolved/*.bat` |
-
-### How it works
-
-```mermaid
-flowchart LR
-    A[Network fingerprint] --> B{AI mode}
-    B -->|on| C[Bandit: pick genome]
-    C --> D[Apply BAT / winws]
-    D --> E[Site probes]
-    E --> F[History + Wilson]
-    F --> G{Evolve time?}
-    G -->|yes| H[Strategy Evolver]
-    H --> I[ai-evolved/*.bat]
-    I --> C
-    F --> C
-    B -->|off| J[Classic orchestrator]
-```
-
-1. On orchestrator start, AI syncs built-in `engine/` profiles into the genome registry.
-2. By **current network fingerprint**, a strategy is chosen (Thompson exploitation or exploration of rare variants).
-3. After each check, results are stored; consecutive failures trigger a switch.
-4. Periodically (or via **Evolve now**), the evolver breeds offspring from top parents and materializes a new BAT.
-5. When the network changes (Wi‑Fi ↔ Ethernet, different DNS), the fingerprint changes — AI adapts to the new environment.
-
-### AI tab
-
-| Control | Description |
-|:---|:---|
-| **Enable self-learning selection** | Orchestrator uses AI instead of simple profile ranking |
-| **Exploration (‰)** | Share of “explore rare strategies” (default `100` = 10%) |
-| **Network / Generation / Probes** | Current fingerprint, evolution generation, history record count |
-| **⚗ Evolve now** | Force evolution and refresh the strategy list |
-| **↺ Reset model** | Clear registry, bandit state, and probe history |
-| **📁 ai-evolved** | Open the folder with generated BAT files |
-| **Strategy list** | Name, origin (builtin / evolved), Wilson score, last verification |
-
-Enable/disable strategies and delete evolved ones on the **Orchestrator** tab (**AI Strategies** block).
-
-### Quick workflow
-
-1. Update `engine/` on the **Updates** tab.
-2. Enable **AI mode** on the **AI** tab.
-3. On **Orchestrator**, set test sites and click **Start orchestrator** (or **Scan profiles** first).
-4. Wait for several check cycles — Wilson scores appear in the strategy list.
-5. Optionally click **Evolve now** — new BAT files land in `engine/ai-evolved/`.
-
-### Settings (config file)
-
-| Parameter | Default | Meaning |
-|:---|:---:|:---|
-| `Enabled` | `false` | AI mode in the UI |
-| `ExplorationRatePermil` | `100` | Exploration in permille (‰) |
-| `MaxEvolvedStrategies` | `24` | Cap on evolved strategies |
-| `EvolutionIntervalMinutes` | `60` | Minimum auto-evolution interval |
-| `MinProbesBeforeEvolve` | `6` | Probes before first auto-evolution |
-| `KeepHistoryDays` | `14` | Probe history retention |
-
-### Data files
-
-Next to app settings (`%AppData%` / local config):
-
-- `fluxroute-ai-strategies.json` — genome registry and bandit state
-- `fluxroute-ai-history.jsonl` — probe journal (network, genome, score, time)
-
-Evolved profiles on disk: **`engine/ai-evolved/`**.
-
----
-
-## 📸 Screenshots
-
-| Main Window | Running |
-|:---:|:---:|
-| <img width="860" height="520" alt="FluxRoute_2TjfigppDJ" src="https://github.com/user-attachments/assets/70dda58d-cbf3-43f8-b8ae-72b7fad3d88e" /> | <img width="860" height="520" alt="FluxRoute_PtjD6uwyNa" src="https://github.com/user-attachments/assets/5c6711d3-93b9-4219-9640-73758e1e46b7" /> |
-
-| Orchestrator | Updates |
-|:---:|:---:|
-| <img width="860" height="520" alt="FluxRoute_ydu1FOkwjG" src="https://github.com/user-attachments/assets/bf33cffb-6d56-4055-8f8e-8c807f57d9a7" /> | <img width="860" height="520" alt="FluxRoute_tEVm5fefzY" src="https://github.com/user-attachments/assets/a51c1477-a560-450f-b6ac-ef05ccbec4d2" /> |
-
-| Service |
-|:---:|
-| <img width="860" height="520" alt="FluxRoute_k7pxUqE7aa" src="https://github.com/user-attachments/assets/4bdf02a2-83dc-4e39-847a-5c133bfbe6a9" /> |
-
----
-
-## 🚀 Quick Start
-
-### Requirements
-
-- **Windows 10/11 x64**
-- **Administrator privileges** required for proper `winws.exe` operation
-
-### First Launch
-
-1. Download the latest release from the [Releases](https://github.com/klondike0x/FluxRoute/releases) section
-2. Extract the ZIP archive to any convenient folder
-3. Run `FluxRoute.exe` **as Administrator**
-4. Open the **Updates** tab and click **Check** → **Update**
-5. After the latest `engine/` is downloaded, choose a profile and click **▶ Start**
-6. *(optional)* Enable **AI mode** on the **AI** tab and start the **orchestrator** for adaptive strategy selection
-
----
-
-## 📁 Project Structure
-
-```text
-FluxRoute/
-├── FluxRoute/              — UI (WPF, Views, ViewModels, AI tab)
-├── FluxRoute.Core/         — Orchestrator, connectivity checks, AiSettings
-├── FluxRoute.AI/           — AI engine (bandit, evolver, fingerprint, registry)
-├── FluxRoute.Core.Tests/   — Unit tests (bandit, evolver, parser, fingerprint)
-├── FluxRoute.Updater/      — Automatic engine updates from GitHub
-└── engine/                 — Flowseal scripts (downloaded automatically)
-    └── ai-evolved/         — BAT strategies created by evolution (when AI runs)
-```
-
----
-
-## 🛠️ Build from Source
-
-**Requirements:**
-- .NET 10 SDK
-- Visual Studio 2026
-
-```bash
-git clone https://github.com/klondike0x/FluxRoute.git
-cd FluxRoute
-dotnet build
-```
-
----
-
-## ⚠️ Disclaimer
-
-FluxRoute Desktop is a **GUI wrapper** for the [Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube) project.
-
-All rights to `zapret`, `winws.exe`, and related scripts belong to their respective authors.  
-This repository does not claim authorship of the original low-level networking components.
-
----
-
-## 🐞 Found a Bug?
-
-If something is not working as expected, open an [Issue](https://github.com/klondike0x/FluxRoute/issues) and, if possible, include:
-
-- what happened;
-- what you expected to happen;
-- how to reproduce it;
-- which profile was selected;
-- what the logs or diagnostics say.
-
-The more accurate the report, the easier it will be to investigate.
-
----
-
-## 🧩 Engine Base
-
-FluxRoute uses the following project ecosystem:
-
-- [**WinDivert**](https://github.com/basil00/WinDivert) — low-level Windows foundation
-- [**bol-van/zapret**](https://github.com/bol-van/zapret) — original project
-- [**bol-van/zapret-win-bundle**](https://github.com/bol-van/zapret-win-bundle) — Windows bundle with `winws.exe`
-- [**Flowseal/zapret-discord-youtube**](https://github.com/Flowseal/zapret-discord-youtube) — the direct `engine/` base used in FluxRoute
-
----
-
-## 💡 Inspiration
-
-Projects that inspired the creation of FluxRoute Desktop:
-
-- [**Zapret-GUI**](https://github.com/medvedeff-true/Zapret-GUI) — by `medvedeff-true`
-- [**ZapretControl**](https://github.com/Virenbar/ZapretControl) — by `Virenbar`
-- [**zapret**](https://github.com/youtubediscord/zapret) — by `youtubediscord`
-
----
-
-## 📄 License
-
-This project is distributed under the **GNU General Public License v3.0**.  
-See the [LICENSE](./LICENSE) file for details.
+</div>
