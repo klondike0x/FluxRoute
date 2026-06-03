@@ -331,6 +331,33 @@ FluxRoute/
 
 ---
 
+## 📜 Derivative Projects Attribution
+
+> [!IMPORTANT]
+> **When developing projects based on FluxRoute, you must attribute the original author 
+> and upstream projects listed in the Ecosystem section.**
+>
+> This is required by the **GPL-3.0** license (§4 — preserve copyright notices, 
+> §5 — prominent notices of changes).
+
+**Minimum requirements for forks and derivative projects:**
+
+1. ✅ Add to README: `> **Original project:** [klondike0x/FluxRoute](https://github.com/klondike0x/FluxRoute)`
+2. ✅ Preserve all upstream attributions (Flowseal, bol-van, WinDivert)
+3. ✅ Mark changes with date (e.g., "Modified by [author] on [date]")
+4. ✅ Do not mislead users about authorship
+
+**Example of correct attribution in fork README:**
+
+```markdown
+> **Original project:** [klondike0x/FluxRoute](https://github.com/klondike0x/FluxRoute)
+>
+> This fork is based on FluxRoute Desktop and extends it with additional 
+> AI features. Changes made by [author] [date].
+```
+
+---
+
 ## 🌳 Ecosystem
 
 FluxRoute leverages the following project ecosystem:
@@ -366,6 +393,8 @@ If you've created a fork or extension — open an Issue to get it added to this 
 This project is distributed under the **GNU General Public License v3.0**.
 
 See the [LICENSE](LICENSE) file for details.
+
+For fork developers: see the [Derivative Projects Attribution](#-derivative-projects-attribution) section.
 
 FluxRoute Desktop is a **GUI wrapper** for the `Flowseal/zapret-discord-youtube` project.
 All rights to `zapret`, `winws.exe`, and related scripts belong to their respective authors.
