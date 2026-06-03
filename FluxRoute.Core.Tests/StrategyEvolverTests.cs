@@ -7,7 +7,7 @@ namespace FluxRoute.Core.Tests;
 public sealed class StrategyEvolverTests
 {
     [Fact]
-    public void Evolve_CreatesChild_WithEvolvedOriginAndBat()
+    public void Evolve_CreatesChild_WithEvolvedOrigin()
     {
         var root = Path.Combine(Path.GetTempPath(), "fr-ai-ev-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(root, "bin"));
@@ -18,7 +18,6 @@ public sealed class StrategyEvolverTests
         var reg = new AiStrategyRegistry(regPath);
         reg.Load();
         var hist = new AiHistoryStore(histPath);
-        var mat = new BatMaterializer(() => root);
 
         var g1 = new StrategyGenome { DisplayName = "p1", DesyncMode = "split", FilterTcp = "80", SplitPosSemantic = "host" };
         var g2 = new StrategyGenome { DisplayName = "p2", DesyncMode = "fake", FilterTcp = "443", FakeTlsMod = "rand" };
@@ -58,8 +57,8 @@ public sealed class StrategyEvolverTests
         var child = evolver.Evolve(net);
         Assert.NotNull(child);
         Assert.Equal(StrategyOrigin.Evolved, child!.Origin);
-        Assert.False(string.IsNullOrEmpty(child.SourceBatPath));
-        Assert.True(File.Exists(child.SourceBatPath));
+        Assert.Null(child.SourceBatPath);
+        Assert.Null(child.BatFileName);
         Assert.True(reg.GetGenomes().Any(x => x.Id == child.Id));
     }
 }

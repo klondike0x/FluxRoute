@@ -8,7 +8,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <Version>1.6.1</Version>
-    <ApplicationIcon>..\assets\FluxRoute.ico</ApplicationIcon>
+    <ApplicationIcon>Resources\FluxRoute.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

@@ -53,6 +53,13 @@ public partial class MainWindow : Window
     private WpfBorder? _sidebarBorder;
     private TranslateTransform? _navIndicatorTransform;
     private WpfScrollViewer? _serviceLogScroll;
+    private System.Windows.Shapes.Ellipse? WaveRing1;
+    private System.Windows.Shapes.Ellipse? WaveRing2;
+    private System.Windows.Shapes.Ellipse? WaveRing3;
+    private ScaleTransform? WaveRing1Scale;
+    private ScaleTransform? WaveRing2Scale;
+    private ScaleTransform? WaveRing3Scale;
+    private System.Windows.Threading.DispatcherTimer _idlePulseTimer = new();
 
 
     // Parameterless constructor is intentionally kept for the WPF designer
