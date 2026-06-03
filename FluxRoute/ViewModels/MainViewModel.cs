@@ -268,6 +268,7 @@ public partial class MainViewModel : ObservableObject
         6 => "СЕРВИС",
         7 => "О ПРОГРАММЕ",
         8 => "ЛОГИ",
+        9 => "BYEDPI",
         _ => ""
     };
     partial void OnSelectedTabIndexChanged(int value)
@@ -401,6 +402,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ISettingsService _settingsService;
     private readonly IConnectivityChecker _connectivity;
     private bool _settingsLoaded = false;
+    private readonly DispatcherTimer _saveSettingsDebounce = new() { Interval = TimeSpan.FromMilliseconds(500) };
     private bool _suppressOrchestratorStop = false;
 
     // ── Обновления ──
@@ -446,6 +448,7 @@ public partial class MainViewModel : ObservableObject
     {
         _settingsService = settingsService;
         _updater = updaterService;
+        _appUpdater = appUpdaterService;
         _byeDpiUpdater = byeDpiUpdaterService;
         _engineManager = engineManager;
         _connectivity = connectivity;
@@ -640,8 +643,28 @@ public partial class MainViewModel : ObservableObject
         AiEnabled = settings.Ai.Enabled;
         AiExplorationPermil = settings.Ai.ExplorationRatePermil;
         AiAutoDeleteBelowScore = settings.Ai.AutoDeleteBelowScore;
-        UseHybridMode = settings.Ai.UseHybridMode;
+        EngineMode = settings.Ai.EngineMode;
+        UseHybridMode = settings.Ai.EngineMode == 2;
         ByeDpiSocksPort = settings.Ai.ByeDpiSocksPort;
+
+        var bd = settings.Ai.ByeDpiDefaults ?? new ByeDpiProfileSettings();
+        ByeDpiSplitPos = bd.SplitPos;
+        ByeDpiDisorderPos = bd.DisorderPos;
+        ByeDpiFakePos = bd.FakePos;
+        ByeDpiOobPos = bd.OobPos;
+        ByeDpiTlsrecPos = bd.TlsrecPos;
+        ByeDpiFakeTtl = bd.FakeTtl;
+        ByeDpiAutoTtl = bd.AutoTtl;
+        ByeDpiAutoMode = bd.Auto;
+        ByeDpiTimeout = bd.Timeout;
+        ByeDpiHosts = bd.Hosts;
+        ByeDpiHostlist = bd.Hostlist;
+        ByeDpiFakeTlsMod = bd.FakeTlsMod;
+        ByeDpiFakeSni = bd.FakeSni;
+        ByeDpiFakeData = bd.FakeData;
+        ByeDpiModHttp = bd.ModHttp;
+        ByeDpiTlsminor = bd.Tlsminor;
+        ByeDpiMd5sig = bd.Md5sig;
 
         // TG Proxy — сбрасываем устаревшие дефолты
         TgProxyHost = string.IsNullOrWhiteSpace(settings.TgProxy.Host) || settings.TgProxy.Host == "0.0.0.0" ? "127.0.0.1" : settings.TgProxy.Host;

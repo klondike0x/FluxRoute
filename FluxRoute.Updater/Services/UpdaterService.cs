@@ -70,7 +70,9 @@ public sealed partial class ByeDpiUpdaterService : IByeDpiUpdaterService
             var json = await http.GetStringAsync(ApiUrl, ct).ConfigureAwait(false);
 
             var tagMatch = Regex.Match(json, @"""tag_name""\s*:\s*""([^""]+)""");
-            var urlMatch = Regex.Match(json, @"""browser_download_url""\s*:\s*""([^""]+ciadpi[^""]*(?:exe|zip|7z))""", RegexOptions.IgnoreCase);
+            var urlMatch = Regex.Match(json, @"""browser_download_url""\s*:\s*""([^""]*byedpi[^""]*x86_64[^""]*w64\.zip)""", RegexOptions.IgnoreCase);
+            if (!urlMatch.Success)
+                urlMatch = Regex.Match(json, @"""browser_download_url""\s*:\s*""([^""]*byedpi[^""]*(?:exe|zip|7z))""", RegexOptions.IgnoreCase);
             var bodyMatch = Regex.Match(json, @"""body""\s*:\s*""([^""]*)""");
 
             if (!tagMatch.Success)
@@ -119,7 +121,7 @@ public sealed partial class ByeDpiUpdaterService : IByeDpiUpdaterService
 
             // Если DownloadUrl не найден через API, собираем вручную
             var url = string.IsNullOrEmpty(update.DownloadUrl)
-                ? $"https://github.com/hufrea/byedpi/releases/download/v{update.Version}/ciadpi-x86_64-w64-mingw32.exe"
+                ? $"https://github.com/hufrea/byedpi/releases/download/v{update.Version}/byedpi-{update.Version.TrimStart('0', '.')}-x86_64-w64.zip"
                 : update.DownloadUrl;
 
             var bytes = await http.GetByteArrayAsync(url, ct).ConfigureAwait(false);

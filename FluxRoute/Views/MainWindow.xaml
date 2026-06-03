@@ -648,6 +648,24 @@
                                     </StackPanel>
                                 </Button>
 
+                                <!-- Nav: ByeDPI -->
+                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="9" d:IsLocked="True">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="9">
+                                                    <Setter Property="Foreground" Value="#E6EDF3"/>
+                                                    <Setter Property="Background" Value="#161B22"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <StackPanel Orientation="Horizontal" d:IsLocked="True">
+                                        <TextBlock Text="🔒" Width="20" TextAlignment="Center" d:IsLocked="True"/>
+                                        <TextBlock Text="ByeDPI" Margin="6,0,0,0" Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolToVis}}" d:IsLocked="True"/>
+                                    </StackPanel>
+                                </Button>
+
                                 <!-- Nav: Логи -->
                                 <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="8" d:IsLocked="True">
                                     <Button.Style>
@@ -878,6 +896,17 @@
                                                 <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0" d:IsLocked="True">
                                                     <Run Text="Engine: "/><Run Text="{Binding CurrentEngineVersion, Mode=OneWay}" Foreground="#E6EDF3"/>
                                                 </TextBlock>
+                                                <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0" d:IsLocked="True">
+                                                    <Run Text="ByeDPI: "/><Run Text="{Binding Updates.ByeDpiVersion, Mode=OneWay}" Foreground="#E6EDF3"/>
+                                                </TextBlock>
+                                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0" d:IsLocked="True">
+                                                    <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E" VerticalAlignment="Center" Margin="0,0,6,0" Text="Режим:" d:IsLocked="True"/>
+                                                    <ComboBox SelectedIndex="{Binding EngineMode}" Width="155" Height="24" FontFamily="Segoe UI" FontSize="11" d:IsLocked="True">
+                                                        <ComboBoxItem Content="⚡ Zapret" d:IsLocked="True"/>
+                                                        <ComboBoxItem Content="🔒 ByeDPI" d:IsLocked="True"/>
+                                                        <ComboBoxItem Content="⚡🔒 Hybrid" d:IsLocked="True"/>
+                                                    </ComboBox>
+                                                </StackPanel>
                                                 <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E" Margin="0,2,0,0" d:IsLocked="True">
                                                     <Run Text="Администратор: "/><Run Text="{Binding AdminText, Mode=OneWay}" Foreground="#E6EDF3"/>
                                                 </TextBlock>
@@ -1154,6 +1183,14 @@
                                                  Width="60" Height="26" VerticalContentAlignment="Center" d:IsLocked="True"/>
                                     </StackPanel>
 
+                                    <CheckBox Content="Гибридный режим (Zapret + ByeDPI одновременно)"
+                                              IsChecked="{Binding UseHybridMode}" Margin="0,0,0,8" d:IsLocked="True"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10" d:IsLocked="True">
+                                        <TextBlock Style="{StaticResource Lbl}" Text="ByeDPI SOCKS порт: " VerticalAlignment="Center" Margin="0,0,8,0" d:IsLocked="True"/>
+                                        <TextBox Text="{Binding ByeDpiSocksPort, UpdateSourceTrigger=PropertyChanged}"
+                                                 Width="60" Height="26" VerticalContentAlignment="Center" d:IsLocked="True"/>
+                                    </StackPanel>
+
                                     <Grid Margin="0,0,0,12" d:IsLocked="True">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="140"/>
@@ -1389,6 +1426,37 @@
                                                 Margin="0,0,10,0"
                                                 Command="{Binding CheckTgProxyUpdatesCommand}"
                                                 IsEnabled="{Binding TgProxyInstalled}" d:IsLocked="True"/>
+                                    </StackPanel>
+
+                                    <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
+
+                                    <!-- BYEDPI (CIADPI) -->
+                                    <TextBlock Style="{StaticResource SecH}" Text="BYEDPI (CIADPI)" Margin="0,8,0,8" d:IsLocked="True"/>
+                                    <Grid Margin="0,0,0,10" d:IsLocked="True">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="26"/>
+                                            <RowDefinition Height="26"/>
+                                            <RowDefinition Height="26"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Текущая версия:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.ByeDpiVersion}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Доступна:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.ByeDpiLatestVersion}" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Lbl}" Text="Статус:" d:IsLocked="True"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding Updates.ByeDpiUpdateStatus}" d:IsLocked="True"/>
+                                    </Grid>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12" d:IsLocked="True">
+                                        <Button Content="🔍 Проверить обновления" Style="{StaticResource TermBtn}"
+                                                Margin="0,0,10,0"
+                                                Command="{Binding Updates.CheckByeDpiUpdateCommand}"
+                                                IsEnabled="{Binding Updates.IsByeDpiUpdating, Converter={StaticResource InvBool}}" d:IsLocked="True"/>
+                                        <Button Content="⬆️ Установить" Style="{StaticResource TermBtn}"
+                                                Command="{Binding Updates.InstallByeDpiUpdateCommand}"
+                                                IsEnabled="{Binding Updates.IsByeDpiUpdating, Converter={StaticResource InvBool}}" d:IsLocked="True"/>
                                     </StackPanel>
 
                                     <Rectangle Style="{StaticResource Sep}" d:IsLocked="True"/>
@@ -1662,6 +1730,155 @@
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
                                         </ScrollViewer>
+                                    </Border>
+
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+
+                        <!-- ╔══════════════════════════════════════╗ -->
+                        <!-- ║       TAB 9: BYEDPI НАСТРОЙКИ       ║ -->
+                        <!-- ╚══════════════════════════════════════╝ -->
+                        <Border d:IsLocked="True">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Setter Property="Opacity" Value="0"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedTabIndex}" Value="9">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                         From="0" To="1" Duration="0:0:0.3">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseOut"/>
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16,12" d:IsLocked="True">
+                                <StackPanel d:IsLocked="True">
+
+                                    <TextBlock Text="Настройки ByeDPI" Foreground="#4FC3F7" FontSize="14"
+                                               FontWeight="Bold" Margin="0,0,0,4" d:IsLocked="True"/>
+                                    <TextBlock Text="Параметры генерации командной строки ciadpi.exe. Применяются при запуске ByeDPI-стратегий ИИ."
+                                               Foreground="#8B949E" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,14" d:IsLocked="True"/>
+
+                                    <!-- === Сеть === -->
+                                    <Border Style="{StaticResource Card}" d:IsLocked="True">
+                                        <StackPanel d:IsLocked="True">
+                                            <TextBlock Text="Сеть" Style="{StaticResource SecH}" d:IsLocked="True"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0" d:IsLocked="True">
+                                                <TextBlock Text="SOCKS5 порт:" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBox Text="{Binding ByeDpiSocksPort, UpdateSourceTrigger=PropertyChanged}" Width="80" d:IsLocked="True"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" d:IsLocked="True">
+                                                <TextBlock Text="Split (позиция):" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBox Text="{Binding ByeDpiSplitPos, UpdateSourceTrigger=PropertyChanged}" Width="120" d:IsLocked="True" ToolTip="Split packet at position, e.g. 2,5,-2" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" d:IsLocked="True">
+                                                <TextBlock Text="Disorder (позиция):" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBox Text="{Binding ByeDpiDisorderPos, UpdateSourceTrigger=PropertyChanged}" Width="120" d:IsLocked="True" ToolTip="Disorder packet at position, e.g. 1" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" d:IsLocked="True">
+                                                <TextBlock Text="Timeout (мс):" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBox Text="{Binding ByeDpiTimeout, UpdateSourceTrigger=PropertyChanged}" Width="80" d:IsLocked="True" ToolTip="Connection timeout in milliseconds" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Rectangle Style="{StaticResource Sep}" Margin="0,12" d:IsLocked="True"/>
+
+                                    <!-- === Fake / TLS === -->
+                                    <Border Style="{StaticResource Card}" d:IsLocked="True">
+                                        <StackPanel d:IsLocked="True">
+                                            <TextBlock Text="Fake / TLS" Style="{StaticResource SecH}" d:IsLocked="True"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0" d:IsLocked="True">
+                                                <TextBlock Text="Fake (позиция):" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBox Text="{Binding ByeDpiFakePos, UpdateSourceTrigger=PropertyChanged}" Width="120" d:IsLocked="True" ToolTip="Fake packet at position" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" d:IsLocked="True">
+                                                <TextBlock Text="Fake TTL:" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBox Text="{Binding ByeDpiFakeTtl, UpdateSourceTrigger=PropertyChanged}" Width="80" d:IsLocked="True" ToolTip="TTL for fake packets" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" d:IsLocked="True">
+                                                <TextBlock Text="Fake TLS mod:" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBox Text="{Binding ByeDpiFakeTlsMod, UpdateSourceTrigger=PropertyChanged}" Width="120" d:IsLocked="True" ToolTip="Fake TLS modification, e.g. all, hello" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" d:IsLocked="True">
+                                                <TextBlock Text="Fake SNI:" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBox Text="{Binding ByeDpiFakeSni, UpdateSourceTrigger=PropertyChanged}" Width="160" d:IsLocked="True" ToolTip="Fake SNI for TLS" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" d:IsLocked="True">
+                                                <TextBlock Text="Fake data:" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBox Text="{Binding ByeDpiFakeData, UpdateSourceTrigger=PropertyChanged}" Width="160" d:IsLocked="True" ToolTip="Fake payload data" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" d:IsLocked="True">
+                                                <TextBlock Text="OOB (позиция):" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBox Text="{Binding ByeDpiOobPos, UpdateSourceTrigger=PropertyChanged}" Width="120" d:IsLocked="True" ToolTip="Out-of-band data at position" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" d:IsLocked="True">
+                                                <TextBlock Text="TLSrec (позиция):" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBox Text="{Binding ByeDpiTlsrecPos, UpdateSourceTrigger=PropertyChanged}" Width="120" d:IsLocked="True" ToolTip="TLS record split at position" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" d:IsLocked="True">
+                                                <TextBlock Text="TLS minor ver:" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBox Text="{Binding ByeDpiTlsminor, UpdateSourceTrigger=PropertyChanged}" Width="80" d:IsLocked="True" ToolTip="TLS minor version override" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Rectangle Style="{StaticResource Sep}" Margin="0,12" d:IsLocked="True"/>
+
+                                    <!-- === Авто / Хосты === -->
+                                    <Border Style="{StaticResource Card}" d:IsLocked="True">
+                                        <StackPanel d:IsLocked="True">
+                                            <TextBlock Text="Авто / Хосты" Style="{StaticResource SecH}" d:IsLocked="True"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0" d:IsLocked="True">
+                                                <TextBlock Text="Auto TTL:" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <CheckBox IsChecked="{Binding ByeDpiAutoTtl}" d:IsLocked="True"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" d:IsLocked="True">
+                                                <TextBlock Text="Auto mode:" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBox Text="{Binding ByeDpiAutoMode, UpdateSourceTrigger=PropertyChanged}" Width="120" d:IsLocked="True" ToolTip="Auto mode string: torst, tcnt, icmp, etc." />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" d:IsLocked="True">
+                                                <TextBlock Text="Hosts:" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBox Text="{Binding ByeDpiHosts, UpdateSourceTrigger=PropertyChanged}" Width="200" d:IsLocked="True" ToolTip="Comma-separated host list" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" d:IsLocked="True">
+                                                <TextBlock Text="Hostlist file:" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBox Text="{Binding ByeDpiHostlist, UpdateSourceTrigger=PropertyChanged}" Width="200" d:IsLocked="True" ToolTip="Path to hostlist file" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" d:IsLocked="True">
+                                                <TextBlock Text="Mod HTTP:" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <TextBox Text="{Binding ByeDpiModHttp, UpdateSourceTrigger=PropertyChanged}" Width="120" d:IsLocked="True" ToolTip="HTTP modification mode" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" d:IsLocked="True">
+                                                <TextBlock Text="MD5 Signature:" Width="120" VerticalAlignment="Center" d:IsLocked="True"/>
+                                                <CheckBox IsChecked="{Binding ByeDpiMd5sig}" d:IsLocked="True"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Rectangle Style="{StaticResource Sep}" Margin="0,12" d:IsLocked="True"/>
+
+                                    <!-- === Info === -->
+                                    <Border Style="{StaticResource Card}" d:IsLocked="True">
+                                        <StackPanel d:IsLocked="True">
+                                            <TextBlock Text="Информация" Style="{StaticResource SecH}" d:IsLocked="True"/>
+                                            <TextBlock Text="ByeDPI используется для обхода DPI через SOCKS5 прокси. При выборе режима ByeDPI или Hybrid ИИ будет генерировать командные строки ciadpi.exe вместо winws.exe."
+                                                       Foreground="#8B949E" FontSize="11" TextWrapping="Wrap" d:IsLocked="True"/>
+                                            <TextBlock Text="Параметры above используются ИИ как дефолтные значения для эволюции ByeDPI-стратегий. Значения с префиксом «-» в геноме перезаписывают эти дефолты."
+                                                       Foreground="#8B949E" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0" d:IsLocked="True"/>
+                                        </StackPanel>
                                     </Border>
 
                                 </StackPanel>

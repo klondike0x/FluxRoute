@@ -42,6 +42,8 @@ public sealed class AiOrchestratorService : IDisposable
     private DateTimeOffset _lastEvolutionUtc = DateTimeOffset.MinValue;
     private volatile bool _networkDirty;
     private StrategyGenome? _currentGenome;
+    private readonly Dictionary<string, (int score, DateTimeOffset at)> _networkProbeCache = new();
+    private bool _fastStartDone;
 
     public event EventHandler<OrchestratorEventArgs>? StatusChanged;
 
@@ -161,9 +163,20 @@ public sealed class AiOrchestratorService : IDisposable
             if (ct.IsCancellationRequested)
                 return;
 
+            if (!_fastStartDone && _aiSettings().FastStartEnabled)
+            {
+                _fastStartDone = true;
+                await FastStartProbeAsync(ct).ConfigureAwait(false);
+            }
+
             while (!ct.IsCancellationRequested)
             {
-                var interval = _networkDirty ? TimeSpan.FromSeconds(2) : CheckInterval;
+                var baseInterval = _networkDirty ? TimeSpan.FromSeconds(2) : CheckInterval;
+                if (_consecutiveFailures > 0 && !_networkDirty)
+                    baseInterval = TimeSpan.FromSeconds(Math.Max(15, baseInterval.TotalSeconds / Math.Pow(2, _consecutiveFailures)));
+                else if (!_networkDirty && _consecutiveFailures == 0)
+                    baseInterval = TimeSpan.FromSeconds(Math.Min(1800, baseInterval.TotalSeconds * 1.5));
+                var interval = baseInterval;
                 _networkDirty = false;
                 NextCheckAt = DateTimeOffset.Now + interval;
 
@@ -225,6 +238,14 @@ public sealed class AiOrchestratorService : IDisposable
         var fp = _fingerprints.Capture();
         _registry.MarkNetworkSeen(fp.Hash);
 
+        // Network probe cache: skip if we recently probed this genome on this network with good result
+        if (_currentGenome is not null && _networkProbeCache.TryGetValue($"{fp.Hash}|{_currentGenome.Id}", out var cached) &&
+            (DateTimeOffset.UtcNow - cached.at).TotalMinutes < 10 && cached.score >= 80)
+        {
+            Notify($"ИИ: пропуск проверки (кеш: {cached.score}% за {Math.Round((DateTimeOffset.UtcNow - cached.at).TotalMinutes)}м).");
+            return;
+        }
+
         if (_networkDirty)
         {
             _networkDirty = false;
@@ -284,6 +305,19 @@ public sealed class AiOrchestratorService : IDisposable
 
         _history.Append(outcome);
 
+        // Update network probe cache
+        if (_currentGenome is not null)
+        {
+            var cacheKey = $"{fp.Hash}|{_currentGenome.Id}";
+            _networkProbeCache[cacheKey] = (result.Score, DateTimeOffset.UtcNow);
+            // Evict old entries
+            if (_networkProbeCache.Count > _aiSettings().NetworkCacheSize)
+            {
+                var oldest = _networkProbeCache.OrderBy(kv => kv.Value.at).First();
+                _networkProbeCache.Remove(oldest.Key);
+            }
+        }
+
         if (result.IsWorking(FailThreshold))
         {
             _registry.RecordBanditSuccess(_currentGenome.Id, fp.Hash);
@@ -327,8 +361,8 @@ public sealed class AiOrchestratorService : IDisposable
 
         if (pick is null)
         {
-            Notify(GenePool().Count == 0
-                ? "ИИ: нет включённых стратегий для переподбора."
+            Notify(pool.Count == 0
+                ? $"ИИ: нет включённых стратегий для режима {(_aiSettings().EngineMode switch { 1 => "ByeDPI", 2 => "Hybrid", _ => "Zapret" })}."
                 : "ИИ: нет доступной стратегии после смены сети.");
             return;
         }
@@ -359,7 +393,7 @@ public sealed class AiOrchestratorService : IDisposable
         var engineDir = _engineDir();
         var profile = g.ToEngineProfile();
 
-        var runMode = _aiSettings().UseHybridMode ? DpiRunMode.Hybrid : DpiRunMode.Standalone;
+        var runMode = _aiSettings().EngineMode == 2 ? DpiRunMode.Hybrid : DpiRunMode.Standalone;
         _engineManager.SetRunMode(runMode);
 
         var started = await _engineManager.ApplyProfileAsync(profile, ct).ConfigureAwait(false);
@@ -386,6 +420,28 @@ public sealed class AiOrchestratorService : IDisposable
                 FullPath = Path.Combine(engineDir, "ai-evolved", $"{g.DisplayName}.bat"),
             };
             await _switchProfile(pi).ConfigureAwait(false);
+        }
+    }
+
+    private async Task FastStartProbeAsync(CancellationToken ct)
+    {
+        var pool = GenePool();
+        if (pool.Count == 0) return;
+
+        var top = pool.Take(2).ToList();
+        Notify($"⚡ Быстрый старт: проверка {top.Count} стратегий...");
+
+        var fp = _fingerprints.Capture();
+        foreach (var g in top)
+        {
+            if (ct.IsCancellationRequested) break;
+            try
+            {
+                _currentGenome = g;
+                Notify($"⚡ Быстрый старт: «{g.DisplayName}» ({g.EngineType}).");
+                await Task.Delay(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
+            }
+            catch { break; }
         }
     }
 
@@ -428,8 +484,17 @@ public sealed class AiOrchestratorService : IDisposable
             Notify("ИИ: эволюция не создала новую стратегию (мало активных родителей или дубликат).");
     }
 
-    private List<StrategyGenome> GenePool() =>
-        _registry.GetActiveGenomes().ToList();
+    private List<StrategyGenome> GenePool()
+    {
+        var ai = _aiSettings();
+        var all = _registry.GetActiveGenomes();
+        return ai.EngineMode switch
+        {
+            1 => all.Where(g => g.EngineType == DpiEngineType.ByeDpi).ToList(),
+            2 => all.Where(g => g.EngineType is DpiEngineType.Zapret or DpiEngineType.ByeDpi).ToList(),
+            _ => all.Where(g => g.EngineType == DpiEngineType.Zapret).ToList(),
+        };
+    }
 
     private async Task VerifyEvolvedGenomeAsync(StrategyGenome child, NetworkFingerprint fp, CancellationToken ct)
     {
@@ -459,7 +524,7 @@ public sealed class AiOrchestratorService : IDisposable
         var engineDir = _engineDir();
         var profile = g.ToEngineProfile();
 
-        var runMode = _aiSettings().UseHybridMode ? DpiRunMode.Hybrid : DpiRunMode.Standalone;
+        var runMode = _aiSettings().EngineMode == 2 ? DpiRunMode.Hybrid : DpiRunMode.Standalone;
         _engineManager.SetRunMode(runMode);
 
         var started = await _engineManager.ApplyProfileAsync(profile, ct).ConfigureAwait(false);
@@ -496,15 +561,15 @@ public sealed class AiOrchestratorService : IDisposable
                 StartupWait = probeOptions.StartupWait,
                 StableWait = probeOptions.StableWait,
                 ProcessWaitTimeout = probeOptions.ProcessWaitTimeout,
-                StopAfterProbe = probeOptions.StopAfterProbe,
-                RequireWinwsProcess = probeOptions.RequireWinwsProcess,
+                StopAfterProbe = false,
+                RequireWinwsProcess = false,
                 UseCurlForHttp = probeOptions.UseCurlForHttp,
                 MaxParallelChecks = probeOptions.MaxParallelChecks,
                 Socks5Endpoint = $"127.0.0.1:{socksPort}",
                 ProcessName = "ciadpi",
             };
         }
-        var result = await _probeService.ProbeAsync(testProfile, targets, probeOptions, ct).ConfigureAwait(false);
+        var result = await _probeService.ProbeCurrentAsync(testProfile, targets, probeOptions, ct).ConfigureAwait(false);
         var failedKeys = result.FailedChecks.Select(x => x.Key).ToList();
         var avgLat = result.Checks.Where(x => x.ElapsedMs.HasValue).Select(x => x.ElapsedMs!.Value).DefaultIfEmpty(0)
             .Average();

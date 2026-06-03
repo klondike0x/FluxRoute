@@ -152,6 +152,33 @@ public partial class MainViewModel
         RefreshDiagnostics();
         UpdateRuntimeInfo();
         TryStartOrchestratorIfEnabled();
+
+        if (UseHybridMode)
+            _ = StartByeDpiAsync();
+    }
+
+    private async Task StartByeDpiAsync()
+    {
+        try
+        {
+            var profile = _engineManager.CloneWithDefaults(FluxRoute.Core.Models.DpiEngineType.ByeDpi);
+            profile.SocksPort = ByeDpiSocksPort;
+            var ok = await _engineManager.StartAsync(FluxRoute.Core.Models.DpiEngineType.ByeDpi, profile);
+            if (ok)
+            {
+                Logs.Add($"ByeDPI запущен в гибридном режиме (SOCKS порт: {ByeDpiSocksPort})");
+                AddToRecentLogs($"✅ ByeDPI запущен (порт {ByeDpiSocksPort})");
+            }
+            else
+            {
+                Logs.Add("⚠️ Не удалось запустить ByeDPI");
+                AddToRecentLogs("⚠️ ByeDPI не запущен");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"⚠️ Ошибка запуска ByeDPI: {ex.Message}");
+        }
     }
 
     private void StartViaBatFallback()
@@ -189,6 +216,9 @@ public partial class MainViewModel
         RefreshDiagnostics();
         UpdateRuntimeInfo();
         TryStartOrchestratorIfEnabled();
+
+        if (UseHybridMode)
+            _ = StartByeDpiAsync();
     }
 
     private async Task TrackDirectWinwsAsync(Process winws)
@@ -421,6 +451,10 @@ public partial class MainViewModel
         UptimeText = "—";
         IsRunning = false;
         _runStartedAt = null;
+
+        // Останавливаем ByeDPI если был запущен в гибридном режиме
+        try { _engineManager.StopAllAsync().GetAwaiter().GetResult(); }
+        catch { /* ignored */ }
 
         // Останавливаем сервисы оркестратора вместе с Zapret (флаг OrchestratorEnabled не меняем).
         if (!_suppressOrchestratorStop)

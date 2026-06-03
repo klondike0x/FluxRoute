@@ -27,8 +27,72 @@ public partial class MainViewModel
     [ObservableProperty] private bool useHybridMode;
     partial void OnUseHybridModeChanged(bool value) => SaveSettings();
 
+    [ObservableProperty] private int engineMode;
+    partial void OnEngineModeChanged(int value)
+    {
+        SaveSettings();
+        var mode = value switch
+        {
+            1 => FluxRoute.Core.Models.DpiEngineMode.ByeDpi,
+            2 => FluxRoute.Core.Models.DpiEngineMode.Hybrid,
+            _ => FluxRoute.Core.Models.DpiEngineMode.Zapret
+        };
+        _engineManager.SetRunMode(value == 2 ? "hybrid" : "standalone");
+    }
+
     [ObservableProperty] private int byeDpiSocksPort = 1080;
     partial void OnByeDpiSocksPortChanged(int value) => SaveSettings();
+
+    [ObservableProperty] private string? byeDpiSplitPos;
+    partial void OnByeDpiSplitPosChanged(string? value) => SaveSettings();
+
+    [ObservableProperty] private string? byeDpiDisorderPos = "1";
+    partial void OnByeDpiDisorderPosChanged(string? value) => SaveSettings();
+
+    [ObservableProperty] private string? byeDpiFakePos;
+    partial void OnByeDpiFakePosChanged(string? value) => SaveSettings();
+
+    [ObservableProperty] private string? byeDpiOobPos;
+    partial void OnByeDpiOobPosChanged(string? value) => SaveSettings();
+
+    [ObservableProperty] private string? byeDpiTlsrecPos;
+    partial void OnByeDpiTlsrecPosChanged(string? value) => SaveSettings();
+
+    [ObservableProperty] private int? byeDpiFakeTtl;
+    partial void OnByeDpiFakeTtlChanged(int? value) => SaveSettings();
+
+    [ObservableProperty] private bool byeDpiAutoTtl;
+    partial void OnByeDpiAutoTtlChanged(bool value) => SaveSettings();
+
+    [ObservableProperty] private string? byeDpiAutoMode = "torst";
+    partial void OnByeDpiAutoModeChanged(string? value) => SaveSettings();
+
+    [ObservableProperty] private int? byeDpiTimeout;
+    partial void OnByeDpiTimeoutChanged(int? value) => SaveSettings();
+
+    [ObservableProperty] private string? byeDpiHosts;
+    partial void OnByeDpiHostsChanged(string? value) => SaveSettings();
+
+    [ObservableProperty] private string? byeDpiHostlist;
+    partial void OnByeDpiHostlistChanged(string? value) => SaveSettings();
+
+    [ObservableProperty] private string? byeDpiFakeTlsMod;
+    partial void OnByeDpiFakeTlsModChanged(string? value) => SaveSettings();
+
+    [ObservableProperty] private string? byeDpiFakeSni;
+    partial void OnByeDpiFakeSniChanged(string? value) => SaveSettings();
+
+    [ObservableProperty] private string? byeDpiFakeData;
+    partial void OnByeDpiFakeDataChanged(string? value) => SaveSettings();
+
+    [ObservableProperty] private string? byeDpiModHttp;
+    partial void OnByeDpiModHttpChanged(string? value) => SaveSettings();
+
+    [ObservableProperty] private int? byeDpiTlsminor;
+    partial void OnByeDpiTlsminorChanged(int? value) => SaveSettings();
+
+    [ObservableProperty] private bool byeDpiMd5sig;
+    partial void OnByeDpiMd5sigChanged(bool value) => SaveSettings();
 
     [ObservableProperty] private string aiNetworkLabel = "—";
     [ObservableProperty] private string aiGenerationText = "—";
@@ -36,14 +100,39 @@ public partial class MainViewModel
 
     private AiSettings BuildAiSettingsSnapshot()
     {
-        var s = _settingsService.Load().Ai;
-        s.Enabled = AiEnabled;
-        s.ExplorationRatePermil = AiExplorationPermil;
-        s.AutoDeleteBelowScore = AiAutoDeleteBelowScore;
-        s.UseHybridMode = UseHybridMode;
-        s.ByeDpiSocksPort = ByeDpiSocksPort;
-        return s;
+        return new AiSettings
+        {
+            Enabled = AiEnabled,
+            ExplorationRatePermil = AiExplorationPermil,
+            AutoDeleteBelowScore = AiAutoDeleteBelowScore,
+            EngineMode = EngineMode,
+            UseHybridMode = EngineMode == 2,
+            ByeDpiSocksPort = ByeDpiSocksPort,
+            ByeDpiDefaults = BuildByeDpiDefaultsSnapshot(),
+        };
     }
+
+    private ByeDpiProfileSettings BuildByeDpiDefaultsSnapshot() => new()
+    {
+        SocksPort = ByeDpiSocksPort,
+        SplitPos = ByeDpiSplitPos,
+        DisorderPos = ByeDpiDisorderPos,
+        FakePos = ByeDpiFakePos,
+        OobPos = ByeDpiOobPos,
+        TlsrecPos = ByeDpiTlsrecPos,
+        FakeTtl = ByeDpiFakeTtl,
+        AutoTtl = ByeDpiAutoTtl,
+        Auto = ByeDpiAutoMode,
+        Timeout = ByeDpiTimeout,
+        Hosts = ByeDpiHosts,
+        Hostlist = ByeDpiHostlist,
+        FakeTlsMod = ByeDpiFakeTlsMod,
+        FakeSni = ByeDpiFakeSni,
+        FakeData = ByeDpiFakeData,
+        ModHttp = ByeDpiModHttp,
+        Tlsminor = ByeDpiTlsminor,
+        Md5sig = ByeDpiMd5sig,
+    };
 
     private Task RefreshProfilesInternalAsync()
     {

@@ -292,6 +292,13 @@ public sealed class SettingsService : ISettingsService
         settings.ProfileRatings ??= new List<ProfileRatingEntry>();
         settings.TgProxy ??= new TgProxySettings();
         settings.Ai ??= new AiSettings();
+        settings.Ai.ByeDpiDefaults ??= new ByeDpiProfileSettings();
+
+        if (settings.Ai.UseHybridMode && settings.Ai.EngineMode == 0)
+        {
+            settings.Ai.EngineMode = 2;
+            settings.Ai.UseHybridMode = false;
+        }
 
         // Миграция: сброс старого дефолтного домена www.google.com.
         // fake-tls-domain требует домен, указывающий на IP самого прокси.

@@ -1,20 +1,23 @@
 using System.Collections.Concurrent;
 using FluxRoute.AI.Models;
+using FluxRoute.Core.Models;
 
 namespace FluxRoute.AI.Services;
 
 public sealed class BanditSelector
 {
     private readonly AiStrategyRegistry _registry;
+    private readonly Func<AiSettings> _aiSettings;
     private readonly Random _rng;
     private readonly ConcurrentDictionary<Guid, DateTimeOffset> _blockedUntil = new();
     private readonly ConcurrentDictionary<string, DateTimeOffset> _sigCooldown = new();
     private readonly ConcurrentDictionary<string, DateTimeOffset> _familyCooldown = new();
     private readonly ConcurrentDictionary<Guid, int> _failureStreak = new();
 
-    public BanditSelector(AiStrategyRegistry registry, Random? rng = null)
+    public BanditSelector(AiStrategyRegistry registry, Func<AiSettings>? aiSettings = null, Random? rng = null)
     {
         _registry = registry;
+        _aiSettings = aiSettings ?? (() => new AiSettings());
         _rng = rng ?? new Random();
     }
 
@@ -37,12 +40,17 @@ public sealed class BanditSelector
             return usable[0];
         }
 
-        var totalT = usable.Sum(g => 1 + _registry.SumPullsForGenomeOnNetwork(g.Id, networkHash));
+        var effective = _aiSettings().ParetoEnabled
+            ? ParetoFront(usable, networkHash)
+            : usable;
+        if (effective.Count == 0) effective = usable;
+
+        var totalT = effective.Sum(g => 1 + _registry.SumPullsForGenomeOnNetwork(g.Id, networkHash));
 
         StrategyGenome? best = null;
         double bestScore = double.MinValue;
 
-        foreach (var g in usable)
+        foreach (var g in effective)
         {
             var entry = _registry.GetOrCreateBandit(g.Id, networkHash);
             var pulls = entry.Alpha + entry.Beta - 2;
@@ -99,6 +107,40 @@ public sealed class BanditSelector
         }
 
         return best;
+    }
+
+    public List<StrategyGenome> ParetoFront(IReadOnlyList<StrategyGenome> candidates, string networkHash)
+    {
+        var scored = candidates
+            .Select(g =>
+            {
+                var entry = _registry.GetOrCreateBandit(g.Id, networkHash);
+                var pulls = entry.Alpha + entry.Beta - 2;
+                if (pulls < 1) return (g, score: 0.5, latency: 1000.0);
+                var score = entry.Alpha / (entry.Alpha + entry.Beta);
+                var latency = entry.Alpha > 0 ? entry.Alpha / (entry.Alpha + entry.Beta) * 100 : 500;
+                return (g, score, latency);
+            })
+            .ToList();
+
+        var pareto = new List<(StrategyGenome g, double score, double latency)>();
+        foreach (var item in scored)
+        {
+            bool dominated = false;
+            foreach (var other in scored)
+            {
+                if (other.g.Id == item.g.Id) continue;
+                if (other.score >= item.score && other.latency <= item.latency &&
+                    (other.score > item.score || other.latency < item.latency))
+                {
+                    dominated = true;
+                    break;
+                }
+            }
+            if (!dominated) pareto.Add(item);
+        }
+
+        return pareto.Select(x => x.g).ToList();
     }
 
     public void RegisterSuccess(Guid genomeId)

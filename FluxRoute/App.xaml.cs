@@ -149,7 +149,10 @@ public partial class App : Application
         });
 
         services.AddSingleton(sp =>
-            new BanditSelector(sp.GetRequiredService<AiStrategyRegistry>(), new Random()));
+            new BanditSelector(
+                sp.GetRequiredService<AiStrategyRegistry>(),
+                () => sp.GetRequiredService<SettingsService>().Load().Ai,
+                new Random()));
 
         services.AddSingleton(sp =>
         {

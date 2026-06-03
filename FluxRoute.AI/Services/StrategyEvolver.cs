@@ -115,7 +115,9 @@ public sealed class StrategyEvolver
 
     private void GarbageCollectEvolved()
     {
-        var settingsMax = Math.Max(4, _aiSettings().MaxEvolvedStrategies);
+        var settings = _aiSettings();
+        var settingsMax = Math.Max(4, settings.MaxEvolvedStrategies);
+        var elitismCount = settings.ElitismEnabled ? Math.Max(2, settingsMax / 4) : 0;
         var evolved = _registry.GetGenomes().Where(g => g.Origin == StrategyOrigin.Evolved).ToList();
         if (evolved.Count <= settingsMax)
             return;
@@ -133,11 +135,15 @@ public sealed class StrategyEvolver
                 var w = WilsonScore.LowerBound(succ, trials);
                 return (g, w);
             })
-            .OrderBy(x => x.w)
+            .OrderByDescending(x => x.w)
             .ToList();
 
+        // Elitism: protect top N from deletion
+        var protectedIds = ranked.Take(elitismCount).Select(x => x.g.Id).ToHashSet();
+        var removable = ranked.Where(x => !protectedIds.Contains(x.g.Id)).ToList();
+
         var removeCount = evolved.Count - settingsMax;
-        foreach (var (g, _) in ranked.Take(removeCount))
+        foreach (var (g, _) in removable.Take(removeCount))
         {
             TryDeleteBat(g);
             _registry.Remove(g.Id);

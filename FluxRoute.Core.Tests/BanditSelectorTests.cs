@@ -24,7 +24,7 @@ public sealed class BanditSelectorTests
         reg.RecordBanditSuccess(gBetter.Id, net);
         reg.RecordBanditFailure(gWorse.Id, net);
 
-        var sel = new BanditSelector(reg, new Random(42));
+        var sel = new BanditSelector(reg, aiSettings: null, new Random(42));
         var counts = new Dictionary<Guid, int>
         {
             [gBetter.Id] = 0,
@@ -50,7 +50,7 @@ public sealed class BanditSelectorTests
         reg.Load();
         var g = new StrategyGenome { DisplayName = "only", DesyncMode = "split" };
         reg.Upsert(g);
-        var sel = new BanditSelector(reg, new Random(1));
+        var sel = new BanditSelector(reg, aiSettings: null, new Random(1));
         var p = sel.Pick([g], "x", explorationPermil: 1000);
         Assert.Same(g, p);
     }

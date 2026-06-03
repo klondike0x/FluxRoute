@@ -89,7 +89,7 @@ public partial class MainWindow : Window
             new NetworkChangeWatcher(fingerprints),
             registry,
             history,
-            new BanditSelector(registry, new Random()),
+            new BanditSelector(registry, () => settings.Load().Ai, new Random()),
             new StrategyEvolver(registry, history,
                 () => Path.Combine(AppContext.BaseDirectory, "engine"),
                 () => settings.Load().Ai),
@@ -288,25 +288,18 @@ public partial class MainWindow : Window
     private void AnimateNavIndicator(int tabIndex)
     {
         double targetY;
-        if (tabIndex == 7)
+        // Map logical tab index to visual slot in StackPanel
+        // Slot order: 0,1,2,3,4,5, 6(settings), 9(ByeDPI)→7, 8(logs)→8, 7(about)→9
+        int visualIndex = tabIndex switch
         {
-            targetY = 417;
-        }
-        else
-        {
-            // Map logical tab index to visual slot in StackPanel
-            // Slot order: 0,1,2,3,4,5, 8(logs)→6, 6(settings)→7
-            int visualIndex = tabIndex switch
-            {
-                6 => 6,
-                8 => 7,
-                _ => tabIndex
-            };
-            // Each slot: Height=36 + Margin top=4 + bottom=4 = 44px per slot
-            // Pill Margin.Top=20 already positions it at slot-0 center (8 top + 12 center offset)
-            // TranslateTransform.Y is additive offset from that base position
-            targetY = visualIndex * 44;
-        }
+            6 => 6,
+            9 => 7,
+            8 => 8,
+            7 => 9,
+            _ => tabIndex
+        };
+        // Each slot: Height=36 + Margin top=4 + bottom=4 = 44px per slot
+        targetY = visualIndex * 44;
 
         SetNavIndicatorVisible(true);
 
