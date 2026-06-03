@@ -292,10 +292,12 @@ public sealed class SettingsService : ISettingsService
         settings.ProfileRatings ??= new List<ProfileRatingEntry>();
         settings.TgProxy ??= new TgProxySettings();
         settings.Ai ??= new AiSettings();
+        settings.UserSites ??= new List<string>();
+        settings.CustomTargetDomains ??= new List<string>();
+        settings.CustomExcludeDomains ??= new List<string>();
+        settings.Presets ??= new List<ConfigPreset>();
 
         // Миграция: сброс старого дефолтного домена www.google.com.
-        // fake-tls-domain требует домен, указывающий на IP самого прокси.
-        // Для локального 127.0.0.1 fake-tls не нужен, пустая строка = выкл.
         if (settings.TgProxy.Domain == "www.google.com")
         {
             settings.TgProxy.Domain = "";

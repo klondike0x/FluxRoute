@@ -22,6 +22,7 @@ public sealed partial class ServiceViewModel : ObservableObject
     private readonly Func<string> _getEngineDir;
     private readonly Func<string?> _getSelectedProfileDisplayName;
     private readonly Action<string> _addAppLog;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     private static readonly Dictionary<string, string> _protocolToFile = new()
     {
@@ -72,11 +73,13 @@ public sealed partial class ServiceViewModel : ObservableObject
     public ServiceViewModel(
         Func<string> getEngineDir,
         Func<string?> getSelectedProfileDisplayName,
-        Action<string> addAppLog)
+        Action<string> addAppLog,
+        IHttpClientFactory httpClientFactory)
     {
         _getEngineDir = getEngineDir;
         _getSelectedProfileDisplayName = getSelectedProfileDisplayName;
         _addAppLog = addAppLog;
+        _httpClientFactory = httpClientFactory;
     }
 
     private string ProtocolToFileValue(string protocol) =>
@@ -254,13 +257,14 @@ public sealed partial class ServiceViewModel : ObservableObject
     {
         IsServiceBusy = true;
         AddLog("⬇️ Скачиваем ipset-all.txt...");
-
         try
         {
             var url = "https://raw.githubusercontent.com/Flowseal/zapret-discord-youtube/refs/heads/main/.service/ipset-service.txt";
-            using var http = new HttpClient();
-            http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
+
+            // ═══ ИСПРАВЛЕНО: используем HttpClient из DI ═══
+            using var http = _httpClientFactory.CreateClient("Service");
             var content = await http.GetStringAsync(url);
+            // ════════════════════════════════════════════════
 
             var listsDir = Path.GetDirectoryName(IpSetFilePath)!;
             Directory.CreateDirectory(listsDir);
@@ -290,15 +294,16 @@ public sealed partial class ServiceViewModel : ObservableObject
     {
         IsServiceBusy = true;
         AddLog("⬇️ Проверяем hosts файл...");
-
         try
         {
             var hostsUrl = "https://raw.githubusercontent.com/Flowseal/zapret-discord-youtube/refs/heads/main/.service/hosts";
-            using var http = new HttpClient();
-            http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
-            var newContent = await http.GetStringAsync(hostsUrl);
-            var newLines = newContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
+            // ═══ ИСПРАВЛЕНО: используем HttpClient из DI ═══
+            using var http = _httpClientFactory.CreateClient("Service");
+            var newContent = await http.GetStringAsync(hostsUrl);
+            // ════════════════════════════════════════════════
+
+            var newLines = newContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
             var hostsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts");
 
             if (!File.Exists(hostsPath))

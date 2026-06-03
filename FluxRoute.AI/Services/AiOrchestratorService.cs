@@ -227,8 +227,8 @@ public sealed class AiOrchestratorService : IDisposable
 
         if (_networkDirty)
         {
-            _networkDirty = false;
             await RepickAfterNetworkChangeAsync(fp, ct).ConfigureAwait(false);
+            _networkDirty = false;
             return;
         }
 

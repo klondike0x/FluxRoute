@@ -15,6 +15,9 @@ namespace FluxRoute.ViewModels;
 public partial class MainViewModel
 {
     // ── Пути ──
+    private const string PythonVersion = "3.14.5";
+    private const string PythonEmbedUrl = $"https://www.python.org/ftp/python/{PythonVersion}/python-{PythonVersion}-embed-amd64.zip";
+    private const string PythonMirrorUrl = $"https://github.com/astral-sh/python-build-standalone/releases/download/20260510/cpython-{PythonVersion}%2B20260510-x86_64-pc-windows-msvc-install_only_stripped.tar.gz";
     private string TgProxyDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tg-proxy");
     private string PythonDir => Path.Combine(TgProxyDir, "python");
     private string PythonExe
@@ -36,21 +39,6 @@ public partial class MainViewModel
     }
     private string ProxyScriptDir => Path.Combine(TgProxyDir, "proxy");
     private string ProxyScript => Path.Combine(ProxyScriptDir, "tg_ws_proxy.py");
-
-    //// Файлы исходников proxy/ которые нужно скачать
-    //private static readonly string[] ProxySourceFiles =
-    //[
-    //"__init__.py",
-    //"balancer.py",
-    //"bridge.py",
-    //"config.py",
-    //"fake_tls.py",
-    //"pool.py",
-    //"raw_websocket.py",
-    //"stats.py",
-    //"tg_ws_proxy.py",
-    //"utils.py"
-    //];
 
     private const string TgProxyReleasesAtomUrl = "https://github.com/Flowseal/tg-ws-proxy/releases.atom";
 
@@ -414,7 +402,7 @@ public partial class MainViewModel
     private async Task<bool> DownloadPythonWithFallbackAsync(HttpClient http)
     {
         // Попытка 1: python.org (embeddable)
-        var embedUrl = "https://www.python.org/ftp/python/3.14.0/python-3.14.0-embed-amd64.zip";
+        var embedUrl = PythonEmbedUrl;
         try
         {
             AddTgProxyLog("📦 Попытка 1/2: python.org (embeddable ZIP)...");
@@ -427,7 +415,7 @@ public partial class MainViewModel
             Directory.CreateDirectory(PythonDir);
             ZipFile.ExtractToDirectory(zipPath, PythonDir, overwriteFiles: true);
             File.Delete(zipPath);
-            AddTgProxyLog("✅ Python 3.14 (embeddable) скачан и распакован");
+            AddTgProxyLog($"✅ Python {PythonVersion} (embeddable) скачан и распакован");
             return true;
         }
         catch (Exception ex)
@@ -437,8 +425,7 @@ public partial class MainViewModel
         }
 
         // Попытка 2: astral-sh mirror (install_only_stripped.tar.gz)
-        var mirrorUrl = "https://github.com/astral-sh/python-build-standalone/releases/download/20260510/" +
-                        "cpython-3.14.5%2B20260510-x86_64-pc-windows-msvc-install_only_stripped.tar.gz";
+        var mirrorUrl = PythonMirrorUrl;
         try
         {
             AddTgProxyLog("📦 Попытка 2/2: astral-sh mirror (TAR.GZ, ~21MB)...");
@@ -507,7 +494,7 @@ public partial class MainViewModel
             if (pythonExeFound is null)
                 throw new Exception("python.exe не найден после распаковки");
 
-            AddTgProxyLog($"✅ Python 3.14.5 (astral-sh) успешно установлен");
+            AddTgProxyLog($"✅ Python {PythonVersion} (astral-sh) успешно установлен");
             AddTgProxyLog($"   Путь: {Path.GetRelativePath(TgProxyDir, pythonExeFound)}");
             return true;
         }

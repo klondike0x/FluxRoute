@@ -31,18 +31,6 @@ public partial class MainViewModel
     [DllImport("user32.dll")]
     private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
 
-    // Делегат оставлен, потому что поле _winEventCallback объявлено в MainViewModel.cs.
-    // Сам WinEventHook больше не устанавливаем: при массовом сканировании профилей он мог
-    // ломать WPF message pump и приводить к System.ExecutionEngineException в Dispatcher.cs.
-    private delegate void WinEventProc(
-        IntPtr hWinEventHook,
-        uint eventType,
-        IntPtr hwnd,
-        int idObject,
-        int idChild,
-        uint idEventThread,
-        uint dwmsEventTime);
-
     private const uint TH32CS_SNAPPROCESS = 0x00000002;
     private static readonly IntPtr INVALID_HANDLE_VALUE = new(-1);
 
@@ -470,28 +458,6 @@ public partial class MainViewModel
         }
 
         return pids;
-    }
-
-    private void InstallWindowHook()
-    {
-        // Отключено намеренно. CreateNoWindow=true скрывает winws/cmd без глобального WinEventHook.
-    }
-
-    private void RemoveWindowHook()
-    {
-        if (_winEventHook != IntPtr.Zero)
-        {
-            try
-            {
-                UnhookWinEvent(_winEventHook);
-            }
-            catch
-            {
-                // ignored
-            }
-
-            _winEventHook = IntPtr.Zero;
-        }
     }
 
     private static bool SafeHasExited(Process process)

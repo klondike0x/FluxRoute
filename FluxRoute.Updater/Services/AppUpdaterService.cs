@@ -81,6 +81,14 @@ public sealed class AppUpdaterService : IAppUpdaterService
                 return _cachedResult;
             }
 
+            // Валидация тега (защита от форков с кастомными тегами)
+            if (!IsValidSemVerTag(tagName))
+            {
+                _cachedResult = (null, $"Некорректный тег релиза: {tagName}");
+                _cacheExpiresAt = DateTime.UtcNow + CacheTtl;
+                return _cachedResult;
+            }
+
             var remoteVersion = tagName.TrimStart('v', 'V');
             var localVersion  = GetCurrentVersion();
 
@@ -120,6 +128,19 @@ public sealed class AppUpdaterService : IAppUpdaterService
         {
             return (null, $"Ошибка: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Проверяет, что тег соответствует semver и не содержит суффиксов форков.
+    /// </summary>
+    private static bool IsValidSemVerTag(string tag)
+    {
+        var clean = tag.TrimStart('v', 'V');
+        return Version.TryParse(clean, out _) &&
+               !tag.Contains("AI", StringComparison.OrdinalIgnoreCase) &&
+               !tag.Contains("fork", StringComparison.OrdinalIgnoreCase) &&
+               !tag.Contains("custom", StringComparison.OrdinalIgnoreCase) &&
+               !tag.Contains("-", StringComparison.Ordinal); // без pre-release суффиксов
     }
 
     /// <summary>

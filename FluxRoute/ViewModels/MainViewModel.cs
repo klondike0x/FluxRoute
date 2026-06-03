@@ -392,7 +392,6 @@ public partial class MainViewModel : ObservableObject
     private Process? _runningProcess;
     private CancellationTokenSource? _hideWindowsCts;
     private volatile HashSet<uint> _trackedPids = [];
-    private IntPtr _winEventHook;
     private string EngineDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "engine");
 
     private readonly IUpdaterService _updater;
@@ -429,19 +428,18 @@ public partial class MainViewModel : ObservableObject
     public string EngineDownloadStatus => Updates.EngineDownloadStatus;
     private readonly IHttpClientFactory _httpClientFactory;
     public MainViewModel(
-        ISettingsService settingsService,
-        IUpdaterService updaterService,
-        IAppUpdaterService appUpdaterService,
-        IConnectivityChecker connectivity,
-        NetworkFingerprintProvider aiFingerprints,
-        NetworkChangeWatcher aiNetworkWatcher,
-        AiStrategyRegistry aiRegistry,
-        AiHistoryStore aiHistoryStore,
-        BanditSelector aiBandit,
-        StrategyEvolver aiEvolver,
-        BatMaterializer aiMaterializer,
-        IHttpClientFactory httpClientFactory)
-
+    ISettingsService settingsService,
+    IUpdaterService updaterService,
+    IAppUpdaterService appUpdaterService,
+    IConnectivityChecker connectivity,
+    NetworkFingerprintProvider aiFingerprints,
+    NetworkChangeWatcher aiNetworkWatcher,
+    AiStrategyRegistry aiRegistry,
+    AiHistoryStore aiHistoryStore,
+    BanditSelector aiBandit,
+    StrategyEvolver aiEvolver,
+    BatMaterializer aiMaterializer,
+    IHttpClientFactory httpClientFactory)
     {
         _settingsService = settingsService;
         _updater = updaterService;
@@ -461,11 +459,13 @@ public partial class MainViewModel : ObservableObject
             getWinDivertSysPath: () => WinDivertSysPath,
             addAppLog: msg => Logs.Add(msg));
 
+        // ═══ ИСПРАВЛЕНО: передаём httpClientFactory в ServiceViewModel ═══
         Service = new ServiceViewModel(
             getEngineDir: () => EngineDir,
             getSelectedProfileDisplayName: () => SelectedProfile?.DisplayName,
-            addAppLog: msg => Logs.Add(msg));
-
+            addAppLog: msg => Logs.Add(msg),
+            httpClientFactory: _httpClientFactory);
+        // ════════════════════════════════════════════════════════════════════
         Service.GetAutoTuneTargets = () =>
         {
             var sites = new List<string>();
@@ -532,7 +532,18 @@ public partial class MainViewModel : ObservableObject
         {
             Logs.Add("⚠️ Папка engine/ не найдена. Скачиваем Flowseal...");
             AddToRecentLogs("⬇️ Скачивание Flowseal...");
-            _ = Updates.AutoDownloadEngineAsync();
+            _ = Updates.AutoDownloadEngineAsync().ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    var ex = t.Exception?.InnerException ?? t.Exception;
+                    Application.Current?.Dispatcher.BeginInvoke(() =>
+                    {
+                        Logs.Add($"❌ Ошибка автоскачивания: {ex?.Message}");
+                        AddToRecentLogs($"❌ Flowseal: {ex?.Message}");
+                    });
+                }
+            }, TaskScheduler.Default);
         }
 
         DisableNativeUpdateCheck();
@@ -829,11 +840,8 @@ public partial class MainViewModel : ObservableObject
             _orchestrator.Stop();
         if (_aiOrchestrator.IsRunning)
             _aiOrchestrator.Stop();
-
         _uptimeTimer?.Stop();
         _orchestratorUiTimer?.Stop();
-
-        RemoveWindowHook();
         _hideWindowsCts?.Cancel();
         _hideWindowsCts?.Dispose();
     }

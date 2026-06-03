@@ -64,6 +64,10 @@ public partial class MainWindow : Window
     {
     }
 
+    /// <summary>
+    /// ⚠️ WARNING: This method duplicates DI registration from App.xaml.cs.
+    /// When changing service registration in App.xaml.cs, update this method too.
+    /// </summary>
     private static MainViewModel CreateDesignTimeViewModel()
     {
         var settings = new SettingsService();
