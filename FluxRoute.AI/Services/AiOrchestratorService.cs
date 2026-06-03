@@ -436,6 +436,7 @@ public sealed class AiOrchestratorService : IDisposable
         var previousGenome = _currentGenome;
         var previousProfile = _getActiveProfile();
         var wasRunning = _isAnyEngineRunning();
+        var deleted = false;
         try
         {
             await _refreshProfiles().ConfigureAwait(false);

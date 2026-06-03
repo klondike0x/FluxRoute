@@ -280,6 +280,7 @@ public partial class MainWindow : Window
 
     private void AnimateNavIndicator(int tabIndex)
     {
+        double targetY;
         if (tabIndex == 7)
         {
             targetY = 417;
@@ -302,7 +303,6 @@ public partial class MainWindow : Window
 
         SetNavIndicatorVisible(true);
 
-        var visualIndex = tabIndex == 8 ? 7 : tabIndex;
         var animation = new DoubleAnimation
         {
             To = targetY,
