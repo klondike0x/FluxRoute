@@ -51,7 +51,7 @@
                             <GradientStop Color="#0E1018" Offset="1" />
                         </LinearGradientBrush>
                     </Border.Background>
-                    <Grid Margin="0,0,0,-1">
+                    <Grid Margin="0,0,0,0">
 
                         <!-- ╔══════════ TAB 0: ГЛАВНАЯ ══════════╗ -->
                         <Border>
