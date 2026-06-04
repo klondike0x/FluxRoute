@@ -36,6 +36,12 @@
                         RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4A90E2">Flowseal/zapret-discord-youtube</Hyperlink>
                     <Run Text=" — основа engine" />
                 </TextBlock>
+                <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+                    <Run Text="• " />
+                    <Hyperlink NavigateUri="https://github.com/Flowseal/tg-ws-proxy"
+                        RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4A90E2">Flowseal/tg-ws-proxy</Hyperlink>
+                    <Run Text=" — Telegram WebSocket прокси" />
+                </TextBlock>
             </StackPanel>
             <Rectangle Style="{StaticResource Sep}" />
             <!-- После секции "ОСНОВА ENGINE" -->
