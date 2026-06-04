@@ -680,22 +680,17 @@ public partial class MainWindow : Window
 
     private void UnifiedLogEntries_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (_unifiedLogsTextBox is null || !_vm.LogsAutoScroll)
+        if (LogsTab is null || !_vm.LogsAutoScroll)
             return;
-
         if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
             return;
-
         Dispatcher.BeginInvoke(new Action(() =>
         {
             try
             {
-                _unifiedLogsTextBox.CaretIndex = _unifiedLogsTextBox.Text.Length;
-                _unifiedLogsTextBox.ScrollToEnd();
+                LogsTab.ScrollToEnd();  // ← вызываем метод UserControl
             }
-            catch
-            {
-            }
+            catch { }
         }));
     }
 

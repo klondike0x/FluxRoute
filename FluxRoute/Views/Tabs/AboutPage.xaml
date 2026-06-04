@@ -38,6 +38,56 @@
                 </TextBlock>
             </StackPanel>
             <Rectangle Style="{StaticResource Sep}" />
+            <!-- После секции "ОСНОВА ENGINE" -->
+            <TextBlock Style="{StaticResource SecH}" Text="ACKNOWLEDGMENTS" />
+            <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3"
+           Text="FluxRoute был вдохновлён и частично основан на UX-решениях следующих проектов:" />
+
+            <StackPanel Margin="8,8,0,0">
+                <!-- Zapret Hub — главная благодарность -->
+                <Border Background="#161B22" BorderBrush="#30363D" BorderThickness="1" 
+            CornerRadius="6" Padding="12" Margin="0,4,0,8">
+                    <StackPanel>
+                        <TextBlock FontFamily="Segoe UI" FontSize="13" FontWeight="SemiBold" Foreground="#C9D1D9">
+                <Hyperlink NavigateUri="https://github.com/goshkow/Zapret-Hub" 
+                           RequestNavigate="Hyperlink_RequestNavigate" 
+                           Foreground="#58A6FF">Zapret Hub</Hyperlink>
+                <Run Text=" by goshkow" />
+                        </TextBlock>
+                        <TextBlock FontFamily="Segoe UI" Foreground="#8B949E" FontSize="11" 
+                       TextWrapping="Wrap" Margin="0,4,0,0"
+                       Text="Часть интерфейсных и продуктовых решений была вдохновлена Zapret Hub:" />
+                        <TextBlock FontFamily="Segoe UI" Foreground="#8B949E" FontSize="11" 
+                       Margin="8,2,0,0" Text="• Auto-Tune (подбор IPSet × GameFilter)" />
+                        <TextBlock FontFamily="Segoe UI" Foreground="#8B949E" FontSize="11" 
+                       Margin="8,2,0,0" Text="• Интеграция TG WS Proxy в единый интерфейс" />
+                        <TextBlock FontFamily="Segoe UI" Foreground="#8B949E" FontSize="11" 
+                       Margin="8,2,0,0" Text="• Структура навигации и продуктовый подход" />
+                    </StackPanel>
+                </Border>
+
+                <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+        <Run Text="• " />
+        <Hyperlink NavigateUri="https://github.com/medvedeff-true/Zapret-GUI" 
+                   RequestNavigate="Hyperlink_RequestNavigate" 
+                   Foreground="#4A90E2">Zapret-GUI</Hyperlink>
+        <Run Text=" by medvedeff-true" />
+                </TextBlock>
+                <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+        <Run Text="• " />
+        <Hyperlink NavigateUri="https://github.com/Virenbar/ZapretControl" 
+                   RequestNavigate="Hyperlink_RequestNavigate" 
+                   Foreground="#4A90E2">ZapretControl</Hyperlink>
+        <Run Text=" by Virenbar" />
+                </TextBlock>
+                <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+        <Run Text="• " />
+        <Hyperlink NavigateUri="https://github.com/youtubediscord/zapret" 
+                   RequestNavigate="Hyperlink_RequestNavigate" 
+                   Foreground="#4A90E2">zapret</Hyperlink>
+        <Run Text=" by youtubediscord" />
+                </TextBlock>
+            </StackPanel>
             <TextBlock Style="{StaticResource SecH}" Text="ПОЛЕЗНЫЕ ССЫЛКИ" />
             <StackPanel Margin="8,0,0,0">
                 <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">

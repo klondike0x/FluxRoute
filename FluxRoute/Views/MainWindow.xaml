@@ -246,7 +246,7 @@
                         </Border>
 
                         <!-- ╔══════════ TAB 8: ЛОГИ ══════════╗ -->
-                        <Border>
+                        <Border d:IsLocked="True">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <Setter Property="Visibility" Value="Collapsed" />
@@ -254,26 +254,16 @@
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding SelectedTabIndex}" Value="8">
                                             <Setter Property="Visibility" Value="Visible" />
-                                            <DataTrigger.EnterActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                            From="0" To="1" Duration="0:0:0.25" />
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </DataTrigger.EnterActions>
+                                            <Setter Property="Opacity" Value="1" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Border.Style>
                             <tabs:LogsPage x:Name="LogsTab" />
                         </Border>
-
                     </Grid>
                 </Border>
-
             </Grid>
-
         </Grid>
     </Border>
 </Window>
