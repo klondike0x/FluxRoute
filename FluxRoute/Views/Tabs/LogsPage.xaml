@@ -1,0 +1,62 @@
+<UserControl x:Class="FluxRoute.Views.Tabs.LogsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" d:DesignHeight="460" d:DesignWidth="760">
+    <Grid Margin="16,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Border Grid.Row="0" Background="#111520" BorderBrush="#1E2235" BorderThickness="1"
+            CornerRadius="10" Padding="12" Margin="0,0,0,10">
+            <StackPanel>
+                <TextBlock Text="Логи" Foreground="#4A90E2" FontSize="14"
+                    FontWeight="Bold" Margin="0,0,0,4" />
+                <TextBlock
+                    Text="События приложения, оркестратора, winws.exe, TG WS Proxy, обновлений и сервиса."
+                    Foreground="#4A5170" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10" />
+                <WrapPanel VerticalAlignment="Center">
+                    <TextBlock Text="Тип:" Foreground="#4A5170" VerticalAlignment="Center"
+                        Margin="0,0,6,0" />
+                    <ComboBox Width="200" Height="28" Margin="0,0,10,6"
+                        ItemsSource="{Binding LogCategoryFilters}"
+                        SelectedItem="{Binding SelectedLogCategory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Text="Поиск:" Foreground="#4A5170" VerticalAlignment="Center"
+                        Margin="0,0,6,0" />
+                    <TextBox Width="200" Height="28" Margin="0,0,10,6"
+                        VerticalContentAlignment="Center"
+                        Text="{Binding LogSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <CheckBox Content="Только ошибки" Foreground="#9BB0D0" Margin="0,4,12,6"
+                        VerticalAlignment="Center"
+                        IsChecked="{Binding LogsErrorsOnly, Mode=TwoWay}" />
+                    <CheckBox Content="Автопрокрутка" Foreground="#9BB0D0" Margin="0,4,12,6"
+                        VerticalAlignment="Center"
+                        IsChecked="{Binding LogsAutoScroll, Mode=TwoWay}" />
+                    <Button Content="Очистить" Style="{StaticResource ActionBtn}" Height="28"
+                        Padding="10,0" Margin="0,0,6,6"
+                        Command="{Binding ClearUnifiedLogsCommand}" />
+                    <Button Content="Скопировать" Style="{StaticResource ActionBtn}" Height="28"
+                        Padding="10,0" Margin="0,0,6,6"
+                        Command="{Binding CopyUnifiedLogsCommand}" />
+                    <Button Content="Сохранить" Style="{StaticResource ActionBtn}" Height="28"
+                        Padding="10,0" Margin="0,0,6,6"
+                        Command="{Binding SaveUnifiedLogsCommand}" />
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+        <Border Grid.Row="1" Background="#080B12" BorderBrush="#1E2235"
+            BorderThickness="1" CornerRadius="8">
+            <TextBox x:Name="UnifiedLogsTextBox"
+                Background="Transparent" Foreground="#9BB0D0"
+                BorderThickness="0"
+                FontFamily="Consolas" FontSize="12" Padding="10,8"
+                IsReadOnly="True" IsUndoEnabled="False"
+                AcceptsReturn="True" TextWrapping="Wrap"
+                VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled"
+                Text="{Binding UnifiedLogsText, Mode=OneWay}" />
+        </Border>
+    </Grid>
+</UserControl>

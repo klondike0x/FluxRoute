@@ -1,0 +1,112 @@
+<UserControl x:Class="FluxRoute.Views.Tabs.AiPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" d:DesignHeight="460" d:DesignWidth="760">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="16,12">
+            <TextBlock Style="{StaticResource SecH}" Text="РЕЖИМ ИИ" Margin="0,0,0,8" />
+            <CheckBox Content="Включить самообучаемый подбор стратегий (оркестратор использует ИИ)"
+                IsChecked="{Binding AiEnabled}" Margin="0,0,0,10" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Style="{StaticResource Lbl}" Text="Exploration (‰): "
+                    VerticalAlignment="Center" Margin="0,0,8,0" />
+                <TextBox Text="{Binding AiExplorationPermil, UpdateSourceTrigger=PropertyChanged}"
+                    Width="60" Height="26" VerticalContentAlignment="Center" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Style="{StaticResource Lbl}" Text="Авто-удаление ниже (%): "
+                    VerticalAlignment="Center" Margin="0,0,8,0" />
+                <TextBox Text="{Binding AiAutoDeleteBelowScore, UpdateSourceTrigger=PropertyChanged}"
+                    Width="60" Height="26" VerticalContentAlignment="Center" />
+            </StackPanel>
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="140" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Сеть:" />
+                <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AiNetworkLabel}" />
+                <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Поколение:" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AiGenerationText}" />
+                <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Lbl}" Text="Проб в истории:" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AiProbeCountText}" />
+            </Grid>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <Button Content="⚗ Эволюция сейчас" Style="{StaticResource AccentBtn}"
+                    Margin="0,0,10,0" Command="{Binding RunAiEvolutionCommand}" />
+                <Button Content="↺ Сброс модели" Style="{StaticResource TermBtn}"
+                    Margin="0,0,10,0" Command="{Binding ResetAiModelCommand}" />
+                <Button Content="📁 ai-evolved" Style="{StaticResource TermBtn}"
+                    Command="{Binding OpenAiEvolvedFolderCommand}" />
+            </StackPanel>
+            <Rectangle Style="{StaticResource Sep}" />
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <TextBlock Style="{StaticResource SecH}" Text="СТРАТЕГИИ" />
+                <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E"
+                    Margin="12,2,0,0"
+                    Text="{Binding AiStrategyRowCount, StringFormat='({0})'}" />
+            </StackPanel>
+            <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
+                TextWrapping="Wrap" Margin="0,0,0,8"
+                Text="Снимите галочку, чтобы исключить стратегию из подбора ИИ и эволюции. Нажмите 🗑 для удаления эволюционированных стратегий." />
+            <Border MaxHeight="360" BorderBrush="#30363D" BorderThickness="1"
+                CornerRadius="6" Margin="0,0,0,8">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding AiStrategyRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#111520" Padding="10,6" Margin="0,2">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal"
+                                            VerticalAlignment="Center" Margin="0,0,10,0">
+                                            <CheckBox IsChecked="{Binding IsEnabled}"
+                                                VerticalAlignment="Center" Margin="0,0,6,0" />
+                                            <Button Content="🗑" Style="{StaticResource RedBtn}"
+                                                Width="28" Height="28" Padding="0" FontSize="12"
+                                                Visibility="{Binding CanDelete, Converter={StaticResource BoolToVis}}"
+                                                Command="{Binding DataContext.DeleteAiStrategyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip="Удалить эволюционированную стратегию" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Vertical"
+                                            VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding DisplayName}"
+                                                FontFamily="Segoe UI" Foreground="#C8D4EC" FontSize="13" />
+                                            <TextBlock Text="{Binding OriginTag}"
+                                                FontFamily="Segoe UI" Foreground="#8B949E" FontSize="11" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="{Binding WilsonText}"
+                                            ToolTip="{Binding WilsonToolTip}"
+                                            FontFamily="Segoe UI" Foreground="#4FC3F7" FontSize="12"
+                                            VerticalAlignment="Center" Margin="8,0,8,0" />
+                                        <TextBlock Grid.Column="3" Text="{Binding VerificationText}"
+                                            ToolTip="{Binding VerificationToolTip}"
+                                            FontFamily="Segoe UI" Foreground="#79C0FF" FontSize="12"
+                                            VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
+            <TextBlock Margin="0,12,0,0" FontFamily="Segoe UI" FontSize="11"
+                Foreground="#8B949E" TextWrapping="Wrap"
+                Text="ИИ использует оркестратор проверок на вкладке «Оркестратор». Новые стратегии сохраняются в engine/ai-evolved." />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

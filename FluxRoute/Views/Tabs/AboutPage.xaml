@@ -1,0 +1,70 @@
+<UserControl x:Class="FluxRoute.Views.Tabs.AboutPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" d:DesignHeight="460" d:DesignWidth="760">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="16,12">
+            <TextBlock Style="{StaticResource SecH}" Text="ДЛЯ ЧЕГО СОЗДАН ПРОЕКТ" Margin="0,0,0,8" />
+            <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" TextWrapping="Wrap" FontSize="12"
+                Text="FluxRoute создан как удобный desktop-интерфейс для управления сетевыми профилями и сценариями обхода ограничений. Главная цель — упростить запуск и переключение стратегий без ручного редактирования bat-файлов." />
+            <Rectangle Style="{StaticResource Sep}" />
+            <TextBlock Style="{StaticResource SecH}" Text="КАК РАБОТАЕТ" />
+            <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" TextWrapping="Wrap" FontSize="12"
+                Text="Приложение загружает профили из каталога engine, запускает выбранный сценарий, отслеживает статус процесса и диагностику. Оркестратор анализирует доступность целей и переключает профиль на более стабильный." />
+            <Rectangle Style="{StaticResource Sep}" />
+            <TextBlock Style="{StaticResource SecH}" Text="ОСНОВА ENGINE" />
+            <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3"
+                Text="FluxRoute использует экосистему проектов:" />
+            <StackPanel Margin="8,8,0,0">
+                <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+                    <Run Text="• " />
+                    <Hyperlink NavigateUri="https://github.com/basil00/WinDivert"
+                        RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4A90E2">WinDivert</Hyperlink>
+                    <Run Text=" — низкоуровневая основа" />
+                </TextBlock>
+                <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+                    <Run Text="• " />
+                    <Hyperlink NavigateUri="https://github.com/bol-van/zapret"
+                        RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4A90E2">bol-van/zapret</Hyperlink>
+                    <Run Text=" — оригинальный проект" />
+                </TextBlock>
+                <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+                    <Run Text="• " />
+                    <Hyperlink NavigateUri="https://github.com/Flowseal/zapret-discord-youtube"
+                        RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4A90E2">Flowseal/zapret-discord-youtube</Hyperlink>
+                    <Run Text=" — основа engine" />
+                </TextBlock>
+            </StackPanel>
+            <Rectangle Style="{StaticResource Sep}" />
+            <TextBlock Style="{StaticResource SecH}" Text="ПОЛЕЗНЫЕ ССЫЛКИ" />
+            <StackPanel Margin="8,0,0,0">
+                <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+                    <Run Text="• " />
+                    <Hyperlink NavigateUri="https://github.com/klondike0x/FluxRoute"
+                        RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4A90E2">FluxRoute на GitHub</Hyperlink>
+                    <Run Text=" — репозиторий проекта" />
+                </TextBlock>
+                <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+                    <Run Text="• " />
+                    <Hyperlink NavigateUri="https://github.com/klondike0x/FluxRoute/releases"
+                        RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4A90E2">Релизы</Hyperlink>
+                    <Run Text=" — скачать последнюю версию" />
+                </TextBlock>
+                <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+                    <Run Text="• " />
+                    <Hyperlink NavigateUri="https://github.com/klondike0x/FluxRoute/issues"
+                        RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4A90E2">Issues</Hyperlink>
+                    <Run Text=" — баг-репорты и предложения" />
+                </TextBlock>
+                <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
+                    <Run Text="• " />
+                    <Hyperlink NavigateUri="https://github.com/klondike0x"
+                        RequestNavigate="Hyperlink_RequestNavigate" Foreground="#4A90E2">klondike0x</Hyperlink>
+                    <Run Text=" — страница автора на GitHub" />
+                </TextBlock>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

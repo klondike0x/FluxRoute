@@ -50,11 +50,6 @@ public partial class MainWindow : Window
     private WpfTextBox? _unifiedLogsTextBox;
     private WpfTextBlock? _pageTitleTextBlock;
 
-    // ── Wave pulse animation (Zapret-Hub style) ──
-    private readonly System.Windows.Threading.DispatcherTimer _idlePulseTimer = new()
-    {
-        Interval = TimeSpan.FromMilliseconds(1480)
-    };
 
 
     // Parameterless constructor is intentionally kept for the WPF designer
@@ -241,7 +236,7 @@ public partial class MainWindow : Window
 
     private void ServiceLogs_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        ServiceLogScroll?.ScrollToEnd();
+        // ServiceLogScroll moved to ServicePage — autoscroll handled there
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -280,141 +275,29 @@ public partial class MainWindow : Window
     }
 
     private void AnimateNavIndicator(int tabIndex)
-    {
-        // Tab 7 (About) is pinned to the bottom in a separate StackPanel (Margin.Top=416)
-        // Center Y = 416 (StackPanel) + 9 (separator) + 4 (Grid margin) + 18 (icon center) = 447
-        // Pill Margin.Top=20, Height=20 → Y = 447 - 10 - 20 = 417
-        double targetY;
-        if (tabIndex == 7)
-        {
-            targetY = 417;
-        }
-        else
-        {
-            // Map logical tab index to visual slot in StackPanel
-            // Slot order: 0,1,2,3,4,5, 8(logs)→6, 6(settings)→7
-            int visualIndex = tabIndex switch
-            {
-                6 => 6,
-                8 => 7,
-                _ => tabIndex
-            };
-            // Each slot: Height=36 + Margin top=4 + bottom=4 = 44px per slot
-            // Pill Margin.Top=20 already positions it at slot-0 center (8 top + 12 center offset)
-            // TranslateTransform.Y is additive offset from that base position
-            targetY = visualIndex * 44;
-        }
-
-        var animation = new DoubleAnimation
-        {
-            To = targetY,
-            Duration = TimeSpan.FromMilliseconds(280),
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-        };
-        NavIndicatorTransform.BeginAnimation(TranslateTransform.YProperty, animation);
-    }
+        => SidebarControl.AnimateNavIndicator(tabIndex);
 
     private void AnimateSidebar(bool expanded)
     {
         // No-op in v1.5.0: sidebar is fixed-width icon-only; no expand/collapse animation.
     }
 
-    // ── Wave pulse (Zapret-Hub style) ────────────────────────────────────────
+    // ── Wave pulse (делегируем в HomePage UserControl) ──
 
-    /// <summary>
-    /// Plays a 3-ring expanding (outward=true) or contracting (outward=false) wave.
-    /// strength: 0..1 opacity peak. duration: ms.
-    /// </summary>
     private void PlayWave(bool outward, double strength, int duration)
-    {
-        if (WaveRing1 == null) return;
-
-        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-        double startScale = outward ? 0.85 : 1.22;
-        double endScale   = outward ? 1.22 : 0.78;
-
-        // Stagger: ring 2 offset +80ms, ring 3 offset +160ms
-        int[] delays = { 0, 80, 160 };
-        double[] alphas = { strength, strength * 0.78, strength * 0.52 };
-
-        var rings = new[] { WaveRing1, WaveRing2, WaveRing3 };
-        var scales = new[] { WaveRing1Scale, WaveRing2Scale, WaveRing3Scale };
-
-        for (int i = 0; i < 3; i++)
-        {
-            var ring = rings[i];
-            var scale = scales[i];
-            double alpha = alphas[i];
-            int delay = delays[i];
-
-            ring.BeginAnimation(UIElement.OpacityProperty, null);
-            scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
-            scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
-            ring.Opacity = 0;
-            scale.ScaleX = startScale;
-            scale.ScaleY = startScale;
-
-            var opacityAnim = new DoubleAnimationUsingKeyFrames();
-            opacityAnim.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(delay))));
-            opacityAnim.KeyFrames.Add(new EasingDoubleKeyFrame(alpha, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(delay + duration * 0.08)), new CubicEase { EasingMode = EasingMode.EaseOut }));
-            opacityAnim.KeyFrames.Add(new EasingDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(delay + duration)), new CubicEase { EasingMode = EasingMode.EaseIn }));
-            ring.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
-
-            var scaleXAnim = new DoubleAnimation(startScale, endScale,
-                new Duration(TimeSpan.FromMilliseconds(duration)))
-            {
-                BeginTime = TimeSpan.FromMilliseconds(delay),
-                EasingFunction = ease
-            };
-            var scaleYAnim = new DoubleAnimation(startScale, endScale,
-                new Duration(TimeSpan.FromMilliseconds(duration)))
-            {
-                BeginTime = TimeSpan.FromMilliseconds(delay),
-                EasingFunction = ease
-            };
-            scale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleXAnim);
-            scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleYAnim);
-        }
-    }
+        => HomeTab?.PlayWave(outward, strength, duration);
 
     private void StartIdlePulse()
-    {
-        _idlePulseTimer.Stop();
-        _idlePulseTimer.Interval = TimeSpan.FromMilliseconds(2400);
-        _idlePulseTimer.Tick -= OnIdlePulseTick;
-        _idlePulseTimer.Tick += OnIdlePulseTick;
-        _idlePulseTimer.Start();
-        // Fire immediately
-        PlayWave(outward: true, strength: 0.38, duration: 2200);
-    }
+        => HomeTab?.StartIdlePulse();
 
     private void StopIdlePulse()
-    {
-        _idlePulseTimer.Stop();
-        _idlePulseTimer.Tick -= OnIdlePulseTick;
-    }
+        => HomeTab?.StopIdlePulse();
 
-    private void OnIdlePulseTick(object? sender, EventArgs e)
-    {
-        if (_vm.IsRunning)
-            PlayWave(outward: true, strength: 0.38, duration: 2200);
-    }
+    private void TitleBar_MinimizeRequested(object sender, System.Windows.RoutedEventArgs e)
+        => WindowState = WindowState.Minimized;
 
-    private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (e.ChangedButton == MouseButton.Left)
-            DragMove();
-    }
-
-    private void MinimizeButton_Click(object sender, RoutedEventArgs e)
-    {
-        WindowState = WindowState.Minimized;
-    }
-
-    private void CloseButton_Click(object sender, RoutedEventArgs e)
-    {
-        Close();
-    }
+    private void TitleBar_CloseRequested(object sender, System.Windows.RoutedEventArgs e)
+        => Close();
 
     private static void ForceKillProcesses()
     {

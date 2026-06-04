@@ -1,0 +1,263 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ══ ACTION BUTTON (BASE) ══ -->
+    <Style x:Key="ActionBtn" TargetType="Button">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="FontFamily" Value="Segoe UI" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="#9BB0D0" />
+        <Setter Property="Background" Value="#111520" />
+        <Setter Property="BorderBrush" Value="#1E2235" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Padding" Value="14,6" />
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border CornerRadius="6" x:Name="Bd">
+                        <Border.Background>
+                            <SolidColorBrush x:Name="BdBg" Color="#111520" />
+                        </Border.Background>
+                        <Border.BorderBrush>
+                            <SolidColorBrush x:Name="BdBorder" Color="#1E2235" />
+                        </Border.BorderBrush>
+                        <Border.BorderThickness>
+                            <Thickness>1</Thickness>
+                        </Border.BorderThickness>
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <EventTrigger RoutedEvent="Border.MouseEnter" SourceName="Bd">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <ColorAnimation Storyboard.TargetName="BdBorder"
+                                        Storyboard.TargetProperty="Color"
+                                        To="#4A90E2" Duration="0:0:0.18">
+                                        <ColorAnimation.EasingFunction>
+                                            <CubicEase EasingMode="EaseOut" />
+                                        </ColorAnimation.EasingFunction>
+                                    </ColorAnimation>
+                                    <ColorAnimation Storyboard.TargetName="BdBg"
+                                        Storyboard.TargetProperty="Color"
+                                        To="#161C2E" Duration="0:0:0.18">
+                                        <ColorAnimation.EasingFunction>
+                                            <CubicEase EasingMode="EaseOut" />
+                                        </ColorAnimation.EasingFunction>
+                                    </ColorAnimation>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                        <EventTrigger RoutedEvent="Border.MouseLeave" SourceName="Bd">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <ColorAnimation Storyboard.TargetName="BdBorder"
+                                        Storyboard.TargetProperty="Color"
+                                        To="#1E2235" Duration="0:0:0.22">
+                                        <ColorAnimation.EasingFunction>
+                                            <CubicEase EasingMode="EaseOut" />
+                                        </ColorAnimation.EasingFunction>
+                                    </ColorAnimation>
+                                    <ColorAnimation Storyboard.TargetName="BdBg"
+                                        Storyboard.TargetProperty="Color"
+                                        To="#111520" Duration="0:0:0.22">
+                                        <ColorAnimation.EasingFunction>
+                                            <CubicEase EasingMode="EaseOut" />
+                                        </ColorAnimation.EasingFunction>
+                                    </ColorAnimation>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="0.95" ScaleY="0.95" />
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ ACTION BUTTON VARIANTS ══ -->
+    <Style x:Key="ActionBtnGreen" TargetType="Button" BasedOn="{StaticResource ActionBtn}">
+        <Setter Property="Foreground" Value="#00D68F" />
+        <Setter Property="BorderBrush" Value="#004D3A" />
+    </Style>
+
+    <Style x:Key="ActionBtnRed" TargetType="Button" BasedOn="{StaticResource ActionBtn}">
+        <Setter Property="Foreground" Value="#E74C3C" />
+        <Setter Property="BorderBrush" Value="#6B1A1A" />
+    </Style>
+
+    <Style x:Key="ActionBtnAccent" TargetType="Button" BasedOn="{StaticResource ActionBtn}">
+        <Setter Property="Foreground" Value="#4A90E2" />
+        <Setter Property="BorderBrush" Value="#1E3A7A" />
+    </Style>
+
+    <!-- ══ LEGACY ALIASES (backward compat) ══ -->
+    <Style x:Key="TermBtn" TargetType="Button" BasedOn="{StaticResource ActionBtn}" />
+    <Style x:Key="AccentBtn" TargetType="Button" BasedOn="{StaticResource ActionBtnAccent}" />
+    <Style x:Key="GreenBtn" TargetType="Button" BasedOn="{StaticResource ActionBtnGreen}" />
+    <Style x:Key="RedBtn" TargetType="Button" BasedOn="{StaticResource ActionBtnRed}" />
+
+    <!-- ══ NAV ICON BUTTON ══ -->
+    <Style x:Key="NavIconBtn" TargetType="Button">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="Width" Value="52" />
+        <Setter Property="Height" Value="36" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Margin="0">
+                        <ContentPresenter HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard Name="HoverEnterSB">
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetProperty="RenderTransform.ScaleX"
+                                            To="1.12" Duration="0:0:0.15" FillBehavior="HoldEnd">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut" />
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation
+                                            Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                            To="1.12" Duration="0:0:0.15" FillBehavior="HoldEnd">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut" />
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <StopStoryboard BeginStoryboardName="HoverEnterSB" />
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetProperty="RenderTransform.ScaleX"
+                                            To="1.0" Duration="0:0:0.2" FillBehavior="HoldEnd">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut" />
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation
+                                            Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                            To="1.0" Duration="0:0:0.2" FillBehavior="HoldEnd">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut" />
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <EventTrigger RoutedEvent="Button.PreviewMouseLeftButtonDown">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation
+                                        Storyboard.TargetProperty="RenderTransform.ScaleX"
+                                        To="0.88" Duration="0:0:0.08">
+                                        <DoubleAnimation.EasingFunction>
+                                            <CubicEase EasingMode="EaseOut" />
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                    <DoubleAnimation
+                                        Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                        To="0.88" Duration="0:0:0.08">
+                                        <DoubleAnimation.EasingFunction>
+                                            <CubicEase EasingMode="EaseOut" />
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                        <EventTrigger RoutedEvent="Button.PreviewMouseLeftButtonUp">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation
+                                        Storyboard.TargetProperty="RenderTransform.ScaleX"
+                                        To="1.0" Duration="0:0:0.15">
+                                        <DoubleAnimation.EasingFunction>
+                                            <CubicEase EasingMode="EaseOut" />
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                    <DoubleAnimation
+                                        Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                        To="1.0" Duration="0:0:0.15">
+                                        <DoubleAnimation.EasingFunction>
+                                            <CubicEase EasingMode="EaseOut" />
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ TITLEBAR BUTTON ══ -->
+    <Style x:Key="TitleBtn" TargetType="Button">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
+                        <ContentPresenter HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="CloseTitleBtn" TargetType="Button" BasedOn="{StaticResource TitleBtn}">
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="Transparent" CornerRadius="0,8,0,0">
+                        <ContentPresenter HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>
