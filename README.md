@@ -362,10 +362,9 @@ FluxRoute/
 ```
 
 ---
-
 ## 🌳 Экосистема
 
-FluxRoute использует экосистему проектов:
+FluxRoute построен на экосистеме open-source проектов:
 
 - **[WinDivert](https://github.com/basil00/WinDivert)** — низкоуровневая Windows-основа
 - **[bol-van/zapret](https://github.com/bol-van/zapret)** — оригинальный проект
@@ -373,12 +372,28 @@ FluxRoute использует экосистему проектов:
 - **[Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube)** — основа `engine/`, используемая в FluxRoute
 - **[Flowseal/tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy)** — Telegram WebSocket прокси
 
-### Проекты, которые вдохновили
+---
 
-- **[Zapret-GUI](https://github.com/medvedeff-true/Zapret-GUI)** — от `medvedeff-true`
-- **[ZapretControl](https://github.com/Virenbar/ZapretControl)** — от `Virenbar`
-- **[Zapret-Hub](https://github.com/goshkow/Zapret-Hub)** — от `goshkow`
-- **[zapret](https://github.com/youtubediscord/zapret)** — от `youtubediscord`
+## 🙏 Acknowledgments
+
+FluxRoute был вдохновлён и частично основан на UX- и продуктовых решениях следующих проектов:
+
+### [Zapret Hub](https://github.com/goshkow/Zapret-Hub) by goshkow
+
+Часть интерфейсных, UX- и продуктовых решений FluxRoute была вдохновлена **Zapret Hub**:
+
+- **Auto-Tune** (подбор настроек IPSet × GameFilter) — концепция автоматического тестирования комбинаций
+- **Интеграция TG WS Proxy** — объединение zapret и tg-ws-proxy в едином интерфейсе
+- **Структура навигации** — левая боковая панель с плавными переходами между вкладками
+- **Продуктовый подход** — единый центр управления zapret-сценариями без bat-файлов
+
+Особая благодарность **goshkow** за открытость к сотрудничеству и консультации.
+
+### Другие проекты, повлиявшие на FluxRoute
+
+- **[Zapret-GUI](https://github.com/medvedeff-true/Zapret-GUI)** by medvedeff-true
+- **[ZapretControl](https://github.com/Virenbar/ZapretControl)** by Virenbar
+- **[zapret](https://github.com/youtubediscord/zapret)** by youtubediscord
 
 ---
 
