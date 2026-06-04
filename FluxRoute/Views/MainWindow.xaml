@@ -246,7 +246,7 @@
                         </Border>
 
                         <!-- ╔══════════ TAB 8: ЛОГИ ══════════╗ -->
-                        <Border d:IsLocked="True">
+                        <Border>
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <Setter Property="Visibility" Value="Collapsed" />
@@ -254,7 +254,14 @@
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding SelectedTabIndex}" Value="8">
                                             <Setter Property="Visibility" Value="Visible" />
-                                            <Setter Property="Opacity" Value="1" />
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                    From="0" To="1" Duration="0:0:0.25" />
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>

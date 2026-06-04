@@ -54,14 +54,32 @@
         <Border Grid.Row="1" Background="#080B12" BorderBrush="#1E2235"
                 BorderThickness="1" CornerRadius="8">
             <TextBox x:Name="UnifiedLogsTextBox"
-                     Background="Transparent" Foreground="#9BB0D0"
-                     BorderThickness="0"
-                     FontFamily="Consolas" FontSize="12" Padding="10,8"
-                     IsReadOnly="True" IsUndoEnabled="False"
-                     AcceptsReturn="True" TextWrapping="Wrap"
-                     VerticalScrollBarVisibility="Auto"
-                     HorizontalScrollBarVisibility="Disabled"
-                     Text="{Binding UnifiedLogsText, Mode=OneWay}" />
+        Background="Transparent" Foreground="#9BB0D0"
+        BorderThickness="0"
+        FontFamily="Consolas" FontSize="12" Padding="10,8"
+        IsReadOnly="True" IsUndoEnabled="False"
+        AcceptsReturn="True" TextWrapping="Wrap"
+        VerticalScrollBarVisibility="Auto"
+        HorizontalScrollBarVisibility="Disabled"
+        Text="{Binding UnifiedLogsText, Mode=OneWay}">
+                <TextBox.Resources>
+                    <!-- Явный стиль для переопределения глобального -->
+                    <Style TargetType="TextBox">
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="Foreground" Value="#9BB0D0" />
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="FontFamily" Value="Consolas" />
+                        <Setter Property="FontSize" Value="12" />
+                        <Setter Property="Padding" Value="10,8" />
+                        <Setter Property="IsReadOnly" Value="True" />
+                        <Setter Property="IsUndoEnabled" Value="False" />
+                        <Setter Property="AcceptsReturn" Value="True" />
+                        <Setter Property="TextWrapping" Value="Wrap" />
+                        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+                        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+                    </Style>
+                </TextBox.Resources>
+            </TextBox>
         </Border>
     </Grid>
 </UserControl>
