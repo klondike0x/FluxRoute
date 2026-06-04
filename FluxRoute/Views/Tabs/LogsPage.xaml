@@ -9,52 +9,46 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <Border Grid.Row="0" Background="#111520" BorderBrush="#1E2235" BorderThickness="1"
+        <Border Grid.Row="0" Background="#111520" BorderBrush="#1E2235"
+            BorderThickness="1"
             CornerRadius="10" Padding="12" Margin="0,0,0,10">
             <StackPanel>
                 <TextBlock Text="Логи" Foreground="#4A90E2" FontSize="14"
                     FontWeight="Bold" Margin="0,0,0,4" />
                 <TextBlock
-                    Text="Здесь собраны события приложения, оркестратора, проверки профилей, winws.exe, TG WS Proxy, обновлений и сервиса."
-                    Foreground="#4A5170" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10" />
-
-                <!-- Строка 1: Тип + Поиск + Только ошибки -->
-                <Grid Margin="0,0,0,6">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="200" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="Тип:" Foreground="#4A5170"
+                    Text="События приложения, оркестратора, winws.exe, TG WS Proxy, обновлений и сервиса."
+                    Foreground="#4A5170" FontSize="11" TextWrapping="Wrap"
+                    Margin="0,0,0,10" />
+                <WrapPanel VerticalAlignment="Center">
+                    <TextBlock Text="Тип:" Foreground="#4A5170"
                         VerticalAlignment="Center" Margin="0,0,6,0" />
-                    <ComboBox Grid.Column="1" Height="28"
+                    <ComboBox Width="200" Height="28" Margin="0,0,10,6"
                         ItemsSource="{Binding LogCategoryFilters}"
                         SelectedItem="{Binding SelectedLogCategory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    <TextBlock Grid.Column="2" Text="Поиск:" Foreground="#4A5170"
-                        VerticalAlignment="Center" Margin="12,0,6,0" />
-                    <TextBox Grid.Column="3" Height="28"
+                    <TextBlock Text="Поиск:" Foreground="#4A5170"
+                        VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBox Width="200" Height="28" Margin="0,0,10,6"
                         VerticalContentAlignment="Center"
                         Text="{Binding LogSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    <CheckBox Grid.Column="4" Content="Только ошибки" Foreground="#9BB0D0"
-                        VerticalAlignment="Center" Margin="12,0,0,0"
+                    <CheckBox Content="Только ошибки" Foreground="#9BB0D0"
+                        Margin="0,4,12,6"
+                        VerticalAlignment="Center"
                         IsChecked="{Binding LogsErrorsOnly, Mode=TwoWay}" />
-                </Grid>
-
-                <!-- Строка 2: Автопрокрутка + кнопки -->
-                <WrapPanel>
                     <CheckBox Content="Автопрокрутка" Foreground="#9BB0D0"
-                        VerticalAlignment="Center" Margin="0,0,12,0"
+                        Margin="0,4,12,6"
+                        VerticalAlignment="Center"
                         IsChecked="{Binding LogsAutoScroll, Mode=TwoWay}" />
-                    <Button Content="Очистить" Style="{StaticResource ActionBtn}" Height="28"
-                        Padding="10,0" Margin="0,0,6,0"
+                    <Button Content="Очистить"
+                        Style="{StaticResource ActionBtn}" Height="28"
+                        Padding="10,0" Margin="0,0,6,6"
                         Command="{Binding ClearUnifiedLogsCommand}" />
-                    <Button Content="Скопировать" Style="{StaticResource ActionBtn}" Height="28"
-                        Padding="10,0" Margin="0,0,6,0"
+                    <Button Content="Скопировать"
+                        Style="{StaticResource ActionBtn}" Height="28"
+                        Padding="10,0" Margin="0,0,6,6"
                         Command="{Binding CopyUnifiedLogsCommand}" />
-                    <Button Content="Сохранить" Style="{StaticResource ActionBtn}" Height="28"
-                        Padding="10,0"
+                    <Button Content="Сохранить"
+                        Style="{StaticResource ActionBtn}" Height="28"
+                        Padding="10,0" Margin="0,0,6,6"
                         Command="{Binding SaveUnifiedLogsCommand}" />
                 </WrapPanel>
             </StackPanel>
