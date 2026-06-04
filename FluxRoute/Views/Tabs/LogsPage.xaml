@@ -16,7 +16,7 @@
                 <TextBlock Text="Логи" Foreground="#4A90E2" FontSize="14"
                     FontWeight="Bold" Margin="0,0,0,4" />
                 <TextBlock
-                    Text="События приложения, оркестратора, winws.exe, TG WS Proxy, обновлений и сервиса."
+                    Text="Здесь собраны события приложения, оркестратора, проверки профилей, winws.exe, TG WS Proxy, обновлений и сервиса."
                     Foreground="#4A5170" FontSize="11" TextWrapping="Wrap"
                     Margin="0,0,0,10" />
                 <WrapPanel VerticalAlignment="Center">
