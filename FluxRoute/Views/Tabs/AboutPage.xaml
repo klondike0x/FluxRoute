@@ -88,6 +88,7 @@
         <Run Text=" by youtubediscord" />
                 </TextBlock>
             </StackPanel>
+            <Rectangle Style="{StaticResource Sep}" />
             <TextBlock Style="{StaticResource SecH}" Text="ПОЛЕЗНЫЕ ССЫЛКИ" />
             <StackPanel Margin="8,0,0,0">
                 <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3">
