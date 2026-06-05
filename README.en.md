@@ -117,11 +117,11 @@ FluxRoute is the **only** GUI with a full-featured AI subsystem:
 | ⚙️ Auto-Tune (IPSet × GameFilter) | ✅ | ✅ | ❌ | ❌ | ❌ |
 | 📡 Built-in TG WS Proxy | ✅ | ✅ | ✅ | ❌ | ❌ |
 | 🤖 AI DNS (ChatGPT, Claude, Gemini) | ❌ | ❌ | ✅ | ✅ | ❌ |
-| 💬 Telegram Desktop Unlock | ❌ | ❌ | ✅ | ✅ | ❌ |
+| 💬 Telegram Desktop Unlock | ✅ | ✅ | ✅ | ✅ | ❌ |
 | 📚 80+ Strategies Out of the Box | ❌ | ❌ | ❌ | ✅ | ❌ |
 | 🎨 Themes (5+) and Multilingual Support | ❌ | ✅ | ✅ | ❌ | ❌ |
 | 📦 Portable + Installer | ⚠️ | ✅ | ⚠️ | ⚠️ | ⚠️ |
-| 🔒 GitHub Actions (transparent build) | ✅ | ❌ | ❌ | ❌ | ✅ |
+| 🔒 GitHub Actions (transparent build) | ✅ | ✅ | ❌ | ❌ | ✅ |
 | 🔄 Atomic Engine Updates | ✅ | ⚠️ | ✅ | ❌ | ❌ |
 
 > **Legend:** ✅ = fully implemented · ⚠️ = partial / with limitations · ❌ = not available
