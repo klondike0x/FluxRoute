@@ -371,12 +371,28 @@ FluxRoute leverages the following project ecosystem:
 - **[Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube)** — the `engine/` base used in FluxRoute
 - **[Flowseal/tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy)** — Telegram WebSocket proxy
 
-### Projects That Inspired FluxRoute
+---
 
-- **[Zapret-GUI](https://github.com/medvedeff-true/Zapret-GUI)** — by `medvedeff-true`
-- **[ZapretControl](https://github.com/Virenbar/ZapretControl)** — by `Virenbar`
-- **[Zapret-Hub](https://github.com/goshkow/Zapret-Hub)** — by `goshkow`
-- **[zapret](https://github.com/youtubediscord/zapret)** — by `youtubediscord`
+## 🙏 Acknowledgments
+
+FluxRoute was inspired by and partially built upon the UX and product design decisions of the following projects:
+
+### [Zapret Hub](https://github.com/goshkow/Zapret-Hub) by goshkow
+
+A number of FluxRoute's interface, UX, and product decisions were inspired by **Zapret Hub**:
+
+- **Auto-Tune** (IPSet × GameFilter tuning) — the concept of automatic combination testing
+- **TG WS Proxy integration** — unifying zapret and tg-ws-proxy into a single interface
+- **Navigation structure** — left sidebar with smooth transitions between tabs
+- **Product approach** — a single control center for zapret scenarios without bat-files
+
+Special thanks to **goshkow** for openness to collaboration and consultations.
+
+### Other projects that influenced FluxRoute
+
+- **[Zapret-GUI](https://github.com/medvedeff-true/Zapret-GUI)** by medvedeff-true
+- **[ZapretControl](https://github.com/Virenbar/ZapretControl)** by Virenbar
+- **[zapret](https://github.com/youtubediscord/zapret)** by youtubediscord
 
 ---
 
