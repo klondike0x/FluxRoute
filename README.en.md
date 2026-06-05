@@ -121,7 +121,7 @@ FluxRoute is the **only** GUI with a full-featured AI subsystem:
 | 📚 80+ Strategies Out of the Box | ❌ | ❌ | ❌ | ✅ | ❌ |
 | 🎨 Themes (5+) and Multilingual Support | ❌ | ✅ | ✅ | ❌ | ❌ |
 | 📦 Portable + Installer | ⚠️ | ✅ | ⚠️ | ⚠️ | ⚠️ |
-| 🔒 GitHub Actions (transparent build) | ✅ | ✅ | ❌ | ❌ | ✅ |
+| 🔒 GitHub Actions (transparent build) | ✅ | ✅ | ❌ | ✅ | ✅ |
 | 🔄 Atomic Engine Updates | ✅ | ⚠️ | ✅ | ❌ | ❌ |
 
 > **Legend:** ✅ = fully implemented · ⚠️ = partial / with limitations · ❌ = not available
