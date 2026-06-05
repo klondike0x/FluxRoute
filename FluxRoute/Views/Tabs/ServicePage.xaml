@@ -12,7 +12,7 @@
                 <TextBlock Style="{StaticResource SecH}" Text="БЫСТРЫЕ ПРЕСЕТЫ" Margin="0,0,0,4" />
                 <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
                     TextWrapping="Wrap" Margin="0,0,0,8"
-                    Text="Сохраните текущую конфигурацию (профиль + GameFilter + IPSet) как пресет. Укажите имя процесса (.exe) для автопереключения при запуске игры — работает когда оркестратор включён." />
+                    Text="Сохраните текущую конфигурацию (Стратегия + GameFilter + IPSet) как пресет. Укажите имя процесса (.exe) для автопереключения при запуске игры — работает когда оркестратор включён." />
 
                 <ItemsControl ItemsSource="{Binding Presets}">
                     <ItemsControl.ItemTemplate>
@@ -32,7 +32,7 @@
                                         <TextBlock FontFamily="Segoe UI" FontSize="11"
                                             Foreground="#8B949E" Margin="0,2,0,0">
                                             <TextBlock.Text>
-                                                <MultiBinding StringFormat="{}Профиль: {0}  |  GameFilter: {1} ({2})  |  IPSet: {3}">
+                                                <MultiBinding StringFormat="{}Стратегия: {0}  |  GameFilter: {1} ({2})  |  IPSet: {3}">
                                                     <Binding Path="ProfileFileName" FallbackValue="—" />
                                                     <Binding Path="GameFilterEnabled" />
                                                     <Binding Path="GameFilterProtocol" />
@@ -170,7 +170,7 @@
                 <TextBlock Style="{StaticResource SecH}" Text="ПОДОБРАТЬ НАСТРОЙКИ" Margin="0,0,0,4" />
                 <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
                     TextWrapping="Wrap" Margin="0,0,0,8"
-                    Text="Приложение автоматически проверит все комбинации IPSet и GameFilter и предложит лучшую для текущего профиля." />
+                    Text="Приложение автоматически проверит все комбинации IPSet и GameFilter и предложит лучшую для текущей стратегии." />
                 <Button Content="🔍 Подобрать настройки" Style="{StaticResource ActionBtnAccent}"
                     Command="{Binding Service.StartAutoTuneCommand}"
                     HorizontalAlignment="Left" Padding="12,6" Margin="0,0,0,4" />
@@ -340,7 +340,7 @@
                             </StackPanel.Style>
                             <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
                                 TextWrapping="Wrap" Margin="0,0,0,10"
-                                Text="Приложение проверит все комбинации IPSet mode и Gaming mode для текущего профиля." />
+                                Text="Приложение проверит все комбинации IPSet mode и Gaming mode для текущей стратегии." />
                             <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#C9D1D9"
                                 Text="{Binding Service.AutoTuneStatusText}" Margin="0,0,0,8" />
                             <ProgressBar Value="{Binding Service.AutoTuneProgress}"

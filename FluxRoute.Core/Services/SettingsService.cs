@@ -9,7 +9,7 @@ namespace FluxRoute.Core.Services;
 
 public sealed class AppSettings
 {
-    // Профиль
+    // Стратегия
     public string? LastProfileFileName { get; set; }
 
     // Оркестратор
@@ -40,7 +40,7 @@ public sealed class AppSettings
     public List<string> CustomExcludeDomains { get; set; } = new();
     // ═══════════════════════════════════════════
 
-    // Рейтинг профилей
+    // Рейтинг стратегий
     public List<ProfileRatingEntry> ProfileRatings { get; set; } = new();
 
     // Game Filter
@@ -53,7 +53,7 @@ public sealed class AppSettings
     public bool AutoStartEnabled { get; set; } = false;
     public bool MinimizeToTray { get; set; } = true;
 
-    // Предупреждение при смене профиля
+    // Предупреждение при смене стратегии
     public bool ShowProfileSwitchWarning { get; set; } = true;
 
     // TG WS Proxy
@@ -92,7 +92,7 @@ public sealed class ConfigPreset
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "";
 
-    // Профиль
+    // Стратегия
     public string? ProfileFileName { get; set; }
 
     // Game Filter

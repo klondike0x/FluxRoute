@@ -8,11 +8,11 @@
         <StackPanel Margin="16,12">
             <TextBlock Style="{StaticResource SecH}" Text="ДЛЯ ЧЕГО СОЗДАН ПРОЕКТ" Margin="0,0,0,8" />
             <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" TextWrapping="Wrap" FontSize="12"
-                Text="FluxRoute создан как удобный desktop-интерфейс для управления сетевыми профилями и сценариями обхода ограничений. Главная цель — упростить запуск и переключение стратегий без ручного редактирования bat-файлов." />
+                Text="FluxRoute создан как удобный desktop-интерфейс для управления сетевыми стратегиями и сценариями обхода ограничений. Главная цель — упростить запуск и переключение стратегий без ручного редактирования bat-файлов." />
             <Rectangle Style="{StaticResource Sep}" />
             <TextBlock Style="{StaticResource SecH}" Text="КАК РАБОТАЕТ" />
             <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" TextWrapping="Wrap" FontSize="12"
-                Text="Приложение загружает профили из каталога engine, запускает выбранный сценарий, отслеживает статус процесса и диагностику. Оркестратор анализирует доступность целей и переключает профиль на более стабильный." />
+                Text="Приложение загружает стратегии из каталога engine, запускает выбранный сценарий, отслеживает статус процесса и диагностику. Оркестратор анализирует доступность целей и переключает стратегию на более стабильный." />
             <Rectangle Style="{StaticResource Sep}" />
             <TextBlock Style="{StaticResource SecH}" Text="ОСНОВА ENGINE" />
             <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" FontSize="12" Margin="0,3"

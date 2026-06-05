@@ -359,11 +359,11 @@ public sealed partial class ServiceViewModel : ObservableObject
         var profileName = _getSelectedProfileDisplayName();
         if (profileName is null)
         {
-            AddLog("❌ Сначала выберите профиль");
+            AddLog("❌ Сначала выберите стратегию");
             return;
         }
 
-        AddLog($"🔧 Установка службы zapret с профилем «{profileName}»...");
+        AddLog($"🔧 Установка службы zapret с стратегии «{profileName}»...");
         AddLog("⚠️ Запускаем service.bat — следуйте инструкциям в консоли");
 
         try

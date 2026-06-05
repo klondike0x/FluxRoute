@@ -52,23 +52,6 @@
                 <TextBlock Style="{StaticResource Val}" Text="{Binding OrchestratorNextCheck}" />
             </StackPanel>
             <Rectangle Style="{StaticResource Sep}" />
-
-            <TextBlock Style="{StaticResource SecH}" Text="ЖУРНАЛ" Margin="0,0,0,4" />
-            <Border Background="#0A0E17" BorderBrush="#21262D" BorderThickness="1"
-                CornerRadius="4" Margin="0,0,0,8">
-                <ScrollViewer Height="140" VerticalScrollBarVisibility="Auto" Padding="6,4">
-                    <ItemsControl ItemsSource="{Binding OrchestratorLogs}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="11"
-                                    Foreground="#C9D1D9" TextWrapping="Wrap" Margin="0,1" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-            </Border>
-
-            <Rectangle Style="{StaticResource Sep}" />
             <TextBlock Style="{StaticResource SecH}" Text="САЙТЫ ДЛЯ ПРОВЕРКИ" />
             <WrapPanel Margin="0,0,0,8">
                 <CheckBox Content="YouTube" IsChecked="{Binding SiteYouTube}" Margin="0,4,16,4" />
@@ -130,7 +113,7 @@
                         TextWrapping="Wrap" Margin="0,0,0,8">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
-                                <Setter Property="Text" Value="Домены для проверки доступности при сканировании профилей. Добавляйте по одному (example.com)." />
+                                <Setter Property="Text" Value="Домены для проверки доступности при сканировании стратегий. Добавляйте по одному (example.com)." />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding SelectedTabMode}" Value="Exclusions">
                                         <Setter Property="Text" Value="Домены-исключения. Они НЕ будут проверяться оркестратором и ИИ." />
@@ -155,7 +138,7 @@
                                 <KeyBinding Key="Return" Command="{Binding AddCustomDomainCommand}" />
                             </TextBox.InputBindings>
                         </TextBox>
-                        <Button Grid.Column="1" Content="＋ Добавить" Height="30" Width="90"
+                        <Button Grid.Column="1" Content="＋ Добавить" Height="30" Padding="14,0"
                             Margin="6,0,0,0" Style="{StaticResource ActionBtnGreen}"
                             Command="{Binding AddCustomDomainCommand}" />
                         <Button Grid.Column="2" Content="🗑" Height="30" Width="30" Margin="4,0,0,0"
@@ -298,12 +281,12 @@
             </Border>
 
             <Rectangle Style="{StaticResource Sep}" />
-            <TextBlock Style="{StaticResource SecH}" Text="РЕЙТИНГ ПРОФИЛЕЙ" />
+            <TextBlock Style="{StaticResource SecH}" Text="РЕЙТИНГ СТРАТЕГИЙ" />
             <Button HorizontalAlignment="Left" Margin="0,0,0,10"
                 Command="{Binding ScanProfilesCommand}">
                 <Button.Style>
                     <Style TargetType="Button" BasedOn="{StaticResource ActionBtnAccent}">
-                        <Setter Property="Content" Value="Сканировать все профили" />
+                        <Setter Property="Content" Value="Сканировать все стратегии" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsScanning}" Value="True">
                                 <Setter Property="IsEnabled" Value="False" />

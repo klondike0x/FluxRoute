@@ -6,7 +6,7 @@ using FluxRoute.Core.Services;
 namespace FluxRoute.Core.Tests;
 
 /// <summary>
-/// Тесты для парсинга BAT-профилей (ProfileItem), TargetEntry и вспомогательной логики.
+/// Тесты для парсинга BAT-стратегий (ProfileItem), TargetEntry и вспомогательной логики.
 /// </summary>
 public sealed class ProfileParserTests : IDisposable
 {

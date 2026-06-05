@@ -58,7 +58,7 @@ public partial class MainViewModel
     [RelayCommand]
     private void RefreshProfiles()
     {
-        Logs.Add("Обновляем список профилей...");
+        Logs.Add("Обновляем список стратегий...");
         LoadProfiles();
         RefreshDiagnostics();
     }
@@ -83,8 +83,8 @@ public partial class MainViewModel
 
         if (SelectedProfile is null)
         {
-            Logs.Add("Профиль не выбран.");
-            AddToRecentLogs("❌ Профиль не выбран");
+            Logs.Add("Стратегия не выбрана.");
+            AddToRecentLogs("❌ Стратегия не выбрана");
             return;
         }
 
@@ -216,7 +216,7 @@ public partial class MainViewModel
         }
         catch (InvalidOperationException)
         {
-            // Процесс мог завершиться/стать недоступным во время переключения профилей.
+            // Процесс мог завершиться/стать недоступным во время переключения стратегий.
         }
 
         if (!ct.IsCancellationRequested)
@@ -315,7 +315,7 @@ public partial class MainViewModel
         }
         catch (InvalidOperationException)
         {
-            // Процесс мог завершиться/стать недоступным во время переключения профилей.
+            // Процесс мог завершиться/стать недоступным во время переключения стратегий.
         }
 
         if (!ct.IsCancellationRequested)

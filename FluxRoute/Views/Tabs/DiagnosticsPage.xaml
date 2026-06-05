@@ -9,7 +9,7 @@
             <TextBlock Style="{StaticResource SecH}" Text="СИСТЕМНЫЕ НАСТРОЙКИ" Margin="0,0,0,8" />
             <CheckBox Content="Запускать FluxRoute при входе в Windows"
                 IsChecked="{Binding AutoStartEnabled}" Margin="0,4,0,4" />
-            <CheckBox Content="Показывать предупреждение при смене профиля"
+            <CheckBox Content="Показывать предупреждение при смене стратегии"
                 IsChecked="{Binding ShowProfileSwitchWarning}" Margin="0,4,0,12" />
             <Rectangle Style="{StaticResource Sep}" />
 

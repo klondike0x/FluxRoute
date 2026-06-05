@@ -56,7 +56,7 @@
             <Border Background="#1C1800" BorderBrush="#4A3800"
                 BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,16">
                 <TextBlock TextWrapping="Wrap" FontFamily="Segoe UI" FontSize="11" Foreground="#F0B429"
-                    Text="При обновлении winws.exe будет остановлен. После установки нужно заново запустить профиль." />
+                    Text="При обновлении winws.exe будет остановлен. После установки нужно заново запустить стратегию." />
             </Border>
             <Rectangle Style="{StaticResource Sep}" />
 
@@ -130,19 +130,6 @@
                 HorizontalAlignment="Left" Margin="0,0,0,12"
                 Command="{Binding CheckTgProxyUpdatesCommand}"
                 IsEnabled="{Binding TgProxyInstalled}" />
-            <Rectangle Style="{StaticResource Sep}" />
-
-            <TextBlock Style="{StaticResource SecH}" Text="ЛОГ ОБНОВЛЕНИЯ" Margin="0,8,0,4" />
-            <Border Style="{StaticResource LogArea}" MaxHeight="220">
-                <ItemsControl ItemsSource="{Binding UpdateLogs}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding}" Foreground="#4A5170"
-                                FontFamily="Segoe UI" FontSize="11" Margin="0,2" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

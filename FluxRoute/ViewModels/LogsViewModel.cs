@@ -56,8 +56,8 @@ public sealed partial class LogsViewModel : ObservableObject
         "Все логи",
         "Приложение",
         "Оркестратор",
-        "Сканирование профилей",
-        "Запуск профиля / winws.exe",
+        "Сканирование стратегий",
+        "Запуск стратегии / winws.exe",
         "TG WS Proxy",
         "Обновление engine",
         "Сервис",
@@ -242,7 +242,7 @@ public sealed partial class LogsViewModel : ObservableObject
             return AppLogCategory.ProfileScan;
 
         if (message.Contains("winws", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("профил", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("стратегия", StringComparison.OrdinalIgnoreCase) ||
             message.Contains("PID", StringComparison.OrdinalIgnoreCase))
             return AppLogCategory.Process;
 

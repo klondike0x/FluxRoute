@@ -198,7 +198,7 @@ public sealed class AiOrchestratorService : IDisposable
         {
             Notify(_registry.GetGenomes().Count > 0
                 ? "ИИ: нет включённых стратегий. Включите хотя бы одну на вкладке «Оркестратор»."
-                : "ИИ: нет профилей/genomes в engine/. Обновите Flowseal.");
+                : "ИИ: нет стратегий/genomes в engine/. Обновите Flowseal.");
             return;
         }
 
@@ -358,7 +358,7 @@ public sealed class AiOrchestratorService : IDisposable
         var profile = ResolveProfile(g);
         if (profile is null)
         {
-            Notify($"ИИ: не удалось материализовать профиль для «{g.DisplayName}».");
+            Notify($"ИИ: не удалось материализовать стратегию для «{g.DisplayName}».");
             return;
         }
 
@@ -393,7 +393,7 @@ public sealed class AiOrchestratorService : IDisposable
         await _refreshProfiles().ConfigureAwait(false);
         if (child is not null)
         {
-            Notify("ИИ: эволюция завершена, новые профили в engine/ai-evolved/.");
+            Notify("ИИ: эволюция завершена, новые стратегии в engine/ai-evolved/.");
             await VerifyEvolvedGenomeAsync(child, fp, ct).ConfigureAwait(false);
         }
         else
