@@ -104,26 +104,29 @@ Launch, update, and switch profiles from a single window — no manual BAT-file 
 
 ---
 
-## 🆚 How FluxRoute differs from other GUIs
+## 🆚 How FluxRoute Compares to Other GUIs
 
-FluxRoute is the **only** GUI with a full-fledged AI subsystem:
+FluxRoute is the **only** GUI with a full-featured AI subsystem:
 
 | Category | FluxRoute | Zapret-Hub | Zapret-GUI | Zapret2 GUI | ZapretControl |
-|----------|:---------:|:----------:|:----------:|:-----------:|:-------------:|
+|---|:---:|:---:|:---:|:---:|:---:|
 | 🧠 AI Orchestrator (Thompson Sampling) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| 🧬 Genetic strategy evolution | ✅ | ❌ | ❌ | ❌ | ❌ |
-| 🎮 Process triggers (by .exe) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| ⚙️ Auto-Tune (IPSet × GameFilter) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| 📡 Built-in TG WS Proxy | ✅ | ✅ | ❌ | ❌ | ❌ |
+| 🧬 Genetic Strategy Evolution | ✅ | ❌ | ❌ | ❌ | ❌ |
+| 🔄 Orchestrator (auto-scanning) | ✅ | ❌ | ❌ | ✅ | ❌ |
+| 🎮 Process-triggers (auto by .exe) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| ⚙️ Auto-Tune (IPSet × GameFilter) | ✅ | ✅ | ❌ | ❌ | ❌ |
+| 📡 Built-in TG WS Proxy | ✅ | ✅ | ✅ | ❌ | ❌ |
 | 🤖 AI DNS (ChatGPT, Claude, Gemini) | ❌ | ❌ | ✅ | ✅ | ❌ |
-| 💬 Telegram Desktop unlock | ❌ | ❌ | ✅ | ❌ | ❌ |
-| 📚 80+ built-in strategies | ❌ | ❌ | ❌ | ✅ | ❌ |
-| 🎨 Themes (5+) and i18n | ❌ | ✅ | ✅ | ❌ | ❌ |
-| 📦 Portable + installer | ❌ | ✅ | ❌ | ❌ | ❌ |
-| 🔒 GitHub Actions (transparent builds) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| 🔄 Atomic engine updates | ✅ | ⚠️ | ✅ | ❌ | ❌ |
+| 💬 Telegram Desktop Unlock | ❌ | ❌ | ✅ | ❌ | ❌ |
+| 📚 80+ Strategies Out of the Box | ❌ | ❌ | ❌ | ✅ | ❌ |
+| 🎨 Themes (5+) and Multilingual Support | ❌ | ✅ | ✅ | ❌ | ❌ |
+| 📦 Portable + Installer | ⚠️ | ✅ | ⚠️ | ⚠️ | ⚠️ |
+| 🔒 GitHub Actions (transparent build) | ✅ | ❌ | ❌ | ❌ | ✅ |
+| 🔄 Atomic Engine Updates | ✅ | ⚠️ | ✅ | ❌ | ❌ |
 
-> **Key difference:** FluxRoute is the only project where AI **autonomously selects and evolves** strategies for your network via Thompson Sampling and genetic algorithms. Other GUIs are convenient wrappers with static profiles or niche features (AI DNS, Telegram, mods).
+> **Legend:** ✅ = fully implemented · ⚠️ = partial / with limitations · ❌ = not available
+
+> **Key Difference:** FluxRoute is the only project where AI **automatically selects and evolves** strategies for your network using Thompson Sampling and genetic algorithms. The build process is fully transparent via GitHub Actions — anyone can verify exactly what goes into each release.
 
 ---
 
