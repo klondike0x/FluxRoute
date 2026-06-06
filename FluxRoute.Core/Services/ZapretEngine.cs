@@ -153,6 +153,24 @@ public sealed class ZapretEngine : IDpiEngine
             list.Add(p.RepeatCount.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
         }
 
+        if (!string.IsNullOrWhiteSpace(p.DesyncAnyProtocol))
+        {
+            list.Add("--dpi-desync-any-protocol");
+            list.Add(p.DesyncAnyProtocol);
+        }
+
+        if (!string.IsNullOrWhiteSpace(p.DesyncFooling))
+        {
+            list.Add("--dpi-desync-fooling");
+            list.Add(p.DesyncFooling);
+        }
+
+        if (!string.IsNullOrWhiteSpace(p.FakeResend))
+        {
+            list.Add("--dpi-desync-fake-resend");
+            list.Add(p.FakeResend);
+        }
+
         if (!string.IsNullOrWhiteSpace(p.Hostlist))
         {
             list.Add("--hostlist");

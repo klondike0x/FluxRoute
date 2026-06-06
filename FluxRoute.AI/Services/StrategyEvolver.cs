@@ -16,6 +16,8 @@ public sealed class StrategyEvolver
     private static readonly string[] OobPosCandidates = ["3+s", "5+s", "7"];
     private static readonly string[] TlsrecPosCandidates = ["1+s", "3+s", "7"];
     private static readonly string[] ModHttpCandidates = ["hcsmix", "dcsmix", "rmspace", "hcsmix,dcsmix", "hcsmix,rmspace"];
+    private static readonly string[] FoolingCandidates = ["md5sig", "badseq", "datanoack", "hopbyhop", "hopbyhop2", "badsum"];
+    private static readonly string[] AnyProtocolCandidates = ["0", "1"];
 
     private readonly AiStrategyRegistry _registry;
     private readonly AiHistoryStore _history;
@@ -192,6 +194,9 @@ public sealed class StrategyEvolver
             Auto = RngPickNullableRef(a.Auto, b.Auto),
             Timeout = RngPickNullableStruct(a.Timeout, b.Timeout),
             AutoMode = RngPickNullableStruct(a.AutoMode, b.AutoMode),
+            DesyncAnyProtocol = RngPickNullableRef(a.DesyncAnyProtocol, b.DesyncAnyProtocol),
+            DesyncFooling = RngPickNullableRef(a.DesyncFooling, b.DesyncFooling),
+            FakeResend = RngPickNullableRef(a.FakeResend, b.FakeResend),
             ExtraArgs = RngPickList(a.ExtraArgs, b.ExtraArgs),
             ParentIds = [a.Id, b.Id],
         };
@@ -219,7 +224,7 @@ public sealed class StrategyEvolver
 
     private void Mutate(StrategyGenome g)
     {
-        var roll = _rng.Next(12);
+        var roll = _rng.Next(15);
 
         if (g.EngineType == DpiEngineType.ByeDpi)
         {
@@ -255,6 +260,12 @@ public sealed class StrategyEvolver
                 g.AutoTtl = !g.AutoTtl;
                 break;
             case 5:
+                g.DesyncFooling = FoolingCandidates[_rng.Next(FoolingCandidates.Length)];
+                break;
+            case 6:
+                g.DesyncAnyProtocol = AnyProtocolCandidates[_rng.Next(AnyProtocolCandidates.Length)];
+                break;
+            case 7:
                 g.EngineType = DpiEngineType.ByeDpi;
                 g.SplitPos = null;
                 g.SplitPosSemantic = null;

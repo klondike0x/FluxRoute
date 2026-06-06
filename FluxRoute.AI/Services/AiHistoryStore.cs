@@ -8,6 +8,7 @@ public sealed class AiHistoryStore
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
     private readonly string _path;
     private readonly object _gate = new();
+    private List<ProbeOutcome>? _cache;
 
     public AiHistoryStore(string path)
     {
@@ -23,6 +24,15 @@ public sealed class AiHistoryStore
             if (!string.IsNullOrEmpty(dir))
                 Directory.CreateDirectory(dir);
             File.AppendAllText(_path, line);
+
+            if (_cache != null)
+            {
+                _cache.Add(outcome);
+            }
+            else
+            {
+                _cache = new List<ProbeOutcome> { outcome };
+            }
         }
     }
 
@@ -46,6 +56,9 @@ public sealed class AiHistoryStore
     {
         lock (_gate)
         {
+            if (_cache != null)
+                return [.. _cache];
+
             if (!File.Exists(_path))
                 return [];
 
@@ -66,6 +79,7 @@ public sealed class AiHistoryStore
                 }
             }
 
+            _cache = [.. list];
             return list;
         }
     }
@@ -92,6 +106,8 @@ public sealed class AiHistoryStore
             using var sw = new StreamWriter(fs);
             foreach (var o in kept.OrderBy(x => x.Timestamp))
                 sw.WriteLine(JsonSerializer.Serialize(o, JsonOptions));
+
+            _cache = [.. kept];
         }
     }
 }

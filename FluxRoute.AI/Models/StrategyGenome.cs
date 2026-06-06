@@ -40,6 +40,11 @@ public sealed class StrategyGenome
     public string? Auto { get; set; }
     public int? Timeout { get; set; }
     public int? AutoMode { get; set; }
+
+    public string? DesyncAnyProtocol { get; set; }
+    public string? DesyncFooling { get; set; }
+    public string? FakeResend { get; set; }
+
     public List<string> ExtraArgs { get; set; } = [];
 
     public string DisplayName { get; set; } = "";
@@ -82,6 +87,9 @@ public sealed class StrategyGenome
             Auto = Auto,
             Timeout = Timeout,
             AutoMode = AutoMode,
+            DesyncAnyProtocol = DesyncAnyProtocol,
+            DesyncFooling = DesyncFooling,
+            FakeResend = FakeResend,
             ExtraArgs = [..ExtraArgs],
         };
     }

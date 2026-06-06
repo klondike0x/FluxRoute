@@ -666,6 +666,24 @@
                                     </StackPanel>
                                 </Button>
 
+                                <!-- Nav: Warp -->
+                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="10" d:IsLocked="True">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="10">
+                                                    <Setter Property="Foreground" Value="#E6EDF3"/>
+                                                    <Setter Property="Background" Value="#161B22"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <StackPanel Orientation="Horizontal" d:IsLocked="True">
+                                        <TextBlock Text="🌐" Width="20" TextAlignment="Center" d:IsLocked="True"/>
+                                        <TextBlock Text="Warp" Margin="6,0,0,0" Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolToVis}}" d:IsLocked="True"/>
+                                    </StackPanel>
+                                </Button>
+
                                 <!-- Nav: Логи -->
                                 <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="8" d:IsLocked="True">
                                     <Button.Style>
@@ -1885,6 +1903,55 @@
                             </ScrollViewer>
                         </Border>
 
+
+                        <!-- ╔══════════════════════════════════════╗ -->
+                        <!-- ║          TAB 10: WARP               ║ -->
+                        <!-- ╚══════════════════════════════════════╝ -->
+                        <Border d:IsLocked="True">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Setter Property="Opacity" Value="0"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedTabIndex}" Value="10">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                         From="0" To="1" Duration="0:0:0.3">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseOut"/>
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16,12" d:IsLocked="True">
+                                <StackPanel d:IsLocked="True">
+                                    <TextBlock Text="Cloudflare Warp" Foreground="#4FC3F7" FontSize="14"
+                                               FontWeight="Bold" Margin="0,0,0,4" d:IsLocked="True"/>
+                                    <TextBlock Text="Генерация конфигурации для Cloudflare Warp (WireGuard)."
+                                               Foreground="#8B949E" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,14" d:IsLocked="True"/>
+
+                                    <Border Style="{StaticResource Card}" d:IsLocked="True">
+                                        <StackPanel d:IsLocked="True">
+                                            <Button Content="Генерировать конфиг" Style="{StaticResource AccentBtn}"
+                                                    Command="{Binding GenerateWarpConfigCommand}" d:IsLocked="True"/>
+
+                                            <TextBlock Text="Результат:" Style="{StaticResource SecH}" d:IsLocked="True"/>
+                                            <TextBox Text="{Binding WarpConfigResult}" Height="200"
+                                                     AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                                                     IsReadOnly="True" FontFamily="Consolas" FontSize="11" d:IsLocked="True"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
 
                         <!-- ╔══════════════════════════════════════╗ -->
                         <!-- ║          TAB 8: ЛОГИ                ║ -->
