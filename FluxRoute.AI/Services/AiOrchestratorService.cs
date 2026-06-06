@@ -1,4 +1,5 @@
 using FluxRoute.AI.Models;
+using FluxRoute.AI.Stats;
 using FluxRoute.Core.Models;
 using FluxRoute.Core.Services;
 
@@ -318,17 +319,20 @@ public sealed class AiOrchestratorService : IDisposable
             }
         }
 
+        var current = _currentGenome;
+        if (current is null) return;
+
         if (result.IsWorking(FailThreshold))
         {
-            _registry.RecordBanditSuccess(_currentGenome.Id, fp.Hash);
-            _bandit.RegisterSuccess(_currentGenome.Id);
+            _registry.RecordBanditSuccess(current.Id, fp.Hash);
+            _bandit.RegisterSuccess(current.Id);
             _consecutiveFailures = 0;
             Notify($"✅ ИИ: «{active.DisplayName}» ок ({result.Score}%).", result: result);
         }
         else
         {
-            _registry.RecordBanditFailure(_currentGenome.Id, fp.Hash);
-            _bandit.RegisterFailure(_currentGenome, failureSig);
+            _registry.RecordBanditFailure(current.Id, fp.Hash);
+            _bandit.RegisterFailure(current, failureSig);
             Notify($"⚠️ ИИ: «{active.DisplayName}» {result.Score}% ({result.Summary})", result: result);
             _consecutiveFailures++;
         }
@@ -428,20 +432,65 @@ public sealed class AiOrchestratorService : IDisposable
         var pool = GenePool();
         if (pool.Count == 0) return;
 
-        var top = pool.Take(2).ToList();
-        Notify($"⚡ Быстрый старт: проверка {top.Count} стратегий...");
-
         var fp = _fingerprints.Capture();
-        foreach (var g in top)
-        {
-            if (ct.IsCancellationRequested) break;
-            try
+        var outcomes = _history.LoadForNetwork(fp.Hash);
+        var byGenome = outcomes.GroupBy(o => o.GenomeId).ToDictionary(g => g.Key, g => g.ToList());
+
+        var top = pool
+            .Select(g =>
             {
-                _currentGenome = g;
-                Notify($"⚡ Быстрый старт: «{g.DisplayName}» ({g.EngineType}).");
-                await Task.Delay(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
+                byGenome.TryGetValue(g.Id, out var list);
+                list ??= [];
+                var succ = list.Count(o => o.Score >= 50);
+                var trials = list.Count;
+                var wilson = WilsonScore.LowerBound(succ, trials);
+                return (g, wilson);
+            })
+            .OrderByDescending(x => x.wilson)
+            .Take(3)
+            .Select(x => x.g)
+            .ToList();
+
+        Notify($"⚡ Быстрый старт: проверка {top.Count} топовых стратегий...");
+
+        StrategyGenome? bestGenome = null;
+        int bestScore = -1;
+
+        var previousGenome = _currentGenome;
+        var previousProfile = _getActiveProfile();
+        var wasRunning = _isAnyEngineRunning();
+
+        try
+        {
+            foreach (var g in top)
+            {
+                if (ct.IsCancellationRequested) break;
+                await TryProbeAndPersistGenomeAsync(g, fp, ct, isFreshlyEvolved: false).ConfigureAwait(false);
+
+                var freshG = _registry.GetById(g.Id);
+                if (freshG?.LastVerificationScore is { } score && score > bestScore)
+                {
+                    bestScore = score;
+                    bestGenome = freshG;
+                }
+
+                if (bestScore >= 95) break;
             }
-            catch { break; }
+        }
+        finally
+        {
+            if (bestGenome != null && bestScore >= (int)Math.Round(FailThreshold * 100))
+            {
+                await ApplyGenomeAsync(bestGenome, fp, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                if (previousProfile is not null)
+                    await _switchProfile(previousProfile).ConfigureAwait(false);
+                else if (wasRunning)
+                    await _ensureProtectionRunning().ConfigureAwait(false);
+                _currentGenome = previousGenome;
+            }
         }
     }
 

@@ -33,5 +33,10 @@ public sealed class EngineProfile
     public string? Auto { get; set; }
     public int? Timeout { get; set; }
     public int? AutoMode { get; set; }
+
+    public string? DesyncAnyProtocol { get; set; }
+    public string? DesyncFooling { get; set; }
+    public string? FakeResend { get; set; }
+
     public List<string> ExtraArgs { get; set; } = [];
 }
