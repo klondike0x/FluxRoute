@@ -363,7 +363,7 @@ public sealed partial class ServiceViewModel : ObservableObject
             return;
         }
 
-        AddLog($"🔧 Установка службы zapret с стратегии «{profileName}»...");
+        AddLog($"🔧 Установка службы zapret со стратегией «{profileName}»...");
         AddLog("⚠️ Запускаем service.bat — следуйте инструкциям в консоли");
 
         try

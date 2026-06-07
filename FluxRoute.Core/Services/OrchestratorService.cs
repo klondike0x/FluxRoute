@@ -262,7 +262,7 @@ public sealed class OrchestratorService : IDisposable
         }
 
         _consecutiveFailures = 0;
-        Notify($"⚠️ Стратегич «{active.DisplayName}» не работает ({pct}%). Переключаю...", result: result);
+        Notify($"⚠️ Стратегия «{active.DisplayName}» не работает ({pct}%). Переключаю...", result: result);
         await SwitchToNextBestAsync(active, ct).ConfigureAwait(false);
     }
 
