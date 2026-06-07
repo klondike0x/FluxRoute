@@ -106,7 +106,7 @@ public partial class MainWindow : Window
 
     private void OnProfileSwitched(object? sender, string profileName)
     {
-        _trayIcon.ShowBalloon("FluxRoute", $"Стратегия переключён: {profileName}");
+        _trayIcon.ShowBalloon("FluxRoute", $"Стратегия переключена: {profileName}");
         _trayIcon.UpdateTooltip($"FluxRoute — {profileName}");
         _logger?.LogInformation("Active profile switched to {ProfileName}.", profileName);
     }
