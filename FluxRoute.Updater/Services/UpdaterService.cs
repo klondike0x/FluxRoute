@@ -176,9 +176,15 @@ public sealed partial class UpdaterService : IUpdaterService
             using var http = _httpClientFactory.CreateClient(HttpClientNames.Updater);
             var bytes = await http.GetByteArrayAsync(update.DownloadUrl, ct).ConfigureAwait(false);
 
+            // Валидация размера ZIP (защита от HTML-страниц с ошибками)
+            if (bytes.Length < 1024)
+            {
+                onProgress($"❌ Скачанный файл слишком мал ({bytes.Length} байт) — возможно, ошибка сервера");
+                return false;
+            }
+
             var hash = Convert.ToHexString(SHA256.HashData(bytes));
             onProgress($"🔒 SHA-256: {hash}");
-
             await File.WriteAllBytesAsync(tempZip, bytes, ct).ConfigureAwait(false);
 
             // ── Шаг 2: Распаковываем в staging ────────────────────────────────────

@@ -24,8 +24,8 @@ public partial class MainViewModel
     [RelayCommand]
     private void ApplyProfile()
     {
-        if (SelectedProfile is null) { Logs.Add("Профиль не выбран."); return; }
-        Logs.Add($"Выбран профиль: {SelectedProfile.FileName}");
+        if (SelectedProfile is null) { Logs.Add("Стратегия не выбрана."); return; }
+        Logs.Add($"Выбрана стратегия: {SelectedProfile.FileName}");
     }
 
     [RelayCommand]
@@ -194,7 +194,7 @@ public partial class MainViewModel
                 SelectedProfile ??= Profiles.FirstOrDefault();
         }
         finally { _suppressProfileWarning = false; }
-        Logs.Add($"Профили загружены: {Profiles.Count} (.bat)");
+        Logs.Add($"Стратегии загружены: {Profiles.Count} (.bat)");
         RebuildAiStrategyRows();
     }
 

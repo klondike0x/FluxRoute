@@ -103,7 +103,7 @@ public partial class MainViewModel
         if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
             return;
 
-        // Важно: не используем Dispatcher.Invoke(). Во время сканирования профилей события идут
+        // Важно: не используем Dispatcher.Invoke(). Во время сканирования стратегией события идут
         // из фоновых задач и из UI-потока вперемешку; синхронный Invoke может создать re-entrancy.
         _ = dispatcher.BeginInvoke(new Action(() =>
         {
@@ -444,8 +444,8 @@ public partial class MainViewModel
                 var profile = Profiles.FirstOrDefault(p => p.FileName == top.FileName);
                 if (profile is not null)
                 {
-                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ▶ Запуск лучшего профиля «{profile.DisplayName}» ({(int)System.Math.Round((double)top.Score * 100)}%).");
-                    Logs.Add($"[Оркестратор] Лучший профиль после сканирования: «{profile.DisplayName}».");
+                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ▶ Запуск лучшей стратегии «{profile.DisplayName}» ({(int)System.Math.Round((double)top.Score * 100)}%).");
+                    Logs.Add($"[Оркестратор] Лучшая стратегия после сканирования: «{profile.DisplayName}».");
                     await SwitchProfileAsync(profile).ConfigureAwait(false);
                 }
             }

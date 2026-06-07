@@ -1,56 +1,40 @@
 <Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0-windows</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<UseWPF>true</UseWPF>
+		<UseWindowsForms>true</UseWindowsForms>
+		<Version>1.5.1</Version>
+		<ApplicationIcon>Resources\FluxRoute.ico</ApplicationIcon>
+	</PropertyGroup>
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
-    <UseWindowsForms>true</UseWindowsForms>
-    <Version>1.5.1</Version>
-    <ApplicationIcon>Resources\FluxRoute.ico</ApplicationIcon>
-  </PropertyGroup>
+	<ItemGroup>
+		<Content Include="engine\**\*">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 
-  <ItemGroup>
-    <Content Include="engine\**\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="Resources\FluxRoute.ico" LogicalName="FluxRoute.ico" />
+		<Resource Include="Resources\FluxRoute.png" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Compile Remove="Properties\**" />
-    <Compile Remove="ViewModels\Новая папка\**" />
-    <EmbeddedResource Remove="Properties\**" />
-    <EmbeddedResource Remove="ViewModels\Новая папка\**" />
-    <None Remove="Properties\**" />
-    <None Remove="ViewModels\Новая папка\**" />
-    <Page Remove="Properties\**" />
-    <Page Remove="ViewModels\Новая папка\**" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.8" />
+		<PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.6.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.8" />
+		<PackageReference Include="Serilog" Version="4.3.1" />
+		<PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
+		<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\FluxRoute.ico" LogicalName="FluxRoute.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Resource Include="Resources\FluxRoute.png" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.6.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.8" />
-    <PackageReference Include="Serilog" Version="4.3.1" />
-    <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
-    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\FluxRoute.AI\FluxRoute.AI.csproj" />
-    <ProjectReference Include="..\FluxRoute.Core\FluxRoute.Core.csproj" />
-    <ProjectReference Include="..\FluxRoute.Updater\FluxRoute.Updater.csproj" />
-  </ItemGroup>
-
+	<ItemGroup>
+		<ProjectReference Include="..\FluxRoute.AI\FluxRoute.AI.csproj" />
+		<ProjectReference Include="..\FluxRoute.Core\FluxRoute.Core.csproj" />
+		<ProjectReference Include="..\FluxRoute.Updater\FluxRoute.Updater.csproj" />
+	</ItemGroup>
 </Project>

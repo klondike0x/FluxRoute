@@ -1,3 +1,7 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using FluxRoute.Core.Models;
+using FluxRoute.Views;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -5,11 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Windows;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using Application = System.Windows.Application;
-
-using FluxRoute.Views;
 
 namespace FluxRoute.ViewModels;
 
@@ -22,6 +22,7 @@ public sealed partial class ServiceViewModel : ObservableObject
     private readonly Func<string> _getEngineDir;
     private readonly Func<string?> _getSelectedProfileDisplayName;
     private readonly Action<string> _addAppLog;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     private static readonly Dictionary<string, string> _protocolToFile = new()
     {
@@ -72,11 +73,13 @@ public sealed partial class ServiceViewModel : ObservableObject
     public ServiceViewModel(
         Func<string> getEngineDir,
         Func<string?> getSelectedProfileDisplayName,
-        Action<string> addAppLog)
+        Action<string> addAppLog,
+        IHttpClientFactory httpClientFactory)
     {
         _getEngineDir = getEngineDir;
         _getSelectedProfileDisplayName = getSelectedProfileDisplayName;
         _addAppLog = addAppLog;
+        _httpClientFactory = httpClientFactory;
     }
 
     private string ProtocolToFileValue(string protocol) =>
@@ -254,13 +257,14 @@ public sealed partial class ServiceViewModel : ObservableObject
     {
         IsServiceBusy = true;
         AddLog("⬇️ Скачиваем ipset-all.txt...");
-
         try
         {
             var url = "https://raw.githubusercontent.com/Flowseal/zapret-discord-youtube/refs/heads/main/.service/ipset-service.txt";
-            using var http = new HttpClient();
-            http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
+
+            // ═══ ИСПРАВЛЕНО: используем HttpClient из DI ═══
+            using var http = _httpClientFactory.CreateClient("Service");
             var content = await http.GetStringAsync(url);
+            // ════════════════════════════════════════════════
 
             var listsDir = Path.GetDirectoryName(IpSetFilePath)!;
             Directory.CreateDirectory(listsDir);
@@ -290,15 +294,16 @@ public sealed partial class ServiceViewModel : ObservableObject
     {
         IsServiceBusy = true;
         AddLog("⬇️ Проверяем hosts файл...");
-
         try
         {
             var hostsUrl = "https://raw.githubusercontent.com/Flowseal/zapret-discord-youtube/refs/heads/main/.service/hosts";
-            using var http = new HttpClient();
-            http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
-            var newContent = await http.GetStringAsync(hostsUrl);
-            var newLines = newContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
+            // ═══ ИСПРАВЛЕНО: используем HttpClient из DI ═══
+            using var http = _httpClientFactory.CreateClient("Service");
+            var newContent = await http.GetStringAsync(hostsUrl);
+            // ════════════════════════════════════════════════
+
+            var newLines = newContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
             var hostsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts");
 
             if (!File.Exists(hostsPath))
@@ -354,11 +359,11 @@ public sealed partial class ServiceViewModel : ObservableObject
         var profileName = _getSelectedProfileDisplayName();
         if (profileName is null)
         {
-            AddLog("❌ Сначала выберите профиль");
+            AddLog("❌ Сначала выберите стратегию");
             return;
         }
 
-        AddLog($"🔧 Установка службы zapret с профилем «{profileName}»...");
+        AddLog($"🔧 Установка службы zapret со стратегией «{profileName}»...");
         AddLog("⚠️ Запускаем service.bat — следуйте инструкциям в консоли");
 
         try
@@ -508,6 +513,10 @@ public sealed partial class ServiceViewModel : ObservableObject
     //  AUTO-TUNE: подбор лучшей комбинации IPSet × GameFilter
     // ══════════════════════════════════════════════════════════════
 
+    // Коллекция всех протестированных комбинаций
+    private readonly ObservableCollection<AutoTuneResult> _autoTuneResults = new();
+    public ObservableCollection<AutoTuneResult> AutoTuneResults => _autoTuneResults;
+
     private bool _autoTuneRunning;
     public bool AutoTuneRunning { get => _autoTuneRunning; set => SetProperty(ref _autoTuneRunning, value); }
 
@@ -582,25 +591,35 @@ public sealed partial class ServiceViewModel : ObservableObject
 
     private async Task RunAutoTuneAsync(CancellationToken ct)
     {
-        await Application.Current.Dispatcher.InvokeAsync(() => AutoTuneRunning = true);
+        await Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            AutoTuneRunning = true;
+            AutoTuneOverlayVisible = true;
+            AutoTuneResultVisible = false;
+            AutoTuneProgress = 0;
+            AutoTuneStatusText = "Подготовка...";
+            _autoTuneResults.Clear(); // Новый ObservableCollection<AutoTuneResult>
+        });
+
         var checker = new FluxRoute.Core.Services.ConnectivityChecker();
 
         // Комбинации: приоритетные первыми (наиболее вероятные рабочие)
         var combos = new[]
         {
-            ("loaded", "TCP и UDP"),
-            ("loaded", "Выкл"),
-            ("none",   "TCP и UDP"),
-            ("none",   "Выкл"),
-            ("any",    "TCP и UDP"),
-            ("loaded", "TCP"),
-            ("loaded", "UDP"),
-            ("none",   "TCP"),
-            ("none",   "UDP"),
-            ("any",    "TCP"),
-            ("any",    "UDP"),
-            ("any",    "Выкл"),
-        };
+        ("loaded", "TCP и UDP"),  // Самый частый рабочий вариант
+        ("loaded", "Выкл"),
+        ("none",   "TCP и UDP"),
+        ("none",   "Выкл"),
+        ("any",    "TCP и UDP"),
+        ("loaded", "TCP"),
+        ("loaded", "UDP"),
+        ("none",   "TCP"),
+        ("none",   "UDP"),
+        ("any",    "TCP"),
+        ("any",    "UDP"),
+        ("any",    "Выкл"),
+    };
+
         int total = combos.Length;
 
         // Сохраняем исходные настройки
@@ -616,10 +635,10 @@ public sealed partial class ServiceViewModel : ObservableObject
 
         // Получаем цели один раз — не более 5 штук для скорости
         var targets = GetAutoTuneTargets?.Invoke()?.Take(5).ToList()
-                      ?? FluxRoute.Core.Services.ConnectivityChecker.BuiltinSites
-                          .SelectMany(kv => kv.Value).Take(5).ToList();
+            ?? FluxRoute.Core.Services.ConnectivityChecker.BuiltinSites
+                .SelectMany(kv => kv.Value).Take(5).ToList();
 
-        (string ipSet, string protocol, int success, int count, double ms) best = ("", "", -1, 0, double.MaxValue);
+        var results = new List<AutoTuneResult>();
         bool foundPerfect = false;
 
         try
@@ -629,77 +648,123 @@ public sealed partial class ServiceViewModel : ObservableObject
                 if (ct.IsCancellationRequested) break;
 
                 var (ip, pr) = combos[i];
+                var comboName = $"{ip} / {(pr == "Выкл" ? "без фильтра" : pr)}";
+
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    AutoTuneStatusText = $"Проверяется: {ip} / {(pr == "Выкл" ? "без фильтра" : pr)}";
-                    AutoTuneProgress = (double)i / total * 100;
+                    AutoTuneStatusText = $"[{i + 1}/{total}] Тестирую: {comboName}...";
+                    AutoTuneProgress = (double)(i + 1) / total * 100;
                 });
 
-                // Применяем комбинацию через UI-поток
+                // Применяем комбинацию
                 bool gfEnabled = pr != "Выкл";
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                     ApplyPresetState(gfEnabled, gfEnabled ? pr : "TCP и UDP", ip));
 
-                // Короткая пауза — winws перечитывает файлы быстро
-                try { await Task.Delay(400, ct); } catch (OperationCanceledException) { break; }
-                if (ct.IsCancellationRequested) break;
+                // Короткая пауза — winws перечитывает файлы
+                try { await Task.Delay(400, ct); }
+                catch (OperationCanceledException) { break; }
 
+                if (ct.IsCancellationRequested) break;
                 if (targets.Count == 0) continue;
 
                 var sw = System.Diagnostics.Stopwatch.StartNew();
+
                 // Таймаут — 4 секунды на комбинацию
                 using var checkCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 checkCts.CancelAfter(TimeSpan.FromSeconds(4));
-                IReadOnlyList<FluxRoute.Core.Models.CheckResult> results;
+
+                IReadOnlyList<FluxRoute.Core.Models.CheckResult> checkResults;
                 try
                 {
                     var (_, r) = await checker.CheckAllAsync(targets, checkCts.Token).ConfigureAwait(false);
-                    results = r;
+                    checkResults = r;
                 }
                 catch (OperationCanceledException)
                 {
                     if (ct.IsCancellationRequested) break;
-                    results = System.Array.Empty<FluxRoute.Core.Models.CheckResult>();
+                    checkResults = Array.Empty<FluxRoute.Core.Models.CheckResult>();
                 }
+
                 sw.Stop();
 
-                int successCount = results.Count(r => r.Ok);
-                double ms = sw.Elapsed.TotalMilliseconds;
+                int successCount = checkResults.Count(r => r.Ok);
+                var latencies = checkResults
+                    .Where(r => r.Ok && r.ElapsedMs.HasValue)
+                    .Select(r => r.ElapsedMs!.Value)
+                    .ToList();
 
-                if (successCount > best.success || (successCount == best.success && ms < best.ms))
-                    best = (ip, pr, successCount, results.Count, ms);
+                var result = new AutoTuneResult
+                {
+                    IpSetMode = ip,
+                    GameFilterProtocol = pr,
+                    SuccessCount = successCount,
+                    TotalCount = checkResults.Count,
+                    AvgLatencyMs = latencies.Count > 0 ? latencies.Average() : 0,
+                    MinLatencyMs = latencies.Count > 0 ? latencies.Min() : 0,
+                    MaxLatencyMs = latencies.Count > 0 ? latencies.Max() : 0,
+                    TestDuration = sw.Elapsed
+                };
 
-                // Ранний выход: все цели прошли
-                if (successCount == targets.Count && targets.Count > 0)
+                results.Add(result);
+
+                // Обновляем UI с результатами теста
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    _autoTuneResults.Add(result);
+                    AutoTuneStatusText = result.IsPerfect
+                        ? $"✅ {comboName}: все цели пройдены!"
+                        : $"→ {comboName}: {successCount}/{checkResults.Count} ({result.SuccessRate:0.#}%)";
+                });
+
+                // Ранний выход: все цели прошли + хорошая задержка
+                if (result.IsPerfect && result.AvgLatencyMs < 1000)
+                {
                     foundPerfect = true;
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                        AutoTuneStatusText = $"🎯 Найдена идеальная комбинация: {comboName}");
+                }
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+                AutoTuneStatusText = "⚠️ Отменено пользователем");
+        }
         finally
         {
-            // Восстанавливаем исходные настройки через UI-поток
+            // Восстанавливаем исходные настройки
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 ApplyPresetState(origGfEnabled, origProtocol, origIpSet);
                 AutoTuneRunning = false;
                 AutoTuneProgress = 100;
+            });
+        }
 
-                if (!ct.IsCancellationRequested && best.success >= 0)
-                {
-                    BestIpSet = best.ipSet;
-                    BestProtocol = best.protocol;
-                    BestSuccessCount = best.success;
-                    BestTotalCount = best.count;
-                    BestTimeMs = Math.Round(best.ms / 1000, 2);
-                    AutoTuneStatusText = foundPerfect
-                        ? "Найдена идеальная комбинация (все цели)."
-                        : "Лучшая комбинация найдена.";
-                    AutoTuneResultVisible = true;
-                }
-                else
-                {
-                    AutoTuneStatusText = "Отменено.";
-                }
+        // Показываем результаты
+        if (!ct.IsCancellationRequested && results.Count > 0)
+        {
+            var best = results.OrderByDescending(r => r.CompositeScore).First();
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                // Сортируем результаты по композитному скорингу
+                AutoTuneResults.Clear();
+                foreach (var r in results.OrderByDescending(r => r.CompositeScore))
+                    AutoTuneResults.Add(r);
+
+                BestIpSet = best.IpSetMode;
+                BestProtocol = best.GameFilterProtocol;
+                BestSuccessCount = best.SuccessCount;
+                BestTotalCount = best.TotalCount;
+                BestTimeMs = best.AvgLatencyMs;
+
+                AutoTuneStatusText = best.IsPerfect
+                    ? "✅ Найдена идеальная комбинация!"
+                    : "🏆 Лучшая комбинация найдена";
+
+                AutoTuneResultVisible = true;
             });
         }
     }

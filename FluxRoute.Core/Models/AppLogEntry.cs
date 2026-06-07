@@ -34,8 +34,8 @@ public sealed class AppLogEntry
     {
         AppLogCategory.App => "Приложение",
         AppLogCategory.Orchestrator => "Оркестратор",
-        AppLogCategory.ProfileScan => "Сканирование профилей",
-        AppLogCategory.Process => "Запуск профиля / winws.exe",
+        AppLogCategory.ProfileScan => "Сканирование стратегий",
+        AppLogCategory.Process => "Запуск стратегии / winws.exe",
         AppLogCategory.TgProxy => "TG WS Proxy",
         AppLogCategory.Updater => "Обновление engine",
         AppLogCategory.Service => "Сервис",

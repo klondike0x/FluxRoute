@@ -1,0 +1,55 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ══ SECTION HEADER ══ -->
+    <Style x:Key="SecH" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="Segoe UI" />
+        <Setter Property="Foreground" Value="#4A90E2" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="0,14,0,8" />
+    </Style>
+
+    <!-- ══ LABEL ══ -->
+    <Style x:Key="Lbl" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="Segoe UI" />
+        <Setter Property="Foreground" Value="#4A5170" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- ══ VALUE ══ -->
+    <Style x:Key="Val" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="Segoe UI" />
+        <Setter Property="Foreground" Value="#C8D4EC" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- ══ CARD ══ -->
+    <Style x:Key="Card" TargetType="Border">
+        <Setter Property="Background" Value="#111520" />
+        <Setter Property="BorderBrush" Value="#1E2235" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="14,12" />
+    </Style>
+
+    <!-- ══ LOG AREA ══ -->
+    <Style x:Key="LogArea" TargetType="Border">
+        <Setter Property="Background" Value="#080B12" />
+        <Setter Property="BorderBrush" Value="#1E2235" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="MaxHeight" Value="150" />
+    </Style>
+
+    <!-- ══ SEPARATOR ══ -->
+    <Style x:Key="Sep" TargetType="Rectangle">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="Fill" Value="#1E2235" />
+        <Setter Property="Margin" Value="0,8" />
+    </Style>
+
+</ResourceDictionary>

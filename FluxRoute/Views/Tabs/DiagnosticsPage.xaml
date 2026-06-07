@@ -1,0 +1,108 @@
+<UserControl x:Class="FluxRoute.Views.Tabs.DiagnosticsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" d:DesignHeight="460" d:DesignWidth="760">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="16,12">
+            <TextBlock Style="{StaticResource SecH}" Text="СИСТЕМНЫЕ НАСТРОЙКИ" Margin="0,0,0,8" />
+            <CheckBox Content="Запускать FluxRoute при входе в Windows"
+                IsChecked="{Binding AutoStartEnabled}" Margin="0,4,0,4" />
+            <CheckBox Content="Показывать предупреждение при смене стратегии"
+                IsChecked="{Binding ShowProfileSwitchWarning}" Margin="0,4,0,12" />
+            <Rectangle Style="{StaticResource Sep}" />
+
+            <TextBlock Style="{StaticResource SecH}" Text="КОМПОНЕНТЫ" />
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="180" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="26" />
+                    <RowDefinition Height="26" />
+                    <RowDefinition Height="26" />
+                    <RowDefinition Height="26" />
+                    <RowDefinition Height="26" />
+                    <RowDefinition Height="26" />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Права администратора:" />
+                <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AdminText}" />
+                <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="engine/:" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding EngineText}" />
+                <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Lbl}" Text="winws.exe:" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding WinwsText}" />
+                <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource Lbl}" Text="WinDivert.dll:" />
+                <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding WinDivertDllText}" />
+                <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource Lbl}" Text="WinDivert.sys:" />
+                <TextBlock Grid.Row="4" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding WinDivertDriverText}" />
+                <TextBlock Grid.Row="5" Grid.Column="0" Style="{StaticResource Lbl}" Text="Версия приложения:" />
+                <TextBlock Grid.Row="5" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AppVersion}" />
+            </Grid>
+            <WrapPanel>
+                <Button Content="🔍 Запустить диагностику" Style="{StaticResource ActionBtnAccent}"
+                    Margin="0,0,8,8" Command="{Binding RunExtendedDiagnosticsCommand}"
+                    IsEnabled="{Binding IsExtendedDiagnosticsRunning, Converter={StaticResource InvBool}}"
+                    ToolTip="Запустить расширенную проверку системы (без консольного окна)" />
+                <Button Content="Обновить" Style="{StaticResource ActionBtn}" Margin="0,0,8,8"
+                    Command="{Binding RefreshProfilesCommand}" />
+                <Button Content="Скопировать" Style="{StaticResource ActionBtn}" Margin="0,0,8,8"
+                    Command="{Binding CopyDiagnosticsCommand}" />
+                <Button Content="Экспорт логов" Style="{StaticResource ActionBtn}" Margin="0,0,8,8"
+                    Command="{Binding ExportLogsCommand}" />
+                <Button Content="Diagnostic Bundle" Style="{StaticResource ActionBtn}" Margin="0,0,8,8"
+                    Command="{Binding ExportDiagnosticBundleCommand}"
+                    ToolTip="Сохранить ZIP-архив с логами, диагностикой и настройками" />
+            </WrapPanel>
+
+            <!-- Результаты расширенной диагностики -->
+            <Border Background="#0D1117" BorderBrush="#30363D" BorderThickness="1"
+                CornerRadius="6" Padding="12" Margin="0,12,0,0"
+                Visibility="{Binding ExtendedDiagnosticsVisible, Converter={StaticResource BoolToVis}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock FontFamily="Segoe UI" FontSize="12" FontWeight="SemiBold"
+                                Foreground="#4A90E2" Margin="0,0,12,0" VerticalAlignment="Center"
+                                Text="Результаты диагностики" />
+                            <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
+                                VerticalAlignment="Center"
+                                Visibility="{Binding IsExtendedDiagnosticsRunning, Converter={StaticResource BoolToVis}}"
+                                Text="⏳ Выполняется..." />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Content="📋 Копировать" Style="{StaticResource ActionBtnAccent}"
+                                Margin="0,0,8,0" Command="{Binding CopyExtendedDiagnosticsCommand}"
+                                ToolTip="Скопировать все результаты диагностики в буфер обмена" />
+                            <Button Content="🗑 Очистить" Style="{StaticResource ActionBtn}"
+                                Command="{Binding ClearExtendedDiagnosticsCommand}"
+                                ToolTip="Очистить результаты" />
+                        </StackPanel>
+                    </Grid>
+
+                    <ScrollViewer Grid.Row="1" MaxHeight="340" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding ExtendedDiagnosticsResults}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}"
+                                        FontFamily="Consolas" FontSize="11"
+                                        Foreground="#C9D1D9" TextWrapping="Wrap" Margin="0,2" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

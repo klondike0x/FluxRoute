@@ -1,39 +1,46 @@
+using CommunityToolkit.Mvvm.Input;
+using FluxRoute.Core.Services;
+using FluxRoute.Views;
+using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Security.Cryptography;
-using CommunityToolkit.Mvvm.Input;
 using Application = System.Windows.Application;
-using FluxRoute.Views;
 
 namespace FluxRoute.ViewModels;
 
 public partial class MainViewModel
 {
     // ── Пути ──
+    private const string PythonVersion = "3.14.5";
+    private const string PythonEmbedUrl = $"https://www.python.org/ftp/python/{PythonVersion}/python-{PythonVersion}-embed-amd64.zip";
+    private const string PythonMirrorUrl = $"https://github.com/astral-sh/python-build-standalone/releases/download/20260510/cpython-{PythonVersion}%2B20260510-x86_64-pc-windows-msvc-install_only_stripped.tar.gz";
     private string TgProxyDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tg-proxy");
     private string PythonDir => Path.Combine(TgProxyDir, "python");
-    private string PythonExe => Path.Combine(PythonDir, "python.exe");
+    private string PythonExe
+    {
+        get
+        {
+            // Если директория не существует — возвращаем путь (File.Exists вернёт false)
+            if (!Directory.Exists(PythonDir))
+                return Path.Combine(PythonDir, "python.exe");
+
+            // 1. Прямой путь (embeddable)
+            var direct = Path.Combine(PythonDir, "python.exe");
+            if (File.Exists(direct)) return direct;
+
+            // 2. Поиск в подпапках (install_only может иметь вложенность)
+            var found = Directory.GetFiles(PythonDir, "python.exe", SearchOption.AllDirectories).FirstOrDefault();
+            return found ?? direct;
+        }
+    }
     private string ProxyScriptDir => Path.Combine(TgProxyDir, "proxy");
     private string ProxyScript => Path.Combine(ProxyScriptDir, "tg_ws_proxy.py");
 
-    // Файлы исходников proxy/ которые нужно скачать
-    private static readonly string[] ProxySourceFiles =
-    [
-        "__init__.py",
-        "balancer.py",
-        "bridge.py",
-        "config.py",
-        "fake_tls.py",
-        "raw_websocket.py",
-        "stats.py",
-        "tg_ws_proxy.py",
-        "utils.py"
-    ];
-
-    private const string ProxyRawBase = "https://raw.githubusercontent.com/Flowseal/tg-ws-proxy/main/proxy/";
+    private const string TgProxyReleasesAtomUrl = "https://github.com/Flowseal/tg-ws-proxy/releases.atom";
 
     // ── Состояние ──
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
@@ -177,81 +184,65 @@ public partial class MainViewModel
         TgProxyVersion = TgProxyInstalled ? GetTgProxyLocalVersion() : "—";
     }
 
-    // ── Установка ──
     [RelayCommand]
     private async Task DownloadTgProxyAsync()
     {
         IsTgProxyDownloading = true;
         AddTgProxyLog("⬇️ Начало установки TG WS Proxy...");
-
         try
         {
             Directory.CreateDirectory(TgProxyDir);
             Directory.CreateDirectory(ProxyScriptDir);
 
-            using var http = new HttpClient();
-            http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
-            http.Timeout = TimeSpan.FromMinutes(5);
+            // ✅ ИСПРАВЛЕНО: используем HttpClient из DI (SSL/TLS настроен в App.xaml.cs)
+            using var http = _httpClientFactory.CreateClient("TgProxyDownloader");
 
-            // Шаг 1: Python Embeddable
+            // ═══ ШАГ 1: Python с fallback на astral-sh mirror ═══
             if (!File.Exists(PythonExe))
             {
-                TgProxyDownloadStatus = "⬇️ Скачиваем Python Embeddable...";
-                AddTgProxyLog(" Скачиваем Python 3.11 Embeddable...");
-
-                var pythonZipUrl = "https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip";
-                var zipBytes = await http.GetByteArrayAsync(pythonZipUrl);
-                var zipPath = Path.Combine(TgProxyDir, "python_embed.zip");
-                await File.WriteAllBytesAsync(zipPath, zipBytes);
-
-                TgProxyDownloadStatus = " Распаковываем Python...";
-                Directory.CreateDirectory(PythonDir);
-                ZipFile.ExtractToDirectory(zipPath, PythonDir, overwriteFiles: true);
-                File.Delete(zipPath);
-
-                // Правим python311._pth — это единственный способ добавить пути в embeddable Python.
-                // PYTHONPATH и sys.path игнорируются пока не включён site.
-                var pthFile = Directory.GetFiles(PythonDir, "python*._pth").FirstOrDefault();
-                if (pthFile != null)
+                TgProxyDownloadStatus = "⬇️ Скачиваем Python 3.14.5...";
+                var pythonInstalled = await DownloadPythonWithFallbackAsync(http);
+                if (!pythonInstalled)
                 {
-                    var pthSitePackages = Path.Combine(PythonDir, "Lib", "site-packages");
-                    var lines = new List<string>
-                    {
-                        ".",
-                        pthSitePackages,
-                        ProxyScriptDir,
-                        "import site"
-                    };
-                    File.WriteAllLines(pthFile, lines);
+                    TgProxyDownloadStatus = "❌ Не удалось скачать Python";
+                    AddTgProxyLog("❌ Не удалось скачать Python ни с одного источника");
+                    AddTgProxyLog("💡 Скачайте вручную через Firefox:");
+                    AddTgProxyLog("   https://www.python.org/ftp/python/3.14.0/python-3.14.0-embed-amd64.zip");
+                    AddTgProxyLog("   И распакуйте в: tg-proxy\\python\\");
+                    return;
                 }
-
-                AddTgProxyLog("✅ Python распакован");
             }
 
-            // Всегда обновляем .pth — на случай если пути изменились или установка неполная.
+            // Всегда обновляем .pth для embeddable-сборки
             FixPythonPth();
 
-            // Шаг 2: pip через get-pip.py
-            var pipExe = Directory.GetFiles(PythonDir, "pip.exe", SearchOption.AllDirectories).FirstOrDefault();
-            if (pipExe is null)
+            // ═══ ШАГ 2: cryptography (pip уже есть в install_only сборке) ═══
+            var pipExe = Directory.Exists(PythonDir)
+                ? Directory.GetFiles(PythonDir, "pip.exe", SearchOption.AllDirectories).FirstOrDefault()
+                : null;
+            pipExe ??= Path.Combine(PythonDir, "Scripts", "pip.exe");
+
+            if (!File.Exists(pipExe))
             {
                 TgProxyDownloadStatus = "⬇️ Устанавливаем pip...";
-                AddTgProxyLog(" Устанавливаем pip...");
-
+                AddTgProxyLog("📦 Устанавливаем pip через get-pip.py...");
                 var getPipBytes = await http.GetByteArrayAsync("https://bootstrap.pypa.io/get-pip.py");
                 var getPipPath = Path.Combine(TgProxyDir, "get-pip.py");
                 await File.WriteAllBytesAsync(getPipPath, getPipBytes);
-
                 await RunProcessAsync(PythonExe, $"\"{getPipPath}\"", PythonDir, extraEnv: GetPythonEnv());
                 File.Delete(getPipPath);
-
-                pipExe = Directory.GetFiles(PythonDir, "pip.exe", SearchOption.AllDirectories).FirstOrDefault()
-                         ?? Path.Combine(PythonDir, "Scripts", "pip.exe");
-
+                pipExe = Directory.Exists(PythonDir)
+                    ? Directory.GetFiles(PythonDir, "pip.exe", SearchOption.AllDirectories).FirstOrDefault()
+                    : null;
+                pipExe ??= Path.Combine(PythonDir, "Scripts", "pip.exe");
                 AddTgProxyLog("✅ pip установлен");
             }
+            else
+            {
+                AddTgProxyLog($"✅ pip уже есть: {Path.GetRelativePath(TgProxyDir, pipExe)}");
+            }
 
-            // Шаг 3: cryptography
+            // ═══ ШАГ 3: cryptography ═══
             var sitePackages = Path.Combine(PythonDir, "Lib", "site-packages");
             var cryptoDir = Directory.Exists(sitePackages)
                 ? Directory.GetDirectories(sitePackages, "cryptography*").FirstOrDefault()
@@ -259,46 +250,37 @@ public partial class MainViewModel
 
             if (cryptoDir is null)
             {
-                TgProxyDownloadStatus = " Устанавливаем cryptography...";
-                AddTgProxyLog(" Устанавливаем cryptography...");
-                await RunProcessAsync(pipExe!, "install cryptography --quiet --no-warn-script-location", PythonDir, extraEnv: GetPythonEnv(), ignoreExitCode: true);
+                TgProxyDownloadStatus = "📦 Устанавливаем cryptography...";
+                AddTgProxyLog("📦 Устанавливаем cryptography...");
+                await RunProcessAsync(pipExe!, "install cryptography --quiet --no-warn-script-location",
+                    PythonDir, extraEnv: GetPythonEnv(), ignoreExitCode: true);
                 AddTgProxyLog("✅ cryptography установлен");
             }
 
-            // Шаг 4: исходники proxy/
+            // ═══ ШАГ 4: Скачиваем ВЕСЬ репозиторий и распаковываем proxy/ ═══
             TgProxyDownloadStatus = "⬇️ Скачиваем исходники прокси...";
-            AddTgProxyLog(" Скачиваем исходники proxy/...");
+            AddTgProxyLog("📦 Скачиваем репозиторий tg-ws-proxy...");
+            var tagName = await GetLatestTgProxyTagAsync(http) ?? "main";
 
-            // Получаем версию
-            using var noRedirect = new HttpClientHandler { AllowAutoRedirect = false };
-            using var verHttp = new HttpClient(noRedirect);
-            verHttp.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
-            var verResp = await verHttp.GetAsync("https://github.com/Flowseal/tg-ws-proxy/releases/latest");
-            var tagName = verResp.Headers.Location?.ToString().Split('/').LastOrDefault() ?? "unknown";
-
-            foreach (var file in ProxySourceFiles)
+            if (!await DownloadAndExtractProxyFolderAsync(http, tagName))
             {
-                var url = ProxyRawBase + file;
-                var dest = Path.Combine(ProxyScriptDir, file);
-                var content = await http.GetByteArrayAsync(url);
-                await File.WriteAllBytesAsync(dest, content);
+                AddTgProxyLog("❌ Не удалось скачать исходники прокси");
+                return;
             }
 
             File.WriteAllText(Path.Combine(TgProxyDir, "version.txt"), tagName);
-            AddTgProxyLog($"✅ Исходники proxy/ скачаны ({tagName})");
-
             TgProxyVersion = tagName;
             TgProxyInstalled = true;
             TgProxyDownloadStatus = $"✅ Установлено {tagName}";
-            AddTgProxyLog(" TG WS Proxy готов к работе!");
+            AddTgProxyLog($"✅ Исходники proxy/ скачаны ({tagName})");
+            AddTgProxyLog("🎉 TG WS Proxy готов к работе!");
 
             if (string.IsNullOrWhiteSpace(TgProxySecret))
                 GenerateTgProxySecret();
 
-            // Если прокси запущен со старой сломанной установкой — перезапускаем.
             if (TgProxyRunning)
             {
-                AddTgProxyLog(" Перезапускаем прокси с новой установкой...");
+                AddTgProxyLog("🔄 Перезапускаем прокси с новой установкой...");
                 StopTgProxy();
                 await Task.Delay(1000);
                 StartTgProxy();
@@ -308,10 +290,218 @@ public partial class MainViewModel
         {
             TgProxyDownloadStatus = $"❌ Ошибка: {ex.Message}";
             AddTgProxyLog($"❌ Ошибка установки: {ex.Message}");
+            if (ex.InnerException is not null)
+                AddTgProxyLog($"   Inner: {ex.InnerException.Message}");
         }
         finally
         {
             IsTgProxyDownloading = false;
+        }
+    }
+
+    /// <summary>
+    /// Скачивает ZIP-архив всего репозитория tg-ws-proxy и распаковывает папку proxy/.
+    /// Это надёжнее, чем скачивание отдельных файлов — защищает от добавления новых файлов в репозиторий.
+    /// </summary>
+    private async Task<bool> DownloadAndExtractProxyFolderAsync(HttpClient http, string tagName)
+    {
+        var zipUrl = $"https://github.com/Flowseal/tg-ws-proxy/archive/{tagName}.zip";
+        var tempZipPath = Path.Combine(TgProxyDir, "tg-ws-proxy-temp.zip");
+        var tempExtractDir = Path.Combine(TgProxyDir, "tg-ws-proxy-extracted");
+
+        try
+        {
+            AddTgProxyLog($"   URL: {zipUrl}");
+
+            // Скачиваем ZIP
+            using var response = await http.GetAsync(zipUrl, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            await using (var contentStream = await response.Content.ReadAsStreamAsync())
+            await using (var fileStream = File.Create(tempZipPath))
+            {
+                await contentStream.CopyToAsync(fileStream);
+            }
+
+            AddTgProxyLog($"✅ Архив скачан ({new FileInfo(tempZipPath).Length / 1024} KB)");
+
+            // Распаковываем во временную директорию
+            if (Directory.Exists(tempExtractDir))
+                Directory.Delete(tempExtractDir, recursive: true);
+
+            Directory.CreateDirectory(tempExtractDir);
+            ZipFile.ExtractToDirectory(tempZipPath, tempExtractDir);
+
+            // Ищем папку proxy/ внутри распакованного архива
+            // GitHub создаёт структуру: tg-ws-proxy-{tagName}/proxy/
+            var extractedRoot = Directory.GetDirectories(tempExtractDir).FirstOrDefault();
+            if (extractedRoot is null)
+            {
+                AddTgProxyLog("❌ Архив пуст");
+                return false;
+            }
+
+            var proxySourceDir = Path.Combine(extractedRoot, "proxy");
+            if (!Directory.Exists(proxySourceDir))
+            {
+                AddTgProxyLog("❌ Папка proxy/ не найдена в архиве");
+                return false;
+            }
+
+            // Копируем proxy/ в целевую директорию
+            if (Directory.Exists(ProxyScriptDir))
+                Directory.Delete(ProxyScriptDir, recursive: true);
+
+            CopyDirectory(proxySourceDir, ProxyScriptDir);
+
+            var fileCount = Directory.GetFiles(ProxyScriptDir, "*", SearchOption.AllDirectories).Length;
+            AddTgProxyLog($"✅ Исходники proxy/ распакованы ({fileCount} файлов)");
+
+            // Сохраняем версию
+            File.WriteAllText(Path.Combine(TgProxyDir, "version.txt"), tagName);
+            TgProxyVersion = tagName;
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AddTgProxyLog($"❌ Ошибка распаковки: {ex.Message}");
+            return false;
+        }
+        finally
+        {
+            // Чистим временные файлы
+            try { if (File.Exists(tempZipPath)) File.Delete(tempZipPath); } catch { }
+            try { if (Directory.Exists(tempExtractDir)) Directory.Delete(tempExtractDir, recursive: true); } catch { }
+        }
+    }
+
+    /// <summary>
+    /// Рекурсивное копирование директории.
+    /// </summary>
+    private static void CopyDirectory(string sourceDir, string destinationDir)
+    {
+        Directory.CreateDirectory(destinationDir);
+
+        foreach (var file in Directory.GetFiles(sourceDir))
+        {
+            var destFile = Path.Combine(destinationDir, Path.GetFileName(file));
+            File.Copy(file, destFile, overwrite: true);
+        }
+
+        foreach (var dir in Directory.GetDirectories(sourceDir))
+        {
+            var destDir = Path.Combine(destinationDir, Path.GetFileName(dir));
+            CopyDirectory(dir, destDir);
+        }
+    }
+
+    /// <summary>
+    /// Скачивает Python с fallback: python.org → astral-sh mirror (GitHub CDN, не блокируется DPI).
+    /// </summary>
+    private async Task<bool> DownloadPythonWithFallbackAsync(HttpClient http)
+    {
+        // Попытка 1: python.org (embeddable)
+        var embedUrl = PythonEmbedUrl;
+        try
+        {
+            AddTgProxyLog("📦 Попытка 1/2: python.org (embeddable ZIP)...");
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            var bytes = await http.GetByteArrayAsync(embedUrl, cts.Token);  // ← используем http из параметра!
+
+            var zipPath = Path.Combine(TgProxyDir, "python_embed.zip");
+            await File.WriteAllBytesAsync(zipPath, bytes);
+
+            Directory.CreateDirectory(PythonDir);
+            ZipFile.ExtractToDirectory(zipPath, PythonDir, overwriteFiles: true);
+            File.Delete(zipPath);
+            AddTgProxyLog($"✅ Python {PythonVersion} (embeddable) скачан и распакован");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AddTgProxyLog($"⚠️ python.org недоступен: {ex.Message}");
+            AddTgProxyLog("🔄 Переключаемся на зеркало astral-sh (GitHub)...");
+        }
+
+        // Попытка 2: astral-sh mirror (install_only_stripped.tar.gz)
+        var mirrorUrl = PythonMirrorUrl;
+        try
+        {
+            AddTgProxyLog("📦 Попытка 2/2: astral-sh mirror (TAR.GZ, ~21MB)...");
+            var tarPath = Path.Combine(TgProxyDir, "python.tar.gz");
+
+            using var response = await http.GetAsync(mirrorUrl, HttpCompletionOption.ResponseHeadersRead);  // ← http из параметра!
+            response.EnsureSuccessStatusCode();
+
+            var totalBytes = response.Content.Headers.ContentLength ?? -1;
+            await using var contentStream = await response.Content.ReadAsStreamAsync();
+
+            // ✅ ВАЖНО: закрываем поток ПЕРЕД запуском tar.exe
+            await using (var fileStream = File.Create(tarPath))
+            {
+                var buffer = new byte[81920];
+                long bytesRead = 0;
+                int lastPercent = 0;
+                int read;
+
+                while ((read = await contentStream.ReadAsync(buffer)) > 0)
+                {
+                    await fileStream.WriteAsync(buffer.AsMemory(0, read));
+                    bytesRead += read;
+
+                    if (totalBytes > 0)
+                    {
+                        var percent = (int)(bytesRead * 100 / totalBytes);
+                        if (percent >= lastPercent + 20)
+                        {
+                            AddTgProxyLog($"   ⬇️ {percent}% ({bytesRead / 1024 / 1024}MB / {totalBytes / 1024 / 1024}MB)");
+                            lastPercent = percent;
+                        }
+                    }
+                }
+                await fileStream.FlushAsync();
+            } // ← Здесь fileStream закрывается!
+
+            AddTgProxyLog($"✅ Скачано {new FileInfo(tarPath).Length / 1024 / 1024}MB");
+            AddTgProxyLog("📦 Распаковываем через tar.exe...");
+            Directory.CreateDirectory(PythonDir);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "tar.exe",
+                Arguments = $"-xzf \"{tarPath}\" -C \"{PythonDir}\"",  // БЕЗ --strip-components=1
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            using var tarProcess = Process.Start(psi);
+            if (tarProcess is null)
+                throw new Exception("Не удалось запустить tar.exe");
+
+            var stderr = await tarProcess.StandardError.ReadToEndAsync();
+            await tarProcess.WaitForExitAsync();
+
+            if (tarProcess.ExitCode != 0)
+                throw new Exception($"tar.exe завершился с кодом {tarProcess.ExitCode}: {stderr}");
+
+            File.Delete(tarPath);
+
+            // Ищем python.exe (install_only имеет вложенную структуру python/python/)
+            var pythonExeFound = Directory.GetFiles(PythonDir, "python.exe", SearchOption.AllDirectories).FirstOrDefault();
+            if (pythonExeFound is null)
+                throw new Exception("python.exe не найден после распаковки");
+
+            AddTgProxyLog($"✅ Python {PythonVersion} (astral-sh) успешно установлен");
+            AddTgProxyLog($"   Путь: {Path.GetRelativePath(TgProxyDir, pythonExeFound)}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AddTgProxyLog($"❌ astral-sh mirror тоже недоступен: {ex.Message}");
+            return false;
         }
     }
 
@@ -345,40 +535,68 @@ public partial class MainViewModel
             throw new Exception($"{Path.GetFileName(exe)} завершился с кодом {proc.ExitCode}");
     }
 
-    // Прописываем нужные пути в python311._pth — единственный способ управлять sys.path
-    // в embeddable Python (PYTHONPATH там игнорируется без включённого site).
+    /// <summary>
+    /// Обновляет .pth файл embeddable Python для подключения site-packages и proxy-скриптов.
+    /// 
+    /// ВАЖНО: этот метод безопасен для обеих сборок Python:
+    /// - embeddable (python.org) → метод находит и правит python3XX._pth
+    /// - install_only (astral-sh) → метода ._pth нет, и он просто выходит (return)
+    /// 
+    /// Также учитывает вложенную структуру install_only сборки.
+    /// </summary>
     private void FixPythonPth()
     {
-        var pthFile = Directory.GetFiles(PythonDir, "python*._pth").FirstOrDefault();
+        // Если директория не существует — выходим
+        if (!Directory.Exists(PythonDir))
+            return;
+
+        var pthFile = Directory.GetFiles(PythonDir, "python*._pth", SearchOption.AllDirectories).FirstOrDefault();
         if (pthFile is null)
             return;
 
-        var sitePackages = Path.Combine(PythonDir, "Lib", "site-packages");
+        var pthDir = Path.GetDirectoryName(pthFile)!;
+        var sitePackages = Path.Combine(pthDir, "Lib", "site-packages");
         Directory.CreateDirectory(sitePackages);
 
+        var pthName = Path.GetFileNameWithoutExtension(pthFile);
+        var zipName = $"{pthName}.zip";
+
         var lines = new List<string>
-        {
-            ".",
-            "python311.zip",
-            sitePackages,
-            ProxyScriptDir,
-            "import site"
-        };
+    {
+        ".",
+        zipName,
+        sitePackages,
+        ProxyScriptDir,
+        "import site"
+    };
 
         File.WriteAllLines(pthFile, lines);
     }
 
-    // Переменные окружения для корректной работы embeddable Python с пакетами.
+    /// <summary>
+    /// Переменные окружения для корректной работы Python с пакетами.
+    /// 
+    /// ВАЖНО: для install_only сборки (astral-sh) структура вложенная:
+    /// tg-proxy/python/python/python.exe
+    /// tg-proxy/python/python/Lib/
+    /// tg-proxy/python/python/Scripts/
+    /// 
+    /// Поэтому PYTHONHOME должен указывать на директорию с python.exe,
+    /// а не на PythonDir.
+    /// </summary>
     private Dictionary<string, string> GetPythonEnv()
     {
-        var sitePackages = Path.Combine(PythonDir, "Lib", "site-packages");
-        var scripts = Path.Combine(PythonDir, "Scripts");
+        var pythonExePath = PythonExe;
+        var pythonHome = Path.GetDirectoryName(pythonExePath) ?? PythonDir;
+        var sitePackages = Path.Combine(pythonHome, "Lib", "site-packages");
+        var scripts = Path.Combine(pythonHome, "Scripts");
 
         return new Dictionary<string, string>
         {
-            ["PYTHONHOME"] = PythonDir,
+            // PYTHONHOME — директория, где лежит python.exe (может быть вложенной)
+            ["PYTHONHOME"] = pythonHome,
             ["PYTHONPATH"] = $"{ProxyScriptDir};{sitePackages}",
-            ["PATH"] = $"{PythonDir};{scripts};{Environment.GetEnvironmentVariable("PATH")}" 
+            ["PATH"] = $"{pythonHome};{scripts};{Environment.GetEnvironmentVariable("PATH")}"
         };
     }
 
@@ -584,18 +802,21 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task CheckTgProxyUpdates()
     {
-        AddTgProxyLog(" Проверяем обновления TG WS Proxy...");
-
+        AddTgProxyLog("🔍 Проверяем обновления TG WS Proxy...");
         try
         {
-            using var handler = new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false };
-            using var http = new HttpClient(handler);
-            http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
+            using var http = _httpClientFactory.CreateClient("TgProxyDownloader");
+            var latest = await GetLatestTgProxyTagAsync(http);
 
-            var response = await http.GetAsync("https://github.com/Flowseal/tg-ws-proxy/releases/latest");
-            var latest = response.Headers.Location?.ToString().Split('/').LastOrDefault() ?? "?";
+            // ✅ Graceful degradation: если не можем определить тег — не пытаемся обновляться
+            if (!IsValidGitTag(latest))
+            {
+                AddTgProxyLog("❌ Не удалось определить последнюю версию TG WS Proxy");
+                AddTgProxyLog("💡 Возможно, GitHub недоступен из текущей сети");
+                return;
+            }
+
             var local = GetTgProxyLocalVersion();
-
             if (latest == local)
             {
                 AddTgProxyLog($"✅ Актуальная версия ({local})");
@@ -603,12 +824,12 @@ public partial class MainViewModel
             else
             {
                 AddTgProxyLog($"⬆️ Доступна версия {latest} (текущая {local})");
-
                 if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
                 {
                     var update = Application.Current.Dispatcher.Invoke(() =>
-                        CustomDialog.Show(" Обновление", $"Доступна версия {latest}.\nОбновить исходники прокси?", "Обновить", "Отмена"));
-
+                        CustomDialog.Show("🔄 Обновление",
+                            $"Доступна версия {latest}.\nОбновить исходники прокси?",
+                            "Обновить", "Отмена"));
                     if (update)
                         await UpdateProxySourcesAsync(latest);
                 }
@@ -622,28 +843,106 @@ public partial class MainViewModel
 
     private async Task UpdateProxySourcesAsync(string tagName)
     {
-        AddTgProxyLog($"⬇️ Обновляем исходники до {tagName}...");
+        if (!IsValidGitTag(tagName))
+        {
+            AddTgProxyLog($"❌ Некорректный тег версии: '{tagName}'");
+            return;
+        }
 
+        AddTgProxyLog($"⬇️ Обновляем исходники до {tagName}...");
         try
         {
-            using var http = new HttpClient();
-            http.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
-            var rawBase = $"https://raw.githubusercontent.com/Flowseal/tg-ws-proxy/{tagName}/proxy/";
+            using var http = _httpClientFactory.CreateClient("TgProxyDownloader");
 
-            foreach (var file in ProxySourceFiles)
+            if (await DownloadAndExtractProxyFolderAsync(http, tagName))
             {
-                var content = await http.GetByteArrayAsync(rawBase + file);
-                await File.WriteAllBytesAsync(Path.Combine(ProxyScriptDir, file), content);
-            }
+                TgProxyVersion = tagName;
+                AddTgProxyLog($"✅ Исходники обновлены до {tagName}");
 
-            File.WriteAllText(Path.Combine(TgProxyDir, "version.txt"), tagName);
-            TgProxyVersion = tagName;
-            AddTgProxyLog($"✅ Исходники обновлены до {tagName}");
+                // Перезапускаем прокси, если он запущен
+                if (TgProxyRunning)
+                {
+                    AddTgProxyLog("🔄 Перезапускаем прокси с новыми исходниками...");
+                    StopTgProxy();
+                    await Task.Delay(1000);
+                    StartTgProxy();
+                }
+            }
         }
         catch (Exception ex)
         {
             AddTgProxyLog($"❌ Ошибка обновления: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Надёжное получение тега последнего релиза TG WS Proxy:
+    /// 1) redirect releases/latest (быстро)
+    /// 2) Atom feed (без лимитов API, без редиректов — запасной путь)
+    /// </summary>
+    private async Task<string?> GetLatestTgProxyTagAsync(HttpClient http, CancellationToken ct = default)
+    {
+        // Способ 1: редирект releases/latest
+        try
+        {
+            using var noRedirectHandler = new HttpClientHandler { AllowAutoRedirect = false };
+            using var noRedirectHttp = new HttpClient(noRedirectHandler);
+            noRedirectHttp.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
+            noRedirectHttp.Timeout = TimeSpan.FromSeconds(10);
+
+            var response = await noRedirectHttp.GetAsync(
+                "https://github.com/Flowseal/tg-ws-proxy/releases/latest", ct);
+            if (response.StatusCode is System.Net.HttpStatusCode.Redirect
+                                     or System.Net.HttpStatusCode.MovedPermanently
+                                     or System.Net.HttpStatusCode.TemporaryRedirect
+                                     or System.Net.HttpStatusCode.PermanentRedirect
+                && response.Headers.Location is { } location)
+            {
+                var tag = location.ToString().Split('/').LastOrDefault();
+                if (IsValidGitTag(tag)) return tag;
+            }
+        }
+        catch { /* fallback to atom */ }
+
+        // Способ 2: Atom feed (надёжно, без лимитов API)
+        try
+        {
+            var xml = await http.GetStringAsync(TgProxyReleasesAtomUrl, ct);
+            return ParseTgProxyTagFromAtom(xml);
+        }
+        catch { return null; }
+    }
+
+    private static string? ParseTgProxyTagFromAtom(string xml)
+    {
+        const string entryOpen = "<entry>";
+        const string idOpen = "<id>tag:github.com,";
+        const string idClose = "</id>";
+
+        var entryStart = xml.IndexOf(entryOpen, StringComparison.Ordinal);
+        if (entryStart < 0) return null;
+
+        var idStart = xml.IndexOf(idOpen, entryStart, StringComparison.Ordinal);
+        if (idStart < 0) return null;
+
+        var idEnd = xml.IndexOf(idClose, idStart, StringComparison.Ordinal);
+        if (idEnd < 0) return null;
+
+        var idContent = xml[idStart..idEnd];
+        var lastSlash = idContent.LastIndexOf('/');
+        if (lastSlash < 0) return null;
+
+        var tag = idContent[(lastSlash + 1)..].Trim();
+        return IsValidGitTag(tag) ? tag : null;
+    }
+
+    private static bool IsValidGitTag(string? tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag)) return false;
+        if (tag == "?") return false;
+        if (tag.Contains('/') || tag.Contains('\\')) return false;
+        if (tag.Contains("..")) return false;  // защита от path traversal
+        return tag.Length >= 2 && tag.Length <= 64;
     }
 
     [RelayCommand]

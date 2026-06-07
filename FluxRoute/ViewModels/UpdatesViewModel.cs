@@ -114,41 +114,42 @@ public sealed partial class UpdatesViewModel : ObservableObject
         UpdateStatus = "🔍 Проверяем обновления...";
         LatestRemoteVersion = "…";
 
-        // Сначала получаем последнюю версию независимо, чтобы показать её в UI
+        // Один запрос вместо двух: GetLatestReleaseAsync вызываем один раз и
+        // сами сравниваем версии, не вызывая CheckForUpdateAsync отдельно.
         var (latest, latestError) = await _updater.GetLatestReleaseAsync();
-        if (latest is not null)
-        {
-            LatestRemoteVersion = latest.Version;
-            ReleaseNotes = latest.ReleaseNotes;
-        }
-        else
+
+        if (latest is null)
         {
             LatestRemoteVersion = "—";
-        }
-
-        var (update, error) = await _updater.CheckForUpdateAsync(EngineDir);
-
-        if (update is null)
-        {
-            if (error is not null)
-            {
-                UpdateStatus = $"❌ {error}";
-                _addAppLog($"Ошибка проверки: {error}");
-                AddLog($"❌ {error}");
-            }
-            else
-            {
-                UpdateStatus = $"✅ Актуальная версия ({_getCurrentEngineVersion()})";
-                _addAppLog("Обновлений не найдено.");
-                AddLog("✅ Обновлений не найдено");
-            }
+            var errMsg = latestError ?? "Неизвестная ошибка";
+            UpdateStatus = $"❌ {errMsg}";
+            _addAppLog($"Ошибка проверки: {errMsg}");
+            AddLog($"❌ {errMsg}");
             return;
         }
 
-        _pendingUpdate = update;
-        UpdateStatus = $"⬆️ Доступна версия {update.Version}";
-        _addAppLog($"Доступно обновление: {update.Version}");
-        AddLog($"⬆️ Доступно: {update.Version}");
+        LatestRemoteVersion = latest.Version;
+        ReleaseNotes = latest.ReleaseNotes;
+
+        var local = _updater.GetLocalVersion(EngineDir);
+        var isOutdated = !string.Equals(
+            local,
+            latest.Version.Trim().TrimStart('v', 'V').Trim(),
+            StringComparison.OrdinalIgnoreCase);
+
+        if (!isOutdated)
+        {
+            UpdateStatus = $"✅ Актуальная версия ({_getCurrentEngineVersion()})";
+            _addAppLog("Обновлений не найдено.");
+            AddLog("✅ Обновлений не найдено");
+            _pendingUpdate = null;
+            return;
+        }
+
+        _pendingUpdate = latest;
+        UpdateStatus = $"⬆️ Доступна версия {latest.Version}";
+        _addAppLog($"Доступно обновление: {latest.Version}");
+        AddLog($"⬆️ Доступно: {latest.Version}");
     }
 
     [RelayCommand]

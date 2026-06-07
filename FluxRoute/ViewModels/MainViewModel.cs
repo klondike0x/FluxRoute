@@ -10,6 +10,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Windows;
 using System.Windows.Threading;
@@ -102,7 +103,7 @@ public partial class MainViewModel : ObservableObject
     {
         AddToRecentLogs($"⚙️ Применяем пресет «{preset.Name}»...");
 
-        // 1. Переключить профиль
+        // 1. Переключить стратегию
         if (!string.IsNullOrEmpty(preset.ProfileFileName))
         {
             var profile = Profiles.FirstOrDefault(p => p.FileName == preset.ProfileFileName);
@@ -213,7 +214,7 @@ public partial class MainViewModel : ObservableObject
     public event EventHandler? OpenAboutRequested;
     public event EventHandler<string>? ProfileSwitchNotification;
 
-    // ── Профиль ──
+    // ── Стратегия ──
     public string SelectedScriptName => SelectedProfile?.FileName ?? "—";
     [ObservableProperty] private ProfileItem? selectedProfile;
     partial void OnSelectedProfileChanged(ProfileItem? oldValue, ProfileItem? newValue)
@@ -222,8 +223,8 @@ public partial class MainViewModel : ObservableObject
             && oldValue is not null && newValue is not null)
         {
             if (!CustomDialog.Show(
-                "⚠️ Смена профиля",
-                "Изменение профиля может повлиять на работу приложения и сетевые подключения. Продолжить?",
+                "⚠️ Смена стратегии",
+                "Изменение стратегии может повлиять на работу приложения и сетевые подключения. Продолжить?",
                 "Продолжить", "Отмена", isDanger: true))
             {
                 _suppressProfileWarning = true;
@@ -391,7 +392,6 @@ public partial class MainViewModel : ObservableObject
     private Process? _runningProcess;
     private CancellationTokenSource? _hideWindowsCts;
     private volatile HashSet<uint> _trackedPids = [];
-    private IntPtr _winEventHook;
     private string EngineDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "engine");
 
     private readonly IUpdaterService _updater;
@@ -405,7 +405,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool autoUpdateEnabled = false;
     partial void OnAutoUpdateEnabledChanged(bool value) => SaveSettings();
 
-    // ── Предупреждение при смене профиля ──
+    // ── Предупреждение при смене стратегии ──
     [ObservableProperty] private bool showProfileSwitchWarning = true;
     partial void OnShowProfileSwitchWarningChanged(bool value) => SaveSettings();
     private bool _suppressProfileWarning;
@@ -426,19 +426,20 @@ public partial class MainViewModel : ObservableObject
     public bool IsUpdating => Updates.IsUpdating;
     public bool IsDownloadingEngine => Updates.IsDownloadingEngine;
     public string EngineDownloadStatus => Updates.EngineDownloadStatus;
-
+    private readonly IHttpClientFactory _httpClientFactory;
     public MainViewModel(
-        ISettingsService settingsService,
-        IUpdaterService updaterService,
-        IAppUpdaterService appUpdaterService,
-        IConnectivityChecker connectivity,
-        NetworkFingerprintProvider aiFingerprints,
-        NetworkChangeWatcher aiNetworkWatcher,
-        AiStrategyRegistry aiRegistry,
-        AiHistoryStore aiHistoryStore,
-        BanditSelector aiBandit,
-        StrategyEvolver aiEvolver,
-        BatMaterializer aiMaterializer)
+    ISettingsService settingsService,
+    IUpdaterService updaterService,
+    IAppUpdaterService appUpdaterService,
+    IConnectivityChecker connectivity,
+    NetworkFingerprintProvider aiFingerprints,
+    NetworkChangeWatcher aiNetworkWatcher,
+    AiStrategyRegistry aiRegistry,
+    AiHistoryStore aiHistoryStore,
+    BanditSelector aiBandit,
+    StrategyEvolver aiEvolver,
+    BatMaterializer aiMaterializer,
+    IHttpClientFactory httpClientFactory)
     {
         _settingsService = settingsService;
         _updater = updaterService;
@@ -447,6 +448,7 @@ public partial class MainViewModel : ObservableObject
         _aiRegistry = aiRegistry;
         _aiHistoryStore = aiHistoryStore;
         _aiFingerprints = aiFingerprints;
+        _httpClientFactory = httpClientFactory;
 
         // ── Инициализация feature ViewModels ──
         Diagnostics = new DiagnosticsViewModel(
@@ -457,11 +459,13 @@ public partial class MainViewModel : ObservableObject
             getWinDivertSysPath: () => WinDivertSysPath,
             addAppLog: msg => Logs.Add(msg));
 
+        // ═══ ИСПРАВЛЕНО: передаём httpClientFactory в ServiceViewModel ═══
         Service = new ServiceViewModel(
             getEngineDir: () => EngineDir,
             getSelectedProfileDisplayName: () => SelectedProfile?.DisplayName,
-            addAppLog: msg => Logs.Add(msg));
-
+            addAppLog: msg => Logs.Add(msg),
+            httpClientFactory: _httpClientFactory);
+        // ════════════════════════════════════════════════════════════════════
         Service.GetAutoTuneTargets = () =>
         {
             var sites = new List<string>();
@@ -519,7 +523,7 @@ public partial class MainViewModel : ObservableObject
             var sorted = ProfileScores.OrderByDescending(s => s.Score).ToList();
             ProfileScores.Clear();
             foreach (var s in sorted) ProfileScores.Add(s);
-            Logs.Add("📊 Рейтинг профилей восстановлен.");
+            Logs.Add("📊 Рейтинг стратегий восстановлен.");
         }
 
         _settingsLoaded = true;
@@ -528,7 +532,18 @@ public partial class MainViewModel : ObservableObject
         {
             Logs.Add("⚠️ Папка engine/ не найдена. Скачиваем Flowseal...");
             AddToRecentLogs("⬇️ Скачивание Flowseal...");
-            _ = Updates.AutoDownloadEngineAsync();
+            _ = Updates.AutoDownloadEngineAsync().ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    var ex = t.Exception?.InnerException ?? t.Exception;
+                    Application.Current?.Dispatcher.BeginInvoke(() =>
+                    {
+                        Logs.Add($"❌ Ошибка автоскачивания: {ex?.Message}");
+                        AddToRecentLogs($"❌ Flowseal: {ex?.Message}");
+                    });
+                }
+            }, TaskScheduler.Default);
         }
 
         DisableNativeUpdateCheck();
@@ -825,11 +840,8 @@ public partial class MainViewModel : ObservableObject
             _orchestrator.Stop();
         if (_aiOrchestrator.IsRunning)
             _aiOrchestrator.Stop();
-
         _uptimeTimer?.Stop();
         _orchestratorUiTimer?.Stop();
-
-        RemoveWindowHook();
         _hideWindowsCts?.Cancel();
         _hideWindowsCts?.Dispose();
     }

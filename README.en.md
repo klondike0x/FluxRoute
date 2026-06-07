@@ -111,6 +111,8 @@ FluxRoute is the **only** GUI with a full-featured AI subsystem:
 | Category | FluxRoute | Zapret-Hub | Zapret-GUI | Zapret2 GUI | ZapretControl |
 |---|:---:|:---:|:---:|:---:|:---:|
 | 🧠 AI Orchestrator (Thompson Sampling) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| 🧬 Genetic Strategy Evolution | ✅ | ❌ | ❌ | ❌ | ❌ |
+| 🔄 Orchestrator (auto-scanning) | ✅ | ❌ | ❌ | ✅ | ❌ |
 | 🔄 Orchestrator (auto-scanning) | ✅ | ❌ | ❌ | ✅ | ❌ |
 | 🧬 Genetic Strategy Evolution | ✅ | ❌ | ❌ | ❌ | ❌ |
 | 🎮 Process-triggers (auto by .exe) | ✅ | ❌ | ❌ | ❌ | ❌ |

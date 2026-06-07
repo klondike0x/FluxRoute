@@ -93,7 +93,7 @@ public sealed class OrchestratorService : IDisposable
             .ToList();
 
         if (_rankedProfiles.Count > 0)
-            Notify($"📋 Рейтинг профилей восстановлен из кэша ({_rankedProfiles.Count} шт.), сканирование пропущено.");
+            Notify($"📋 Рейтинг стратегий восстановлен из кэша ({_rankedProfiles.Count} шт.), сканирование пропущено.");
     }
 
     /// <summary>
@@ -154,11 +154,11 @@ public sealed class OrchestratorService : IDisposable
 
             if (profiles.Count == 0)
             {
-                Notify("Нет профилей для сканирования.");
+                Notify("Нет стратегий для сканирования.");
                 return;
             }
 
-            Notify($"Сканирование {profiles.Count} профилей с проверкой winws.exe и целей...");
+            Notify($"Сканирование {profiles.Count} стратегий с проверкой winws.exe и целей...");
             var targets = BuildTargets();
             var scores = new List<(ProfileItem profile, int score, ProfileProbeResult? result)>();
 
@@ -209,17 +209,17 @@ public sealed class OrchestratorService : IDisposable
 
         if (best.profile is null)
         {
-            Notify("❌ Нет рабочих профилей. Запускаю первый по списку.");
+            Notify("❌ Нет рабочих стратегий. Запускаю первый по списку.");
             best = _rankedProfiles.FirstOrDefault();
         }
 
         if (best.profile is null)
         {
-            Notify("Нет профилей.");
+            Notify("Нет стратегий.");
             return;
         }
 
-        Notify($"Запускаю лучший профиль «{best.profile.DisplayName}» ({best.score}%).");
+        Notify($"Запускаю лучшую стратегию «{best.profile.DisplayName}» ({best.score}%).");
         await _switchProfile(best.profile).ConfigureAwait(false);
     }
 
@@ -230,12 +230,12 @@ public sealed class OrchestratorService : IDisposable
 
         if (active is null)
         {
-            Notify("Активный профиль не выбран. Переключаюсь на лучший доступный...");
+            Notify("Активная стратегия не выбрана. Переключаюсь на лучший доступный...");
             await SwitchToNextBestAsync(null, ct).ConfigureAwait(false);
             return;
         }
 
-        Notify($"Проверка профиля «{active.DisplayName}»...");
+        Notify($"Проверка стратегии «{active.DisplayName}»...");
 
         var result = await _probeService.ProbeCurrentAsync(active, targets, ct: ct).ConfigureAwait(false);
         var pct = result.Score;
@@ -247,7 +247,7 @@ public sealed class OrchestratorService : IDisposable
         if (result.IsWorking(FailThreshold))
         {
             _consecutiveFailures = 0;
-            Notify($"✅ Профиль «{active.DisplayName}» работает ({pct}%).", result: result);
+            Notify($"✅ Стратегия «{active.DisplayName}» работает ({pct}%).", result: result);
             return;
         }
 
@@ -256,13 +256,13 @@ public sealed class OrchestratorService : IDisposable
         if (_consecutiveFailures < RequiredFailuresBeforeSwitch)
         {
             Notify(
-                $"⚠️ Профиль «{active.DisplayName}» ниже порога ({pct}%). Повторная проверка перед переключением: {_consecutiveFailures}/{RequiredFailuresBeforeSwitch}.",
+                $"⚠️ Стратегия «{active.DisplayName}» ниже порога ({pct}%). Повторная проверка перед переключением: {_consecutiveFailures}/{RequiredFailuresBeforeSwitch}.",
                 result: result);
             return;
         }
 
         _consecutiveFailures = 0;
-        Notify($"⚠️ Профиль «{active.DisplayName}» не работает ({pct}%). Переключаю...", result: result);
+        Notify($"⚠️ Стратегия «{active.DisplayName}» не работает ({pct}%). Переключаю...", result: result);
         await SwitchToNextBestAsync(active, ct).ConfigureAwait(false);
     }
 
@@ -276,7 +276,7 @@ public sealed class OrchestratorService : IDisposable
 
         if (candidates.Count == 0)
         {
-            Notify("❌ Нет альтернативных рабочих профилей.");
+            Notify("❌ Нет альтернативных рабочих стратегий.");
             return;
         }
 
@@ -305,7 +305,7 @@ public sealed class OrchestratorService : IDisposable
         }
 
         await _switchProfile(null).ConfigureAwait(false);
-        Notify("❌ Ни один профиль не прошёл проверку.");
+        Notify("❌ Ни одна стратегия не прошёла проверку.");
     }
 
     private List<TargetEntry> BuildTargets()

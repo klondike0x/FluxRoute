@@ -95,6 +95,7 @@
 
     <!-- ScrollViewer — overlay scrollbars; animation is driven by ScrollViewerBehavior -->
     <Style TargetType="ScrollViewer">
+        <!-- ═══ ИСПРАВЛЕНО: возвращен attached behavior ═══ -->
         <Setter Property="helpers:ScrollViewerBehavior.AutoHideScrollBar" Value="True"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -103,7 +104,6 @@
                         <ScrollContentPresenter
                             CanContentScroll="{TemplateBinding CanContentScroll}"
                             Margin="{TemplateBinding Padding}"/>
-
                         <ScrollBar x:Name="PART_VerticalScrollBar"
                                    HorizontalAlignment="Right"
                                    Orientation="Vertical"
@@ -112,7 +112,6 @@
                                    ViewportSize="{TemplateBinding ViewportHeight}"
                                    Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
                                    Opacity="0"/>
-
                         <ScrollBar x:Name="PART_HorizontalScrollBar"
                                    VerticalAlignment="Bottom"
                                    Orientation="Horizontal"
@@ -126,5 +125,4 @@
             </Setter.Value>
         </Setter>
     </Style>
-
 </ResourceDictionary>

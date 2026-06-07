@@ -88,18 +88,18 @@ public static class ProfileBatLauncher
                 // Автоматически добавляем list-general-user.txt в аргументы winws.exe,
                 // чтобы домены из UI FluxRoute работали без ручного редактирования BAT-файлов.
                 var userHostlistPath = Path.Combine(engineDir, "lists", "list-general-user.txt");
-                if (File.Exists(userHostlistPath) && new FileInfo(userHostlistPath).Length > 10)
+                if (File.Exists(userHostlistPath) && HasRealDomains(userHostlistPath))
                 {
                     bool hasUserList = args.Any(a => a.Contains("list-general-user", StringComparison.OrdinalIgnoreCase));
                     if (!hasUserList)
                     {
                         args.Add("--hostlist");
-                        args.Add(userHostlistPath); // Передаем абсолютный путь
+                        args.Add(userHostlistPath);
                     }
                 }
 
                 var userExcludePath = Path.Combine(engineDir, "lists", "list-exclude-user.txt");
-                if (File.Exists(userExcludePath) && new FileInfo(userExcludePath).Length > 10)
+                if (File.Exists(userExcludePath) && HasRealDomains(userExcludePath))
                 {
                     bool hasExclude = args.Any(a => a.Contains("list-exclude-user", StringComparison.OrdinalIgnoreCase));
                     if (!hasExclude)
@@ -378,5 +378,21 @@ public static class ProfileBatLauncher
             return "\"\"";
 
         return arg.Any(char.IsWhiteSpace) ? $"\"{arg}\"" : arg;
+    }
+
+    /// <summary>
+    /// Проверяет, содержит ли файл реальные домены (не только комментарии и пустые строки).
+    /// </summary>
+    private static bool HasRealDomains(string path)
+    {
+        try
+        {
+            return File.ReadLines(path)
+                .Any(line => !string.IsNullOrWhiteSpace(line) && !line.TrimStart().StartsWith('#'));
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

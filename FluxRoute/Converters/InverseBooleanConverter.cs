@@ -6,7 +6,6 @@ namespace FluxRoute.Converters;
 
 /// <summary>
 /// Converts true to false and false to true for XAML bindings.
-/// Kept intentionally small because it is used only by the presentation layer.
 /// </summary>
 public sealed class InverseBooleanConverter : IValueConverter
 {

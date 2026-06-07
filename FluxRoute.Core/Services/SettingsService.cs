@@ -9,7 +9,7 @@ namespace FluxRoute.Core.Services;
 
 public sealed class AppSettings
 {
-    // Профиль
+    // Стратегия
     public string? LastProfileFileName { get; set; }
 
     // Оркестратор
@@ -40,7 +40,7 @@ public sealed class AppSettings
     public List<string> CustomExcludeDomains { get; set; } = new();
     // ═══════════════════════════════════════════
 
-    // Рейтинг профилей
+    // Рейтинг стратегий
     public List<ProfileRatingEntry> ProfileRatings { get; set; } = new();
 
     // Game Filter
@@ -53,7 +53,7 @@ public sealed class AppSettings
     public bool AutoStartEnabled { get; set; } = false;
     public bool MinimizeToTray { get; set; } = true;
 
-    // Предупреждение при смене профиля
+    // Предупреждение при смене стратегии
     public bool ShowProfileSwitchWarning { get; set; } = true;
 
     // TG WS Proxy
@@ -92,7 +92,7 @@ public sealed class ConfigPreset
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "";
 
-    // Профиль
+    // Стратегия
     public string? ProfileFileName { get; set; }
 
     // Game Filter
@@ -292,10 +292,12 @@ public sealed class SettingsService : ISettingsService
         settings.ProfileRatings ??= new List<ProfileRatingEntry>();
         settings.TgProxy ??= new TgProxySettings();
         settings.Ai ??= new AiSettings();
+        settings.UserSites ??= new List<string>();
+        settings.CustomTargetDomains ??= new List<string>();
+        settings.CustomExcludeDomains ??= new List<string>();
+        settings.Presets ??= new List<ConfigPreset>();
 
         // Миграция: сброс старого дефолтного домена www.google.com.
-        // fake-tls-domain требует домен, указывающий на IP самого прокси.
-        // Для локального 127.0.0.1 fake-tls не нужен, пустая строка = выкл.
         if (settings.TgProxy.Domain == "www.google.com")
         {
             settings.TgProxy.Domain = "";
