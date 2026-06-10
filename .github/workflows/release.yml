@@ -3,6 +3,8 @@ name: Build and Release FluxRoute
 on:
   workflow_dispatch:
   push:
+    branches:
+      - 'release/**'
     tags:
       - 'v*'
 
@@ -76,6 +78,12 @@ jobs:
 
           gh release view $tag --repo "$env:GITHUB_REPOSITORY" *> $null
 
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $target = "${{ github.ref_name }}"
+          } else {
+            $target = "${{ github.ref_name }}"
+          }
+
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag $zip --clobber --repo "$env:GITHUB_REPOSITORY"
           }
@@ -83,6 +91,6 @@ jobs:
             gh release create $tag $zip `
               --title "$tag" `
               --generate-notes `
-              --target "${{ github.ref_name }}" `
+              --target $target `
               --repo "$env:GITHUB_REPOSITORY"
           }
