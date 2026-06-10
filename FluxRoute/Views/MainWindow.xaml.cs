@@ -134,6 +134,8 @@ public partial class MainWindow : Window
         {
             ShowInTaskbar = false;
             Hide();
+            // Явно убеждаемся, что tray icon видим перед показом balloon
+            _trayIcon.SetVisible(true);
             _trayIcon.ShowBalloon("FluxRoute", "Приложение свёрнуто в трей");
         }
     }
