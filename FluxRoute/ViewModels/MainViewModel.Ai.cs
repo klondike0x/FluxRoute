@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluxRoute.AI.Models;
 using FluxRoute.Core.Models;
+using FluxRoute.Core.Services;
 using Application = System.Windows.Application;
 
 namespace FluxRoute.ViewModels;
