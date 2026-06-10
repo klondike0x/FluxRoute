@@ -21,6 +21,7 @@ public sealed class AppSettings
     public bool SiteTwitch { get; set; } = true;
     public bool SiteInstagram { get; set; } = true;
     public bool SiteTelegram { get; set; } = true;
+    public bool SiteTikTok { get; set; } = true;
 
     // Пользовательские пресеты конфигурации
     public List<ConfigPreset> Presets { get; set; } = new();

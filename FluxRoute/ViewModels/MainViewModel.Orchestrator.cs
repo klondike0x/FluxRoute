@@ -376,6 +376,7 @@ public partial class MainViewModel
         if (SiteTwitch) sites.Add("Twitch");
         if (SiteInstagram) sites.Add("Instagram");
         if (SiteTelegram) sites.Add("Telegram");
+        if (SiteTikTok) sites.Add("TikTok");
         _orchestrator.EnabledSites = sites;
         _aiOrchestrator.EnabledSites = sites;
 
