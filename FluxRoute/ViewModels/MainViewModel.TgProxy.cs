@@ -8,6 +8,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Text;
 using Application = System.Windows.Application;
 
 namespace FluxRoute.ViewModels;
@@ -18,6 +19,15 @@ public partial class MainViewModel
     private const string PythonVersion = "3.14.5";
     private const string PythonEmbedUrl = $"https://www.python.org/ftp/python/{PythonVersion}/python-{PythonVersion}-embed-amd64.zip";
     private const string PythonMirrorUrl = $"https://github.com/astral-sh/python-build-standalone/releases/download/20260510/cpython-{PythonVersion}%2B20260510-x86_64-pc-windows-msvc-install_only_stripped.tar.gz";
+
+    private static readonly string[] PyPiMirrors =
+    [
+        "https://pypi.org/simple/",                      // основной (может быть заблокирован)
+        "https://pypi.tuna.tsinghua.edu.cn/simple/",     // Tsinghua University, Китай
+        "https://mirrors.aliyun.com/pypi/simple/",       // Alibaba Cloud
+        "https://pypi.mirrors.ustc.edu.cn/simple/",      // USTC, Китай
+    ];
+
     private string TgProxyDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tg-proxy");
     private string PythonDir => Path.Combine(TgProxyDir, "python");
     private string PythonExe
@@ -226,16 +236,16 @@ public partial class MainViewModel
             {
                 TgProxyDownloadStatus = "⬇️ Устанавливаем pip...";
                 AddTgProxyLog("📦 Устанавливаем pip через get-pip.py...");
-                var getPipBytes = await http.GetByteArrayAsync("https://bootstrap.pypa.io/get-pip.py");
-                var getPipPath = Path.Combine(TgProxyDir, "get-pip.py");
-                await File.WriteAllBytesAsync(getPipPath, getPipBytes);
-                await RunProcessAsync(PythonExe, $"\"{getPipPath}\"", PythonDir, extraEnv: GetPythonEnv());
-                File.Delete(getPipPath);
+                if (!await InstallPipWithFallbackAsync(http))
+                {
+                    TgProxyDownloadStatus = "❌ Ошибка установки pip";
+                    AddTgProxyLog("❌ Не удалось установить pip — проверь доступ к интернету");
+                    return;
+                }
                 pipExe = Directory.Exists(PythonDir)
                     ? Directory.GetFiles(PythonDir, "pip.exe", SearchOption.AllDirectories).FirstOrDefault()
                     : null;
                 pipExe ??= Path.Combine(PythonDir, "Scripts", "pip.exe");
-                AddTgProxyLog("✅ pip установлен");
             }
             else
             {
@@ -251,10 +261,12 @@ public partial class MainViewModel
             if (cryptoDir is null)
             {
                 TgProxyDownloadStatus = "📦 Устанавливаем cryptography...";
-                AddTgProxyLog("📦 Устанавливаем cryptography...");
-                await RunProcessAsync(pipExe!, "install cryptography --quiet --no-warn-script-location",
-                    PythonDir, extraEnv: GetPythonEnv(), ignoreExitCode: true);
-                AddTgProxyLog("✅ cryptography установлен");
+                if (!await InstallPipPackageWithFallbackAsync(pipExe!, "cryptography"))
+                {
+                    TgProxyDownloadStatus = "❌ Ошибка установки cryptography";
+                    AddTgProxyLog("⚠️ cryptography не установлен — прокси может не работать");
+                    // Не прерываем установку — пользователь может установить вручную
+                }
             }
 
             // ═══ ШАГ 4: Скачиваем ВЕСЬ репозиторий и распаковываем proxy/ ═══
@@ -271,6 +283,7 @@ public partial class MainViewModel
             File.WriteAllText(Path.Combine(TgProxyDir, "version.txt"), tagName);
             TgProxyVersion = tagName;
             TgProxyInstalled = true;
+            EnsureTgProxyDomainsInHostlist();
             TgProxyDownloadStatus = $"✅ Установлено {tagName}";
             AddTgProxyLog($"✅ Исходники proxy/ скачаны ({tagName})");
             AddTgProxyLog("🎉 TG WS Proxy готов к работе!");
@@ -645,6 +658,8 @@ public partial class MainViewModel
             return;
         }
 
+        EnsureTgProxyDomainsInHostlist();
+
         var scriptArgs = BuildArguments();
 
         // Запускаем: python.exe proxy/tg_ws_proxy.py
@@ -990,5 +1005,226 @@ public partial class MainViewModel
 
         System.Windows.Clipboard.SetText(TgDeepLink);
         AddTgProxyLog($"Copied: {TgDeepLink}");
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  FALLBACK ДЛЯ УСТАНОВКИ PIP И CRYPTOGRAPHY (БЛОКИРОВКА PyPI)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    private static readonly string[] TgProxyRequiredDomains =
+    [
+        "pypi.org",
+        "files.pythonhosted.org",
+        "bootstrap.pypa.io",
+        "www.python.org",
+        "pythonhosted.org",
+        "github.com",
+        "raw.githubusercontent.com",
+        "objects.githubusercontent.com",
+        "github.githubassets.com",
+        "api.github.com"
+    ];
+
+    /// <summary>
+    /// Устанавливает pip через get-pip.py с перебором зеркал PyPI.
+    /// </summary>
+    private async Task<bool> InstallPipWithFallbackAsync(HttpClient http, CancellationToken ct = default)
+    {
+        var getPipUrl = "https://bootstrap.pypa.io/get-pip.py";
+        var getPipPath = Path.Combine(TgProxyDir, "get-pip.py");
+
+        try
+        {
+            var getPipBytes = await http.GetByteArrayAsync(getPipUrl, ct);
+            await File.WriteAllBytesAsync(getPipPath, getPipBytes, ct);
+        }
+        catch (Exception ex)
+        {
+            AddTgProxyLog($"❌ Не удалось скачать get-pip.py: {ex.Message}");
+            return false;
+        }
+
+        for (var i = 0; i < PyPiMirrors.Length; i++)
+        {
+            var mirror = PyPiMirrors[i];
+            var mirrorName = new Uri(mirror).Host;
+            var attemptLabel = i == 0 ? "основной" : $"зеркало {i}/{PyPiMirrors.Length - 1}";
+
+            AddTgProxyLog($"🔄 Устанавливаем pip ({attemptLabel}: {mirrorName})...");
+            TgProxyDownloadStatus = $"⬇️ pip через {mirrorName}...";
+
+            try
+            {
+                // get-pip.py поддерживает --index-url
+                var args = $"\"{getPipPath}\" --index-url {mirror} --trusted-host {new Uri(mirror).Host}";
+                var exitCode = await RunProcessWithExitCodeAsync(
+                    PythonExe, args, PythonDir,
+                    extraEnv: GetPythonEnv(),
+                    timeoutSeconds: 120,
+                    ct: ct);
+
+                if (exitCode == 0)
+                {
+                    AddTgProxyLog($"✅ pip установлен через {mirrorName}");
+                    return true;
+                }
+
+                AddTgProxyLog($"⚠️ {mirrorName} вернул код {exitCode}, пробуем следующий...");
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                AddTgProxyLog($"⚠️ {mirrorName} не сработал: {ex.Message}");
+            }
+        }
+
+        AddTgProxyLog("❌ Не удалось установить pip ни через одно зеркало");
+        return false;
+    }
+
+    /// <summary>
+    /// Устанавливает pip-пакет с перебором зеркал PyPI.
+    /// </summary>
+    private async Task<bool> InstallPipPackageWithFallbackAsync(
+        string pipExe,
+        string packageName,
+        CancellationToken ct = default)
+    {
+        for (var i = 0; i < PyPiMirrors.Length; i++)
+        {
+            var mirror = PyPiMirrors[i];
+            var mirrorName = new Uri(mirror).Host;
+            var attemptLabel = i == 0 ? "основной" : $"зеркало {i}/{PyPiMirrors.Length - 1}";
+
+            AddTgProxyLog($"📦 Устанавливаем {packageName} ({attemptLabel}: {mirrorName})...");
+
+            try
+            {
+                var args = $"install {packageName} --quiet --no-warn-script-location " +
+                           $"--index-url {mirror} --trusted-host {new Uri(mirror).Host}";
+                var exitCode = await RunProcessWithExitCodeAsync(
+                    pipExe, args, PythonDir,
+                    extraEnv: GetPythonEnv(),
+                    timeoutSeconds: 180,
+                    ct: ct);
+
+                if (exitCode == 0)
+                {
+                    AddTgProxyLog($"✅ {packageName} установлен через {mirrorName}");
+                    return true;
+                }
+
+                AddTgProxyLog($"⚠️ {mirrorName} вернул код {exitCode}, пробуем следующий...");
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                AddTgProxyLog($"⚠️ {mirrorName} не сработал: {ex.Message}");
+            }
+        }
+
+        AddTgProxyLog($"❌ Не удалось установить {packageName} ни через одно зеркало");
+        return false;
+    }
+
+    /// <summary>
+    /// Запускает процесс и возвращает код выхода (а не выбрасывает исключение).
+    /// </summary>
+    private async Task<int> RunProcessWithExitCodeAsync(
+        string exe,
+        string args,
+        string workDir,
+        Dictionary<string, string>? extraEnv = null,
+        int timeoutSeconds = 120,
+        CancellationToken ct = default)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = exe,
+            Arguments = args,
+            WorkingDirectory = workDir,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+
+        if (extraEnv != null)
+            foreach (var kv in extraEnv)
+                psi.Environment[kv.Key] = kv.Value;
+
+        using var proc = Process.Start(psi)
+            ?? throw new InvalidOperationException($"Не удалось запустить {exe}");
+
+        var stdoutTask = proc.StandardOutput.ReadToEndAsync(ct);
+        var stderrTask = proc.StandardError.ReadToEndAsync(ct);
+
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+
+        try
+        {
+            await proc.WaitForExitAsync(timeoutCts.Token);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            try { proc.Kill(entireProcessTree: true); } catch { }
+            throw new TimeoutException($"Процесс {exe} не завершился за {timeoutSeconds}с");
+        }
+
+        var stdout = await stdoutTask;
+        var stderr = await stderrTask;
+        if (!string.IsNullOrWhiteSpace(stderr) && stderr.Contains("error", StringComparison.OrdinalIgnoreCase))
+        {
+            AddTgProxyLog($"⚠️ {Path.GetFileName(exe)}: {stderr.Split('\n').FirstOrDefault()?.Trim()}");
+        }
+
+        return proc.ExitCode;
+    }
+
+    /// <summary>
+    /// Добавляет домены PyPI и GitHub в list-general-user.txt, чтобы zapret обрабатывал их трафик.
+    /// </summary>
+    private void EnsureTgProxyDomainsInHostlist()
+    {
+        try
+        {
+            var listsDir = Path.Combine(EngineDir, "lists");
+            Directory.CreateDirectory(listsDir);
+            var userHostlistPath = Path.Combine(listsDir, "list-general-user.txt");
+
+            var existingDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (File.Exists(userHostlistPath))
+            {
+                foreach (var line in File.ReadLines(userHostlistPath))
+                {
+                    var domain = line.Trim();
+                    if (!string.IsNullOrWhiteSpace(domain) && !domain.StartsWith('#'))
+                        existingDomains.Add(domain);
+                }
+            }
+
+            // Добавляем пользовательские домены (из менеджера доменов)
+            foreach (var domain in CustomTargetDomains)
+                if (!string.IsNullOrWhiteSpace(domain))
+                    existingDomains.Add(domain.Trim());
+
+            // Добавляем наши обязательные домены
+            var addedCount = 0;
+            foreach (var domain in TgProxyRequiredDomains)
+            {
+                if (existingDomains.Add(domain))
+                    addedCount++;
+            }
+
+            File.WriteAllLines(userHostlistPath, existingDomains.OrderBy(d => d), new UTF8Encoding(false));
+
+            if (addedCount > 0)
+                AddTgProxyLog($"✅ Добавлено {addedCount} домен(ов) для обхода PyPI/GitHub в list-general-user.txt");
+        }
+        catch (Exception ex)
+        {
+            AddTgProxyLog($"⚠️ Ошибка добавления доменов: {ex.Message}");
+        }
     }
 }

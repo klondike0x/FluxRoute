@@ -84,7 +84,14 @@ public sealed class ConnectivityChecker : IConnectivityChecker
         [
             new TargetEntry { Key = "TelegramWeb", Kind = TargetKind.Http, Value = "https://web.telegram.org" },
             new TargetEntry { Key = "TelegramMe", Kind = TargetKind.Http, Value = "https://t.me" }
-        ]
+        ],
+        ["TikTok"] =
+        [
+            new TargetEntry { Key = "TikTok", Kind = TargetKind.Http, Value = "https://www.tiktok.com" },
+            new TargetEntry { Key = "TikTokStudio", Kind = TargetKind.Http, Value = "https://studio.tiktok.com" },
+            new TargetEntry { Key = "TikTokCDN", Kind = TargetKind.Http, Value = "https://p16-sign.tiktokcdn.com" },
+            new TargetEntry { Key = "TikTokLive", Kind = TargetKind.Http, Value = "https://live.tiktok.com" }
+        ],
     };
 
     public bool IsCurlAvailable => _curlAvailable.Value;

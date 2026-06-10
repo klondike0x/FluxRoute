@@ -32,8 +32,24 @@ public sealed class TrayIconService : IDisposable
 
     public void ShowBalloon(string title, string text, ToolTipIcon icon = ToolTipIcon.Info)
     {
-        if (_notifyIcon.Visible)
-            _notifyIcon.ShowBalloonTip(3000, title, text, icon);
+        // Откладываем показ через Dispatcher, чтобы NotifyIcon успел отрисоваться
+        // и получить корректные координаты в системном трее.
+        System.Windows.Application.Current?.Dispatcher.BeginInvoke(
+            new Action(() =>
+            {
+                try
+                {
+                    if (_notifyIcon.Visible)
+                    {
+                        _notifyIcon.ShowBalloonTip(3000, title, text, icon);
+                    }
+                }
+                catch (InvalidOperationException)
+                {
+                    // Игнорируем если NotifyIcon ещё не готов или уже disposed
+                }
+            }),
+            System.Windows.Threading.DispatcherPriority.Background);
     }
 
     public void UpdateTooltip(string text)

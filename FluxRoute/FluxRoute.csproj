@@ -6,7 +6,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<UseWPF>true</UseWPF>
 		<UseWindowsForms>true</UseWindowsForms>
-		<Version>1.5.1</Version>
+		<Version>1.5.2</Version>
 		<ApplicationIcon>Resources\FluxRoute.ico</ApplicationIcon>
 	</PropertyGroup>
 

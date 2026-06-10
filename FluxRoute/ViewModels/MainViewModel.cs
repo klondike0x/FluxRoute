@@ -352,6 +352,8 @@ public partial class MainViewModel : ObservableObject
     partial void OnSiteInstagramChanged(bool value) => SaveSettings();
     [ObservableProperty] private bool siteTelegram = true;
     partial void OnSiteTelegramChanged(bool value) => SaveSettings();
+    [ObservableProperty] private bool siteTikTok = true;
+    partial void OnSiteTikTokChanged(bool value) => SaveSettings();
 
     // ── Свои сайты ──
     [ObservableProperty] private string userCustomSitesText = "";
@@ -475,6 +477,7 @@ public partial class MainViewModel : ObservableObject
             if (SiteTwitch) sites.Add("Twitch");
             if (SiteInstagram) sites.Add("Instagram");
             if (SiteTelegram) sites.Add("Telegram");
+            if (SiteTikTok) sites.Add("TikTok");
             return sites
                 .SelectMany(s => FluxRoute.Core.Services.ConnectivityChecker.BuiltinSites.TryGetValue(s, out var e) ? e : Enumerable.Empty<FluxRoute.Core.Models.TargetEntry>())
                 .ToList();
@@ -615,6 +618,7 @@ public partial class MainViewModel : ObservableObject
         SiteTwitch = settings.SiteTwitch;
         SiteInstagram = settings.SiteInstagram;
         SiteTelegram = settings.SiteTelegram;
+        SiteTikTok = settings.SiteTikTok;
         UserCustomSitesText = string.Join("\n", settings.UserSites ?? new());
 
         // Миграция старых данных в новые списки менеджера доменов
@@ -687,6 +691,7 @@ public partial class MainViewModel : ObservableObject
             SiteTwitch = SiteTwitch,
             SiteInstagram = SiteInstagram,
             SiteTelegram = SiteTelegram,
+            SiteTikTok = SiteTikTok,
             UserSites = UserCustomSitesText
     .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
     .Where(s => !string.IsNullOrWhiteSpace(s))
