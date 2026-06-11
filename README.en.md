@@ -72,7 +72,7 @@ Launch, update, and switch profiles from a single window — no manual BAT-file 
 
 | Feature | Description |
 |---------|-------------|
-| 📡 **TG WS Proxy** | Built-in Telegram proxy installer with fallback mirror (astral-sh) |
+| 📡 **TG WS Proxy** | Built-in Telegram proxy installer with automatic fallback to working PyPI mirrors (Tsinghua, Aliyun, USTC) when `pypi.org` is blocked |
 | 🔄 **Auto-update engine/** | Checks new Flowseal releases via GitHub Releases Atom feed (no API limits) |
 | 🆙 **App auto-update** | Downloads and atomically installs new FluxRoute versions with SHA-256 verification |
 | 🌍 **Domain Manager** | Add custom sites and exclusions for orchestrator checks via UI |
