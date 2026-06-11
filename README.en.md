@@ -222,12 +222,12 @@ flowchart LR
 
 <table>
 <tr>
-<td><img src="assets/screenshots/main.png" alt="Main Window" width="400"/></td>
-<td><img src="assets/screenshots/ai.png" alt="AI Orchestrator" width="400"/></td>
+<td><img src="https://github.com/user-attachments/assets/70dda58d-cbf3-43f8-b8ae-72b7fad3d88e" alt="Main Window" width="860"/></td>
+<td><img src="https://github.com/user-attachments/assets/a51c1477-a560-450f-b6ac-ef05ccbec4d2" alt="Update" width="860"/></td>
 </tr>
 <tr>
-<td><img src="assets/screenshots/orchestrator.png" alt="Orchestrator" width="400"/></td>
-<td><img src="assets/screenshots/domains.png" alt="Domain Manager" width="400"/></td>
+<td><img src="https://github.com/user-attachments/assets/bf33cffb-6d56-4055-8f8e-8c807f57d9a7" alt="Orchestrator" width="860"/></td>
+<td><img src="https://github.com/user-attachments/assets/4bdf02a2-83dc-4e39-847a-5c133bfbe6a9" alt="Service" width="860"/></td>
 </tr>
 </table>
 
@@ -237,6 +237,7 @@ flowchart LR
 
 > [!IMPORTANT]
 > For any issues, try:
+>
 > 1. Run as **Administrator**
 > 2. Update `engine/` on the **Updates** tab
 > 3. Run **Scan all profiles** on the **Orchestrator** tab
