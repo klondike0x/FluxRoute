@@ -243,32 +243,27 @@ flowchart LR
 > 3. Run **Scan all profiles** on the **Orchestrator** tab
 > 4. Enable **Auto-Tune** on the **Service** tab
 
-### ❌ TG WS Proxy won't install (SSL error)
+### ❌ TG WS Proxy fails to install (SSL error)
 
-In networks with DPI blocking `python.org`, use **Firefox** for manual download:
+Starting with **v1.5.2**, TG WS Proxy installation automatically falls back to working PyPI mirrors (Tsinghua, Aliyun, USTC) when `pypi.org` is blocked. In most cases, manual intervention is not needed.
 
-1. Download: https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip
+If the automatic fallback fails (rare situation), download Python manually using **Firefox**:
+
+1. Download: `https://www.python.org/ftp/python/3.14.5/python-3.14.5-embed-amd64.zip`
 2. Extract to `tg-proxy\python\`
-3. In FluxRoute: **TG Proxy** tab → **Install TG WS Proxy**
-
-**Starting with v1.5.1** — automatic fallback to `astral-sh` mirror (GitHub CDN).
+3. In FluxRoute: go to the **TG Proxy** tab → **Install TG WS Proxy**
 
 ### ❌ `ModuleNotFoundError: No module named 'proxy.pool'`
 
-The old installer didn't fetch new files. Fix:
+This error occurred in very old versions (prior to v1.5.1). **Update to v1.5.2** – the installer now downloads the entire repository as a ZIP archive, and the issue has been fixed.
 
-1. Download https://github.com/Flowseal/tg-ws-proxy/archive/main.zip
-2. Copy the `proxy/` folder to `tg-proxy\proxy\`
-3. Restart the proxy
+### ❌ Profile does not work (0% score)
 
-**Starting with v1.5.1** — the installer downloads the entire repository as a ZIP archive.
-
-### ❌ Profile not working (0%)
-
-1. Ensure **GameFilter** = `TCP and UDP`
+1. Make sure **GameFilter** = `TCP and UDP`
 2. **IPSet Mode** = `loaded`
 3. Run **Auto-Tune** on the **Service** tab
-4. Check extended diagnostics (**Diagnostics** tab)
+4. Check that the strategy is not disabled in AI mode (checkbox in the strategy list on the **AI** tab)
+5. Run extended diagnostics (**Diagnostics** tab → **Run Diagnostics**)
 
 ### ❌ Port 1443 is busy (TG Proxy)
 
