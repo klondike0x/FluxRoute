@@ -276,6 +276,8 @@ netstat -ano | findstr :1443
 taskkill /PID <number> /F
 ```
 
+> If that doesn’t help – restart your computer.
+
 ---
 
 ## ⚠️ WinDivert and Antivirus
