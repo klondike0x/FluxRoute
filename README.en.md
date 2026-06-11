@@ -125,8 +125,6 @@ FluxRoute is the **only** GUI with a full-featured AI subsystem:
 | 🧠 AI Orchestrator (Thompson Sampling) | ✅ | ❌ | ❌ | ❌ | ❌ |
 | 🧬 Genetic Strategy Evolution | ✅ | ❌ | ❌ | ❌ | ❌ |
 | 🔄 Orchestrator (auto-scanning) | ✅ | ❌ | ❌ | ✅ | ❌ |
-| 🔄 Orchestrator (auto-scanning) | ✅ | ❌ | ❌ | ✅ | ❌ |
-| 🧬 Genetic Strategy Evolution | ✅ | ❌ | ❌ | ❌ | ❌ |
 | 🎮 Process-triggers (auto by .exe) | ✅ | ❌ | ❌ | ❌ | ❌ |
 | ⚙️ Auto-Tune (IPSet × GameFilter) | ✅ | ✅ | ❌ | ❌ | ❌ |
 | 📡 Built-in TG WS Proxy | ✅ | ✅ | ✅ | ❌ | ❌ |
