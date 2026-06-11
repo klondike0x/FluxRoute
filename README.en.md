@@ -35,6 +35,18 @@
 > 
 > All derivative projects (forks) are based on this code. GitHub automatically marks them with `forked from klondike0x/FluxRoute`.
 
+> [!CAUTION]
+> ### ⚠️ Beware: Unauthorized Copies
+> 
+> **The official project is only this repository:**  
+> [`klondike0x/FluxRoute`](https://github.com/klondike0x/FluxRoute)
+> 
+> - All legitimate forks **must** retain a prominent attribution notice in the README and link back to this repository.
+> - If you encounter "FluxRoute" or "FluxRoute AI" on GitHub, GitLab, Telegram, or file-sharing sites **without clear attribution** — it is an **unauthorized copy violating GPLv3**.
+> - Such copies may be malicious, unstable, or contain false promises. Do not download them.
+> 
+> **Only trust official releases with the green `Verified` badge in this repository.**
+
 **FluxRoute Desktop** is a modern GUI wrapper for managing [`Flowseal/zapret-discord-youtube`](https://github.com/Flowseal/zapret-discord-youtube) profiles with a unique **AI orchestrator** powered by Thompson Sampling and genetic strategy evolution.
 
 Launch, update, and switch profiles from a single window — no manual BAT-file editing required.
