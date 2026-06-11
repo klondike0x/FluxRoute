@@ -415,9 +415,8 @@ Special thanks to **goshkow** for openness to collaboration and consultations.
 | Project | Author | Status |
 |---------|--------|--------|
 | **FluxRoute** (this one) | [klondike0x](https://github.com/klondike0x) | ✅ Original, actively maintained |
-| FluxRoute_AI | [mx57](https://github.com/mx57/FluxRoute_AI) | Fork with AI extensions |
 
-If you've created a fork or extension — open an Issue to get it added to this list.
+If you've created a **legitimate fork** (with proper attribution and full compliance with GPLv3), open an Issue to get it added to this list.
 
 ---
 
