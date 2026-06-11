@@ -410,16 +410,6 @@ Special thanks to **goshkow** for openness to collaboration and consultations.
 
 ---
 
-## 🌟 Derivative Projects
-
-| Project | Author | Status |
-|---------|--------|--------|
-| **FluxRoute** (this one) | [klondike0x](https://github.com/klondike0x) | ✅ Original, actively maintained |
-
-If you've created a **legitimate fork** (with proper attribution and full compliance with GPLv3), open an Issue to get it added to this list.
-
----
-
 ## 📜 License
 
 This project is distributed under the **GNU General Public License v3.0**.
