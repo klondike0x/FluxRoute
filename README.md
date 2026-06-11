@@ -237,46 +237,43 @@ flowchart LR
 ## 🔧 Troubleshooting
 
 > [!IMPORTANT]
-> При любых проблемах попробуйте:
+> If you encounter any issues, try the following:
 >
-> 1. Запустить от имени **администратора**
-> 2. Обновить `engine/` на вкладке **Обновления**
-> 3. Запустить **Сканировать все профили** на вкладке **Оркестратор**
-> 4. Включить **Auto-Tune** на вкладке **Сервис**
+> 1. Run as **administrator**
+> 2. Update `engine/` on the **Updates** tab
+> 3. Run **Scan all profiles** on the **Orchestrator** tab
+> 4. Enable **Auto-Tune** on the **Service** tab
 
-### ❌ TG WS Proxy не устанавливается (SSL-ошибка)
+### ❌ TG WS Proxy fails to install (SSL error)
 
-В сетях с DPI-блокировками `python.org` используйте **Firefox** для ручной загрузки:
+Starting from **v1.5.2**, TG WS Proxy installation automatically falls back to working PyPI mirrors (Tsinghua, Aliyun, USTC) when `pypi.org` is blocked. In most cases, no manual intervention is needed.
 
-1. Скачайте: `https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip`
-2. Распакуйте в `tg-proxy\python\`
-3. В FluxRoute: вкладка **TG Прокси** → **Установить TG WS Proxy**
+If the automatic fallback fails (rare situation), download Python manually using **Firefox**:
 
-**После выхода v1.5.1** — автоматический fallback на `astral-sh` mirror (GitHub CDN).
+1. Download: `https://www.python.org/ftp/python/3.14.5/python-3.14.5-embed-amd64.zip`
+2. Extract to `tg-proxy\python\`
+3. In FluxRoute: go to the **TG Proxy** tab → **Install TG WS Proxy**
 
 ### ❌ `ModuleNotFoundError: No module named 'proxy.pool'`
 
-Старая версия установщика не скачивала новые файлы. Решение:
+This error occurred in very old versions (prior to v1.5.1). **Update to v1.5.2** – the installer now downloads the entire repository as a ZIP archive, and the issue has been fixed.
 
-1. Скачайте `https://github.com/Flowseal/tg-ws-proxy/archive/main.zip`
-2. Скопируйте папку `proxy/` в `tg-proxy\proxy\`
-3. Перезапустите прокси
+### ❌ Profile does not work (0% score)
 
-**После выхода v1.5.1** — установщик скачивает весь репозиторий ZIP-архивом.
-
-### ❌ Профиль не работает (0%)
-
-1. Убедитесь, что **GameFilter** = `TCP и UDP`
+1. Make sure **GameFilter** = `TCP and UDP`
 2. **IPSet Mode** = `loaded`
-3. Запустите **Auto-Tune** на вкладке **Сервис**
-4. Проверьте расширенную диагностику (вкладка **Диагностика**)
+3. Run **Auto-Tune** on the **Service** tab
+4. Check that the strategy is not disabled in AI mode (checkbox in the strategy list on the **AI** tab)
+5. Run extended diagnostics (**Diagnostics** tab → **Run Diagnostics**)
 
-### ❌ Порт 1443 занят (TG Proxy)
+### ❌ Port 1443 is busy (TG Proxy)
 
 ```cmd
 netstat -ano | findstr :1443
-taskkill /PID <число> /F
+taskkill /PID <number> /F
 ```
+
+> If that doesn’t help – restart your computer.
 
 ---
 
