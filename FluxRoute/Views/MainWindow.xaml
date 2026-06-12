@@ -349,7 +349,8 @@
                                Foreground="#E6EDF3" VerticalAlignment="Center" d:IsLocked="True"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                                 VerticalAlignment="Center" Margin="0,0,-6,0" d:IsLocked="True">
-                        <Button Width="36" Height="36" Click="MinimizeButton_Click" d:IsLocked="True">
+                        <Button Width="36" Height="36" Click="MinimizeButton_Click" d:IsLocked="True"
+                                ToolTip="Свернуть" AutomationProperties.Name="Свернуть окно">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border x:Name="Bd" Background="Transparent">
@@ -398,7 +399,8 @@
                                 </ControlTemplate>
                             </Button.Template>
                         </Button>
-                        <Button Width="36" Height="36" Click="CloseButton_Click" d:IsLocked="True">
+                        <Button Width="36" Height="36" Click="CloseButton_Click" d:IsLocked="True"
+                                ToolTip="Закрыть" AutomationProperties.Name="Закрыть приложение">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border x:Name="Bd" Background="Transparent">
@@ -469,7 +471,8 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <Button Grid.Row="0" Height="36" Command="{Binding ToggleSidebarCommand}" Cursor="Hand" d:IsLocked="True">
+                        <Button Grid.Row="0" Height="36" Command="{Binding ToggleSidebarCommand}" Cursor="Hand" d:IsLocked="True"
+                                ToolTip="Свернуть/развернуть боковую панель" AutomationProperties.Name="Переключить боковую панель">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border x:Name="Bd" Background="Transparent" BorderThickness="3,0,0,0" BorderBrush="Transparent">
@@ -523,7 +526,8 @@
                         <Grid Grid.Row="1" d:IsLocked="True">
                             <StackPanel d:IsLocked="True">
                                 <!-- Nav: Главная -->
-                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="0" d:IsLocked="True">
+                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="0" d:IsLocked="True"
+                                        ToolTip="Главная" AutomationProperties.Name="Раздел Главная">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
                                             <Style.Triggers>
@@ -541,7 +545,8 @@
                                 </Button>
 
                                 <!-- Nav: TG Прокси -->
-                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="1" d:IsLocked="True">
+                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="1" d:IsLocked="True"
+                                        ToolTip="TG Прокси" AutomationProperties.Name="Раздел TG Прокси">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
                                             <Style.Triggers>
@@ -559,7 +564,8 @@
                                 </Button>
 
                                 <!-- Nav: Оркестратор -->
-                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="2" d:IsLocked="True">
+                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="2" d:IsLocked="True"
+                                        ToolTip="Оркестратор" AutomationProperties.Name="Раздел Оркестратор">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
                                             <Style.Triggers>
@@ -577,7 +583,8 @@
                                 </Button>
 
                                 <!-- Nav: ИИ -->
-                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="3" d:IsLocked="True">
+                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="3" d:IsLocked="True"
+                                        ToolTip="ИИ" AutomationProperties.Name="Раздел ИИ">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
                                             <Style.Triggers>
@@ -595,7 +602,8 @@
                                 </Button>
 
                                 <!-- Nav: Обновление -->
-                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="4" d:IsLocked="True">
+                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="4" d:IsLocked="True"
+                                        ToolTip="Обновление" AutomationProperties.Name="Раздел Обновление">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
                                             <Style.Triggers>
@@ -613,7 +621,8 @@
                                 </Button>
 
                                 <!-- Nav: Диагностика -->
-                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="5" d:IsLocked="True">
+                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="5" d:IsLocked="True"
+                                        ToolTip="Диагностика" AutomationProperties.Name="Раздел Диагностика">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
                                             <Style.Triggers>
@@ -631,7 +640,8 @@
                                 </Button>
 
                                 <!-- Nav: Сервис -->
-                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="6" d:IsLocked="True">
+                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="6" d:IsLocked="True"
+                                        ToolTip="Сервис" AutomationProperties.Name="Раздел Сервис">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
                                             <Style.Triggers>
@@ -649,7 +659,8 @@
                                 </Button>
 
                                 <!-- Nav: ByeDPI -->
-                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="9" d:IsLocked="True">
+                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="9" d:IsLocked="True"
+                                        ToolTip="ByeDPI" AutomationProperties.Name="Раздел ByeDPI">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
                                             <Style.Triggers>
@@ -667,7 +678,8 @@
                                 </Button>
 
                                 <!-- Nav: Warp -->
-                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="10" d:IsLocked="True">
+                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="10" d:IsLocked="True"
+                                        ToolTip="Warp" AutomationProperties.Name="Раздел Warp">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
                                             <Style.Triggers>
@@ -685,7 +697,8 @@
                                 </Button>
 
                                 <!-- Nav: Логи -->
-                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="8" d:IsLocked="True">
+                                <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="8" d:IsLocked="True"
+                                        ToolTip="Логи" AutomationProperties.Name="Раздел Логи">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
                                             <Style.Triggers>
@@ -719,7 +732,8 @@
                         <!-- Nav: О программе -->
                         <Border Grid.Row="3" BorderBrush="#21262D" BorderThickness="0,1,0,0"
                                 Background="#0D1117" Padding="0,4,0,4" d:IsLocked="True">
-                            <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="7" d:IsLocked="True">
+                            <Button Height="36" Command="{Binding SelectTabCommand}" CommandParameter="7" d:IsLocked="True"
+                                    ToolTip="О программе" AutomationProperties.Name="Раздел О программе">
                                 <Button.Style>
                                     <Style TargetType="Button" BasedOn="{StaticResource NavBtn}">
                                         <Style.Triggers>
