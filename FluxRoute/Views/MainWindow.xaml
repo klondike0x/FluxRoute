@@ -22,6 +22,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <conv:InverseBooleanConverter x:Key="InvBool" />
         <conv:BoolToInstalledConverter x:Key="BoolToInstalled" />
+        <conv:LogColorConverter x:Key="LogColorConv" />
 
         <!-- ══════ TERMINAL BUTTON ══════ -->
         <Style x:Key="TermBtn" TargetType="Button">
@@ -1176,7 +1177,7 @@
                                         <ItemsControl ItemsSource="{Binding OrchestratorLogs}" d:IsLocked="True">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <TextBlock Text="{Binding}" Foreground="#8B949E"
+                                                    <TextBlock Text="{Binding}" Foreground="{Binding Converter={StaticResource LogColorConv}}"
                                                                FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -1549,7 +1550,7 @@
                                         <ItemsControl ItemsSource="{Binding UpdateLogs}" d:IsLocked="True">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <TextBlock Text="{Binding}" Foreground="#8B949E"
+                                                    <TextBlock Text="{Binding}" Foreground="{Binding Converter={StaticResource LogColorConv}}"
                                                                FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -1646,7 +1647,7 @@
                                         <ItemsControl ItemsSource="{Binding Logs}" d:IsLocked="True">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <TextBlock Text="{Binding}" Foreground="#8B949E"
+                                                    <TextBlock Text="{Binding}" Foreground="{Binding Converter={StaticResource LogColorConv}}"
                                                                FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -1807,7 +1808,7 @@
                                             <ItemsControl ItemsSource="{Binding ServiceLogs}" d:IsLocked="True">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <TextBlock Text="{Binding}" Foreground="#8B949E"
+                                                        <TextBlock Text="{Binding}" Foreground="{Binding Converter={StaticResource LogColorConv}}"
                                                                    FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
@@ -2395,7 +2396,7 @@
                                         <ItemsControl ItemsSource="{Binding TgProxyLogs}" d:IsLocked="True">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <TextBlock Text="{Binding}" Foreground="#8B949E"
+                                                    <TextBlock Text="{Binding}" Foreground="{Binding Converter={StaticResource LogColorConv}}"
 																	   FontFamily="Segoe UI" FontSize="11" Margin="0,2"/>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
