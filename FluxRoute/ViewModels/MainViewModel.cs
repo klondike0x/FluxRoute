@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluxRoute.AI.Services;
 using FluxRoute.Core.Models;
@@ -30,7 +30,6 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<string> RecentLogs { get; } = new();
     public ObservableCollection<string> UpdateLogs => Updates.UpdateLogs;
     public ObservableCollection<string> ServiceLogs => Service.ServiceLogs;
-
     // Коллекции для менеджера доменов (UI)
 
     // ── Пресеты конфигурации ──
@@ -40,10 +39,8 @@ public partial class MainViewModel : ObservableObject
     // ── Менеджер доменов ──
     [ObservableProperty] private string selectedTabMode = "Domains";
     [ObservableProperty] private string newSiteInput = "";
-
     public ObservableCollection<string> CustomTargetDomains { get; } = new();
     public ObservableCollection<string> CustomExcludeDomains { get; } = new();
-
     [ObservableProperty] private string newPresetName = "";
     [ObservableProperty] private string newPresetTrigger = "";
 
@@ -81,7 +78,6 @@ public partial class MainViewModel : ObservableObject
     {
         var name = NewPresetName.Trim();
         if (string.IsNullOrEmpty(name)) name = $"Пресет {Presets.Count + 1}";
-
         var preset = new ConfigPreset
         {
             Name = name,
@@ -148,7 +144,6 @@ public partial class MainViewModel : ObservableObject
         if (string.IsNullOrEmpty(input)) return;
 
         var list = SelectedTabMode == "Exclusions" ? CustomExcludeDomains : CustomTargetDomains;
-
         if (!list.Contains(input, StringComparer.OrdinalIgnoreCase))
         {
             list.Add(input);
@@ -217,6 +212,7 @@ public partial class MainViewModel : ObservableObject
     // ── Стратегия ──
     public string SelectedScriptName => SelectedProfile?.FileName ?? "—";
     [ObservableProperty] private ProfileItem? selectedProfile;
+
     partial void OnSelectedProfileChanged(ProfileItem? oldValue, ProfileItem? newValue)
     {
         if (!_suppressProfileWarning && _settingsLoaded && ShowProfileSwitchWarning
@@ -236,11 +232,9 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
         }
-
         OnPropertyChanged(nameof(SelectedScriptName));
         RunningScriptName = newValue?.FileName ?? "—";
         SaveSettings();
-
         if (!_suppressProfileWarning && _settingsLoaded && IsRunning && newValue is not null)
         {
             Stop();
@@ -286,9 +280,6 @@ public partial class MainViewModel : ObservableObject
 
     // ── Боковая панель ──
     [ObservableProperty] private bool isSidebarExpanded = true;
-
-
-
     [RelayCommand]
     private void ToggleSidebar() => IsSidebarExpanded = !IsSidebarExpanded;
 
@@ -334,8 +325,11 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string orchestratorNextCheck = "—";
     [ObservableProperty] private string orchestratorInterval = "1";
     partial void OnOrchestratorIntervalChanged(string value) => SaveSettings();
+
     [ObservableProperty] private bool isScanning;
     [ObservableProperty] private string scanProgressText = "";
+    [ObservableProperty] private double scanProgressValue;
+
     public string OrchestratorToggleLabel => OrchestratorRunning ? "Остановить оркестратор" : "Запустить оркестратор";
     partial void OnOrchestratorRunningChanged(bool value) => OnPropertyChanged(nameof(OrchestratorToggleLabel));
 
@@ -428,20 +422,22 @@ public partial class MainViewModel : ObservableObject
     public bool IsUpdating => Updates.IsUpdating;
     public bool IsDownloadingEngine => Updates.IsDownloadingEngine;
     public string EngineDownloadStatus => Updates.EngineDownloadStatus;
+
     private readonly IHttpClientFactory _httpClientFactory;
+
     public MainViewModel(
-    ISettingsService settingsService,
-    IUpdaterService updaterService,
-    IAppUpdaterService appUpdaterService,
-    IConnectivityChecker connectivity,
-    NetworkFingerprintProvider aiFingerprints,
-    NetworkChangeWatcher aiNetworkWatcher,
-    AiStrategyRegistry aiRegistry,
-    AiHistoryStore aiHistoryStore,
-    BanditSelector aiBandit,
-    StrategyEvolver aiEvolver,
-    BatMaterializer aiMaterializer,
-    IHttpClientFactory httpClientFactory)
+        ISettingsService settingsService,
+        IUpdaterService updaterService,
+        IAppUpdaterService appUpdaterService,
+        IConnectivityChecker connectivity,
+        NetworkFingerprintProvider aiFingerprints,
+        NetworkChangeWatcher aiNetworkWatcher,
+        AiStrategyRegistry aiRegistry,
+        AiHistoryStore aiHistoryStore,
+        BanditSelector aiBandit,
+        StrategyEvolver aiEvolver,
+        BatMaterializer aiMaterializer,
+        IHttpClientFactory httpClientFactory)
     {
         _settingsService = settingsService;
         _updater = updaterService;
@@ -468,6 +464,7 @@ public partial class MainViewModel : ObservableObject
             addAppLog: msg => Logs.Add(msg),
             httpClientFactory: _httpClientFactory);
         // ════════════════════════════════════════════════════════════════════
+
         Service.GetAutoTuneTargets = () =>
         {
             var sites = new List<string>();
@@ -601,13 +598,14 @@ public partial class MainViewModel : ObservableObject
 
         _orchestratorUiTimer.Tick += (_, _) => UpdateOrchestratorNextCheck();
         _orchestratorUiTimer.Start();
+
         _aiOrchestrator.SyncRegistryFromEngine();
         RebuildAiStrategyRows();
+
         InitializeTgProxyOnStartup();
     }
 
     // ── Настройки ──
-
     private void ApplySettings(AppSettings settings)
     {
         OrchestratorInterval = settings.OrchestratorInterval;
@@ -679,7 +677,6 @@ public partial class MainViewModel : ObservableObject
     public void SaveSettings()
     {
         if (!_settingsLoaded) return;
-
         var settings = new AppSettings
         {
             LastProfileFileName = SelectedProfile?.FileName,
@@ -693,9 +690,9 @@ public partial class MainViewModel : ObservableObject
             SiteTelegram = SiteTelegram,
             SiteTikTok = SiteTikTok,
             UserSites = UserCustomSitesText
-    .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-    .Where(s => !string.IsNullOrWhiteSpace(s))
-    .ToList(),
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .ToList(),
             CustomTargetDomains = CustomTargetDomains.ToList(),
             CustomExcludeDomains = CustomExcludeDomains.ToList(),
             AutoUpdateEnabled = AutoUpdateEnabled,
@@ -730,12 +727,10 @@ public partial class MainViewModel : ObservableObject
             },
             Presets = Presets.ToList()
         };
-
         _settingsService.Save(settings);
     }
 
     // ── UI-команды ──
-
     [RelayCommand]
     private void SelectTab(string index) => SelectedTabIndex = int.Parse(index);
 
@@ -771,7 +766,6 @@ public partial class MainViewModel : ObservableObject
         else Start();
     }
 
-
     private void AddToRecentLogs(string message)
     {
         RecentLogs.Add(message);
@@ -789,7 +783,6 @@ public partial class MainViewModel : ObservableObject
             var listsDir = Path.Combine(EngineDir, "lists");
             Directory.CreateDirectory(listsDir);
             var userHostlistPath = Path.Combine(listsDir, "list-general-user.txt");
-
             var domains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             // 1. Берем домены из нового Менеджера доменов (вкладка "Домены")
@@ -838,7 +831,6 @@ public partial class MainViewModel : ObservableObject
     }
 
     // ── Cleanup ──
-
     public void Cleanup()
     {
         if (_orchestrator.IsRunning)
