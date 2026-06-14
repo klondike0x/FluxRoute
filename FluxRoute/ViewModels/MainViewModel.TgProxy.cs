@@ -23,10 +23,12 @@ public partial class MainViewModel
     private static readonly string[] ProxySourceFiles =
     [
         "__init__.py",
+        "_aes.py",
         "balancer.py",
         "bridge.py",
         "config.py",
         "fake_tls.py",
+        "pool.py",
         "raw_websocket.py",
         "stats.py",
         "tg_ws_proxy.py",

@@ -344,6 +344,11 @@ public sealed class AiOrchestratorService : IDisposable
             _bandit.RegisterSuccess(current.Id);
             _consecutiveFailures = 0;
             Notify($"✅ ИИ: «{active.DisplayName}» ок ({result.Score}%).", result: result);
+
+            if (current.EngineType == DpiEngineType.Warp && !string.IsNullOrWhiteSpace(current.WarpConfig))
+            {
+                SaveWarpConfig(current);
+            }
         }
         else
         {
@@ -710,6 +715,11 @@ public sealed class AiOrchestratorService : IDisposable
                 ? $"✅ ИИ: новая стратегия «{g.DisplayName}» ок ({result.Score}%)."
                 : $"✅ ИИ: «{g.DisplayName}» ок ({result.Score}%).",
                 result: result);
+
+            if (g.EngineType == DpiEngineType.Warp && !string.IsNullOrWhiteSpace(g.WarpConfig))
+            {
+                SaveWarpConfig(g);
+            }
         }
         else
         {
@@ -774,6 +784,28 @@ public sealed class AiOrchestratorService : IDisposable
         }
 
         _registry.Save();
+    }
+
+    private void SaveWarpConfig(StrategyGenome g)
+    {
+        try
+        {
+            var exportDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "exported_configs");
+            Directory.CreateDirectory(exportDir);
+
+            var safeName = BatMaterializer.SanitizeFileName(g.DisplayName);
+            var path = Path.Combine(exportDir, $"{safeName}.conf");
+
+            if (!File.Exists(path))
+            {
+                File.WriteAllText(path, g.WarpConfig);
+                Notify($"💾 Конфиг Warp «{g.DisplayName}» сохранён в exported_configs.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Notify($"❌ Ошибка сохранения конфига: {ex.Message}");
+        }
     }
 
     private static void TryDeleteGenomeBatFile(StrategyGenome g)
