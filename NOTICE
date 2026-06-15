@@ -1,0 +1,44 @@
+FluxRoute - GUI for managing zapret-discord-youtube profiles
+Copyright (C) 2026 klondike0x (https://github.com/klondike0x)
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+==================================================
+Third-Party Components:
+==================================================
+
+zapret (https://github.com/bol-van/zapret)
+Copyright (C) bol-van
+Licensed under GNU GPL v3.0
+
+WinDivert (https://github.com/basil00/WinDivert)
+Copyright (C) basil00
+Licensed under GNU Lesser General Public License v3.0
+
+zapret-discord-youtube (https://github.com/Flowseal/zapret-discord-youtube)
+Copyright (C) Flowseal
+Licensed under GNU GPL v3.0
+
+tg-ws-proxy (https://github.com/Flowseal/tg-ws-proxy)
+Copyright (C) Flowseal
+Licensed under GNU GPL v3.0
+
+==================================================
+GitHub Actions Workflows:
+==================================================
+
+The .github/workflows directory contains configuration files
+used for automated builds and releases.
+Copyright (C) 2026 klondike0x
+All rights reserved.
