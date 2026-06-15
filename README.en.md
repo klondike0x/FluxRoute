@@ -414,6 +414,8 @@ Pull Requests are welcome!
 
 </details>
 
+For third‑party attributions, see the NOTICE file.
+
 **Disclaimer:** The software is provided “as is”. The author is not liable for any consequences arising from its use. By using FluxRoute, you confirm that you do so at your own risk.
 
 ---
@@ -459,7 +461,7 @@ This project is distributed under the **GNU General Public License v3.0**.
 
 See the [LICENSE](LICENSE) file for details.
 
-For fork developers: see the [Derivative Projects Attribution](#-derivative-projects-attribution) section.
+**For fork authors:** please read the [Copyright and Terms of Use](#%EF%B8%8F-copyright-and-terms-of-use) section.
 
 FluxRoute Desktop is a **GUI wrapper** for the `Flowseal/zapret-discord-youtube` project.
 All rights to `zapret`, `winws.exe`, and related scripts belong to their respective authors.
