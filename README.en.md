@@ -414,7 +414,7 @@ Pull Requests are welcome!
 
 </details>
 
-For third‑party attributions, see the NOTICE file.
+For third‑party attributions, see the [NOTICE](NOTICE) file.
 
 **Disclaimer:** The software is provided “as is”. The author is not liable for any consequences arising from its use. By using FluxRoute, you confirm that you do so at your own risk.
 
