@@ -50,8 +50,8 @@ public sealed class ZapretEngine : IDpiEngine
             {
                 FileName = executable,
                 UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                RedirectStandardOutput = false, // Отключаем перенаправление, так как оно не вычитывается
+                RedirectStandardError = false,  // и может приводить к зависанию winws при заполнении буфера
                 CreateNoWindow = true,
                 WorkingDirectory = binDir,
             };
@@ -198,13 +198,30 @@ public sealed class ZapretEngine : IDpiEngine
         try
         {
             if (!process.HasExited)
+            {
                 process.Kill(entireProcessTree: true);
-            process.WaitForExit(2000);
+                // Ждем завершения, но не слишком долго в синхронном вызове
+                if (!process.WaitForExit(3000))
+                {
+                    // Если не завершился за 3с, пробуем убить еще раз жестко
+                    process.Kill(entireProcessTree: true);
+                }
+            }
             process.Dispose();
         }
         catch
         {
         }
+
+        // Дополнительная очистка всех winws.exe для надежности
+        try
+        {
+            foreach (var p in Process.GetProcessesByName("winws"))
+            {
+                try { p.Kill(entireProcessTree: true); } catch { }
+            }
+        }
+        catch { }
     }
 
     public void Dispose()

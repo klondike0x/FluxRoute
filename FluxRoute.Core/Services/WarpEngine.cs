@@ -47,8 +47,8 @@ public sealed class WarpEngine : IDpiEngine
             {
                 FileName = executable,
                 UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                RedirectStandardOutput = false,
+                RedirectStandardError = false,
                 CreateNoWindow = true,
                 WorkingDirectory = Path.GetDirectoryName(executable) ?? _engineDir,
             };
@@ -196,13 +196,27 @@ public sealed class WarpEngine : IDpiEngine
         try
         {
             if (!process.HasExited)
+            {
                 process.Kill(entireProcessTree: true);
-            process.WaitForExit(2000);
+                if (!process.WaitForExit(3000))
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+            }
             process.Dispose();
         }
         catch
         {
         }
+
+        try
+        {
+            foreach (var p in Process.GetProcessesByName("warp-plus"))
+            {
+                try { p.Kill(entireProcessTree: true); } catch { }
+            }
+        }
+        catch { }
     }
 
     public void Dispose()

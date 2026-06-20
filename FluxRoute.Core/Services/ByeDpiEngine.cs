@@ -48,8 +48,8 @@ public sealed class ByeDpiEngine : IDpiEngine
             {
                 FileName = executable,
                 UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                RedirectStandardOutput = false, // Отключаем перенаправление, так как оно не вычитывается
+                RedirectStandardError = false,  // и может приводить к зависанию ciadpi при заполнении буфера
                 CreateNoWindow = true,
                 WorkingDirectory = Path.GetDirectoryName(executable) ?? _engineDir,
             };
@@ -262,13 +262,27 @@ public sealed class ByeDpiEngine : IDpiEngine
         try
         {
             if (!process.HasExited)
+            {
                 process.Kill(entireProcessTree: true);
-            process.WaitForExit(2000);
+                if (!process.WaitForExit(3000))
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+            }
             process.Dispose();
         }
         catch
         {
         }
+
+        try
+        {
+            foreach (var p in Process.GetProcessesByName("ciadpi"))
+            {
+                try { p.Kill(entireProcessTree: true); } catch { }
+            }
+        }
+        catch { }
     }
 
     public void Dispose()

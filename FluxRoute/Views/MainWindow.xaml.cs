@@ -217,10 +217,7 @@ public partial class MainWindow : Window
 
         // Останавливаем winws.exe через ViewModel
         if (_vm.IsRunning)
-            _vm.StopCommand.Execute(null);
-
-        // Останавливаем TG WS Proxy
-        _vm.StopTgProxyOnExit();
+            _ = _vm.StopOnExitAsync();
 
         // Очищаем ресурсы ViewModel (останавливаем оркестратор и таймеры)
         _vm.Cleanup();

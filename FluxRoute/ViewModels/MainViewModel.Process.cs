@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.Input;
 using FluxRoute.Core.Services;
 using Application = System.Windows.Application;
@@ -76,16 +77,16 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private void ToggleStartStop()
+    private async Task ToggleStartStop()
     {
         if (IsRunning)
-            Stop();
+            await Stop();
         else
-            Start();
+            await Start();
     }
 
     [RelayCommand]
-    private void Start()
+    private async Task Start()
     {
         if (IsRunning)
         {
@@ -110,17 +111,17 @@ public partial class MainViewModel
         try
         {
             SyncCustomHostlist();
-            ProfileBatLauncher.PrepareRuntime(EngineDir);
+            await Task.Run(() => ProfileBatLauncher.PrepareRuntime(EngineDir));
 
             if (ProfileBatLauncher.TryCreateLaunchPlan(SelectedProfile.FullPath, EngineDir, out var plan, out var parseError) && plan is not null)
             {
-                StartWinwsDirect(plan);
+                await StartWinwsDirect(plan);
                 return;
             }
 
             Logs.Add($"⚠️ Прямой запуск winws.exe недоступен: {parseError}");
             Logs.Add("⚠️ Использую совместимый запуск через BAT/cmd.exe.");
-            StartViaBatFallback();
+            await StartViaBatFallback();
         }
         catch (Exception ex)
         {
@@ -129,9 +130,9 @@ public partial class MainViewModel
         }
     }
 
-    private void StartWinwsDirect(WinwsLaunchPlan plan)
+    private async Task StartWinwsDirect(WinwsLaunchPlan plan)
     {
-        var winws = ProfileBatLauncher.StartWinws(plan);
+        var winws = await Task.Run(() => ProfileBatLauncher.StartWinws(plan));
         _startedViaBatFallback = false;
         _trackedPids = new HashSet<uint> { (uint)winws.Id };
 
@@ -181,7 +182,7 @@ public partial class MainViewModel
         }
     }
 
-    private void StartViaBatFallback()
+    private async Task StartViaBatFallback()
     {
         var psi = new ProcessStartInfo
         {
@@ -193,7 +194,7 @@ public partial class MainViewModel
             WindowStyle = ProcessWindowStyle.Hidden,
         };
 
-        var cmdProcess = Process.Start(psi);
+        var cmdProcess = await Task.Run(() => Process.Start(psi));
         if (cmdProcess is null)
         {
             Logs.Add("Не удалось запустить процесс.");
@@ -379,7 +380,7 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private void Stop()
+    private async Task Stop()
     {
         _hideWindowsCts?.Cancel();
 
@@ -389,7 +390,8 @@ public partial class MainViewModel
         {
             try
             {
-                pidsToKill.UnionWith(GetProcessTreePids((uint)_runningProcess.Id));
+                var pids = await Task.Run(() => GetProcessTreePids((uint)_runningProcess.Id));
+                pidsToKill.UnionWith(pids);
             }
             catch
             {
@@ -422,20 +424,23 @@ public partial class MainViewModel
         }
 
         var killed = 0;
-        foreach (var pid in pidsToKill)
+        await Task.Run(() =>
         {
-            try
+            foreach (var pid in pidsToKill)
             {
-                using var p = Process.GetProcessById((int)pid);
-                p.Kill(entireProcessTree: true);
-                p.WaitForExit(1500);
-                killed++;
+                try
+                {
+                    using var p = Process.GetProcessById((int)pid);
+                    p.Kill(entireProcessTree: true);
+                    p.WaitForExit(1500);
+                    killed++;
+                }
+                catch
+                {
+                    // ignored
+                }
             }
-            catch
-            {
-                // ignored
-            }
-        }
+        });
 
         Logs.Add($"Остановлено процессов: {killed} ({RunningScriptName})");
         AddToRecentLogs($"⏹ Остановлено: {RunningScriptName}");
@@ -453,7 +458,7 @@ public partial class MainViewModel
         _runStartedAt = null;
 
         // Останавливаем ByeDPI если был запущен в гибридном режиме
-        try { _engineManager.StopAllAsync().GetAwaiter().GetResult(); }
+        try { await _engineManager.StopAllAsync(); }
         catch { /* ignored */ }
 
         // Останавливаем сервисы оркестратора вместе с Zapret (флаг OrchestratorEnabled не меняем).
@@ -564,6 +569,41 @@ public partial class MainViewModel
             return Task.CompletedTask;
         }
 
-        return app.Dispatcher.InvokeAsync(action).Task;
+        return app.Dispatcher.InvokeAsync(action, DispatcherPriority.Normal).Task;
+    }
+
+    private static Task RunOnUiThreadAsync(Func<Task> action)
+    {
+        var app = Application.Current;
+        if (app is null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished)
+            return Task.CompletedTask;
+
+        if (app.Dispatcher.CheckAccess())
+        {
+            return action();
+        }
+
+        return app.Dispatcher.InvokeAsync(action, DispatcherPriority.Normal).Task.Unwrap();
+    }
+
+    public async Task StopOnExitAsync()
+    {
+        try
+        {
+            await Stop();
+        }
+        catch
+        {
+            // ignored
+        }
+
+        try
+        {
+            StopTgProxyOnExit();
+        }
+        catch
+        {
+            // ignored
+        }
     }
 }

@@ -172,10 +172,10 @@ public partial class MainViewModel
         if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
             return;
 
-        void SwitchOnUi()
+        async Task SwitchOnUi()
         {
             _suppressOrchestratorStop = true;
-            Stop();
+            await Stop();
             _suppressOrchestratorStop = false;
 
             if (profile is not null)
@@ -187,21 +187,21 @@ public partial class MainViewModel
         }
 
         if (dispatcher.CheckAccess())
-            SwitchOnUi();
+            await SwitchOnUi();
         else
             await dispatcher.InvokeAsync(SwitchOnUi).Task.ConfigureAwait(false);
 
         // Даём время на завершение WinDivert и winws.exe
         await Task.Delay(1500).ConfigureAwait(false);
 
-        void StartOnUi()
+        async Task StartOnUi()
         {
             if (profile is not null)
-                Start();
+                await Start();
         }
 
         if (dispatcher.CheckAccess())
-            StartOnUi();
+            await StartOnUi();
         else
             await dispatcher.InvokeAsync(StartOnUi).Task.ConfigureAwait(false);
     }
@@ -276,25 +276,26 @@ public partial class MainViewModel
         }
     }
 
-    private Task EnsureProtectionRunningAsync()
+    private async Task EnsureProtectionRunningAsync()
     {
         var dispatcher = Application.Current?.Dispatcher;
         if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
-            return Task.CompletedTask;
+            return;
 
-        void EnsureOnUi()
+        async Task EnsureOnUi()
         {
             if (SelectedProfile is not null && !IsTrackedProcessRunning())
-                Start();
+                await Start();
         }
 
         if (dispatcher.CheckAccess())
         {
-            EnsureOnUi();
-            return Task.CompletedTask;
+            await EnsureOnUi();
         }
-
-        return dispatcher.InvokeAsync(EnsureOnUi).Task;
+        else
+        {
+            await dispatcher.InvokeAsync(EnsureOnUi).Task;
+        }
     }
 
     private (int successes, int trials, double wilsonLower) WilsonStatsForGenome(StrategyGenome g)
@@ -307,7 +308,7 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private void DeleteAiStrategy(AiStrategyRowVm? row)
+    private async Task DeleteAiStrategy(AiStrategyRowVm? row)
     {
         if (row is null)
             return;
@@ -348,7 +349,7 @@ public partial class MainViewModel
         if (wasActive)
         {
             if (IsRunning)
-                Stop();
+                await Stop();
             SelectedProfile = Profiles.FirstOrDefault();
         }
 
@@ -514,7 +515,7 @@ public partial class MainViewModel
 
     // ── Применяем состояние OrchestratorEnabled ──
     // Вызывается при изменении флага через чекбокс/кнопку и при старте/стопе Zapret.
-    internal void ApplyOrchestratorEnabledState()
+    internal async void ApplyOrchestratorEnabledState()
     {
         if (OrchestratorEnabled)
         {
@@ -535,9 +536,9 @@ public partial class MainViewModel
             {
                 Logs.Add("[Оркестратор] Переход в ручной режим — перезапуск Zapret...");
                 _suppressOrchestratorStop = true;
-                Stop();
+                await Stop();
                 _suppressOrchestratorStop = false;
-                Start();
+                await Start();
             }
         }
     }
