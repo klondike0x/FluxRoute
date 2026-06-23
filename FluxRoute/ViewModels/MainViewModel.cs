@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluxRoute.AI.Services;
 using FluxRoute.Core.Models;
@@ -249,6 +249,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string pidText = "—";
     [ObservableProperty] private string uptimeText = "—";
     public string AppVersion { get; } = GetAppVersion();
+    public string AppBuildDate { get; } = GetBuildDate();
+    public string AppLicense { get; } = "GNU General Public License v3.0";
+    public string AppRepositoryUrl { get; } = "https://github.com/klondike0x/FluxRoute";
 
     // ── Навигация ──
     [ObservableProperty] private int selectedTabIndex = 0;
@@ -335,19 +338,19 @@ public partial class MainViewModel : ObservableObject
 
     // ── Настройки сайтов ──
     [ObservableProperty] private bool siteYouTube = true;
-    partial void OnSiteYouTubeChanged(bool value) => SaveSettings();
+    partial void OnSiteYouTubeChanged(bool value) { SaveSettings(); SyncOrchestratorSites(); }
     [ObservableProperty] private bool siteDiscord = true;
-    partial void OnSiteDiscordChanged(bool value) => SaveSettings();
+    partial void OnSiteDiscordChanged(bool value) { SaveSettings(); SyncOrchestratorSites(); }
     [ObservableProperty] private bool siteGoogle = true;
-    partial void OnSiteGoogleChanged(bool value) => SaveSettings();
+    partial void OnSiteGoogleChanged(bool value) { SaveSettings(); SyncOrchestratorSites(); }
     [ObservableProperty] private bool siteTwitch = true;
-    partial void OnSiteTwitchChanged(bool value) => SaveSettings();
+    partial void OnSiteTwitchChanged(bool value) { SaveSettings(); SyncOrchestratorSites(); }
     [ObservableProperty] private bool siteInstagram = true;
-    partial void OnSiteInstagramChanged(bool value) => SaveSettings();
+    partial void OnSiteInstagramChanged(bool value) { SaveSettings(); SyncOrchestratorSites(); }
     [ObservableProperty] private bool siteTelegram = true;
-    partial void OnSiteTelegramChanged(bool value) => SaveSettings();
+    partial void OnSiteTelegramChanged(bool value) { SaveSettings(); SyncOrchestratorSites(); }
     [ObservableProperty] private bool siteTikTok = true;
-    partial void OnSiteTikTokChanged(bool value) => SaveSettings();
+    partial void OnSiteTikTokChanged(bool value) { SaveSettings(); SyncOrchestratorSites(); }
 
     // ── Свои сайты ──
     [ObservableProperty] private string userCustomSitesText = "";

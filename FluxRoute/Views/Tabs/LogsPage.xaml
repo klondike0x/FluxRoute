@@ -5,7 +5,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
              d:DesignHeight="460" d:DesignWidth="760">
-    <Grid Margin="16,12" d:IsLocked="True">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="16,12" d:IsLocked="True">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -82,4 +83,5 @@
             </TextBox>
         </Border>
     </Grid>
+    </ScrollViewer>
 </UserControl>

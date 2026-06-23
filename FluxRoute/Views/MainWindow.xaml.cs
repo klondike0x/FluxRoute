@@ -2,7 +2,9 @@ using System.IO;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Navigation;
 using FluxRoute.AI.Services;
 using FluxRoute.Core.Services;
@@ -316,5 +318,55 @@ public partial class MainWindow : Window
     {
         Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
         e.Handled = true;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  RESIZE GRIPS (для AllowsTransparency=True, WindowStyle=None)
+    //
+    //  Паттерн ReleaseCapture + PostMessage(WM_NCLBUTTONDOWN, HT*)
+    //  — стандартный Win32-способ добавить ресайз в кастомный хром.
+    //  SendMessage НЕ подходит для WindowStyle=None — он блокирует
+    //  цикл сообщений, и окно не входит в режим sizing.
+    // ═══════════════════════════════════════════════════════════════
+
+    private const int WM_NCLBUTTONDOWN = 0x00A1;
+
+    // HT* (hit-test) константы — соответствуют областям окна
+    private const int HTTOP        = 12;
+    private const int HTBOTTOM     = 15;
+    private const int HTLEFT       = 10;
+    private const int HTRIGHT      = 11;
+    private const int HTTOPLEFT    = 13;
+    private const int HTTOPRIGHT   = 14;
+    private const int HTBOTTOMLEFT = 16;
+    private const int HTBOTTOMRIGHT = 17;
+
+    private static readonly Dictionary<string, int> ResizeEdges = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Top"]         = HTTOP,
+        ["Bottom"]      = HTBOTTOM,
+        ["Left"]        = HTLEFT,
+        ["Right"]       = HTRIGHT,
+        ["TopLeft"]     = HTTOPLEFT,
+        ["TopRight"]    = HTTOPRIGHT,
+        ["BottomLeft"]  = HTBOTTOMLEFT,
+        ["BottomRight"] = HTBOTTOMRIGHT,
+    };
+
+    [DllImport("user32.dll")]
+    private static extern bool ReleaseCapture();
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern IntPtr PostMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+    private void ResizeGrip_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left) return;
+        if (sender is not FrameworkElement { Tag: string tag } || !ResizeEdges.TryGetValue(tag, out var htCode))
+            return;
+
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        ReleaseCapture();
+        PostMessage(hwnd, WM_NCLBUTTONDOWN, (IntPtr)htCode, IntPtr.Zero);
     }
 }

@@ -1,4 +1,4 @@
-﻿using FluxRoute.Core.Models;
+using FluxRoute.Core.Models;
 
 namespace FluxRoute.Core.Services;
 
@@ -71,7 +71,9 @@ public sealed class OrchestratorService : IDisposable
         Notify("Оркестратор остановлен.");
     }
 
-    public Task CheckNowAsync() => RunCheckAsync(CancellationToken.None);
+    public Task CheckNowAsync(CancellationToken ct = default) => RunCheckAsync(ct);
+    [Obsolete("Use CheckNowAsync(CancellationToken) instead")]
+    public Task CheckNowAsync_Legacy() => RunCheckAsync(CancellationToken.None);
 
     public async Task ScanAllProfilesAsync(
         CancellationToken ct = default,

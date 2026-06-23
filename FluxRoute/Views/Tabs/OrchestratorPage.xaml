@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="FluxRoute.Views.Tabs.OrchestratorPage"
+<UserControl x:Class="FluxRoute.Views.Tabs.OrchestratorPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -298,57 +298,27 @@
                 </Button.Style>
             </Button>
 
-            <!-- ✨ НОВОЕ: Прогресс-бар сканирования с fade-анимацией -->
-            <Border Margin="0,0,0,8" CornerRadius="6" Padding="10,8">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="Visibility" Value="Collapsed" />
-                        <Setter Property="Opacity" Value="0" />
-                        <Setter Property="Background" Value="#0E1120" />
-                        <Setter Property="BorderBrush" Value="#1E2235" />
-                        <Setter Property="BorderThickness" Value="1" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsScanning}" Value="True">
-                                <Setter Property="Visibility" Value="Visible" />
-                                <DataTrigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                             From="0" To="1" Duration="0:0:0.2">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut" />
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </DataTrigger.EnterActions>
-                                <DataTrigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                             From="1" To="0" Duration="0:0:0.15">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseIn" />
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                                <DiscreteObjectKeyFrame KeyTime="0:0:0.15"
-                                                                        Value="{x:Static Visibility.Collapsed}" />
-                                            </ObjectAnimationUsingKeyFrames>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </DataTrigger.ExitActions>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
+            <!-- Прогресс-бар сканирования (без Storyboard — анимация сбивалась при быстрых переключениях IsScanning) -->
+            <Border Margin="0,0,0,8" CornerRadius="6" Padding="10,8"
+                    Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}"
+                    Background="#0E1120" BorderBrush="#1E2235" BorderThickness="1">
                 <StackPanel>
                     <Grid Margin="0,0,0,6">
-                        <TextBlock Text="{Binding ScanProgressText}" FontFamily="Segoe UI"
-                                   Foreground="#4A90E2" FontSize="12" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding ScanProgressValue, StringFormat={}{0:0}%}"
-                                   FontFamily="Segoe UI" Foreground="#8B949E" FontSize="11"
-                                   HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding ScanProgressText}" FontFamily="Segoe UI"
+                                   Foreground="#4A90E2" FontSize="12" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <TextBlock Text="{Binding ScanProgressValue, StringFormat={}{0:0}%}"
+                                       FontFamily="Segoe UI" Foreground="#8B949E" FontSize="11"
+                                       VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <Button Content="⏹ Остановить" Height="26" Padding="10,0"
+                                    Style="{StaticResource RedBtn}" FontSize="11"
+                                    Command="{Binding CancelScanCommand}" />
+                        </StackPanel>
                     </Grid>
                     <ProgressBar Value="{Binding ScanProgressValue}" Minimum="0" Maximum="100"
                                  Height="6" Background="#21262D" Foreground="#58A6FF"

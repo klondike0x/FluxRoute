@@ -6,6 +6,46 @@
              mc:Ignorable="d" d:DesignHeight="460" d:DesignWidth="760">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="16,12">
+            <!-- ═══ ИНФОРМАЦИЯ О ПРИЛОЖЕНИИ ═══ -->
+            <Border Background="#0D1117" BorderBrush="#21262D" BorderThickness="1"
+                    CornerRadius="8" Padding="14" Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Версия сборки:" FontFamily="Segoe UI"
+                               Foreground="#8B949E" FontSize="12" Margin="0,0,12,4" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AppVersion}" FontFamily="Consolas"
+                               Foreground="#C9D1D9" FontSize="12" Margin="0,0,0,4" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Дата сборки:" FontFamily="Segoe UI"
+                               Foreground="#8B949E" FontSize="12" Margin="0,0,12,4" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AppBuildDate}" FontFamily="Consolas"
+                               Foreground="#C9D1D9" FontSize="12" Margin="0,0,0,4" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Репозиторий:" FontFamily="Segoe UI"
+                               Foreground="#8B949E" FontSize="12" Margin="0,0,12,4" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" FontFamily="Consolas" FontSize="12" Margin="0,0,0,4">
+                        <Hyperlink NavigateUri="{Binding AppRepositoryUrl}"
+                                   RequestNavigate="Hyperlink_RequestNavigate" Foreground="#58A6FF"
+                                   FontFamily="Consolas">github.com/klondike0x/FluxRoute</Hyperlink>
+                    </TextBlock>
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Лицензия:" FontFamily="Segoe UI"
+                               Foreground="#8B949E" FontSize="12" Margin="0,0,12,4" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding AppLicense}" FontFamily="Segoe UI"
+                               Foreground="#C9D1D9" FontSize="12" Margin="0,0,0,4" />
+                    <TextBlock Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" FontFamily="Segoe UI"
+                               Foreground="#4A5170" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
+                               Text="FluxRoute — свободное программное обеспечение. Вы можете распространять и/или модифицировать его в соответствии с условиями GNU GPLv3." />
+                </Grid>
+            </Border>
+
             <TextBlock Style="{StaticResource SecH}" Text="ДЛЯ ЧЕГО СОЗДАН ПРОЕКТ" Margin="0,0,0,8" />
             <TextBlock FontFamily="Segoe UI" Foreground="#9BB0D0" TextWrapping="Wrap" FontSize="12"
                 Text="FluxRoute создан как удобный desktop-интерфейс для управления сетевыми стратегиями и сценариями обхода ограничений. Главная цель — упростить запуск и переключение стратегий без ручного редактирования bat-файлов." />

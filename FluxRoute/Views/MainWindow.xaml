@@ -8,24 +8,60 @@
     mc:Ignorable="d"
     Title="FluxRoute"
     Height="520" Width="860"
+    MinWidth="860" MinHeight="520"
     WindowStartupLocation="CenterScreen"
-    Background="Transparent"
-    AllowsTransparency="True"
+    ResizeMode="CanResize"
     WindowStyle="None"
-    ResizeMode="NoResize">
+    AllowsTransparency="True"
+    Background="Transparent">
 
     <Window.Resources>
         <!-- Конвертеры объявлены глобально в App.xaml -->
     </Window.Resources>
 
-    <!-- ROOT -->
-    <Border Background="#0c0f17" BorderBrush="#1C1F2E" BorderThickness="1" CornerRadius="12"
+    <!-- ROOT: Внешний Border с CornerRadius — WPF-рендеринг даёт гладкие углы,
+         в отличие от WindowChrome.CornerRadius (DWM-клиппинг без сглаживания = зубцы).
+         Невидимые грипы по краям обеспечивают ресайз через Win32 SendMessage. -->
+    <Border Background="#0c0f17" BorderBrush="#1C1F2E" BorderThickness="1" CornerRadius="16"
         ClipToBounds="True">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="40" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
+
+            <!-- Невидимые грипы для ресайза (8 шт: 4 угла + 4 ребра).
+                 Background="Transparent" ОБЯЗАТЕЛЕН — без него Border не получает MouseDown.
+                 Должны быть ПОСЛЕ RowDefinitions, т.к. XAML не смешивает
+                 property elements (RowDefinitions) с content elements. -->
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripTop" Height="6" VerticalAlignment="Top"
+                    Cursor="SizeNS" MouseDown="ResizeGrip_MouseDown" Tag="Top" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripBottom" Height="6" VerticalAlignment="Bottom"
+                    Cursor="SizeNS" MouseDown="ResizeGrip_MouseDown" Tag="Bottom" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripLeft" Width="6" HorizontalAlignment="Left"
+                    Cursor="SizeWE" MouseDown="ResizeGrip_MouseDown" Tag="Left" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripRight" Width="6" HorizontalAlignment="Right"
+                    Cursor="SizeWE" MouseDown="ResizeGrip_MouseDown" Tag="Right" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripTopLeft" Width="12" Height="12"
+                    HorizontalAlignment="Left" VerticalAlignment="Top" Cursor="SizeNWSE"
+                    MouseDown="ResizeGrip_MouseDown" Tag="TopLeft" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripTopRight" Width="12" Height="12"
+                    HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="SizeNESW"
+                    MouseDown="ResizeGrip_MouseDown" Tag="TopRight" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripBottomLeft" Width="12" Height="12"
+                    HorizontalAlignment="Left" VerticalAlignment="Bottom" Cursor="SizeNESW"
+                    MouseDown="ResizeGrip_MouseDown" Tag="BottomLeft" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripBottomRight" Width="12" Height="12"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Cursor="SizeNWSE"
+                    MouseDown="ResizeGrip_MouseDown" Tag="BottomRight" />
 
             <!-- ═══════════ TITLE BAR ═══════════ -->
             <shell:TitleBar Grid.Row="0"
@@ -269,6 +305,50 @@
                             <tabs:LogsPage x:Name="LogsTab" />
                         </Border>
                     </Grid>
+                </Border>
+            </Grid>
+
+            <!-- ═══════════ ОВЕРЛЕЙ СКАНИРОВАНИЯ СТРАТЕГИЙ ═══════════ -->
+            <Grid Grid.RowSpan="2" x:Name="ScanOverlay" IsHitTestVisible="{Binding ScanOverlayVisible}">
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ScanOverlayVisible}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+                <!-- Затемнение фона -->
+                <Border Background="#80000000" CornerRadius="30" />
+                <!-- Карточка прогресса -->
+                <Border Background="#161B22" BorderBrush="#30363D" BorderThickness="1"
+                        CornerRadius="12" Width="400"
+                        VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <StackPanel Margin="24,20">
+                        <TextBlock FontFamily="Segoe UI" FontSize="15" FontWeight="SemiBold"
+                                   Foreground="#C9D1D9" Text="Сканирование стратегий"
+                                   Margin="0,0,0,8" />
+                        <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
+                                   TextWrapping="Wrap" Margin="0,0,0,12"
+                                   Text="Проверка всех стратегий на доступность целей и стабильность winws.exe." />
+                        <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#C9D1D9"
+                                   Text="{Binding ScanStatusText}" Margin="0,0,0,8" />
+                        <ProgressBar Value="{Binding ScanProgressValue}" Minimum="0" Maximum="100"
+                                     Height="6" Background="#21262D" Foreground="#58A6FF"
+                                     BorderThickness="0" Margin="0,0,0,4" />
+                        <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
+                                   Text="{Binding ScanProgressValue, StringFormat={}{0:0}%}"
+                                   Margin="0,0,0,8" />
+                        <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#4A5170"
+                                   Text="{Binding ScanTimeRemaining}" Margin="0,0,0,2" />
+                        <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#4A5170"
+                                   Text="{Binding ScanElapsed}" Margin="0,0,0,12" />
+                        <Button Content="Отмена" Style="{StaticResource ActionBtnRed}"
+                                HorizontalAlignment="Left" Padding="14,7"
+                                Command="{Binding CancelScanCommand}" />
+                    </StackPanel>
                 </Border>
             </Grid>
         </Grid>

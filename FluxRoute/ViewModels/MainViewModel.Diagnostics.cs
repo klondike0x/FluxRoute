@@ -171,20 +171,57 @@ public partial class MainViewModel
         return asm.GetName().Version?.ToString(3) ?? "—";
     }
 
+    public static string GetBuildDate()
+    {
+        try
+        {
+            var asm = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
+            var filePath = asm.Location;
+            if (File.Exists(filePath))
+            {
+                var lastWrite = File.GetLastWriteTime(filePath);
+                return lastWrite.ToString("yyyy-MM-dd HH:mm");
+            }
+        }
+        catch { }
+        return "—";
+    }
+
     private void LoadProfiles()
     {
         var currentFileName = SelectedProfile?.FileName;
         Profiles.Clear();
         if (!Directory.Exists(EngineDir)) { Logs.Add($"Папка engine не найдена: {EngineDir}"); SelectedProfile = null; return; }
-        var excluded = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "service.bat", "service,.bat" };
+
+        // Исключаем service.bat и его варианты с запятой (типография в некоторых сборках)
+        var excluded = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "service.bat" };
+
+        // Собираем все .bat файлы: engine/*.bat + engine/ai-evolved/*.bat
         var aiEvolvedDir = Path.Combine(EngineDir, "ai-evolved");
-        var bats = Directory.EnumerateFiles(EngineDir, "*.bat", SearchOption.TopDirectoryOnly)
-            .Where(f => !excluded.Contains(Path.GetFileName(f)));
+        var batMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        // Сначала engine/ (низкий приоритет — перезапишется ai-evolved при совпадении имён)
+        foreach (var f in Directory.EnumerateFiles(EngineDir, "*.bat", SearchOption.TopDirectoryOnly))
+        {
+            var fn = Path.GetFileName(f);
+            if (!excluded.Contains(fn))
+                batMap[fn] = f;
+        }
+
+        // Потом ai-evolved/ (высокий приоритет — эволюционированные стратегии перезаписывают встроенные)
         if (Directory.Exists(aiEvolvedDir))
-            bats = bats.Concat(Directory.EnumerateFiles(aiEvolvedDir, "*.bat", SearchOption.TopDirectoryOnly));
-        var batList = bats.OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
-        foreach (var bat in batList)
-            Profiles.Add(new ProfileItem { FileName = Path.GetFileName(bat), DisplayName = Path.GetFileNameWithoutExtension(bat), FullPath = bat });
+        {
+            foreach (var f in Directory.EnumerateFiles(aiEvolvedDir, "*.bat", SearchOption.TopDirectoryOnly))
+            {
+                var fn = Path.GetFileName(f);
+                if (!excluded.Contains(fn))
+                    batMap[fn] = f; // перезаписывает, если такой же FileName был в engine/
+            }
+        }
+
+        foreach (var kv in batMap.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
+            Profiles.Add(new ProfileItem { FileName = kv.Key, DisplayName = Path.GetFileNameWithoutExtension(kv.Key), FullPath = kv.Value });
+
         _suppressProfileWarning = true;
         try
         {

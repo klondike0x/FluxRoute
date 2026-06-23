@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
@@ -364,6 +364,14 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>Синхронизирует активные сайты с оркестратором без полной перезагрузки.
+    /// Вызывается при изменении чекбоксов сайтов в реальном времени.</summary>
+    private void SyncOrchestratorSites()
+    {
+        if (!_settingsLoaded) return;
+        UpdateOrchestratorEnabledSites();
+    }
+
     private void UpdateOrchestratorEnabledSites()
     {
         var sites = new HashSet<string>();
@@ -417,34 +425,123 @@ public partial class MainViewModel
         };
     }
 
+    // ── CancellationTokenSource для отмены сканирования ──
+    private CancellationTokenSource? _scanCts;
+    private int _scanGeneration;
+
+    // ── Оверлей сканирования ──
+    [ObservableProperty] private bool scanOverlayVisible;
+    [ObservableProperty] private string scanStatusText = "";
+    [ObservableProperty] private string scanTimeRemaining = "";
+    [ObservableProperty] private string scanElapsed = "";
+    private DateTime _scanStartTime;
+    private int _scanTotalCount;
+    private int _scanCurrentCount;
+    private System.Windows.Threading.DispatcherTimer? _scanEtaTimer;
+
+    /// <summary>Признак, что сканирование можно отменить (показываем кнопку "Остановить").</summary>
+    public bool CanCancelScan => IsScanning;
+
+    [RelayCommand]
+    private void CancelScan()
+    {
+        _scanCts?.Cancel();
+        _scanCts?.Dispose();
+        _scanCts = null;
+        _scanEtaTimer?.Stop();
+        _scanEtaTimer = null;
+        // Инвалидируем поколение — старый finally увидит gen != _scanGeneration и не тронет IsScanning
+        _scanGeneration++;
+        IsScanning = false;
+        ScanOverlayVisible = false;
+        OnPropertyChanged(nameof(CanCancelScan));
+        ScanProgressText = "";
+        ScanProgressValue = 0;
+        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⏹ Сканирование остановлено пользователем.");
+    }
+
+    /// <summary>Обновляет оставшееся и прошедшее время на оверлее.</summary>
+    private void UpdateScanEta()
+    {
+        var elapsed = DateTime.Now - _scanStartTime;
+        ScanElapsed = $"Прошло: {(int)elapsed.TotalMinutes:D2}:{elapsed.Seconds:D2}";
+
+        if (_scanCurrentCount > 0 && _scanTotalCount > _scanCurrentCount)
+        {
+            var avgPerItem = elapsed.TotalSeconds / _scanCurrentCount;
+            var remaining = (int)(avgPerItem * (_scanTotalCount - _scanCurrentCount));
+            ScanTimeRemaining = remaining > 60
+                ? $"Осталось: ~{remaining / 60} мин {remaining % 60} сек"
+                : $"Осталось: ~{remaining} сек";
+        }
+        else
+        {
+            ScanTimeRemaining = "Осталось: —";
+        }
+    }
+
     [RelayCommand]
     private async Task ScanProfiles()
     {
+        // Счётчик поколений: только последний вызов сбрасывает IsScanning в finally
+        var gen = ++_scanGeneration;
+
+        // Отменяем предыдущее сканирование, если было
+        _scanCts?.Cancel();
+        _scanCts?.Dispose();
+        _scanCts = new CancellationTokenSource();
+        var scanCt = _scanCts.Token;
+
         _orchestrator.ClearRankedProfiles();
         RebuildProfileScores();
         IsScanning = true;
+        ScanOverlayVisible = true;
+        OnPropertyChanged(nameof(CanCancelScan));
+        ScanStatusText = "Подготовка...";
         ScanProgressText = "Сканирование...";
-        ScanProgressValue = 0;  // ✨ НОВОЕ: сбрасываем прогресс
+        ScanProgressValue = 0;
+        ScanTimeRemaining = "";
+        ScanElapsed = "";
+        _scanStartTime = DateTime.Now;
+        _scanTotalCount = 0;
+        _scanCurrentCount = 0;
+
+        // Таймер для обновления ETA и прошедшего времени (каждую секунду)
+        _scanEtaTimer?.Stop();
+        _scanEtaTimer = new System.Windows.Threading.DispatcherTimer(
+            System.Windows.Threading.DispatcherPriority.Render)
+        { Interval = TimeSpan.FromSeconds(1) };
+        _scanEtaTimer.Tick += (_, _) => UpdateScanEta();
+        _scanEtaTimer.Start();
+
         UpdateOrchestratorEnabledSites();
         var wasRunning = IsTrackedProcessRunning();
 
-        // ✨ НОВОЕ: callback для обновления прогресса
+        // Определяем общее количество стратегий для ETA
+        _scanTotalCount = Profiles.Count;
+
         var progress = new Progress<(int current, int total)>(report =>
         {
+            _scanCurrentCount = report.current;
+            _scanTotalCount = report.total;
             var percent = report.total > 0
                 ? (double)report.current / report.total * 100
                 : 0;
             ScanProgressValue = percent;
+            ScanStatusText = $"[{report.current}/{report.total}] Тестирую стратегии...";
             ScanProgressText = $"Сканирование... {report.current}/{report.total}";
+            UpdateScanEta();
         });
 
         try
         {
             _suppressOrchestratorStop = true;
-            await _orchestrator.ScanAllProfilesAsync(default, progress);
+            await _orchestrator.ScanAllProfilesAsync(scanCt, progress);
             SortProfileScores();
+            ScanStatusText = "Сканирование завершено";
             ScanProgressText = "Сканирование завершено";
-            ScanProgressValue = 100;  // ✨ НОВОЕ
+            ScanProgressValue = 100;
+            ScanTimeRemaining = "✅ Завершено";
             SaveSettings();
 
             var top = ProfileScores.FirstOrDefault(s => s.Score > 0);
@@ -460,25 +557,48 @@ public partial class MainViewModel
             }
             else if (wasRunning && SelectedProfile is not null && !IsTrackedProcessRunning())
                 await EnsureProtectionRunningAsync().ConfigureAwait(false);
+
+            // Задержка перед закрытием оверлея, чтобы пользователь увидел "100% Завершено"
+            await Task.Delay(800, scanCt).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            if (gen == _scanGeneration)
+            {
+                ScanStatusText = "⏹ Сканирование отменено";
+                AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⏹ Сканирование отменено.");
+                await Task.Delay(500).ConfigureAwait(false);
+            }
         }
         catch (Exception ex)
         {
-            ScanProgressText = "Ошибка сканирования";
-            ScanProgressValue = 0;  // ✨ НОВОЕ
-            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ❌ Ошибка сканирования: {ex.Message}");
-            Logs.Add($"[Оркестратор] Ошибка сканирования: {ex.Message}");
+            if (gen == _scanGeneration)
+            {
+                ScanStatusText = $"❌ Ошибка: {ex.Message}";
+                ScanProgressText = "Ошибка сканирования";
+                ScanProgressValue = 0;
+                AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ❌ Ошибка сканирования: {ex.Message}");
+                Logs.Add($"[Оркестратор] Ошибка сканирования: {ex.Message}");
+                await Task.Delay(1500).ConfigureAwait(false);
+            }
         }
         finally
         {
-            _suppressOrchestratorStop = false;
-            IsScanning = false;
-            // ✨ НОВОЕ: сбрасываем прогресс через 1.5 сек после завершения
-            _ = Task.Delay(1500).ContinueWith(_ =>
+            if (gen == _scanGeneration)
             {
-                System.Windows.Application.Current?.Dispatcher.BeginInvoke(
-                    new Action(() => ScanProgressValue = 0),
-                    System.Windows.Threading.DispatcherPriority.Background);
-            });
+                _scanEtaTimer?.Stop();
+                _scanEtaTimer = null;
+                _suppressOrchestratorStop = false;
+                IsScanning = false;
+                ScanOverlayVisible = false;
+                OnPropertyChanged(nameof(CanCancelScan));
+                _ = Task.Delay(1500).ContinueWith(_ =>
+                {
+                    System.Windows.Application.Current?.Dispatcher.BeginInvoke(
+                        new Action(() => ScanProgressValue = 0),
+                        System.Windows.Threading.DispatcherPriority.Background);
+                });
+            }
         }
     }
 
@@ -574,12 +694,26 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task CheckNow()
     {
+        // Счётчик поколений: только последний вызов сбрасывает IsScanning в finally
+        var gen = ++_scanGeneration;
+
+        // Отменяем предыдущую проверку, если была
+        _scanCts?.Cancel();
+        _scanCts?.Dispose();
+        _scanCts = new CancellationTokenSource();
+        var checkCt = _scanCts.Token;
+
         AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] Запуск ручной проверки...");
+        IsScanning = true;
+        OnPropertyChanged(nameof(CanCancelScan));
+        ScanProgressText = "Ручная проверка...";
+        // Синхронизируем список активных сайтов перед проверкой
+        UpdateOrchestratorEnabledSites();
         try
         {
             if (AiEnabled)
             {
-                await _aiOrchestrator.ProbeAllEnabledStrategiesAsync(CancellationToken.None).ConfigureAwait(false);
+                await _aiOrchestrator.ProbeAllEnabledStrategiesAsync(checkCt).ConfigureAwait(false);
                 var d = Application.Current?.Dispatcher;
                 if (d is not null && !d.HasShutdownStarted && !d.HasShutdownFinished)
                 {
@@ -591,12 +725,29 @@ public partial class MainViewModel
                 }
             }
             else
-                await _orchestrator.CheckNowAsync().ConfigureAwait(false);
+                await _orchestrator.CheckNowAsync(checkCt).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            if (gen == _scanGeneration)
+                AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⏹ Проверка отменена.");
         }
         catch (Exception ex)
         {
-            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ❌ Ошибка проверки: {ex.Message}");
-            Logs.Add($"[Оркестратор] Ошибка проверки: {ex.Message}");
+            if (gen == _scanGeneration)
+            {
+                AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ❌ Ошибка проверки: {ex.Message}");
+                Logs.Add($"[Оркестратор] Ошибка проверки: {ex.Message}");
+            }
+        }
+        finally
+        {
+            if (gen == _scanGeneration)
+            {
+                IsScanning = false;
+                ScanProgressText = "";
+                OnPropertyChanged(nameof(CanCancelScan));
+            }
         }
     }
 

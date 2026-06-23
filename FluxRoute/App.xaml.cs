@@ -117,6 +117,14 @@ public partial class App : Application
         })
         .AddStandardResilienceHandler();
 
+        // Named HttpClient для проверки обновлений самого приложения FluxRoute (GitHub API + Atom)
+        services.AddHttpClient(FluxRoute.Updater.Services.HttpClientNames.AppUpdater, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-AppUpdater");
+        })
+        .AddStandardResilienceHandler();
+
         // Named HttpClient для проверки связности (оркестратор)
         services.AddHttpClient(FluxRoute.Core.Services.HttpClientNames.Connectivity, client =>
         {
