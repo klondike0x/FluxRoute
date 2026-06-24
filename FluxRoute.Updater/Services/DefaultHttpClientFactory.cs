@@ -30,7 +30,32 @@ internal sealed class DefaultHttpClientFactory : IHttpClientFactory
             return client;
         }
 
-        // Стандартный клиент для движка Flowseal
+        // Клиент для скачивания ZIP-архивов движка (большой таймаут + явный SSL)
+        if (name == HttpClientNames.UpdaterDownload)
+        {
+            var handler = new SocketsHttpHandler
+            {
+                PooledConnectionLifetime = TimeSpan.FromMinutes(10),
+                AllowAutoRedirect        = true,
+                MaxAutomaticRedirections = 10,
+                EnableMultipleHttp2Connections = true,
+                // SocketsHttpHandler НЕ использует ServicePointManager — задаём явно
+                SslOptions = new System.Net.Security.SslClientAuthenticationOptions
+                {
+                    EnabledSslProtocols =
+                        System.Security.Authentication.SslProtocols.Tls12 |
+                        System.Security.Authentication.SslProtocols.Tls13
+                }
+            };
+            var client = new HttpClient(handler)
+            {
+                Timeout = TimeSpan.FromMinutes(5)
+            };
+            client.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-Updater");
+            return client;
+        }
+
+        // Стандартный клиент для проверки версии движка Flowseal
         var defaultHandler = new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
@@ -38,7 +63,7 @@ internal sealed class DefaultHttpClientFactory : IHttpClientFactory
         };
         var defaultClient = new HttpClient(defaultHandler)
         {
-            Timeout = TimeSpan.FromSeconds(30)
+            Timeout = TimeSpan.FromSeconds(60)
         };
         defaultClient.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-Updater");
         return defaultClient;

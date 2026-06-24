@@ -11,6 +11,9 @@ using FluxRoute.ViewModels;
 using FluxRoute.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http.Resilience;
+using Polly;
+using Polly.Retry;
 using Serilog;
 using Serilog.Events;
 using Application = System.Windows.Application;
@@ -109,13 +112,60 @@ public partial class App : Application
 
     private static void ConfigureApplicationServices(IServiceCollection services)
     {
-        // Named HttpClient для апдейтера с Polly стандартной resilience-стратегией
+        // ── Клиент для проверки версии обновлений движка (короткие запросы) ──────
+        // Стандартный resilience handler с настроенными таймаутами:
+        // - TotalRequestTimeout: 60с (вся операция с учётом retry)
+        // - AttemptTimeout: 30с (одна попытка)
+        // - SamplingDuration: 60с (>= 2 * AttemptTimeout, требование circuit breaker)
+        // - Retry: 3 попытки с экспоненциальной задержкой + jitter
         services.AddHttpClient(FluxRoute.Updater.Services.HttpClientNames.Updater, client =>
         {
             client.Timeout = TimeSpan.FromSeconds(60);
             client.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-Updater");
         })
-        .AddStandardResilienceHandler();
+        .AddStandardResilienceHandler()
+        .Configure(options =>
+        {
+            options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(60);
+            options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(30);
+            options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(60);
+            options.Retry.MaxRetryAttempts = 3;
+            options.Retry.Delay = TimeSpan.FromSeconds(1);
+            options.Retry.BackoffType = DelayBackoffType.Exponential;
+            options.Retry.UseJitter = true;
+        });
+
+        // ── Клиент для скачивания ZIP-архива обновлений (большие файлы) ──────────
+        // Явный HttpClientHandler с SslProtocols — SocketsHttpHandler НЕ использует
+        // ServicePointManager.SecurityProtocol, а на некоторых системах дефолт не включает Tls12/Tls13.
+        // - TotalRequestTimeout: 300с (5 минут)
+        // - AttemptTimeout: 120с (2 минуты на попытку)
+        // - SamplingDuration: 240с (>= 2 * AttemptTimeout)
+        // - Retry: 3 попытки с экспоненциальной задержкой + jitter
+        services.AddHttpClient(FluxRoute.Updater.Services.HttpClientNames.UpdaterDownload, client =>
+        {
+            client.Timeout = TimeSpan.FromMinutes(5);
+            client.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-Updater");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            AllowAutoRedirect = true,
+            MaxAutomaticRedirections = 10,
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+            SslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13,
+            UseProxy = true,
+        })
+        .AddStandardResilienceHandler()
+        .Configure(options =>
+        {
+            options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(5);
+            options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(120);
+            options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(240);
+            options.Retry.MaxRetryAttempts = 3;
+            options.Retry.Delay = TimeSpan.FromSeconds(2);
+            options.Retry.BackoffType = DelayBackoffType.Exponential;
+            options.Retry.UseJitter = true;
+        });
 
         // Named HttpClient для проверки обновлений самого приложения FluxRoute (GitHub API + Atom)
         services.AddHttpClient(FluxRoute.Updater.Services.HttpClientNames.AppUpdater, client =>

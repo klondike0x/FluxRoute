@@ -3,10 +3,12 @@ namespace FluxRoute.Updater.Services;
 /// <summary>Именованные HTTP-клиенты, зарегистрированные через IHttpClientFactory.</summary>
 public static class HttpClientNames
 {
-    /// <summary>Клиент для загрузки обновлений движка Flowseal с GitHub.</summary>
+    /// <summary>Клиент для проверки версии обновлений движка Flowseal с GitHub (короткие запросы).</summary>
     public const string Updater = "FluxRoute.Updater";
 
-    /// <summary>Клиент для проверки и скачивания обновлений самого приложения FluxRoute.
-    /// Настроен с авто-редиректами и увеличенным таймаутом для скачивания больших файлов.</summary>
+    /// <summary>Клиент для скачивания ZIP-архива обновлений движка (большие файлы, увеличенный таймаут).</summary>
+    public const string UpdaterDownload = "FluxRoute.UpdaterDownload";
+
+    /// <summary>Клиент для проверки и скачивания обновлений самого приложения FluxRoute.</summary>
     public const string AppUpdater = "FluxRoute.AppUpdater";
 }
