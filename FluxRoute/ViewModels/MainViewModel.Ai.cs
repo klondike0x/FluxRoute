@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluxRoute.AI.Models;
 using FluxRoute.Core.Models;
+using FluxRoute.Views;
 using Application = System.Windows.Application;
 
 namespace FluxRoute.ViewModels;
@@ -100,11 +101,52 @@ public partial class MainViewModel
         {
         }
 
+        var evolvedDir = Path.Combine(EngineDir, "ai-evolved");
+        if (Directory.Exists(evolvedDir))
+        {
+            foreach (var bat in Directory.EnumerateFiles(evolvedDir, "*.bat"))
+            {
+                try { File.Delete(bat); } catch { }
+            }
+        }
+
         _aiOrchestrator.SyncRegistryFromEngine();
         LoadProfiles();
         RefreshAiDashboard();
         RebuildAiStrategyRows();
-        Logs.Add("[ИИ] Модель сброшена.");
+        Logs.Add("[ИИ] Модель сброшена, ai-evolved/ очищен.");
+    }
+
+    [RelayCommand]
+    private void ClearAiEvolved()
+    {
+        if (!CustomDialog.Show(
+            "Очистить ai-evolved",
+            "Удалить все эволюционированные стратегии из engine/ai-evolved/?\nBAT-файлы и записи в реестре ИИ будут безвозвратно удалены.",
+            "Очистить",
+            "Отмена",
+            isDanger: true))
+            return;
+
+        var evolvedDir = Path.Combine(EngineDir, "ai-evolved");
+        if (Directory.Exists(evolvedDir))
+        {
+            foreach (var bat in Directory.EnumerateFiles(evolvedDir, "*.bat"))
+            {
+                try { File.Delete(bat); } catch { }
+            }
+        }
+
+        var evolved = _aiRegistry.GetGenomes().Where(g => g.Origin == StrategyOrigin.Evolved).ToList();
+        foreach (var g in evolved)
+            _aiRegistry.Remove(g.Id);
+        _aiRegistry.Save();
+
+        _aiOrchestrator.SyncRegistryFromEngine();
+        LoadProfiles();
+        RefreshAiDashboard();
+        RebuildAiStrategyRows();
+        Logs.Add("[ИИ] ai-evolved очищен.");
     }
 
     [RelayCommand]

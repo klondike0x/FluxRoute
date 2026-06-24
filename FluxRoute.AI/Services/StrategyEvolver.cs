@@ -112,7 +112,7 @@ public sealed class StrategyEvolver
         return child;
     }
 
-    private void GarbageCollectEvolved()
+    public void GarbageCollectEvolved()
     {
         var settingsMax = Math.Max(4, _aiSettings().MaxEvolvedStrategies);
         var evolved = _registry.GetGenomes().Where(g => g.Origin == StrategyOrigin.Evolved).ToList();

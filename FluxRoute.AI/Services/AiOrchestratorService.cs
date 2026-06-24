@@ -86,7 +86,12 @@ public sealed class AiOrchestratorService : IDisposable
         _probeService = new ProfileProbeService(_connectivity, _switchProfile);
     }
 
-    public void SyncRegistryFromEngine() => SyncBuiltins();
+    public void SyncRegistryFromEngine()
+    {
+        SyncBuiltins();
+        _evolver.GarbageCollectEvolved();
+        _registry.Save();
+    }
 
     public void Start()
     {

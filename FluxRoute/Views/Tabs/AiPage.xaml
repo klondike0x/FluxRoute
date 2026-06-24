@@ -44,7 +44,9 @@
                 <Button Content="↺ Сброс модели" Style="{StaticResource TermBtn}"
                     Margin="0,0,10,0" Command="{Binding ResetAiModelCommand}" />
                 <Button Content="📁 ai-evolved" Style="{StaticResource TermBtn}"
-                    Command="{Binding OpenAiEvolvedFolderCommand}" />
+                    Margin="0,0,10,0" Command="{Binding OpenAiEvolvedFolderCommand}" />
+                <Button Content="🗑 Очистить" Style="{StaticResource TermBtn}"
+                    Command="{Binding ClearAiEvolvedCommand}" />
             </StackPanel>
             <Rectangle Style="{StaticResource Sep}" />
 

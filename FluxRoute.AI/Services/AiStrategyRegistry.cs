@@ -60,6 +60,28 @@ public sealed class AiStrategyRegistry
                 _model.Genomes ??= [];
                 _model.Bandit ??= [];
                 _model.SeenNetworkHashes ??= [];
+
+                var seen = new Dictionary<string, StrategyGenome>(StringComparer.Ordinal);
+                var deduped = new List<StrategyGenome>(_model.Genomes.Count);
+                foreach (var g in _model.Genomes)
+                {
+                    var sig = GenomeSignature.Compute(g);
+                    if (seen.TryGetValue(sig, out var existing))
+                    {
+                        if (g.CreatedAt > existing.CreatedAt)
+                        {
+                            deduped.Remove(existing);
+                            deduped.Add(g);
+                            seen[sig] = g;
+                        }
+                    }
+                    else
+                    {
+                        seen[sig] = g;
+                        deduped.Add(g);
+                    }
+                }
+                _model.Genomes = deduped;
             }
             catch
             {
