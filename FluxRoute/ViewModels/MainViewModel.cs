@@ -13,6 +13,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
 using Application = System.Windows.Application;
 
@@ -333,6 +334,12 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string scanProgressText = "";
     [ObservableProperty] private double scanProgressValue;
 
+    // ── Глобальный модальный оверлей ──
+    [ObservableProperty] private bool globalOverlayVisible;
+    [ObservableProperty] private string globalOverlayTitle = "";
+    [ObservableProperty] private object? globalOverlayContent;
+    [ObservableProperty] private ICommand? globalOverlayCloseCommand;
+
     public string OrchestratorToggleLabel => OrchestratorRunning ? "Остановить оркестратор" : "Запустить оркестратор";
     partial void OnOrchestratorRunningChanged(bool value) => OnPropertyChanged(nameof(OrchestratorToggleLabel));
 
@@ -460,13 +467,24 @@ public partial class MainViewModel : ObservableObject
             getWinDivertSysPath: () => WinDivertSysPath,
             addAppLog: msg => Logs.Add(msg));
 
-        // ═══ ИСПРАВЛЕНО: передаём httpClientFactory в ServiceViewModel ═══
+        // ═══ ИСПРАВЛЕНО: передаём httpClientFactory + connectivityChecker в ServiceViewModel ═══
         Service = new ServiceViewModel(
             getEngineDir: () => EngineDir,
             getSelectedProfileDisplayName: () => SelectedProfile?.DisplayName,
             addAppLog: msg => Logs.Add(msg),
-            httpClientFactory: _httpClientFactory);
-        // ════════════════════════════════════════════════════════════════════
+            httpClientFactory: _httpClientFactory,
+            connectivityChecker: _connectivity);
+        // ════════════════════════════════════════════════════════════════════════════════════════
+
+        // Показ/скрытие глобального оверлея из ServiceViewModel
+        Service.RequestShowOverlay = (title, content, closeCmd) =>
+        {
+            GlobalOverlayTitle = title;
+            GlobalOverlayContent = content;
+            GlobalOverlayCloseCommand = closeCmd;
+            GlobalOverlayVisible = true;
+        };
+        Service.RequestHideOverlay = () => GlobalOverlayVisible = false;
 
         Service.GetAutoTuneTargets = () =>
         {

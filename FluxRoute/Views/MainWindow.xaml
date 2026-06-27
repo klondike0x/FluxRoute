@@ -308,47 +308,36 @@
                 </Border>
             </Grid>
 
-            <!-- ═══════════ ОВЕРЛЕЙ СКАНИРОВАНИЯ СТРАТЕГИЙ ═══════════ -->
-            <Grid Grid.RowSpan="2" x:Name="ScanOverlay" IsHitTestVisible="{Binding ScanOverlayVisible}">
+            <!-- ═══════════ ГЛОБАЛЬНЫЙ МОДАЛЬНЫЙ ОВЕРЛЕЙ ═══════════ -->
+            <Grid Grid.RowSpan="2" IsHitTestVisible="{Binding GlobalOverlayVisible}">
                 <Grid.Style>
                     <Style TargetType="Grid">
                         <Setter Property="Visibility" Value="Collapsed" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding ScanOverlayVisible}" Value="True">
+                            <DataTrigger Binding="{Binding GlobalOverlayVisible}" Value="True">
                                 <Setter Property="Visibility" Value="Visible" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Grid.Style>
-                <!-- Затемнение фона -->
-                <Border Background="#80000000" CornerRadius="30" />
-                <!-- Карточка прогресса -->
+                <Border Background="#80000000" CornerRadius="16" />
                 <Border Background="#161B22" BorderBrush="#30363D" BorderThickness="1"
-                        CornerRadius="12" Width="400"
+                        CornerRadius="12" Width="400" MaxHeight="480"
                         VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <StackPanel Margin="24,20">
-                        <TextBlock FontFamily="Segoe UI" FontSize="15" FontWeight="SemiBold"
-                                   Foreground="#C9D1D9" Text="Сканирование стратегий"
-                                   Margin="0,0,0,8" />
-                        <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
-                                   TextWrapping="Wrap" Margin="0,0,0,12"
-                                   Text="Проверка всех стратегий на доступность целей и стабильность winws.exe." />
-                        <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#C9D1D9"
-                                   Text="{Binding ScanStatusText}" Margin="0,0,0,8" />
-                        <ProgressBar Value="{Binding ScanProgressValue}" Minimum="0" Maximum="100"
-                                     Height="6" Background="#21262D" Foreground="#58A6FF"
-                                     BorderThickness="0" Margin="0,0,0,4" />
-                        <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
-                                   Text="{Binding ScanProgressValue, StringFormat={}{0:0}%}"
-                                   Margin="0,0,0,8" />
-                        <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#4A5170"
-                                   Text="{Binding ScanTimeRemaining}" Margin="0,0,0,2" />
-                        <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#4A5170"
-                                   Text="{Binding ScanElapsed}" Margin="0,0,0,12" />
-                        <Button Content="Отмена" Style="{StaticResource ActionBtnRed}"
-                                HorizontalAlignment="Left" Padding="14,7"
-                                Command="{Binding CancelScanCommand}" />
-                    </StackPanel>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0">
+                        <StackPanel Margin="24,20">
+                            <Grid Margin="0,0,0,8">
+                                <TextBlock Text="{Binding GlobalOverlayTitle}"
+                                           FontFamily="Segoe UI" FontSize="15" FontWeight="SemiBold"
+                                           Foreground="#C9D1D9" VerticalAlignment="Center" />
+                                <Button Content="&#x2715;" HorizontalAlignment="Right"
+                                        Background="Transparent" BorderThickness="0"
+                                        Foreground="#8B949E" FontSize="14" Padding="4,0"
+                                        Command="{Binding GlobalOverlayCloseCommand}" />
+                            </Grid>
+                            <ContentPresenter Content="{Binding GlobalOverlayContent}" />
+                        </StackPanel>
+                    </ScrollViewer>
                 </Border>
             </Grid>
         </Grid>

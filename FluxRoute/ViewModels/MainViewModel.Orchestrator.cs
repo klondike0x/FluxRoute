@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.IO;
 using Application = System.Windows.Application;
+using FluxRoute.Controls;
 using FluxRoute.Core.Models;
 using FluxRoute.Core.Services;
 using FluxRoute.AI.Models;
@@ -429,8 +430,7 @@ public partial class MainViewModel
     private CancellationTokenSource? _scanCts;
     private int _scanGeneration;
 
-    // ── Оверлей сканирования ──
-    [ObservableProperty] private bool scanOverlayVisible;
+    // ── Статус сканирования (для ScanProgressView) ──
     [ObservableProperty] private string scanStatusText = "";
     [ObservableProperty] private string scanTimeRemaining = "";
     [ObservableProperty] private string scanElapsed = "";
@@ -453,7 +453,7 @@ public partial class MainViewModel
         // Инвалидируем поколение — старый finally увидит gen != _scanGeneration и не тронет IsScanning
         _scanGeneration++;
         IsScanning = false;
-        ScanOverlayVisible = false;
+        GlobalOverlayVisible = false;
         OnPropertyChanged(nameof(CanCancelScan));
         ScanProgressText = "";
         ScanProgressValue = 0;
@@ -495,7 +495,10 @@ public partial class MainViewModel
         _orchestrator.ClearRankedProfiles();
         RebuildProfileScores();
         IsScanning = true;
-        ScanOverlayVisible = true;
+        GlobalOverlayTitle = "Сканирование стратегий";
+        GlobalOverlayContent = new ScanProgressView { DataContext = this };
+        GlobalOverlayCloseCommand = CancelScanCommand;
+        GlobalOverlayVisible = true;
         OnPropertyChanged(nameof(CanCancelScan));
         ScanStatusText = "Подготовка...";
         ScanProgressText = "Сканирование...";
@@ -590,7 +593,7 @@ public partial class MainViewModel
                 _scanEtaTimer = null;
                 _suppressOrchestratorStop = false;
                 IsScanning = false;
-                ScanOverlayVisible = false;
+                GlobalOverlayVisible = false;
                 OnPropertyChanged(nameof(CanCancelScan));
                 _ = Task.Delay(1500).ContinueWith(_ =>
                 {

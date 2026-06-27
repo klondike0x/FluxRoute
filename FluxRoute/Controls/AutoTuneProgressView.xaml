@@ -1,0 +1,79 @@
+<UserControl x:Class="FluxRoute.Controls.AutoTuneProgressView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel>
+        <!-- Прогресс -->
+        <StackPanel>
+            <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                    <Setter Property="Visibility" Value="Visible" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding AutoTuneResultVisible}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </StackPanel.Style>
+            <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
+                       TextWrapping="Wrap" Margin="0,0,0,10"
+                       Text="Приложение проверит все комбинации IPSet mode и Gaming mode для текущей стратегии." />
+            <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#C9D1D9"
+                       Text="{Binding AutoTuneStatusText}" Margin="0,0,0,8" />
+            <ProgressBar Value="{Binding AutoTuneProgress}"
+                         Minimum="0" Maximum="100" Height="6"
+                         Background="#21262D" Foreground="#58A6FF"
+                         BorderThickness="0" Margin="0,0,0,4" />
+            <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
+                       Margin="0,0,0,12"
+                       Text="{Binding AutoTuneProgress, StringFormat={}{0:0}%}" />
+            <Button Content="Отмена" Style="{StaticResource ActionBtnRed}"
+                    HorizontalAlignment="Left" Padding="12,6"
+                    Command="{Binding CancelAutoTuneCommand}" />
+        </StackPanel>
+        <!-- Результат -->
+        <StackPanel>
+            <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding AutoTuneResultVisible}" Value="True">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </StackPanel.Style>
+            <TextBlock FontFamily="Segoe UI" FontSize="13" Foreground="#3FB950"
+                       FontWeight="SemiBold" Text="Лучшая комбинация найдена."
+                       Margin="0,0,0,12" />
+            <TextBlock FontFamily="Consolas" FontSize="12" Foreground="#C9D1D9" Margin="0,0,0,4">
+                <Run Text="IPSet mode: " />
+                <Run Text="{Binding BestIpSet}" Foreground="#58A6FF" />
+            </TextBlock>
+            <TextBlock FontFamily="Consolas" FontSize="12" Foreground="#C9D1D9" Margin="0,0,0,4">
+                <Run Text="Gaming mode: " />
+                <Run Text="{Binding BestProtocol}" Foreground="#58A6FF" />
+            </TextBlock>
+            <TextBlock FontFamily="Consolas" FontSize="12" Foreground="#C9D1D9" Margin="0,0,0,4">
+                <Run Text="Успешно: " />
+                <Run Text="{Binding BestSuccessCount}" Foreground="#3FB950" />
+                <Run Text="/" />
+                <Run Text="{Binding BestTotalCount}" />
+            </TextBlock>
+            <TextBlock FontFamily="Consolas" FontSize="12" Foreground="#C9D1D9" Margin="0,0,0,16">
+                <Run Text="Время: " />
+                <Run Text="{Binding BestTimeMs}" />
+                <Run Text=" сек." />
+            </TextBlock>
+            <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
+                       Text="Применить эти настройки?" Margin="0,0,0,10" />
+            <StackPanel Orientation="Horizontal">
+                <Button Content="Закрыть" Style="{StaticResource ActionBtn}"
+                        Margin="0,0,10,0" Padding="12,6"
+                        Command="{Binding CloseAutoTuneCommand}" />
+                <Button Content="Применить лучшие настройки"
+                        Style="{StaticResource ActionBtnGreen}" Padding="12,6"
+                        Command="{Binding ApplyBestAutoTuneCommand}" />
+            </StackPanel>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,24 @@
+<UserControl x:Class="FluxRoute.Controls.ScanProgressView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel>
+        <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
+                   TextWrapping="Wrap" Margin="0,0,0,12"
+                   Text="Проверка всех стратегий на доступность целей и стабильность winws.exe." />
+        <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#C9D1D9"
+                   Text="{Binding ScanStatusText}" Margin="0,0,0,8" />
+        <ProgressBar Value="{Binding ScanProgressValue}" Minimum="0" Maximum="100"
+                     Height="6" Background="#21262D" Foreground="#58A6FF"
+                     BorderThickness="0" Margin="0,0,0,4" />
+        <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
+                   Text="{Binding ScanProgressValue, StringFormat={}{0:0}%}"
+                   Margin="0,0,0,8" />
+        <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#4A5170"
+                   Text="{Binding ScanTimeRemaining}" Margin="0,0,0,2" />
+        <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#4A5170"
+                   Text="{Binding ScanElapsed}" Margin="0,0,0,12" />
+        <Button Content="Отмена" Style="{StaticResource ActionBtnRed}"
+                HorizontalAlignment="Left" Padding="14,7"
+                Command="{Binding CancelScanCommand}" />
+    </StackPanel>
+</UserControl>

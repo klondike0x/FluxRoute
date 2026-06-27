@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="FluxRoute.Views.Tabs.ServicePage"
+<UserControl x:Class="FluxRoute.Views.Tabs.ServicePage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -165,13 +165,25 @@
                 <Rectangle Style="{StaticResource Sep}" Margin="0,12,0,8" />
 
                 <!-- ── ПОДОБРАТЬ НАСТРОЙКИ ── -->
-                <TextBlock Style="{StaticResource SecH}" Text="ПОДОБРАТЬ НАСТРОЙКИ" Margin="0,0,0,4" />
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Style="{StaticResource SecH}" Text="ПОДОБРАТЬ НАСТРОЙКИ" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Content="?" Width="22" Height="22" Padding="0" FontSize="11" FontWeight="Bold"
+                            Foreground="#58A6FF" Background="Transparent" BorderBrush="#58A6FF" BorderThickness="1"
+                            Cursor="Hand" Margin="8,0,0,0"
+                            Command="{Binding Service.OpenAutoTuneHelpCommand}"
+                            ToolTip="Что такое Auto-Tune?" />
+                </Grid>
                 <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
                            TextWrapping="Wrap" Margin="0,0,0,8"
                            Text="Приложение автоматически проверит все комбинации IPSet и GameFilter и предложит лучшую для текущей стратегии." />
                 <Button Content="🔍 Подобрать настройки" Style="{StaticResource ActionBtnAccent}"
                         Command="{Binding Service.StartAutoTuneCommand}"
-                        HorizontalAlignment="Left" Padding="12,6" Margin="0,0,0,4" />
+                        HorizontalAlignment="Left" Padding="12,6" Margin="0,0,0,4"
+                        ToolTip="Автоматически перебирает комбинации IPSet и GameFilter для вашей сети. Результат — оптимальная настройка за 1–2 минуты." />
 
                 <Rectangle Style="{StaticResource Sep}" Margin="0,12,0,8" />
 
@@ -297,110 +309,5 @@
                 </Border>
             </StackPanel>
         </ScrollViewer>
-
-        <!-- ── ОВЕРЛЕЙ AUTO-TUNE ── -->
-        <Grid x:Name="AutoTuneOverlay">
-            <Grid.Style>
-                <Style TargetType="Grid">
-                    <Setter Property="Visibility" Value="Collapsed" />
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding Service.AutoTuneOverlayVisible}" Value="True">
-                            <Setter Property="Visibility" Value="Visible" />
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Grid.Style>
-
-            <Border Background="#CC000000" CornerRadius="12" />
-            <Border Background="#161B22" BorderBrush="#30363D" BorderThickness="1"
-            CornerRadius="12" Width="360" MaxHeight="480"
-            VerticalAlignment="Center" HorizontalAlignment="Center">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0">
-                    <StackPanel Margin="24,20">
-                        <Grid Margin="0,0,0,12">
-                            <TextBlock Text="Подобрать настройки" FontFamily="Segoe UI" FontSize="15"
-                               FontWeight="SemiBold" Foreground="#C9D1D9" />
-                            <Button Content="✕" HorizontalAlignment="Right"
-                            Background="Transparent" BorderThickness="0"
-                            Foreground="#8B949E" FontSize="14" Padding="4,0"
-                            Command="{Binding Service.CloseAutoTuneCommand}" />
-                        </Grid>
-                        <!-- Прогресс -->
-                        <StackPanel>
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Service.AutoTuneResultVisible}" Value="True">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
-                            <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
-                               TextWrapping="Wrap" Margin="0,0,0,10"
-                               Text="Приложение проверит все комбинации IPSet mode и Gaming mode для текущей стратегии." />
-                            <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#C9D1D9"
-                               Text="{Binding Service.AutoTuneStatusText}" Margin="0,0,0,8" />
-                            <ProgressBar Value="{Binding Service.AutoTuneProgress}"
-                                 Minimum="0" Maximum="100" Height="6"
-                                 Background="#21262D" Foreground="#58A6FF"
-                                 BorderThickness="0" Margin="0,0,0,4" />
-                            <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
-                               Margin="0,0,0,12"
-                               Text="{Binding Service.AutoTuneProgress, StringFormat={}{0:0}%}" />
-                            <Button Content="Отмена" Style="{StaticResource ActionBtnRed}"
-                            HorizontalAlignment="Left" Padding="12,6"
-                            Command="{Binding Service.CancelAutoTuneCommand}" />
-                        </StackPanel>
-                        <!-- Результат -->
-                        <StackPanel>
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Service.AutoTuneResultVisible}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
-                            <TextBlock FontFamily="Segoe UI" FontSize="13" Foreground="#3FB950"
-                               FontWeight="SemiBold" Text="Лучшая комбинация найдена."
-                               Margin="0,0,0,12" />
-                            <TextBlock FontFamily="Consolas" FontSize="12" Foreground="#C9D1D9" Margin="0,0,0,4">
-                        <Run Text="IPSet mode: " />
-                        <Run Text="{Binding Service.BestIpSet}" Foreground="#58A6FF" />
-                            </TextBlock>
-                            <TextBlock FontFamily="Consolas" FontSize="12" Foreground="#C9D1D9" Margin="0,0,0,4">
-                        <Run Text="Gaming mode: " />
-                        <Run Text="{Binding Service.BestProtocol}" Foreground="#58A6FF" />
-                            </TextBlock>
-                            <TextBlock FontFamily="Consolas" FontSize="12" Foreground="#C9D1D9" Margin="0,0,0,4">
-                        <Run Text="Успешно: " />
-                        <Run Text="{Binding Service.BestSuccessCount}" Foreground="#3FB950" />
-                        <Run Text="/" />
-                        <Run Text="{Binding Service.BestTotalCount}" />
-                            </TextBlock>
-                            <TextBlock FontFamily="Consolas" FontSize="12" Foreground="#C9D1D9" Margin="0,0,0,16">
-                        <Run Text="Время: " />
-                        <Run Text="{Binding Service.BestTimeMs}" />
-                        <Run Text=" сек." />
-                            </TextBlock>
-                            <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
-                               Text="Применить эти настройки?" Margin="0,0,0,10" />
-                            <StackPanel Orientation="Horizontal">
-                                <Button Content="Закрыть" Style="{StaticResource ActionBtn}"
-                                Margin="0,0,10,0" Padding="12,6"
-                                Command="{Binding Service.CloseAutoTuneCommand}" />
-                                <Button Content="Применить лучшие настройки"
-                                Style="{StaticResource ActionBtnGreen}" Padding="12,6"
-                                Command="{Binding Service.ApplyBestAutoTuneCommand}" />
-                            </StackPanel>
-                        </StackPanel>
-                    </StackPanel>
-                </ScrollViewer>
-            </Border>
-        </Grid>
     </Grid>
 </UserControl>
