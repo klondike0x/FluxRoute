@@ -31,7 +31,6 @@ public sealed class OrchestratorService : IDisposable
     private readonly Func<string, int, Task> _notifyScoreUpdate;
     private readonly ProfileProbeService _probeService;
     private readonly IConnectivityChecker _connectivity;
-
     private CancellationTokenSource? _cts;
     private int _consecutiveFailures;
 
@@ -57,7 +56,6 @@ public sealed class OrchestratorService : IDisposable
     public void Start()
     {
         if (_cts is not null) return;
-
         _cts = new CancellationTokenSource();
         Task.Run(() => LoopAsync(_cts.Token));
         Notify("Оркестратор запущен.");
@@ -73,11 +71,15 @@ public sealed class OrchestratorService : IDisposable
         Notify("Оркестратор остановлен.");
     }
 
-    public Task CheckNowAsync() => RunCheckAsync(CancellationToken.None);
+    public Task CheckNowAsync(CancellationToken ct = default) => RunCheckAsync(ct);
+    [Obsolete("Use CheckNowAsync(CancellationToken) instead")]
+    public Task CheckNowAsync_Legacy() => RunCheckAsync(CancellationToken.None);
 
-    public async Task ScanAllProfilesAsync(CancellationToken ct = default)
+    public async Task ScanAllProfilesAsync(
+        CancellationToken ct = default,
+        IProgress<(int current, int total)>? progress = null)
     {
-        await ScanAndRankAsync(ct).ConfigureAwait(false);
+        await ScanAndRankAsync(ct, progress).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -91,7 +93,6 @@ public sealed class OrchestratorService : IDisposable
             .Select(x => (x.profile, x.score, (ProfileProbeResult?)null))
             .OrderByDescending(x => x.score)
             .ToList();
-
         if (_rankedProfiles.Count > 0)
             Notify($"📋 Рейтинг стратегий восстановлен из кэша ({_rankedProfiles.Count} шт.), сканирование пропущено.");
     }
@@ -122,7 +123,6 @@ public sealed class OrchestratorService : IDisposable
         while (!ct.IsCancellationRequested)
         {
             NextCheckAt = DateTimeOffset.Now + CheckInterval;
-
             try
             {
                 await Task.Delay(CheckInterval, ct).ConfigureAwait(false);
@@ -131,14 +131,14 @@ public sealed class OrchestratorService : IDisposable
             {
                 break;
             }
-
             await RunCheckAsync(ct).ConfigureAwait(false);
         }
-
         NextCheckAt = null;
     }
 
-    private async Task ScanAndRankAsync(CancellationToken ct)
+    private async Task ScanAndRankAsync(
+        CancellationToken ct,
+        IProgress<(int current, int total)>? progress = null)
     {
         if (IsScanning)
         {
@@ -147,11 +147,9 @@ public sealed class OrchestratorService : IDisposable
         }
 
         IsScanning = true;
-
         try
         {
             var profiles = _getProfiles().ToList();
-
             if (profiles.Count == 0)
             {
                 Notify("Нет стратегий для сканирования.");
@@ -165,9 +163,13 @@ public sealed class OrchestratorService : IDisposable
             for (var i = 0; i < profiles.Count; i++)
             {
                 if (ct.IsCancellationRequested) break;
-
                 var profile = profiles[i];
+
+                // ✨ НОВОЕ: репортим прогресс
+                progress?.Report((i + 1, profiles.Count));
+
                 Notify($"[{i + 1}/{profiles.Count}] Тестирую «{profile.DisplayName}»...");
+
                 await _notifyScoreUpdate(profile.FileName, -1).ConfigureAwait(false);
 
                 var result = await _probeService.ProbeAsync(
@@ -189,7 +191,6 @@ public sealed class OrchestratorService : IDisposable
             }
 
             _rankedProfiles = scores.OrderByDescending(x => x.score).ToList();
-
             var summary = string.Join(", ", _rankedProfiles.Take(3).Select(x => $"{x.profile.DisplayName}:{x.score}%"));
             Notify($"✅ Сканирование завершено.\nТоп: {summary}");
         }
@@ -206,7 +207,6 @@ public sealed class OrchestratorService : IDisposable
     private async Task StartBestProfileAsync(CancellationToken ct)
     {
         var best = _rankedProfiles.FirstOrDefault(x => x.score > 0);
-
         if (best.profile is null)
         {
             Notify("❌ Нет рабочих стратегий. Запускаю первый по списку.");
@@ -236,10 +236,8 @@ public sealed class OrchestratorService : IDisposable
         }
 
         Notify($"Проверка стратегии «{active.DisplayName}»...");
-
         var result = await _probeService.ProbeCurrentAsync(active, targets, ct: ct).ConfigureAwait(false);
         var pct = result.Score;
-
         UpdateRank(active, pct, result);
 
         Notify($"Результат: {pct}% ({result.Summary})", result: result);
@@ -285,7 +283,6 @@ public sealed class OrchestratorService : IDisposable
             if (ct.IsCancellationRequested) return;
 
             Notify($"Пробую «{profile.DisplayName}» (рейтинг {score}%)...");
-
             var result = await _probeService.ProbeAsync(
                 profile,
                 targets,
@@ -311,15 +308,12 @@ public sealed class OrchestratorService : IDisposable
     private List<TargetEntry> BuildTargets()
     {
         var targets = TargetEntry.ParseFile(_getTargetsPath());
-
         foreach (var site in EnabledSites)
         {
             if (ConnectivityChecker.BuiltinSites.TryGetValue(site, out var entries))
                 targets.AddRange(entries);
         }
-
         targets.AddRange(UserSiteTargets);
-
         return targets
             .Where(x => !string.IsNullOrWhiteSpace(x.Value))
             .GroupBy(x => $"{x.Kind}|{x.Key}|{x.Value}", StringComparer.OrdinalIgnoreCase)
@@ -330,19 +324,15 @@ public sealed class OrchestratorService : IDisposable
     private void UpdateRank(ProfileItem profile, int score, ProfileProbeResult result)
     {
         var updated = false;
-
         for (var i = 0; i < _rankedProfiles.Count; i++)
         {
             if (!IsSameProfile(_rankedProfiles[i].profile, profile)) continue;
-
             _rankedProfiles[i] = (profile, score, result);
             updated = true;
             break;
         }
-
         if (!updated)
             _rankedProfiles.Add((profile, score, result));
-
         _rankedProfiles = _rankedProfiles.OrderByDescending(x => x.score).ToList();
     }
 

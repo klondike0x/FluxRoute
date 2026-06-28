@@ -8,18 +8,21 @@
     mc:Ignorable="d"
     Title="FluxRoute"
     Height="520" Width="860"
+    MinWidth="860" MinHeight="520"
     WindowStartupLocation="CenterScreen"
-    Background="Transparent"
-    AllowsTransparency="True"
+    ResizeMode="CanResize"
     WindowStyle="None"
-    ResizeMode="NoResize">
+    AllowsTransparency="True"
+    Background="Transparent">
 
     <Window.Resources>
         <!-- Конвертеры объявлены глобально в App.xaml -->
     </Window.Resources>
 
-    <!-- ROOT -->
-    <Border Background="#0c0f17" BorderBrush="#1C1F2E" BorderThickness="1" CornerRadius="12"
+    <!-- ROOT: Внешний Border с CornerRadius — WPF-рендеринг даёт гладкие углы,
+         в отличие от WindowChrome.CornerRadius (DWM-клиппинг без сглаживания = зубцы).
+         Невидимые грипы по краям обеспечивают ресайз через Win32 SendMessage. -->
+    <Border Background="#0c0f17" BorderBrush="#1C1F2E" BorderThickness="1" CornerRadius="16"
         ClipToBounds="True">
         <Grid>
             <Grid.RowDefinitions>
@@ -269,6 +272,71 @@
                             <tabs:LogsPage x:Name="LogsTab" />
                         </Border>
                     </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Невидимые грипы для ресайза — ПОВЕРХ контента, под оверлеем.
+                 Background="Transparent" обязателен для hit-testing.
+                 Размещены после TitleBar/Body, чтобы получать mouse events. -->
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripTop" Height="6" VerticalAlignment="Top"
+                    Cursor="SizeNS" MouseDown="ResizeGrip_MouseDown" Tag="Top" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripBottom" Height="6" VerticalAlignment="Bottom"
+                    Cursor="SizeNS" MouseDown="ResizeGrip_MouseDown" Tag="Bottom" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripLeft" Width="6" HorizontalAlignment="Left"
+                    Cursor="SizeWE" MouseDown="ResizeGrip_MouseDown" Tag="Left" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripRight" Width="6" HorizontalAlignment="Right"
+                    Cursor="SizeWE" MouseDown="ResizeGrip_MouseDown" Tag="Right" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripTopLeft" Width="12" Height="12"
+                    HorizontalAlignment="Left" VerticalAlignment="Top" Cursor="SizeNWSE"
+                    MouseDown="ResizeGrip_MouseDown" Tag="TopLeft" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripTopRight" Width="12" Height="12"
+                    HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="SizeNESW"
+                    MouseDown="ResizeGrip_MouseDown" Tag="TopRight" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripBottomLeft" Width="12" Height="12"
+                    HorizontalAlignment="Left" VerticalAlignment="Bottom" Cursor="SizeNESW"
+                    MouseDown="ResizeGrip_MouseDown" Tag="BottomLeft" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripBottomRight" Width="12" Height="12"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Cursor="SizeNWSE"
+                    MouseDown="ResizeGrip_MouseDown" Tag="BottomRight" />
+
+            <!-- ═══════════ ГЛОБАЛЬНЫЙ МОДАЛЬНЫЙ ОВЕРЛЕЙ ═══════════ -->
+            <Grid Grid.RowSpan="2" IsHitTestVisible="{Binding GlobalOverlayVisible}">
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding GlobalOverlayVisible}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+                <Border Background="#80000000" CornerRadius="16" />
+                <Border Background="#161B22" BorderBrush="#30363D" BorderThickness="1"
+                        CornerRadius="12" Width="400" MaxHeight="480"
+                        VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0">
+                        <StackPanel Margin="24,20">
+                            <Grid Margin="0,0,0,8">
+                                <TextBlock Text="{Binding GlobalOverlayTitle}"
+                                           FontFamily="Segoe UI" FontSize="15" FontWeight="SemiBold"
+                                           Foreground="#C9D1D9" VerticalAlignment="Center" />
+                                <Button Content="&#x2715;" HorizontalAlignment="Right"
+                                        Background="Transparent" BorderThickness="0"
+                                        Foreground="#8B949E" FontSize="14" Padding="4,0"
+                                        Command="{Binding GlobalOverlayCloseCommand}" />
+                            </Grid>
+                            <ContentPresenter Content="{Binding GlobalOverlayContent}" />
+                        </StackPanel>
+                    </ScrollViewer>
                 </Border>
             </Grid>
         </Grid>

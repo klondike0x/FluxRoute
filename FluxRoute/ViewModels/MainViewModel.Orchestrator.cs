@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.IO;
 using Application = System.Windows.Application;
+using FluxRoute.Controls;
 using FluxRoute.Core.Models;
 using FluxRoute.Core.Services;
 using FluxRoute.AI.Models;
@@ -24,7 +25,6 @@ public sealed partial class AiStrategyRowVm : ObservableObject
     public string DisplayName { get; }
     public string OriginTag { get; }
     public bool CanDelete { get; }
-
     [ObservableProperty] private string wilsonText = "";
     [ObservableProperty] private string wilsonToolTip = "";
     [ObservableProperty] private string verificationText = "";
@@ -61,7 +61,6 @@ public sealed partial class AiStrategyRowVm : ObservableObject
                 "История проверок пуста. Значение появится после ручной проверки, работы оркестратора или эволюции.";
             return;
         }
-
         WilsonText = $"{wilsonLower * 100:0.#}% ({successes}/{trials})";
         WilsonToolTip =
             $"Нижняя граница Уилсона: {wilsonLower * 100:0.#}% — консервативная оценка качества для подбора ИИ (чем выше, тем надёжнее).\n" +
@@ -77,7 +76,6 @@ public sealed partial class AiStrategyRowVm : ObservableObject
                 "Последняя разовая проверка ещё не выполнялась (кнопка «Проверить сейчас» или автопроверка после эволюции).";
             return;
         }
-
         var t = g.LastVerifiedAt.Value.LocalDateTime;
         VerificationText = $"{g.LastVerificationScore}% · {t:HH:mm}";
         VerificationToolTip =
@@ -175,7 +173,6 @@ public partial class MainViewModel
             _suppressOrchestratorStop = true;
             Stop();
             _suppressOrchestratorStop = false;
-
             if (profile is not null)
             {
                 _suppressProfileWarning = true;
@@ -215,7 +212,6 @@ public partial class MainViewModel
             var entry = ProfileScores.FirstOrDefault(s => s.FileName == fileName);
             if (entry is null)
                 return;
-
             if (score == -1)
                 entry.SetPending();
             else
@@ -255,6 +251,7 @@ public partial class MainViewModel
             var evolved = list.Where(x => x.Origin == StrategyOrigin.Evolved).OrderByDescending(x => x.Generation).ToList();
             var builtin = list.Where(x => x.Origin != StrategyOrigin.Evolved)
                 .OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
+
             foreach (var g in evolved)
             {
                 var (succ, trials, w) = WilsonStatsForGenome(g);
@@ -291,7 +288,6 @@ public partial class MainViewModel
             EnsureOnUi();
             return Task.CompletedTask;
         }
-
         return dispatcher.InvokeAsync(EnsureOnUi).Task;
     }
 
@@ -324,25 +320,27 @@ public partial class MainViewModel
         }
 
         if (!CustomDialog.Show(
-                "Удалить стратегию",
-                $"Удалить «{g.DisplayName}» и файл из ai-evolved?",
-                "Удалить",
-                "Отмена",
-                isDanger: true))
+            "Удалить стратегию",
+            $"Удалить «{g.DisplayName}» и файл из ai-evolved?",
+            "Удалить",
+            "Отмена",
+            isDanger: true))
             return;
 
         var deletedPath = g.SourceBatPath;
         var deletedFileName = g.BatFileName;
+
         TryDeleteGenomeBatFile(g);
         _aiRegistry.Remove(g.Id);
         _aiRegistry.Save();
 
         var wasActive = SelectedProfile is not null &&
-                        (string.Equals(SelectedProfile.FileName, deletedFileName, StringComparison.OrdinalIgnoreCase)
-                         || string.Equals(SelectedProfile.FullPath, deletedPath, StringComparison.OrdinalIgnoreCase)
-                         || string.Equals(SelectedProfile.DisplayName, g.DisplayName, StringComparison.OrdinalIgnoreCase));
+            (string.Equals(SelectedProfile.FileName, deletedFileName, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(SelectedProfile.FullPath, deletedPath, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(SelectedProfile.DisplayName, g.DisplayName, StringComparison.OrdinalIgnoreCase));
 
         LoadProfiles();
+
         if (wasActive)
         {
             if (IsRunning)
@@ -367,6 +365,14 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>Синхронизирует активные сайты с оркестратором без полной перезагрузки.
+    /// Вызывается при изменении чекбоксов сайтов в реальном времени.</summary>
+    private void SyncOrchestratorSites()
+    {
+        if (!_settingsLoaded) return;
+        UpdateOrchestratorEnabledSites();
+    }
+
     private void UpdateOrchestratorEnabledSites()
     {
         var sites = new HashSet<string>();
@@ -377,11 +383,11 @@ public partial class MainViewModel
         if (SiteInstagram) sites.Add("Instagram");
         if (SiteTelegram) sites.Add("Telegram");
         if (SiteTikTok) sites.Add("TikTok");
+
         _orchestrator.EnabledSites = sites;
         _aiOrchestrator.EnabledSites = sites;
 
         var userTargets = new List<TargetEntry>();
-
         // Берем домены из менеджера, ИСКЛЮЧАЯ те, что во вкладке "Исключения"
         foreach (var domain in CustomTargetDomains)
         {
@@ -420,23 +426,125 @@ public partial class MainViewModel
         };
     }
 
+    // ── CancellationTokenSource для отмены сканирования ──
+    private CancellationTokenSource? _scanCts;
+    private int _scanGeneration;
+
+    // ── Статус сканирования (для ScanProgressView) ──
+    [ObservableProperty] private string scanStatusText = "";
+    [ObservableProperty] private string scanTimeRemaining = "";
+    [ObservableProperty] private string scanElapsed = "";
+    private DateTime _scanStartTime;
+    private int _scanTotalCount;
+    private int _scanCurrentCount;
+    private System.Windows.Threading.DispatcherTimer? _scanEtaTimer;
+
+    /// <summary>Признак, что сканирование можно отменить (показываем кнопку "Остановить").</summary>
+    public bool CanCancelScan => IsScanning;
+
+    [RelayCommand]
+    private void CancelScan()
+    {
+        _scanCts?.Cancel();
+        _scanCts?.Dispose();
+        _scanCts = null;
+        _scanEtaTimer?.Stop();
+        _scanEtaTimer = null;
+        // Инвалидируем поколение — старый finally увидит gen != _scanGeneration и не тронет IsScanning
+        _scanGeneration++;
+        IsScanning = false;
+        GlobalOverlayVisible = false;
+        OnPropertyChanged(nameof(CanCancelScan));
+        ScanProgressText = "";
+        ScanProgressValue = 0;
+        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⏹ Сканирование остановлено пользователем.");
+    }
+
+    /// <summary>Обновляет оставшееся и прошедшее время на оверлее.</summary>
+    private void UpdateScanEta()
+    {
+        var elapsed = DateTime.Now - _scanStartTime;
+        ScanElapsed = $"Прошло: {(int)elapsed.TotalMinutes:D2}:{elapsed.Seconds:D2}";
+
+        if (_scanCurrentCount > 0 && _scanTotalCount > _scanCurrentCount)
+        {
+            var avgPerItem = elapsed.TotalSeconds / _scanCurrentCount;
+            var remaining = (int)(avgPerItem * (_scanTotalCount - _scanCurrentCount));
+            ScanTimeRemaining = remaining > 60
+                ? $"Осталось: ~{remaining / 60} мин {remaining % 60} сек"
+                : $"Осталось: ~{remaining} сек";
+        }
+        else
+        {
+            ScanTimeRemaining = "Осталось: —";
+        }
+    }
+
     [RelayCommand]
     private async Task ScanProfiles()
     {
-        _orchestrator.ClearRankedProfiles();
+        // Счётчик поколений: только последний вызов сбрасывает IsScanning в finally
+        var gen = ++_scanGeneration;
 
+        // Отменяем предыдущее сканирование, если было
+        _scanCts?.Cancel();
+        _scanCts?.Dispose();
+        _scanCts = new CancellationTokenSource();
+        var scanCt = _scanCts.Token;
+
+        _orchestrator.ClearRankedProfiles();
         RebuildProfileScores();
         IsScanning = true;
+        GlobalOverlayTitle = "Сканирование стратегий";
+        GlobalOverlayContent = new ScanProgressView { DataContext = this };
+        GlobalOverlayCloseCommand = CancelScanCommand;
+        GlobalOverlayVisible = true;
+        OnPropertyChanged(nameof(CanCancelScan));
+        ScanStatusText = "Подготовка...";
         ScanProgressText = "Сканирование...";
-        UpdateOrchestratorEnabledSites();
+        ScanProgressValue = 0;
+        ScanTimeRemaining = "";
+        ScanElapsed = "";
+        _scanStartTime = DateTime.Now;
+        _scanTotalCount = 0;
+        _scanCurrentCount = 0;
 
+        // Таймер для обновления ETA и прошедшего времени (каждую секунду)
+        _scanEtaTimer?.Stop();
+        _scanEtaTimer = new System.Windows.Threading.DispatcherTimer(
+            System.Windows.Threading.DispatcherPriority.Render)
+        { Interval = TimeSpan.FromSeconds(1) };
+        _scanEtaTimer.Tick += (_, _) => UpdateScanEta();
+        _scanEtaTimer.Start();
+
+        UpdateOrchestratorEnabledSites();
         var wasRunning = IsTrackedProcessRunning();
+
+        // Определяем общее количество стратегий для ETA
+        _scanTotalCount = Profiles.Count;
+
+        var progress = new Progress<(int current, int total)>(report =>
+        {
+            _scanCurrentCount = report.current;
+            _scanTotalCount = report.total;
+            var percent = report.total > 0
+                ? (double)report.current / report.total * 100
+                : 0;
+            ScanProgressValue = percent;
+            ScanStatusText = $"[{report.current}/{report.total}] Тестирую стратегии...";
+            ScanProgressText = $"Сканирование... {report.current}/{report.total}";
+            UpdateScanEta();
+        });
+
         try
         {
             _suppressOrchestratorStop = true;
-            await _orchestrator.ScanAllProfilesAsync();
+            await _orchestrator.ScanAllProfilesAsync(scanCt, progress);
             SortProfileScores();
+            ScanStatusText = "Сканирование завершено";
             ScanProgressText = "Сканирование завершено";
+            ScanProgressValue = 100;
+            ScanTimeRemaining = "✅ Завершено";
             SaveSettings();
 
             var top = ProfileScores.FirstOrDefault(s => s.Score > 0);
@@ -452,17 +560,48 @@ public partial class MainViewModel
             }
             else if (wasRunning && SelectedProfile is not null && !IsTrackedProcessRunning())
                 await EnsureProtectionRunningAsync().ConfigureAwait(false);
+
+            // Задержка перед закрытием оверлея, чтобы пользователь увидел "100% Завершено"
+            await Task.Delay(800, scanCt).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            if (gen == _scanGeneration)
+            {
+                ScanStatusText = "⏹ Сканирование отменено";
+                AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⏹ Сканирование отменено.");
+                await Task.Delay(500).ConfigureAwait(false);
+            }
         }
         catch (Exception ex)
         {
-            ScanProgressText = "Ошибка сканирования";
-            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ❌ Ошибка сканирования: {ex.Message}");
-            Logs.Add($"[Оркестратор] Ошибка сканирования: {ex.Message}");
+            if (gen == _scanGeneration)
+            {
+                ScanStatusText = $"❌ Ошибка: {ex.Message}";
+                ScanProgressText = "Ошибка сканирования";
+                ScanProgressValue = 0;
+                AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ❌ Ошибка сканирования: {ex.Message}");
+                Logs.Add($"[Оркестратор] Ошибка сканирования: {ex.Message}");
+                await Task.Delay(1500).ConfigureAwait(false);
+            }
         }
         finally
         {
-            _suppressOrchestratorStop = false;
-            IsScanning = false;
+            if (gen == _scanGeneration)
+            {
+                _scanEtaTimer?.Stop();
+                _scanEtaTimer = null;
+                _suppressOrchestratorStop = false;
+                IsScanning = false;
+                GlobalOverlayVisible = false;
+                OnPropertyChanged(nameof(CanCancelScan));
+                _ = Task.Delay(1500).ContinueWith(_ =>
+                {
+                    System.Windows.Application.Current?.Dispatcher.BeginInvoke(
+                        new Action(() => ScanProgressValue = 0),
+                        System.Windows.Threading.DispatcherPriority.Background);
+                });
+            }
         }
     }
 
@@ -503,7 +642,6 @@ public partial class MainViewModel
     {
         if (!_orchestrator.IsRunning && !_aiOrchestrator.IsRunning)
             return;
-
         _orchestrator.Stop();
         _aiOrchestrator.Stop();
         OrchestratorRunning = false;
@@ -529,7 +667,6 @@ public partial class MainViewModel
             // Если Zapret работает — перезапускаем его в ручном режиме.
             var wasRunning = IsRunning;
             StopOrchestratorServices();
-
             if (wasRunning)
             {
                 Logs.Add("[Оркестратор] Переход в ручной режим — перезапуск Zapret...");
@@ -560,13 +697,26 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task CheckNow()
     {
-        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] Запуск ручной проверки...");
+        // Счётчик поколений: только последний вызов сбрасывает IsScanning в finally
+        var gen = ++_scanGeneration;
 
+        // Отменяем предыдущую проверку, если была
+        _scanCts?.Cancel();
+        _scanCts?.Dispose();
+        _scanCts = new CancellationTokenSource();
+        var checkCt = _scanCts.Token;
+
+        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] Запуск ручной проверки...");
+        IsScanning = true;
+        OnPropertyChanged(nameof(CanCancelScan));
+        ScanProgressText = "Ручная проверка...";
+        // Синхронизируем список активных сайтов перед проверкой
+        UpdateOrchestratorEnabledSites();
         try
         {
             if (AiEnabled)
             {
-                await _aiOrchestrator.ProbeAllEnabledStrategiesAsync(CancellationToken.None).ConfigureAwait(false);
+                await _aiOrchestrator.ProbeAllEnabledStrategiesAsync(checkCt).ConfigureAwait(false);
                 var d = Application.Current?.Dispatcher;
                 if (d is not null && !d.HasShutdownStarted && !d.HasShutdownFinished)
                 {
@@ -578,12 +728,29 @@ public partial class MainViewModel
                 }
             }
             else
-                await _orchestrator.CheckNowAsync().ConfigureAwait(false);
+                await _orchestrator.CheckNowAsync(checkCt).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            if (gen == _scanGeneration)
+                AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⏹ Проверка отменена.");
         }
         catch (Exception ex)
         {
-            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ❌ Ошибка проверки: {ex.Message}");
-            Logs.Add($"[Оркестратор] Ошибка проверки: {ex.Message}");
+            if (gen == _scanGeneration)
+            {
+                AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ❌ Ошибка проверки: {ex.Message}");
+                Logs.Add($"[Оркестратор] Ошибка проверки: {ex.Message}");
+            }
+        }
+        finally
+        {
+            if (gen == _scanGeneration)
+            {
+                IsScanning = false;
+                ScanProgressText = "";
+                OnPropertyChanged(nameof(CanCancelScan));
+            }
         }
     }
 
@@ -606,14 +773,12 @@ public partial class MainViewModel
     }
 
     // ── Мониторинг процессов для автопереключения пресетов ──
-
     private CancellationTokenSource? _processMonitorCts;
     private string? _presetBeforeGameTrigger; // имя пресета, который был активен до триггера
 
     private void StartProcessMonitor()
     {
         if (_processMonitorCts is not null) return;
-
         _processMonitorCts = new CancellationTokenSource();
         var ct = _processMonitorCts.Token;
         Task.Run(async () => await ProcessMonitorLoopAsync(ct).ConfigureAwait(false), ct);
@@ -641,7 +806,6 @@ public partial class MainViewModel
 
             var dispatcher = Application.Current?.Dispatcher;
             if (dispatcher is null || dispatcher.HasShutdownStarted) break;
-
             await dispatcher.InvokeAsync(() =>
             {
                 try { CheckProcessTriggers(); }
@@ -655,17 +819,20 @@ public partial class MainViewModel
         // Ищем первый пресет с триггером, чей процесс сейчас запущен
         ConfigPreset? matched = null;
         var triggeredPresets = Presets.Where(p => !string.IsNullOrWhiteSpace(p.TriggerProcess)).ToList();
+
         if (triggeredPresets.Count == 0)
         {
             // Нет пресетов с триггером — нечего мониторить
             return;
         }
+
         foreach (var p in triggeredPresets)
         {
             var raw = p.TriggerProcess.Trim();
             var exeName = System.IO.Path.GetFileNameWithoutExtension(raw);
             var procs = System.Diagnostics.Process.GetProcessesByName(exeName);
             AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🔍 Ищу «{exeName}» (из «{raw}») → найдено: {procs.Length}");
+
             if (procs.Length > 0)
             {
                 matched = p;

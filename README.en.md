@@ -38,14 +38,20 @@
 > [!CAUTION]
 > ### ⚠️ Beware: Unauthorized Copies
 > 
-> **The official project is only this repository:**  
-> [`klondike0x/FluxRoute`](https://github.com/klondike0x/FluxRoute)
+> **The only official source of FluxRoute is [this repository](https://github.com/klondike0x/FluxRoute).**
 > 
-> - All legitimate forks **must** retain a prominent attribution notice in the README and link back to this repository.
-> - If you encounter "FluxRoute" or "FluxRoute AI" on GitHub, GitLab, Telegram, or file-sharing sites **without clear attribution** — it is an **unauthorized copy violating GPLv3**.
-> - Such copies may be malicious, unstable, or contain false promises. Do not download them.
+> If you downloaded the program from elsewhere, be cautious. Unauthorized copies may contain:
+> - ❌ Outdated code (missing security fixes)
+> - ❌ Malicious modifications or hidden telemetry
+> - ❌ GPL-3.0 license violations (removed attribution)
+> - ❌ Unstable or untested versions
 > 
-> **Only trust official releases with the green `Verified` badge in this repository.**
+> **How to protect yourself:**
+> - ✅ Always check the source: `github.com/klondike0x/FluxRoute`
+> - ✅ Only download from official releases with the green `Verified` badge
+> - ✅ If you encounter a fork without clear attribution — report it via [GitHub DMCA](https://github.com/contact/report-abuse)
+> 
+> The original FluxRoute **collects no telemetry** and **contains no malicious code**.
 
 **FluxRoute Desktop** is a modern GUI wrapper for managing [`Flowseal/zapret-discord-youtube`](https://github.com/Flowseal/zapret-discord-youtube) profiles with a unique **AI orchestrator** powered by Thompson Sampling and genetic strategy evolution.
 
@@ -344,30 +350,73 @@ FluxRoute/
 
 ---
 
-## 📜 Derivative Projects Attribution
+## ⚖️ Copyright and Terms of Use
 
-> [!IMPORTANT]
-> **When developing projects based on FluxRoute, you must attribute the original author 
-> and upstream projects listed in the Ecosystem section.**
+> [!CAUTION]
+> ### 📜 MUST READ — especially for fork authors
 >
-> This is required by the **GPL-3.0** license (§4 — preserve copyright notices, 
-> §5 — prominent notices of changes).
+> Use of this project means acceptance of the **GPL-3.0** license terms.
+> Violation of the license terms automatically terminates your rights (§8 GPL-3.0).
 
-**Minimum requirements for forks and derivative projects:**
+<details>
+<summary><b>🔍 Expand — GPL-3.0 terms + Section 7 Additional Terms</b></summary>
+<br/>
 
-1. ✅ Add to README: `> **Original project:** [klondike0x/FluxRoute](https://github.com/klondike0x/FluxRoute)`
-2. ✅ Preserve all upstream attributions (Flowseal, bol-van, WinDivert)
-3. ✅ Mark changes with date (e.g., "Modified by [author] on [date]")
-4. ✅ Do not mislead users about authorship
+This software is distributed under the **GPL-3.0** license.
 
-**Example of correct attribution in fork README:**
+- **GUI, AI orchestrator, and automation code (FluxRoute):** © 2026 [klondike0x](https://github.com/klondike0x)
+- **Third‑party components:** [bol-van/zapret](https://github.com/bol-van/zapret), [basil00/WinDivert](https://github.com/basil00/WinDivert), [Flowseal](https://github.com/Flowseal)
+
+### 🔴 Mandatory GPL-3.0 Requirements
+
+Any author of a fork or modification **must comply** with:
+
+#### 1. Author attribution (GPL-3.0 §4, §5a)
+At the **top of the README** you must include the following block:
 
 ```markdown
 > **Original project:** [klondike0x/FluxRoute](https://github.com/klondike0x/FluxRoute)
->
-> This fork is based on FluxRoute Desktop and extends it with additional 
-> AI features. Changes made by [author] [date].
+>  
+> This fork is based on FluxRoute Desktop and extends its functionality.  
+> Changes made by [author] in [year].
 ```
+
+#### 2. Preserve the license (GPL-3.0 §4, §6)
+The fork must be distributed under the same GPL-3.0 license, keeping the full license text.
+
+#### 3. Disclaimer of trademarks (GPL-3.0 §7e)
+The name **"FluxRoute"** and the logo are identifiers of the original project.
+- ✅ Permitted: "Fork of FluxRoute" / "Based on FluxRoute"
+- ❌ Not permitted: "FluxRoute AI" / "FluxRoute Pro" / using the original logo
+
+### 💡 Recommendations (not license requirements)
+
+- **Versioning:** Following SemVer is recommended (do not inflate version numbers)
+- **Privacy:** FluxRoute does not collect user data. Following this principle is encouraged
+- **Transparency:** Do not mislead users about the origin of the code
+
+### ⚖️ Legal consequences of violations
+
+If GPL-3.0 terms are violated:
+- 🔴 **Rights are automatically terminated** (§8 GPL-3.0)
+- 🔴 A **DMCA Takedown** will be filed with GitHub Trust & Safety
+- 🔴 If the code appears on other platforms, an official notice will be sent to their administration
+- 🔴 The repository will be removed
+
+### 🤝 Open to collaboration
+
+I respect the Open Source community and welcome cooperation:
+- ✅ I am open to reviewing quality contributions, with credit given to the contributor
+- ✅ I am always open to discussing ideas and improvements
+- ✅ I can help with GitHub Actions and CI/CD
+
+Pull Requests are welcome!
+
+</details>
+
+For third‑party attributions, see the [NOTICE](NOTICE) file.
+
+**Disclaimer:** The software is provided “as is”. The author is not liable for any consequences arising from its use. By using FluxRoute, you confirm that you do so at your own risk.
 
 ---
 
@@ -412,7 +461,7 @@ This project is distributed under the **GNU General Public License v3.0**.
 
 See the [LICENSE](LICENSE) file for details.
 
-For fork developers: see the [Derivative Projects Attribution](#-derivative-projects-attribution) section.
+**For fork authors:** please read the [Copyright and Terms of Use](#%EF%B8%8F-copyright-and-terms-of-use) section.
 
 FluxRoute Desktop is a **GUI wrapper** for the `Flowseal/zapret-discord-youtube` project.
 All rights to `zapret`, `winws.exe`, and related scripts belong to their respective authors.

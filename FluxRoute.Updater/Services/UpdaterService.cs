@@ -1,6 +1,8 @@
-﻿using System.IO;
+using System.IO;
 using System.IO.Compression;
+using System.Net;
 using System.Net.Http;
+using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
@@ -106,7 +108,7 @@ public sealed partial class UpdaterService : IUpdaterService
     /// </summary>
     public async Task<(UpdateInfo? update, string? error)> CheckForUpdateAsync(string engineDir, CancellationToken ct = default)
     {
-        var (release, error) = await GetLatestReleaseAsync(ct);
+        var (release, error) = await GetLatestReleaseAsync(ct).ConfigureAwait(false);
         if (release is null) return (null, error);
 
         var local = GetLocalVersion(engineDir);
@@ -119,6 +121,7 @@ public sealed partial class UpdaterService : IUpdaterService
     /// Получает информацию о последнем релизе Flowseal.
     /// Версия — из raw.githubusercontent.com/.service/version.txt (без лимита).
     /// ZIP-ссылка — по шаблону (скачивание release asset, тоже без лимита).
+    /// Использует HttpClient с таймаутом 60с и Polly retry (3 попытки).
     /// </summary>
     public async Task<(UpdateInfo? update, string? error)> GetLatestReleaseAsync(CancellationToken ct = default)
     {
@@ -126,7 +129,7 @@ public sealed partial class UpdaterService : IUpdaterService
         {
             // Один GET к статическому файлу — не тратит API rate limit
             using var http = _httpClientFactory.CreateClient(HttpClientNames.Updater);
-            var raw = await http.GetStringAsync(RemoteVersionUrl, ct);
+            var raw = await http.GetStringAsync(RemoteVersionUrl, ct).ConfigureAwait(false);
             var remoteVersion = raw.Trim();
 
             if (string.IsNullOrWhiteSpace(remoteVersion))
@@ -141,21 +144,30 @@ public sealed partial class UpdaterService : IUpdaterService
                 ReleaseNotes = ""
             }, null);
         }
+        catch (HttpRequestException ex) when (ex.InnerException is AuthenticationException)
+        {
+            return (null, "Не удалось установить защищённое соединение с GitHub. Проверьте интернет-соединение или попробуйте позже.");
+        }
+        catch (HttpRequestException ex) when (ex.InnerException is TimeoutException)
+        {
+            return (null, "Сервер GitHub не отвечает. Проверьте интернет-соединение и попробуйте позже.");
+        }
         catch (HttpRequestException ex)
         {
-            return (null, $"Ошибка сети: {ex.Message}");
+            return (null, $"Ошибка сети при проверке обновлений: {ex.Message}");
         }
         catch (TaskCanceledException)
         {
-            return (null, "Таймаут запроса");
+            return (null, "Сервер GitHub не отвечает. Проверьте интернет-соединение и попробуйте позже.");
         }
         catch (Exception ex)
         {
-            return (null, $"Ошибка: {ex.Message}");
+            return (null, $"Ошибка при проверке обновлений: {ex.Message}");
         }
     }
 
-    /// <summary>Скачивает и устанавливает обновление c полным staging → backup → rollback.</summary>
+    /// <summary>Скачивает и устанавливает обновление c полным staging → backup → rollback.
+    /// Для скачивания ZIP использует отдельный HttpClient с таймаутом 120+ секунд.</summary>
     public async Task<bool> InstallUpdateAsync(
         string engineDir,
         UpdateInfo update,
@@ -169,11 +181,17 @@ public sealed partial class UpdaterService : IUpdaterService
 
         try
         {
-            // ── Шаг 1: Скачиваем ──────────────────────────────────────────────────
+            // ── Шаг 1: Скачиваем ZIP с увеличенным таймаутом ──────────────────────
             onProgress($"📥 Источник: {update.DownloadUrl}");
-            onProgress("⬇️ Скачиваем обновление...");
+            onProgress("⬇️ Скачиваем обновление (это может занять несколько минут)...");
 
-            using var http = _httpClientFactory.CreateClient(HttpClientNames.Updater);
+            // Defense-in-depth: ServicePointManager для обратной совместимости,
+            // хотя основной handler (HttpClientHandler) уже имеет явный SslProtocols
+            ServicePointManager.SecurityProtocol =
+                SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
+
+            // Используем отдельный Named HttpClient с таймаутом 300c, retry и явным SSL
+            using var http = _httpClientFactory.CreateClient(HttpClientNames.UpdaterDownload);
             var bytes = await http.GetByteArrayAsync(update.DownloadUrl, ct).ConfigureAwait(false);
 
             // Валидация размера ZIP (защита от HTML-страниц с ошибками)
@@ -245,9 +263,24 @@ public sealed partial class UpdaterService : IUpdaterService
 
             return true;
         }
+        catch (TaskCanceledException)
+        {
+            onProgress("❌ Сервер GitHub не отвечает. Проверьте интернет-соединение и попробуйте позже.");
+            return false;
+        }
         catch (OperationCanceledException)
         {
             onProgress("⚠️ Обновление отменено.");
+            return false;
+        }
+        catch (HttpRequestException ex) when (ex.InnerException is AuthenticationException)
+        {
+            onProgress("❌ Не удалось установить защищённое соединение с GitHub. Проверьте интернет-соединение или попробуйте скачать обновление вручную через браузер.");
+            return false;
+        }
+        catch (HttpRequestException ex) when (ex.InnerException is TimeoutException)
+        {
+            onProgress("❌ Сервер GitHub не отвечает. Проверьте интернет-соединение и попробуйте позже.");
             return false;
         }
         catch (Exception ex)

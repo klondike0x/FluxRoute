@@ -86,7 +86,12 @@ public sealed class AiOrchestratorService : IDisposable
         _probeService = new ProfileProbeService(_connectivity, _switchProfile);
     }
 
-    public void SyncRegistryFromEngine() => SyncBuiltins();
+    public void SyncRegistryFromEngine()
+    {
+        SyncBuiltins();
+        _evolver.GarbageCollectEvolved();
+        _registry.Save();
+    }
 
     public void Start()
     {
@@ -110,7 +115,9 @@ public sealed class AiOrchestratorService : IDisposable
         Notify("ИИ-оркестратор остановлен.");
     }
 
-    public Task CheckNowAsync() => RunCycleAsync(CancellationToken.None);
+    public Task CheckNowAsync(CancellationToken ct = default) => RunCycleAsync(ct);
+    [Obsolete("Use CheckNowAsync(CancellationToken) instead")]
+    public Task CheckNowAsync_Legacy() => RunCycleAsync(CancellationToken.None);
 
     public async Task ProbeAllEnabledStrategiesAsync(CancellationToken ct = default)
     {

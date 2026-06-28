@@ -56,6 +56,9 @@ public partial class CustomDialog : Window
         dialog.CancelBtn.Content = cancelText;
         dialog.ConfirmBtn.Style = (Style)dialog.FindResource(
             isDanger ? "DangerConfirmBtn" : "AccentConfirmBtn");
+        dialog.CancelBtn.Visibility = string.IsNullOrEmpty(cancelText)
+            ? System.Windows.Visibility.Collapsed
+            : System.Windows.Visibility.Visible;
 
         var owner = Application.Current.Windows
             .OfType<Window>()

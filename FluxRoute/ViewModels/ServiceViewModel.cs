@@ -1,7 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluxRoute.Core.Models;
+using FluxRoute.Core.Services;
 using FluxRoute.Views;
+using Serilog;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -9,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Windows;
+using System.Windows.Input;
 using Application = System.Windows.Application;
 
 namespace FluxRoute.ViewModels;
@@ -23,6 +26,7 @@ public sealed partial class ServiceViewModel : ObservableObject
     private readonly Func<string?> _getSelectedProfileDisplayName;
     private readonly Action<string> _addAppLog;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IConnectivityChecker _connectivityChecker;
 
     private static readonly Dictionary<string, string> _protocolToFile = new()
     {
@@ -74,12 +78,14 @@ public sealed partial class ServiceViewModel : ObservableObject
         Func<string> getEngineDir,
         Func<string?> getSelectedProfileDisplayName,
         Action<string> addAppLog,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        IConnectivityChecker connectivityChecker)
     {
         _getEngineDir = getEngineDir;
         _getSelectedProfileDisplayName = getSelectedProfileDisplayName;
         _addAppLog = addAppLog;
         _httpClientFactory = httpClientFactory;
+        _connectivityChecker = connectivityChecker;
     }
 
     private string ProtocolToFileValue(string protocol) =>
@@ -134,12 +140,9 @@ public sealed partial class ServiceViewModel : ObservableObject
             try
             {
                 var lines = File.ReadAllLines(IpSetFilePath).Where(l => !string.IsNullOrWhiteSpace(l)).ToArray();
-                if (lines.Length == 0)
-                    IpSetMode = "any";
-                else if (lines.Length == 1 && lines[0].Trim() == "203.0.113.113/32")
-                    IpSetMode = "none";
-                else
-                    IpSetMode = "loaded";
+                if (lines.Length == 0) IpSetMode = "any";
+                else if (lines.Length == 1 && lines[0].Trim() == "203.0.113.113/32") IpSetMode = "none";
+                else IpSetMode = "loaded";
             }
             catch { IpSetMode = "—"; }
         }
@@ -158,7 +161,6 @@ public sealed partial class ServiceViewModel : ObservableObject
             sc.Start();
             var output = sc.StandardOutput.ReadToEnd();
             sc.WaitForExit(3000);
-
             if (output.Contains("RUNNING", StringComparison.OrdinalIgnoreCase))
                 ZapretServiceStatus = "✅ Запущена";
             else if (output.Contains("STOPPED", StringComparison.OrdinalIgnoreCase))
@@ -181,7 +183,6 @@ public sealed partial class ServiceViewModel : ObservableObject
         {
             var utilsDir = Path.GetDirectoryName(GameFilterFlagPath)!;
             Directory.CreateDirectory(utilsDir);
-
             if (File.Exists(GameFilterFlagPath))
             {
                 File.Delete(GameFilterFlagPath);
@@ -196,7 +197,6 @@ public sealed partial class ServiceViewModel : ObservableObject
                 AddLog($"🎮 Game Filter включён ({GameFilterProtocol})");
                 _addAppLog($"Game Filter включён ({GameFilterProtocol})");
             }
-
             AddLog("⚠️ Перезапустите zapret для применения изменений");
         }
         catch (Exception ex)
@@ -212,7 +212,6 @@ public sealed partial class ServiceViewModel : ObservableObject
         {
             var listsDir = Path.GetDirectoryName(IpSetFilePath)!;
             Directory.CreateDirectory(listsDir);
-
             if (IpSetMode == "loaded")
             {
                 if (File.Exists(IpSetBackupPath)) File.Delete(IpSetBackupPath);
@@ -242,7 +241,6 @@ public sealed partial class ServiceViewModel : ObservableObject
                     return;
                 }
             }
-
             AddLog("⚠️ Перезапустите zapret для применения изменений");
             Refresh();
         }
@@ -260,16 +258,11 @@ public sealed partial class ServiceViewModel : ObservableObject
         try
         {
             var url = "https://raw.githubusercontent.com/Flowseal/zapret-discord-youtube/refs/heads/main/.service/ipset-service.txt";
-
-            // ═══ ИСПРАВЛЕНО: используем HttpClient из DI ═══
             using var http = _httpClientFactory.CreateClient("Service");
             var content = await http.GetStringAsync(url);
-            // ════════════════════════════════════════════════
-
             var listsDir = Path.GetDirectoryName(IpSetFilePath)!;
             Directory.CreateDirectory(listsDir);
             await File.WriteAllTextAsync(IpSetFilePath, content);
-
             Application.Current.Dispatcher.Invoke(() =>
             {
                 AddLog($"✅ IPSet обновлён ({content.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length} записей)");
@@ -297,34 +290,25 @@ public sealed partial class ServiceViewModel : ObservableObject
         try
         {
             var hostsUrl = "https://raw.githubusercontent.com/Flowseal/zapret-discord-youtube/refs/heads/main/.service/hosts";
-
-            // ═══ ИСПРАВЛЕНО: используем HttpClient из DI ═══
             using var http = _httpClientFactory.CreateClient("Service");
             var newContent = await http.GetStringAsync(hostsUrl);
-            // ════════════════════════════════════════════════
-
             var newLines = newContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
             var hostsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts");
-
             if (!File.Exists(hostsPath))
             {
                 Application.Current.Dispatcher.Invoke(() => AddLog("❌ Файл hosts не найден"));
                 return;
             }
-
             var currentHosts = await File.ReadAllTextAsync(hostsPath);
             var firstLine = newLines.FirstOrDefault()?.Trim() ?? "";
             var lastLine = newLines.LastOrDefault()?.Trim() ?? "";
-
             if (currentHosts.Contains(firstLine) && currentHosts.Contains(lastLine))
             {
                 Application.Current.Dispatcher.Invoke(() => AddLog("✅ Hosts файл актуален"));
                 return;
             }
-
             var tempPath = Path.GetTempFileName();
             await File.WriteAllTextAsync(tempPath, currentHosts + "\n" + newContent);
-
             Process.Start(new ProcessStartInfo
             {
                 FileName = "cmd.exe",
@@ -333,7 +317,6 @@ public sealed partial class ServiceViewModel : ObservableObject
                 Verb = "runas",
                 CreateNoWindow = true
             });
-
             Application.Current.Dispatcher.Invoke(() =>
             {
                 AddLog($"✅ Hosts обновлён ({newLines.Length} записей добавлено)");
@@ -362,10 +345,8 @@ public sealed partial class ServiceViewModel : ObservableObject
             AddLog("❌ Сначала выберите стратегию");
             return;
         }
-
         AddLog($"🔧 Установка службы zapret со стратегией «{profileName}»...");
         AddLog("⚠️ Запускаем service.bat — следуйте инструкциям в консоли");
-
         try
         {
             var serviceBat = Path.Combine(EngineDir, "service.bat");
@@ -374,7 +355,6 @@ public sealed partial class ServiceViewModel : ObservableObject
                 AddLog("❌ service.bat не найден в engine/");
                 return;
             }
-
             Process.Start(new ProcessStartInfo
             {
                 FileName = "cmd.exe",
@@ -383,7 +363,6 @@ public sealed partial class ServiceViewModel : ObservableObject
                 UseShellExecute = true,
                 Verb = "runas"
             });
-
             AddLog("✅ service.bat запущен с правами администратора");
         }
         catch (Exception ex)
@@ -397,11 +376,10 @@ public sealed partial class ServiceViewModel : ObservableObject
     {
         if (!CustomDialog.Show(
             "⚠️ Подтверждение остановки",
-            "Вы действительно хотите принудительно остановить службу zapret?\n\nВсе активные соединения через zapret будут прерваны.",
+            "Вы действительно хотите принудительно остановить службу zapret?\nВсе активные соединения через zapret будут прерваны.",
             "Остановить", "Отмена", isDanger: true)) return;
 
         AddLog("⏹ Принудительная остановка службы zapret...");
-
         try
         {
             var commands = "net stop zapret >nul 2>&1 & taskkill /IM winws.exe /F >nul 2>&1 & net stop WinDivert >nul 2>&1 & echo Done & timeout /t 2";
@@ -413,7 +391,6 @@ public sealed partial class ServiceViewModel : ObservableObject
                 Verb = "runas",
                 CreateNoWindow = false
             });
-
             AddLog("✅ Команды остановки отправлены");
             _ = Task.Delay(3000).ContinueWith(_ =>
                 Application.Current.Dispatcher.Invoke(Refresh));
@@ -432,6 +409,20 @@ public sealed partial class ServiceViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Показывает диалог с пояснением работы Auto-Tune.
+    /// </summary>
+    [RelayCommand]
+    private void OpenAutoTuneHelp()
+    {
+        CustomDialog.Show(
+            "Что такое Auto-Tune?",
+            "Auto-Tune автоматически проверяет комбинации IPSet (какие IP-адреса обрабатывать) и GameFilter (какие порты фильтровать).\n\n" +
+            "Программа запускает каждую комбинацию на 4 секунды, проверяет доступность YouTube, Discord и других сайтов, и выбирает лучшую.\n\n" +
+            "Подробнее — в README.",
+            "OK", "");
+    }
+
+    /// <summary>
     /// Применяет состояние GameFilter + IPSet без перезапуска zapret.
     /// Перезапуск запускается вызывающей стороной (MainViewModel.ApplyPreset).
     /// </summary>
@@ -441,7 +432,6 @@ public sealed partial class ServiceViewModel : ObservableObject
         {
             var utilsDir = Path.GetDirectoryName(GameFilterFlagPath)!;
             Directory.CreateDirectory(utilsDir);
-
             if (gameFilterEnabled)
             {
                 File.WriteAllText(GameFilterFlagPath, ProtocolToFileValue(protocol));
@@ -462,17 +452,14 @@ public sealed partial class ServiceViewModel : ObservableObject
         {
             var listsDir = Path.GetDirectoryName(IpSetFilePath)!;
             Directory.CreateDirectory(listsDir);
-
             var currentMode = IpSetMode;
             if (ipSetMode == currentMode)
             {
                 AddLog($"📋 IPSet уже в режиме «{ipSetMode}», пропуск");
                 return;
             }
-
             if (ipSetMode == "any")
             {
-                // Сохраняем бэкап если есть что сохранять
                 if (File.Exists(IpSetFilePath) && currentMode == "loaded")
                 {
                     if (File.Exists(IpSetBackupPath)) File.Delete(IpSetBackupPath);
@@ -513,7 +500,6 @@ public sealed partial class ServiceViewModel : ObservableObject
     //  AUTO-TUNE: подбор лучшей комбинации IPSet × GameFilter
     // ══════════════════════════════════════════════════════════════
 
-    // Коллекция всех протестированных комбинаций
     private readonly ObservableCollection<AutoTuneResult> _autoTuneResults = new();
     public ObservableCollection<AutoTuneResult> AutoTuneResults => _autoTuneResults;
 
@@ -547,225 +533,366 @@ public sealed partial class ServiceViewModel : ObservableObject
     private double _bestTimeMs;
     public double BestTimeMs { get => _bestTimeMs; set => SetProperty(ref _bestTimeMs, value); }
 
-    // Внешние зависимости, инжектируются из MainViewModel
     public Func<IEnumerable<FluxRoute.Core.Models.TargetEntry>>? GetAutoTuneTargets { get; set; }
+
+    // Колбэки для управления глобальным оверлеем (устанавливаются MainViewModel)
+    public Action<string, object, ICommand?>? RequestShowOverlay { get; set; }
+    public Action? RequestHideOverlay { get; set; }
 
     private CancellationTokenSource? _autoTuneCts;
 
+    private volatile bool _isAutoTuneTaskRunning;
+
     [RelayCommand]
-    private void StartAutoTune()
+    private async Task StartAutoTune()
     {
-        if (AutoTuneRunning) return;
-        AutoTuneOverlayVisible = true;
+        Log.Information("Auto-Tune: StartAutoTune вызван");
+
+        // Ждём, пока завершится предыдущая задача
+        while (_isAutoTuneTaskRunning)
+            await Task.Delay(100);
+
+        // Сбрасываем состояния
         AutoTuneResultVisible = false;
         AutoTuneProgress = 0;
         AutoTuneStatusText = "Подготовка...";
+
+        // Показываем глобальный оверлей
+        var content = new Controls.AutoTuneProgressView { DataContext = this };
+        RequestShowOverlay?.Invoke("Подобрать настройки", content, CloseAutoTuneCommand);
+
         _autoTuneCts = new CancellationTokenSource();
+        Log.Information("Auto-Tune: _autoTuneCts создан, запуск RunAutoTuneAsync");
         _ = RunAutoTuneAsync(_autoTuneCts.Token);
     }
 
     [RelayCommand]
     private void CancelAutoTune()
     {
+        Log.Information("Auto-Tune: CancelAutoTune вызван");
         _autoTuneCts?.Cancel();
+        AddLog("⚠️ Auto-Tune отменён пользователем");
+        RequestHideOverlay?.Invoke();
     }
 
     [RelayCommand]
     private void CloseAutoTune()
     {
+        Log.Information("Auto-Tune: CloseAutoTune вызван");
         _autoTuneCts?.Cancel();
-        AutoTuneOverlayVisible = false;
-        AutoTuneResultVisible = false;
+        RequestHideOverlay?.Invoke();
     }
 
     [RelayCommand]
     private void ApplyBestAutoTune()
     {
         ApplyPresetState(!string.IsNullOrEmpty(BestProtocol) && BestProtocol != "Выкл",
-                         BestProtocol == "Выкл" ? "TCP и UDP" : BestProtocol,
-                         BestIpSet);
-        AutoTuneOverlayVisible = false;
-        AutoTuneResultVisible = false;
+            BestProtocol == "Выкл" ? "TCP и UDP" : BestProtocol,
+            BestIpSet);
+        RequestHideOverlay?.Invoke();
         AddLog($"✅ Лучшая конфигурация применена: IPSet={BestIpSet}, GameFilter={BestProtocol}");
+        Log.Information("Auto-Tune: лучшая конфигурация применена: IPSet={IpSet}, GameFilter={Protocol}", BestIpSet, BestProtocol);
     }
 
+    /// <summary>
+    /// Основной цикл Auto-Tune с надёжной обработкой ошибок и таймаутов.
+    /// </summary>
     private async Task RunAutoTuneAsync(CancellationToken ct)
     {
-        await Application.Current.Dispatcher.InvokeAsync(() =>
-        {
-            AutoTuneRunning = true;
-            AutoTuneOverlayVisible = true;
-            AutoTuneResultVisible = false;
-            AutoTuneProgress = 0;
-            AutoTuneStatusText = "Подготовка...";
-            _autoTuneResults.Clear(); // Новый ObservableCollection<AutoTuneResult>
-        });
+        Log.Information("Auto-Tune: RunAutoTuneAsync вход");
+        _isAutoTuneTaskRunning = true;
 
-        var checker = new FluxRoute.Core.Services.ConnectivityChecker();
-
-        // Комбинации: приоритетные первыми (наиболее вероятные рабочие)
-        var combos = new[]
-        {
-        ("loaded", "TCP и UDP"),  // Самый частый рабочий вариант
-        ("loaded", "Выкл"),
-        ("none",   "TCP и UDP"),
-        ("none",   "Выкл"),
-        ("any",    "TCP и UDP"),
-        ("loaded", "TCP"),
-        ("loaded", "UDP"),
-        ("none",   "TCP"),
-        ("none",   "UDP"),
-        ("any",    "TCP"),
-        ("any",    "UDP"),
-        ("any",    "Выкл"),
-    };
-
-        int total = combos.Length;
-
-        // Сохраняем исходные настройки
-        string origIpSet = "";
-        bool origGfEnabled = false;
-        string origProtocol = "";
-        await Application.Current.Dispatcher.InvokeAsync(() =>
-        {
-            origIpSet = IpSetMode;
-            origGfEnabled = GameFilterEnabled;
-            origProtocol = GameFilterProtocol;
-        });
-
-        // Получаем цели один раз — не более 5 штук для скорости
-        var targets = GetAutoTuneTargets?.Invoke()?.Take(5).ToList()
-            ?? FluxRoute.Core.Services.ConnectivityChecker.BuiltinSites
-                .SelectMany(kv => kv.Value).Take(5).ToList();
-
-        var results = new List<AutoTuneResult>();
-        bool foundPerfect = false;
+        bool wasCancelled = false;
+        bool hadResults = false;
+        List<AutoTuneResult> results = new();
 
         try
         {
-            for (int i = 0; i < combos.Length && !foundPerfect; i++)
+            // Шаг 1: Инициализация UI
+            Log.Information("Auto-Tune: инициализация UI через Dispatcher");
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                if (ct.IsCancellationRequested) break;
+                AutoTuneResultVisible = false;
+                AutoTuneProgress = 0;
+                AutoTuneStatusText = "Подготовка...";
+                _autoTuneResults.Clear();
+            });
 
-                var (ip, pr) = combos[i];
-                var comboName = $"{ip} / {(pr == "Выкл" ? "без фильтра" : pr)}";
+            // Шаг 2: Проверка токена и инициализация checker
+            if (ct.IsCancellationRequested)
+            {
+                Log.Warning("Auto-Tune: токен отменён до старта");
+                wasCancelled = true;
+                return;
+            }
 
-                await Application.Current.Dispatcher.InvokeAsync(() =>
+            Log.Information("Auto-Tune: ConnectivityChecker получен из DI, тип={Type}", _connectivityChecker.GetType().Name);
+
+            var combos = new[]
+            {
+                ("loaded", "TCP и UDP"), ("loaded", "Выкл"),
+                ("none",   "TCP и UDP"), ("none",   "Выкл"),
+                ("any",    "TCP и UDP"), ("loaded", "TCP"),
+                ("loaded", "UDP"),       ("none",   "TCP"),
+                ("none",   "UDP"),       ("any",    "TCP"),
+                ("any",    "UDP"),       ("any",    "Выкл"),
+            };
+            int total = combos.Length;
+            Log.Information("Auto-Tune: всего комбинаций={Total}", total);
+
+            // Шаг 3: Сохраняем исходные настройки
+            Log.Information("Auto-Tune: сохранение исходных настроек");
+            string origIpSet = "";
+            bool origGfEnabled = false;
+            string origProtocol = "";
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                origIpSet = IpSetMode;
+                origGfEnabled = GameFilterEnabled;
+                origProtocol = GameFilterProtocol;
+                Log.Information("Auto-Tune: исходные настройки: IPSet={IpSet}, GF={GfEnabled}, Proto={Protocol}",
+                    origIpSet, origGfEnabled, origProtocol);
+            });
+
+            // Шаг 4: Цели для проверки
+            var targets = GetAutoTuneTargets?.Invoke()?.Take(5).ToList()
+                ?? FluxRoute.Core.Services.ConnectivityChecker.BuiltinSites
+                    .SelectMany(kv => kv.Value).Take(5).ToList();
+
+            Log.Information("Auto-Tune: целей для проверки={Count}", targets.Count);
+            foreach (var t in targets)
+                Log.Debug("Auto-Tune: цель {Key} ({Kind}) = {Value}", t.Key, t.Kind, t.Value);
+
+            bool foundPerfect = false;
+
+            try
+            {
+                for (int i = 0; i < combos.Length && !foundPerfect; i++)
                 {
-                    AutoTuneStatusText = $"[{i + 1}/{total}] Тестирую: {comboName}...";
-                    AutoTuneProgress = (double)(i + 1) / total * 100;
-                });
+                    // Шаг 5: Проверка отмены перед каждой комбинацией
+                    if (ct.IsCancellationRequested)
+                    {
+                        Log.Information("Auto-Tune: отмена на комбинации {I}", i + 1);
+                        wasCancelled = true;
+                        break;
+                    }
 
-                // Применяем комбинацию
-                bool gfEnabled = pr != "Выкл";
-                await Application.Current.Dispatcher.InvokeAsync(() =>
-                    ApplyPresetState(gfEnabled, gfEnabled ? pr : "TCP и UDP", ip));
+                    var (ip, pr) = combos[i];
+                    var comboName = $"{ip} / {(pr == "Выкл" ? "без фильтра" : pr)}";
+                    Log.Information("Auto-Tune: комбинация {I}/{Total}: {Combo}", i + 1, total, comboName);
 
-                // Короткая пауза — winws перечитывает файлы
-                try { await Task.Delay(400, ct); }
-                catch (OperationCanceledException) { break; }
-
-                if (ct.IsCancellationRequested) break;
-                if (targets.Count == 0) continue;
-
-                var sw = System.Diagnostics.Stopwatch.StartNew();
-
-                // Таймаут — 4 секунды на комбинацию
-                using var checkCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                checkCts.CancelAfter(TimeSpan.FromSeconds(4));
-
-                IReadOnlyList<FluxRoute.Core.Models.CheckResult> checkResults;
-                try
-                {
-                    var (_, r) = await checker.CheckAllAsync(targets, checkCts.Token).ConfigureAwait(false);
-                    checkResults = r;
-                }
-                catch (OperationCanceledException)
-                {
-                    if (ct.IsCancellationRequested) break;
-                    checkResults = Array.Empty<FluxRoute.Core.Models.CheckResult>();
-                }
-
-                sw.Stop();
-
-                int successCount = checkResults.Count(r => r.Ok);
-                var latencies = checkResults
-                    .Where(r => r.Ok && r.ElapsedMs.HasValue)
-                    .Select(r => r.ElapsedMs!.Value)
-                    .ToList();
-
-                var result = new AutoTuneResult
-                {
-                    IpSetMode = ip,
-                    GameFilterProtocol = pr,
-                    SuccessCount = successCount,
-                    TotalCount = checkResults.Count,
-                    AvgLatencyMs = latencies.Count > 0 ? latencies.Average() : 0,
-                    MinLatencyMs = latencies.Count > 0 ? latencies.Min() : 0,
-                    MaxLatencyMs = latencies.Count > 0 ? latencies.Max() : 0,
-                    TestDuration = sw.Elapsed
-                };
-
-                results.Add(result);
-
-                // Обновляем UI с результатами теста
-                await Application.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    _autoTuneResults.Add(result);
-                    AutoTuneStatusText = result.IsPerfect
-                        ? $"✅ {comboName}: все цели пройдены!"
-                        : $"→ {comboName}: {successCount}/{checkResults.Count} ({result.SuccessRate:0.#}%)";
-                });
-
-                // Ранний выход: все цели прошли + хорошая задержка
-                if (result.IsPerfect && result.AvgLatencyMs < 1000)
-                {
-                    foundPerfect = true;
+                    // Шаг 6: Обновление UI — статус проверки
                     await Application.Current.Dispatcher.InvokeAsync(() =>
-                        AutoTuneStatusText = $"🎯 Найдена идеальная комбинация: {comboName}");
+                    {
+                        AutoTuneStatusText = $"Проверка комбинации {i + 1} из {total}: IPSet={ip}, GameFilter={pr}...";
+                        AutoTuneProgress = (double)(i + 1) / total * 100;
+                    });
+
+                    // Шаг 7: Применение настроек комбинации (с защитой от исключений)
+                    bool gfEnabled = pr != "Выкл";
+                    try
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                            ApplyPresetState(gfEnabled, gfEnabled ? pr : "TCP и UDP", ip));
+                        Log.Debug("Auto-Tune: ApplyPresetState выполнен: GF={Gf}, Proto={Proto}, IPSet={IpSet}",
+                            gfEnabled, gfEnabled ? pr : "TCP и UDP", ip);
+                    }
+                    catch (Exception ex) when (!ct.IsCancellationRequested)
+                    {
+                        Log.Error(ex, "Auto-Tune: ApplyPresetState упал на комбинации {Combo}", comboName);
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                            AddLog($"⚠️ Ошибка применения настроек для {comboName}: {ex.Message}"));
+                        continue; // Пробуем следующую комбинацию
+                    }
+
+                    // Шаг 8: Пауза для применения настроек (с учётом отмены)
+                    try { await Task.Delay(400, ct); }
+                    catch (OperationCanceledException)
+                    {
+                        Log.Information("Auto-Tune: отмена во время паузы на комбинации {I}", i + 1);
+                        wasCancelled = true; break;
+                    }
+
+                    if (ct.IsCancellationRequested) { wasCancelled = true; break; }
+                    if (targets.Count == 0)
+                    {
+                        Log.Warning("Auto-Tune: цели отсутствуют, пропуск комбинации");
+                        continue;
+                    }
+
+                    // Шаг 9: Запуск проверки с жёстким таймаутом
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+
+                    using var checkCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+                    // Показываем промежуточный статус — что проверка идёт
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                        AutoTuneStatusText = $"Проверка комбинации {i + 1} из {total}: IPSet={ip}, GameFilter={pr} (идет тест {targets.Count} целей, до 5 сек)...");
+
+                    checkCts.CancelAfter(TimeSpan.FromSeconds(5));
+
+                    IReadOnlyList<FluxRoute.Core.Models.CheckResult> checkResults;
+                    try
+                    {
+                        Log.Debug("Auto-Tune: CheckAllAsync запуск для {Combo}, целей={Count}", comboName, targets.Count);
+
+                        // Жёсткий таймаут через Task.WhenAny — гарантирует, что цикл не зависнет
+                        var checkTask = _connectivityChecker.CheckAllAsync(targets, checkCts.Token);
+                        var hardTimeoutTask = Task.Delay(TimeSpan.FromSeconds(6), ct);
+                        var completed = await Task.WhenAny(checkTask, hardTimeoutTask).ConfigureAwait(false);
+
+                        if (completed == hardTimeoutTask)
+                        {
+                            Log.Warning("Auto-Tune: жёсткий таймаут 6с для {Combo}", comboName);
+                            await Application.Current.Dispatcher.InvokeAsync(() =>
+                                AddLog($"⚠️ Таймаут проверки для {comboName} (6 сек)"));
+                            checkResults = Array.Empty<FluxRoute.Core.Models.CheckResult>();
+                        }
+                        else
+                        {
+                            var (_, r) = await checkTask.ConfigureAwait(false);
+                            checkResults = r;
+                            Log.Information("Auto-Tune: CheckAllAsync завершён для {Combo}: {OkCount}/{TotalCount}",
+                                comboName, checkResults.Count(rr => rr.Ok), checkResults.Count);
+                        }
+                    }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                    {
+                        Log.Information("Auto-Tune: отмена во время проверки {Combo}", comboName);
+                        wasCancelled = true; break;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        Log.Warning("Auto-Tune: таймаут или отмена CheckAllAsync для {Combo}", comboName);
+                        checkResults = Array.Empty<FluxRoute.Core.Models.CheckResult>();
+                    }
+                    catch (HttpRequestException ex)
+                    {
+                        Log.Error(ex, "Auto-Tune: HTTP-ошибка при проверке {Combo}", comboName);
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                            AddLog($"⚠️ HTTP-ошибка для {comboName}: {ex.Message}"));
+                        checkResults = Array.Empty<FluxRoute.Core.Models.CheckResult>();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "Auto-Tune: неожиданная ошибка при проверке {Combo}", comboName);
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                            AddLog($"❌ Ошибка проверки {comboName}: {ex.Message}"));
+                        checkResults = Array.Empty<FluxRoute.Core.Models.CheckResult>();
+                    }
+                    sw.Stop();
+
+                    int successCount = checkResults.Count(r => r.Ok);
+                    var latencies = checkResults
+                        .Where(r => r.Ok && r.ElapsedMs.HasValue)
+                        .Select(r => r.ElapsedMs!.Value)
+                        .ToList();
+
+                    var result = new AutoTuneResult
+                    {
+                        IpSetMode = ip,
+                        GameFilterProtocol = pr,
+                        SuccessCount = successCount,
+                        TotalCount = checkResults.Count,
+                        AvgLatencyMs = latencies.Count > 0 ? latencies.Average() : 0,
+                        MinLatencyMs = latencies.Count > 0 ? latencies.Min() : 0,
+                        MaxLatencyMs = latencies.Count > 0 ? latencies.Max() : 0,
+                        TestDuration = sw.Elapsed
+                    };
+                    results.Add(result);
+                    Log.Information("Auto-Tune: результат {Combo}: {Success}/{Total} ({Rate:0.#}%), задержка={Latency:0}мс, время={Elapsed}s",
+                        comboName, successCount, checkResults.Count, result.SuccessRate, result.AvgLatencyMs, sw.Elapsed.TotalSeconds);
+
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        _autoTuneResults.Add(result);
+                        AutoTuneStatusText = $"Результат: {successCount}/{checkResults.Count} ({result.SuccessRate:0.#}%), средняя задержка {result.AvgLatencyMs:0} мс";
+                    });
+
+                    if (result.IsPerfect && result.AvgLatencyMs < 1000)
+                    {
+                        foundPerfect = true;
+                        Log.Information("Auto-Tune: найдена идеальная комбинация: {Combo}", comboName);
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                            AutoTuneStatusText = $"🎯 Найдена идеальная комбинация: {comboName}");
+                    }
                 }
             }
-        }
-        catch (OperationCanceledException)
-        {
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-                AutoTuneStatusText = "⚠️ Отменено пользователем");
+            catch (OperationCanceledException)
+            {
+                Log.Information("Auto-Tune: отменено пользователем во время цикла");
+                wasCancelled = true;
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                    AutoTuneStatusText = "⚠️ Отменено пользователем");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Auto-Tune: неожиданная ошибка в цикле проверки");
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    AutoTuneStatusText = "❌ Ошибка при выполнении Auto-Tune";
+                    AddLog($"❌ Критическая ошибка Auto-Tune: {ex.Message}");
+                });
+                // Продолжаем — finally закроет оверлей
+            }
+
+            // Шаг 10: Восстановление настроек (если не было отмены)
+            if (!wasCancelled && !ct.IsCancellationRequested)
+            {
+                Log.Information("Auto-Tune: восстановление исходных настроек");
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    try
+                    {
+                        ApplyPresetState(origGfEnabled, origProtocol, origIpSet);
+                        Log.Information("Auto-Tune: настройки восстановлены: GF={Gf}, Proto={Proto}, IPSet={IpSet}",
+                            origGfEnabled, origProtocol, origIpSet);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "Auto-Tune: ошибка восстановления настроек");
+                        AddLog($"⚠️ Ошибка восстановления настроек: {ex.Message}");
+                    }
+                    AutoTuneProgress = 100;
+                });
+
+                if (results.Count > 0)
+                    hadResults = true;
+            }
+
+            // Шаг 11: Показ результатов
+            if (!wasCancelled && !ct.IsCancellationRequested && hadResults)
+            {
+                var best = results.OrderByDescending(r => r.CompositeScore).First();
+                Log.Information("Auto-Tune: лучшая комбинация: IPSet={IpSet}, GF={Proto}, Score={Score}",
+                    best.IpSetMode, best.GameFilterProtocol, best.CompositeScore);
+
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    AutoTuneResults.Clear();
+                    foreach (var r in results.OrderByDescending(r => r.CompositeScore))
+                        AutoTuneResults.Add(r);
+
+                    BestIpSet = best.IpSetMode;
+                    BestProtocol = best.GameFilterProtocol;
+                    BestSuccessCount = best.SuccessCount;
+                    BestTotalCount = best.TotalCount;
+                    BestTimeMs = best.AvgLatencyMs;
+
+                    AutoTuneStatusText = best.IsPerfect
+                        ? "✅ Найдена идеальная комбинация!"
+                        : "🏆 Лучшая комбинация найдена";
+                    AutoTuneResultVisible = true;
+                });
+            }
         }
         finally
         {
-            // Восстанавливаем исходные настройки
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                ApplyPresetState(origGfEnabled, origProtocol, origIpSet);
-                AutoTuneRunning = false;
-                AutoTuneProgress = 100;
-            });
-        }
-
-        // Показываем результаты
-        if (!ct.IsCancellationRequested && results.Count > 0)
-        {
-            var best = results.OrderByDescending(r => r.CompositeScore).First();
-
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                // Сортируем результаты по композитному скорингу
-                AutoTuneResults.Clear();
-                foreach (var r in results.OrderByDescending(r => r.CompositeScore))
-                    AutoTuneResults.Add(r);
-
-                BestIpSet = best.IpSetMode;
-                BestProtocol = best.GameFilterProtocol;
-                BestSuccessCount = best.SuccessCount;
-                BestTotalCount = best.TotalCount;
-                BestTimeMs = best.AvgLatencyMs;
-
-                AutoTuneStatusText = best.IsPerfect
-                    ? "✅ Найдена идеальная комбинация!"
-                    : "🏆 Лучшая комбинация найдена";
-
-                AutoTuneResultVisible = true;
-            });
+            Log.Information("Auto-Tune: завершение, _isAutoTuneTaskRunning=false");
+            _isAutoTuneTaskRunning = false;
+            // Не закрываем оверлей, если есть результаты для показа
+            if (!hadResults)
+                RequestHideOverlay?.Invoke();
         }
     }
 }
