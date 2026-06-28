@@ -30,39 +30,6 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <!-- Невидимые грипы для ресайза (8 шт: 4 угла + 4 ребра).
-                 Background="Transparent" ОБЯЗАТЕЛЕН — без него Border не получает MouseDown.
-                 Должны быть ПОСЛЕ RowDefinitions, т.к. XAML не смешивает
-                 property elements (RowDefinitions) с content elements. -->
-            <Border Grid.RowSpan="2" Background="Transparent"
-                    x:Name="GripTop" Height="6" VerticalAlignment="Top"
-                    Cursor="SizeNS" MouseDown="ResizeGrip_MouseDown" Tag="Top" />
-            <Border Grid.RowSpan="2" Background="Transparent"
-                    x:Name="GripBottom" Height="6" VerticalAlignment="Bottom"
-                    Cursor="SizeNS" MouseDown="ResizeGrip_MouseDown" Tag="Bottom" />
-            <Border Grid.RowSpan="2" Background="Transparent"
-                    x:Name="GripLeft" Width="6" HorizontalAlignment="Left"
-                    Cursor="SizeWE" MouseDown="ResizeGrip_MouseDown" Tag="Left" />
-            <Border Grid.RowSpan="2" Background="Transparent"
-                    x:Name="GripRight" Width="6" HorizontalAlignment="Right"
-                    Cursor="SizeWE" MouseDown="ResizeGrip_MouseDown" Tag="Right" />
-            <Border Grid.RowSpan="2" Background="Transparent"
-                    x:Name="GripTopLeft" Width="12" Height="12"
-                    HorizontalAlignment="Left" VerticalAlignment="Top" Cursor="SizeNWSE"
-                    MouseDown="ResizeGrip_MouseDown" Tag="TopLeft" />
-            <Border Grid.RowSpan="2" Background="Transparent"
-                    x:Name="GripTopRight" Width="12" Height="12"
-                    HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="SizeNESW"
-                    MouseDown="ResizeGrip_MouseDown" Tag="TopRight" />
-            <Border Grid.RowSpan="2" Background="Transparent"
-                    x:Name="GripBottomLeft" Width="12" Height="12"
-                    HorizontalAlignment="Left" VerticalAlignment="Bottom" Cursor="SizeNESW"
-                    MouseDown="ResizeGrip_MouseDown" Tag="BottomLeft" />
-            <Border Grid.RowSpan="2" Background="Transparent"
-                    x:Name="GripBottomRight" Width="12" Height="12"
-                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Cursor="SizeNWSE"
-                    MouseDown="ResizeGrip_MouseDown" Tag="BottomRight" />
-
             <!-- ═══════════ TITLE BAR ═══════════ -->
             <shell:TitleBar Grid.Row="0"
                 MinimizeRequested="TitleBar_MinimizeRequested"
@@ -307,6 +274,38 @@
                     </Grid>
                 </Border>
             </Grid>
+
+            <!-- Невидимые грипы для ресайза — ПОВЕРХ контента, под оверлеем.
+                 Background="Transparent" обязателен для hit-testing.
+                 Размещены после TitleBar/Body, чтобы получать mouse events. -->
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripTop" Height="6" VerticalAlignment="Top"
+                    Cursor="SizeNS" MouseDown="ResizeGrip_MouseDown" Tag="Top" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripBottom" Height="6" VerticalAlignment="Bottom"
+                    Cursor="SizeNS" MouseDown="ResizeGrip_MouseDown" Tag="Bottom" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripLeft" Width="6" HorizontalAlignment="Left"
+                    Cursor="SizeWE" MouseDown="ResizeGrip_MouseDown" Tag="Left" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripRight" Width="6" HorizontalAlignment="Right"
+                    Cursor="SizeWE" MouseDown="ResizeGrip_MouseDown" Tag="Right" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripTopLeft" Width="12" Height="12"
+                    HorizontalAlignment="Left" VerticalAlignment="Top" Cursor="SizeNWSE"
+                    MouseDown="ResizeGrip_MouseDown" Tag="TopLeft" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripTopRight" Width="12" Height="12"
+                    HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="SizeNESW"
+                    MouseDown="ResizeGrip_MouseDown" Tag="TopRight" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripBottomLeft" Width="12" Height="12"
+                    HorizontalAlignment="Left" VerticalAlignment="Bottom" Cursor="SizeNESW"
+                    MouseDown="ResizeGrip_MouseDown" Tag="BottomLeft" />
+            <Border Grid.RowSpan="2" Background="Transparent"
+                    x:Name="GripBottomRight" Width="12" Height="12"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Cursor="SizeNWSE"
+                    MouseDown="ResizeGrip_MouseDown" Tag="BottomRight" />
 
             <!-- ═══════════ ГЛОБАЛЬНЫЙ МОДАЛЬНЫЙ ОВЕРЛЕЙ ═══════════ -->
             <Grid Grid.RowSpan="2" IsHitTestVisible="{Binding GlobalOverlayVisible}">

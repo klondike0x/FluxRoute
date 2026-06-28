@@ -1,4 +1,4 @@
-﻿<Application x:Class="FluxRoute.App"
+<Application x:Class="FluxRoute.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:FluxRoute"
@@ -18,6 +18,7 @@
             <BooleanToVisibilityConverter x:Key="BoolToVis" />
             <conv:InverseBooleanConverter x:Key="InvBool" />
             <conv:BoolToInstalledConverter x:Key="BoolToInstalled" />
+            <conv:NavIndicatorYConverter x:Key="NavIndicatorY" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

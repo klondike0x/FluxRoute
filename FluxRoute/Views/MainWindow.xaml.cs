@@ -23,6 +23,9 @@ public partial class MainWindow : Window
     private readonly ILogger<MainWindow>? _logger;
     private bool _isClosingConfirmed;
 
+    // Таймер для троттлинга (защита от дёрганий таблетки при частом ресайзе окна)
+    private readonly System.Windows.Threading.DispatcherTimer _navIndicatorResizeTimer;
+
     // Parameterless constructor is intentionally kept for the WPF designer
     // and as a safe fallback if the window is ever instantiated outside DI.
     public MainWindow()
@@ -87,11 +90,20 @@ public partial class MainWindow : Window
         // Auto-scroll service log
         _vm.ServiceLogs.CollectionChanged += ServiceLogs_CollectionChanged;
 
-        // Animate sliding indicator on tab change
         _vm.PropertyChanged += OnViewModelPropertyChanged;
 
         // Unified logs tab
         _vm.UnifiedLogEntries.CollectionChanged += UnifiedLogEntries_CollectionChanged;
+
+        // Инициализация таймера для троттлинга (задержка 0 мс)
+        _navIndicatorResizeTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(0)
+        };
+        _navIndicatorResizeTimer.Tick += OnNavIndicatorResizeTimerTick;
+
+        // Обновление таблетки при ресайзе
+        SizeChanged += OnWindowSizeChanged;
 
         // Если запуск с --minimized (автозапуск), сворачиваем в трей
         var args = Environment.GetCommandLineArgs();
@@ -207,7 +219,7 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(MainViewModel.SelectedTabIndex))
         {
-            AnimateNavIndicator(_vm.SelectedTabIndex);
+            SidebarControl.AnimateNavIndicator(_vm.SelectedTabIndex);
         }
 
         if (e.PropertyName == nameof(MainViewModel.IsSidebarExpanded))
@@ -219,7 +231,7 @@ public partial class MainWindow : Window
             {
                 // Burst: кольца расходятся наружу при включении
                 PlayWave(outward: true, strength: 0.65, duration: 1400);
-                // После burst-волны — запускаем idle-пульс с задержкой
+                // AFTER burst-волны — запускаем idle-пульс с задержкой
                 var startDelay = new System.Windows.Threading.DispatcherTimer
                 {
                     Interval = TimeSpan.FromMilliseconds(1500)
@@ -237,8 +249,28 @@ public partial class MainWindow : Window
         }
     }
 
-    private void AnimateNavIndicator(int tabIndex)
-        => SidebarControl.AnimateNavIndicator(tabIndex);
+    private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        // Сбрасываем таймер при каждом изменении размера. 
+        // Анимация сработает только когда ресайз прекратится на 80 мс.
+        _navIndicatorResizeTimer.Stop();
+        _navIndicatorResizeTimer.Start();
+    }
+
+    private void OnNavIndicatorResizeTimerTick(object? sender, EventArgs e)
+    {
+        // Останавливаем таймер, чтобы он не срабатывал повторно
+        _navIndicatorResizeTimer.Stop();
+
+        var tab = _vm.SelectedTabIndex;
+
+        // Откладываем вызов до момента, когда WPF полностью завершит 
+        // пересчёт layout (DispatcherPriority.Render).
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() =>
+        {
+            SidebarControl?.AnimateNavIndicator(tab);
+        }));
+    }
 
     private void AnimateSidebar(bool expanded)
     {
@@ -332,24 +364,24 @@ public partial class MainWindow : Window
     private const int WM_NCLBUTTONDOWN = 0x00A1;
 
     // HT* (hit-test) константы — соответствуют областям окна
-    private const int HTTOP        = 12;
-    private const int HTBOTTOM     = 15;
-    private const int HTLEFT       = 10;
-    private const int HTRIGHT      = 11;
-    private const int HTTOPLEFT    = 13;
-    private const int HTTOPRIGHT   = 14;
+    private const int HTTOP = 12;
+    private const int HTBOTTOM = 15;
+    private const int HTLEFT = 10;
+    private const int HTRIGHT = 11;
+    private const int HTTOPLEFT = 13;
+    private const int HTTOPRIGHT = 14;
     private const int HTBOTTOMLEFT = 16;
     private const int HTBOTTOMRIGHT = 17;
 
     private static readonly Dictionary<string, int> ResizeEdges = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Top"]         = HTTOP,
-        ["Bottom"]      = HTBOTTOM,
-        ["Left"]        = HTLEFT,
-        ["Right"]       = HTRIGHT,
-        ["TopLeft"]     = HTTOPLEFT,
-        ["TopRight"]    = HTTOPRIGHT,
-        ["BottomLeft"]  = HTBOTTOMLEFT,
+        ["Top"] = HTTOP,
+        ["Bottom"] = HTBOTTOM,
+        ["Left"] = HTLEFT,
+        ["Right"] = HTRIGHT,
+        ["TopLeft"] = HTTOPLEFT,
+        ["TopRight"] = HTTOPRIGHT,
+        ["BottomLeft"] = HTBOTTOMLEFT,
         ["BottomRight"] = HTBOTTOMRIGHT,
     };
 
