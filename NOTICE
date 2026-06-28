@@ -18,21 +18,23 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 Third-Party Components:
 ==================================================
 
-zapret (https://github.com/bol-van/zapret)
-Copyright (C) bol-van
-Licensed under GNU GPL v3.0
+1. WinDivert (https://github.com/basil00/WinDivert)
+   Copyright (C) basil00
+   Dual-licensed under GNU Lesser General Public License v3.0 OR GNU General Public License v2.0
+   (https://github.com/basil00/WinDivert#license)
 
-WinDivert (https://github.com/basil00/WinDivert)
-Copyright (C) basil00
-Licensed under GNU Lesser General Public License v3.0
+2. zapret (https://github.com/bol-van/zapret)
+   Copyright (C) bol-van
+   Licensed under MIT License
+   (https://github.com/bol-van/zapret/blob/master/docs/LICENSE.txt)
 
-zapret-discord-youtube (https://github.com/Flowseal/zapret-discord-youtube)
-Copyright (C) Flowseal
-Licensed under GNU GPL v3.0
+3. zapret-discord-youtube (https://github.com/Flowseal/zapret-discord-youtube)
+   Copyright (C) Flowseal
+   Licensed under MIT License
 
-tg-ws-proxy (https://github.com/Flowseal/tg-ws-proxy)
-Copyright (C) Flowseal
-Licensed under GNU GPL v3.0
+4. tg-ws-proxy (https://github.com/Flowseal/tg-ws-proxy)
+   Copyright (C) Flowseal
+   Licensed under MIT License
 
 ==================================================
 GitHub Actions Workflows:
