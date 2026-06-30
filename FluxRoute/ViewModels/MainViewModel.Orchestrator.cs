@@ -116,6 +116,13 @@ public partial class MainViewModel
                     SaveSettings();
                 }
 
+                // ═══ v1.6.0: Toast-уведомления при создании новых стратегий ═══
+                if (e.Message.Contains("ИИ: эволюция завершена", StringComparison.OrdinalIgnoreCase) ||
+                    e.Message.Contains("ИИ: проверка новой стратегии", StringComparison.OrdinalIgnoreCase))
+                {
+                    _trayIcon?.ShowBalloon("FluxRoute — ИИ", e.Message.Replace($"[{DateTime.Now:HH:mm:ss}] ", ""));
+                }
+
                 if (e.IsSwitched && e.NewProfile is not null)
                 {
                     var profile = Profiles.FirstOrDefault(p => p.DisplayName == e.NewProfile);

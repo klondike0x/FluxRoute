@@ -426,6 +426,33 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool minimizeToTray = true;
     partial void OnMinimizeToTrayChanged(bool value) => SaveSettings();
 
+    // ═══ v1.6.0: Автозапуск через Планировщик задач ═══
+    [ObservableProperty] private bool taskSchedulerAutoStart;
+    partial void OnTaskSchedulerAutoStartChanged(bool value)
+    {
+        var exePath = Environment.ProcessPath
+            ?? System.Reflection.Assembly.GetEntryAssembly()?.Location ?? "";
+        if (!string.IsNullOrEmpty(exePath))
+        {
+            if (value)
+                _taskScheduler.CreateTask(exePath);
+            else
+                _taskScheduler.RemoveTask();
+        }
+        SaveSettings();
+    }
+
+    // ═══ v1.6.0: Автоматический запуск последнего профиля ═══
+    [ObservableProperty] private bool autoLaunchProfile;
+    partial void OnAutoLaunchProfileChanged(bool value) => SaveSettings();
+
+    // ═══ v1.6.0: Синхронизация доменов с UI ═══
+    [ObservableProperty] private bool syncDomainsWithUI = true;
+    partial void OnSyncDomainsWithUIChanged(bool value) => SaveSettings();
+
+    // ═══ v1.6.0: Поле ввода для подбора стратегии по домену/IP ═══
+    [ObservableProperty] private string findBestStrategyTarget = "";
+
     // ── Обновления (wrappers → UpdatesViewModel) ──
     public string UpdateStatus => Updates.UpdateStatus;
     public string CurrentEngineVersion => Updates.CurrentEngineVersion;
@@ -434,6 +461,9 @@ public partial class MainViewModel : ObservableObject
     public string EngineDownloadStatus => Updates.EngineDownloadStatus;
 
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ITaskSchedulerService _taskScheduler;
+    private readonly TrayIconService? _trayIcon;
+    private readonly StrategyEvolver _evolver;
 
     public MainViewModel(
         ISettingsService settingsService,
@@ -447,7 +477,9 @@ public partial class MainViewModel : ObservableObject
         BanditSelector aiBandit,
         StrategyEvolver aiEvolver,
         BatMaterializer aiMaterializer,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        ITaskSchedulerService? taskScheduler = null,
+        TrayIconService? trayIcon = null)
     {
         _settingsService = settingsService;
         _updater = updaterService;
@@ -457,6 +489,9 @@ public partial class MainViewModel : ObservableObject
         _aiHistoryStore = aiHistoryStore;
         _aiFingerprints = aiFingerprints;
         _httpClientFactory = httpClientFactory;
+        _taskScheduler = taskScheduler ?? new TaskSchedulerService();
+        _trayIcon = trayIcon;
+        _evolver = aiEvolver;
 
         // ── Инициализация feature ViewModels ──
         Diagnostics = new DiagnosticsViewModel(
@@ -624,6 +659,24 @@ public partial class MainViewModel : ObservableObject
         RebuildAiStrategyRows();
 
         InitializeTgProxyOnStartup();
+
+        // ═══ v1.6.0: Автозапуск последнего профиля через 2.5 сек ═══
+        if (AutoLaunchProfile && SelectedProfile is not null)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(2500);
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    if (SelectedProfile is not null && !IsRunning)
+                    {
+                        Logs.Add($"🚀 Автозапуск профиля: {SelectedProfile.DisplayName}");
+                        AddToRecentLogs($"🚀 Автозапуск профиля: {SelectedProfile.DisplayName}");
+                        Start();
+                    }
+                });
+            });
+        }
     }
 
     // ── Настройки ──
@@ -667,6 +720,11 @@ public partial class MainViewModel : ObservableObject
         MinimizeToTray = settings.MinimizeToTray;
         GameFilterProtocol = settings.GameFilterProtocol;
         ShowProfileSwitchWarning = settings.ShowProfileSwitchWarning;
+
+        // ═══ v1.6.0 ═══
+        TaskSchedulerAutoStart = settings.TaskSchedulerAutoStart;
+        AutoLaunchProfile = settings.AutoLaunchProfile;
+        SyncDomainsWithUI = settings.SyncDomainsWithUI;
 
         settings.Ai ??= new AiSettings();
         AiEnabled = settings.Ai.Enabled;
@@ -721,6 +779,9 @@ public partial class MainViewModel : ObservableObject
             MinimizeToTray = MinimizeToTray,
             GameFilterProtocol = GameFilterProtocol,
             ShowProfileSwitchWarning = ShowProfileSwitchWarning,
+            TaskSchedulerAutoStart = TaskSchedulerAutoStart,
+            AutoLaunchProfile = AutoLaunchProfile,
+            SyncDomainsWithUI = SyncDomainsWithUI,
             Ai = BuildAiSettingsSnapshot(),
             ProfileRatings = ProfileScores.Select(s => new ProfileRatingEntry
             {
@@ -796,9 +857,12 @@ public partial class MainViewModel : ObservableObject
     }
 
     // ── Синхронизация пользовательских доменов с движком (winws.exe) ──
-    // ── Синхронизация пользовательских доменов с движком (winws.exe) ──
     private void SyncCustomHostlist()
     {
+        // v1.6.0: Пропускаем синхронизацию, если пользователь её отключил
+        if (!SyncDomainsWithUI)
+            return;
+
         try
         {
             var listsDir = Path.Combine(EngineDir, "lists");

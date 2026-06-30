@@ -57,6 +57,15 @@ public sealed class AppSettings
     // Предупреждение при смене стратегии
     public bool ShowProfileSwitchWarning { get; set; } = true;
 
+    // ═══ v1.6.0: Автозапуск через планировщик ═══
+    public bool TaskSchedulerAutoStart { get; set; } = false;
+
+    // ═══ v1.6.0: Автозапуск последнего профиля ═══
+    public bool AutoLaunchProfile { get; set; } = false;
+
+    // ═══ v1.6.0: Синхронизация доменов с UI ═══
+    public bool SyncDomainsWithUI { get; set; } = true;
+
     // TG WS Proxy
     public TgProxySettings TgProxy { get; set; } = new();
 

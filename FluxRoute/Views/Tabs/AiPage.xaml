@@ -50,6 +50,37 @@
             </StackPanel>
             <Rectangle Style="{StaticResource Sep}" />
 
+            <!-- ═══ v1.6.0: Подбор стратегии по домену/IP ═══ -->
+            <TextBlock Style="{StaticResource SecH}" Text="ПОДБОР СТРАТЕГИИ" Margin="0,0,0,8" />
+            <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
+                TextWrapping="Wrap" Margin="0,0,0,8"
+                Text="Введите домен или IP-адрес, чтобы найти лучшую стратегию без полного сканирования." />
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" Height="30" VerticalContentAlignment="Center"
+                    Text="{Binding FindBestStrategyTarget, UpdateSourceTrigger=PropertyChanged}"
+                    Background="#161B22" Foreground="#C9D1D9" BorderBrush="#30363D"
+                    BorderThickness="1" Padding="8,0" FontFamily="Consolas" FontSize="12"
+                    CaretBrush="#C9D1D9"
+                    IsEnabled="{Binding IsFindingStrategy, Converter={StaticResource InvBool}}">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Return" Command="{Binding FindBestStrategyForTargetCommand}" />
+                    </TextBox.InputBindings>
+                </TextBox>
+                <Button Grid.Column="1" Content="🔍 Подобрать стратегию"
+                    Height="30" Padding="14,0" Margin="6,0,0,0"
+                    Style="{StaticResource ActionBtnAccent}"
+                    Command="{Binding FindBestStrategyForTargetCommand}"
+                    IsEnabled="{Binding IsFindingStrategy, Converter={StaticResource InvBool}}" />
+            </Grid>
+            <TextBlock Text="{Binding FindStrategyResultText}"
+                FontFamily="Segoe UI" FontSize="12" Foreground="#00D68F"
+                TextWrapping="Wrap" Margin="0,0,0,8" />
+            <Rectangle Style="{StaticResource Sep}" />
+
             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                 <TextBlock Style="{StaticResource SecH}" Text="СТРАТЕГИИ" />
                 <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#8B949E"

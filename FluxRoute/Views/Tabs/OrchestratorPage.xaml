@@ -55,6 +55,9 @@
                 <TextBlock Style="{StaticResource Val}" Text="{Binding OrchestratorNextCheck}" />
             </StackPanel>
 
+            <CheckBox Content="Синхронизировать домены с интерфейсом (list-general-user.txt)"
+                IsChecked="{Binding SyncDomainsWithUI}" Margin="0,10,0,0" />
+
             <Rectangle Style="{StaticResource Sep}" />
 
             <TextBlock Style="{StaticResource SecH}" Text="САЙТЫ ДЛЯ ПРОВЕРКИ" />

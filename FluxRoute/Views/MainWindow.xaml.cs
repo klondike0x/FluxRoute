@@ -64,7 +64,9 @@ public partial class MainWindow : Window
                 () => Path.Combine(AppContext.BaseDirectory, "engine"),
                 () => settings.Load().Ai),
             materializer,
-            httpClientFactory);  // ✅ Новый параметр
+            httpClientFactory,
+            taskScheduler: new TaskSchedulerService(),
+            trayIcon: null);
     }
 
     public MainWindow(MainViewModel viewModel, TrayIconService trayIcon, ILogger<MainWindow>? logger = null)
@@ -106,13 +108,13 @@ public partial class MainWindow : Window
         SizeChanged += OnWindowSizeChanged;
 
         // Если запуск с --minimized (автозапуск), сворачиваем в трей
+        // НЕЛЬЗЯ вызывать Hide() в конструкторе — WPF ещё не отрисовал окно,
+        // и планировщик задач покажет «битое» окно. Откладываем до Loaded.
         var args = Environment.GetCommandLineArgs();
         if (args.Contains("--minimized", StringComparer.OrdinalIgnoreCase))
         {
-            WindowState = WindowState.Minimized;
-            ShowInTaskbar = false;
-            Hide();
-            _logger?.LogInformation("Main window started minimized because --minimized argument was provided.");
+            Loaded += OnLoadedForMinimizedStart;
+            _logger?.LogInformation("Minimized start scheduled — window will hide after Loaded.");
         }
 
         _logger?.LogInformation("Main window initialized.");
@@ -123,6 +125,19 @@ public partial class MainWindow : Window
         _trayIcon.ShowBalloon("FluxRoute", $"Стратегия переключена: {profileName}");
         _trayIcon.UpdateTooltip($"FluxRoute — {profileName}");
         _logger?.LogInformation("Active profile switched to {ProfileName}.", profileName);
+    }
+
+    /// <summary>
+    /// Отложенное сворачивание в трей для автозапуска (--minimized).
+    /// Вызывается после полной отрисовки окна, чтобы избежать
+    /// «битого» рендеринга при запуске через Планировщик задач.
+    /// </summary>
+    private void OnLoadedForMinimizedStart(object sender, RoutedEventArgs e)
+    {
+        Loaded -= OnLoadedForMinimizedStart;
+        Hide();
+        ShowInTaskbar = false;
+        _logger?.LogInformation("Main window hidden to tray after Loaded (--minimized).");
     }
 
     private void OnTrayShowRequested(object? sender, EventArgs e)
