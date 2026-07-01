@@ -12,6 +12,14 @@ public sealed class AppSettings
     // Стратегия
     public string? LastProfileFileName { get; set; }
 
+    // ═══ v1.6.0: Дефолтный профиль для триггеров ═══
+    /// <summary>
+    /// Имя файла профиля, который используется по умолчанию при возврате из триггера.
+    /// Если не задан, используется профиль, который был активен до срабатывания триггера.
+    /// </summary>
+    public string? DefaultProfileFileName { get; set; }
+    // ═══════════════════════════════════════════════
+
     // Оркестратор
     public string OrchestratorInterval { get; set; } = "1";
     public bool OrchestratorEnabled { get; set; } = false;
@@ -306,6 +314,10 @@ public sealed class SettingsService : ISettingsService
         settings.CustomTargetDomains ??= new List<string>();
         settings.CustomExcludeDomains ??= new List<string>();
         settings.Presets ??= new List<ConfigPreset>();
+
+        // ═══ v1.6.0: Инициализация дефолтного профиля для триггеров (бэквард-совместимость) ═══
+        // DefaultProfileFileName может быть null, это нормально — означает использовать текущий профиль
+        // ═════════════════════════════════════════════════════════════════════════════════════
 
         // Миграция: сброс старого дефолтного домена www.google.com.
         if (settings.TgProxy.Domain == "www.google.com")

@@ -134,29 +134,71 @@ public partial class MainViewModel : ObservableObject
     }
 
     // ── Команды менеджера доменов ──
+
+    /// <summary>
+    /// Нормализует ввод домена: убирает пробелы, протоколы, www., завершающий слеш.
+    /// </summary>
+    private string NormalizeDomainInput(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return "";
+
+        // Убираем пробелы в начале/конце
+        input = input.Trim();
+
+        // Удаляем протоколы (регистронезависимо)
+        input = System.Text.RegularExpressions.Regex.Replace(input, @"^https?://", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // Удаляем www. (регистронезависимо)
+        input = System.Text.RegularExpressions.Regex.Replace(input, @"^www\.", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // Убираем завершающий слеш
+        input = input.TrimEnd('/');
+
+        // Удаляем оставшиеся пробелы (лишние, если были)
+        input = input.Trim();
+
+        return input;
+    }
+
     [RelayCommand]
     private void AddCustomDomain()
     {
         var input = NewSiteInput.Trim();
-        if (string.IsNullOrEmpty(input)) return;
+        if (string.IsNullOrEmpty(input))
+        {
+            NewSiteInput = "";
+            return;
+        }
 
-        // Нормализация: убираем протоколы и www
-        input = input.Replace("http://", "").Replace("https://", "").Replace("www.", "").TrimEnd('/');
-        if (string.IsNullOrEmpty(input)) return;
+        // Нормализуем ввод
+        input = NormalizeDomainInput(input);
+        if (string.IsNullOrEmpty(input))
+        {
+            NewSiteInput = "";
+            return;
+        }
 
         var list = SelectedTabMode == "Exclusions" ? CustomExcludeDomains : CustomTargetDomains;
-        if (!list.Contains(input, StringComparer.OrdinalIgnoreCase))
+        var modeName = SelectedTabMode == "Exclusions" ? "исключение" : "проверка";
+
+        // Проверяем на дубликаты (регистронезависимо)
+        if (list.Any(d => string.Equals(d, input, StringComparison.OrdinalIgnoreCase)))
         {
-            list.Add(input);
+            // Домен уже существует — показываем ошибку через CustomDialog
+            CustomDialog.Show(
+                "⚠️ Дубликат домена",
+                $"Домен «{input}» уже добавлен в список {modeName}.",
+                "OK", isDanger: false);
             NewSiteInput = "";
-            SaveSettings();
-            SyncCustomHostlist();
-            AddToRecentLogs($"✅ Добавлен домен: {input} ({(SelectedTabMode == "Exclusions" ? "исключение" : "проверка")})");
+            return;
         }
-        else
-        {
-            NewSiteInput = "";
-        }
+
+        list.Add(input);
+        NewSiteInput = "";
+        SaveSettings();
+        SyncCustomHostlist();
+        AddToRecentLogs($"✅ Добавлен домен: {input} ({modeName})");
     }
 
     [RelayCommand]
@@ -242,6 +284,51 @@ public partial class MainViewModel : ObservableObject
             Start();
         }
     }
+
+    // ═══ v1.6.0: Дефолтный профиль для триггеров ═══
+    /// <summary>
+    /// Имя файла дефолтного профиля, на который возвращаться после триггера.
+    /// Если не задан (пусто), используется профиль, активный до срабатывания триггера.
+    /// </summary>
+    [ObservableProperty] private string? defaultProfileFileName;
+
+    partial void OnDefaultProfileFileNameChanged(string? value)
+    {
+        SaveSettings();
+        if (!string.IsNullOrEmpty(value))
+        {
+            AddToRecentLogs($"📌 Дефолтный профиль установлен: {value}");
+        }
+        else
+        {
+            AddToRecentLogs($"📌 Дефолтный профиль очищен");
+        }
+    }
+
+    /// <summary>
+    /// Устанавливает профиль как дефолтный для триггеров.
+    /// </summary>
+    [RelayCommand]
+    private void SetDefaultProfile(ProfileItem? profile)
+    {
+        if (profile is null)
+        {
+            DefaultProfileFileName = null;
+            return;
+        }
+
+        DefaultProfileFileName = profile.FileName;
+    }
+
+    /// <summary>
+    /// Очищает дефолтный профиль.
+    /// </summary>
+    [RelayCommand]
+    private void ClearDefaultProfile()
+    {
+        DefaultProfileFileName = null;
+    }
+    // ═════════════════════════════════════════════════
 
     // ── Статус ──
     [ObservableProperty] private string statusText = "Не запущено";
@@ -725,6 +812,7 @@ public partial class MainViewModel : ObservableObject
         TaskSchedulerAutoStart = settings.TaskSchedulerAutoStart;
         AutoLaunchProfile = settings.AutoLaunchProfile;
         SyncDomainsWithUI = settings.SyncDomainsWithUI;
+        DefaultProfileFileName = settings.DefaultProfileFileName; // Дефолтный профиль для триггеров
 
         settings.Ai ??= new AiSettings();
         AiEnabled = settings.Ai.Enabled;
@@ -759,6 +847,7 @@ public partial class MainViewModel : ObservableObject
         var settings = new AppSettings
         {
             LastProfileFileName = SelectedProfile?.FileName,
+            DefaultProfileFileName = DefaultProfileFileName, // Дефолтный профиль для триггеров
             OrchestratorInterval = OrchestratorInterval,
             OrchestratorEnabled = OrchestratorEnabled,
             SiteYouTube = SiteYouTube,

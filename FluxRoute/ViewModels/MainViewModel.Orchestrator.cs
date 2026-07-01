@@ -782,6 +782,7 @@ public partial class MainViewModel
     // ── Мониторинг процессов для автопереключения пресетов ──
     private CancellationTokenSource? _processMonitorCts;
     private string? _presetBeforeGameTrigger; // имя пресета, который был активен до триггера
+    private ProfileItem? _profileBeforeTrigger; // профиль, активный до срабатывания триггера (для возврата)
 
     private void StartProcessMonitor()
     {
@@ -797,6 +798,7 @@ public partial class MainViewModel
         _processMonitorCts?.Cancel();
         _processMonitorCts = null;
         _activeTriggeredPreset = null;
+        _profileBeforeTrigger = null; // Очищаем запомненный профиль
     }
 
     private string? _activeTriggeredPreset; // Id активного тригерного пресета
@@ -853,25 +855,69 @@ public partial class MainViewModel
         {
             if (matched is not null)
             {
-                // Процесс появился → применяем пресет
+                // Процесс появился → запоминаем текущий профиль и применяем пресет
                 _activeTriggeredPreset = matchedId;
+
+                // ═══ v1.6.0: Запоминаем профиль перед триггером ═══
+                // Если не задан дефолтный профиль, используем текущий
+                if (string.IsNullOrEmpty(DefaultProfileFileName))
+                {
+                    _profileBeforeTrigger = SelectedProfile;
+                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 📌 Запомнен профиль до триггера: {_profileBeforeTrigger?.DisplayName ?? "—"}");
+                }
+                else
+                {
+                    // Дефолтный профиль задан, найдём его
+                    _profileBeforeTrigger = Profiles.FirstOrDefault(p => p.FileName == DefaultProfileFileName);
+                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 📌 Используется дефолтный профиль: {_profileBeforeTrigger?.DisplayName ?? DefaultProfileFileName}");
+                }
+                // ═════════════════════════════════════════════════
+
                 AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🎮 Обнаружен процесс «{matched.TriggerProcess}» → применяю пресет «{matched.Name}»");
                 _ = ApplyPreset(matched);
             }
             else if (_activeTriggeredPreset is not null)
             {
-                // Процесс исчез → возвращаем первый пресет без триггера (если есть)
+                // ═══ v1.6.0: Процесс исчез → возвращаем запомненный профиль ═══
                 _activeTriggeredPreset = null;
-                var fallback = Presets.FirstOrDefault(p => string.IsNullOrWhiteSpace(p.TriggerProcess));
-                if (fallback is not null)
+
+                if (_profileBeforeTrigger is not null)
                 {
-                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Процесс завершён → возврат к пресету «{fallback.Name}»");
-                    _ = ApplyPreset(fallback);
+                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Процесс завершён → возврат на профиль «{_profileBeforeTrigger.DisplayName}»");
+                    // Применяем запомненный профиль
+                    if (SelectedProfile != _profileBeforeTrigger)
+                    {
+                        _suppressProfileWarning = true;
+                        SelectedProfile = _profileBeforeTrigger;
+                        _suppressProfileWarning = false;
+
+                        // Перезапускаем защиту если она была запущена
+                        if (IsRunning)
+                        {
+                            Stop();
+                            _ = Task.Delay(1000).ContinueWith(_ =>
+                            {
+                                Application.Current?.Dispatcher.Invoke(Start);
+                            });
+                        }
+                    }
+                    _profileBeforeTrigger = null;
                 }
                 else
                 {
-                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Процесс завершён (пресет возврата не задан)");
+                    // Если профиль не был запомнен, пытаемся вернуться к первому пресету без триггера
+                    var fallback = Presets.FirstOrDefault(p => string.IsNullOrWhiteSpace(p.TriggerProcess));
+                    if (fallback is not null)
+                    {
+                        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Процесс завершён → возврат к пресету «{fallback.Name}»");
+                        _ = ApplyPreset(fallback);
+                    }
+                    else
+                    {
+                        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Процесс завершён (профиль/пресет возврата не задан)");
+                    }
                 }
+                // ═══════════════════════════════════════════════════════════════
             }
         }
     }
