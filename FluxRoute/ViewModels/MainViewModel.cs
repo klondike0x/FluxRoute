@@ -965,7 +965,9 @@ public partial class MainViewModel : ObservableObject
         AutoUpdateEnabled = settings.AutoUpdateEnabled;
         AutoStartEnabled = settings.AutoStartEnabled;
         MinimizeToTray = settings.MinimizeToTray;
+        // ═══ v1.6.0: Крестик сворачивает в трей ═══
         CloseToTray = settings.CloseToTray;
+        // ═══════════════════════════════════════
         GameFilterProtocol = settings.GameFilterProtocol;
         ShowProfileSwitchWarning = settings.ShowProfileSwitchWarning;
 
@@ -1027,7 +1029,9 @@ public partial class MainViewModel : ObservableObject
             AutoUpdateEnabled = AutoUpdateEnabled,
             AutoStartEnabled = AutoStartEnabled,
             MinimizeToTray = MinimizeToTray,
+            // ═══ v1.6.0: Крестик сворачивает в трей ═══
             CloseToTray = CloseToTray,
+            // ═══════════════════════════════════════
             GameFilterProtocol = GameFilterProtocol,
             ShowProfileSwitchWarning = ShowProfileSwitchWarning,
             TaskSchedulerAutoStart = TaskSchedulerAutoStart,
