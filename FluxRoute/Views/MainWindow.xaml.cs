@@ -173,6 +173,17 @@ public partial class MainWindow : Window
     {
         base.OnClosing(e);
 
+        // ═══ v1.6.0: Feature #21 — Крестик сворачивает в трей ═══
+        if (_vm.CloseToTray && !_isClosingConfirmed)
+        {
+            e.Cancel = true;
+            Hide();
+            ShowInTaskbar = false;
+            _trayIcon.ShowBalloon("FluxRoute", "Приложение свёрнуто в трей");
+            return;
+        }
+        // ═══════════════════════════════════════════════════════════
+
         if (!_isClosingConfirmed)
         {
             e.Cancel = true;

@@ -153,6 +153,18 @@
                                 Command="{Binding ClearDomainListCommand}"
                                 ToolTip="Очистить текущий список" />
                     </Grid>
+                    <!-- ═══ v1.6.0: Feature #53 — Кнопки массового импорта доменов ═══ -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <Button Content="📋 Из буфера" Height="26" Padding="8,0" Margin="0,0,6,0"
+                                FontSize="11" Style="{StaticResource ActionBtnAccent}"
+                                Command="{Binding ImportDomainsFromClipboardCommand}"
+                                ToolTip="Импортировать домены из буфера обмена (разделители: пробел, запятая, ;, перенос строки)" />
+                        <Button Content="📂 Из файла" Height="26" Padding="8,0"
+                                FontSize="11" Style="{StaticResource ActionBtnAccent}"
+                                Command="{Binding ImportDomainsFromFileCommand}"
+                                ToolTip="Импортировать домены из текстового файла" />
+                    </StackPanel>
+                    <!-- ═══════════════════════════════════════════════════════════════════ -->
                     <Border Background="#161B22" BorderBrush="#21262D" BorderThickness="1"
                             CornerRadius="4" MaxHeight="180">
                         <Grid>
@@ -286,20 +298,27 @@
             <Rectangle Style="{StaticResource Sep}" />
 
             <TextBlock Style="{StaticResource SecH}" Text="РЕЙТИНГ СТРАТЕГИЙ" />
-            <Button HorizontalAlignment="Left" Margin="0,0,0,10"
-                    Command="{Binding ScanProfilesCommand}">
-                <Button.Style>
-                    <Style TargetType="Button" BasedOn="{StaticResource ActionBtnAccent}">
-                        <Setter Property="Content" Value="Сканировать все стратегии" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsScanning}" Value="True">
-                                <Setter Property="IsEnabled" Value="False" />
-                                <Setter Property="Content" Value="Сканирование..." />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Button.Style>
-            </Button>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <Button Margin="0,0,10,0"
+                        Command="{Binding ScanProfilesCommand}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ActionBtnAccent}">
+                            <Setter Property="Content" Value="Сканировать все стратегии" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsScanning}" Value="True">
+                                    <Setter Property="IsEnabled" Value="False" />
+                                    <Setter Property="Content" Value="Сканирование..." />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <!-- ═══ v1.6.0: Feature #53 — Кнопка сброса рейтинга ═══ -->
+                <Button Content="🔄 Сбросить рейтинг" Style="{StaticResource RedBtn}"
+                        Padding="12,5" FontSize="12"
+                        Command="{Binding ResetProfileRatingsCommand}"
+                        ToolTip="Очистить историю оценок оркестратора и ИИ" />
+            </StackPanel>
 
             <!-- Прогресс-бар сканирования (без Storyboard — анимация сбивалась при быстрых переключениях IsScanning) -->
             <Border Margin="0,0,0,8" CornerRadius="6" Padding="10,8"

@@ -445,6 +445,34 @@
                         </TextBlock>
                     </Button>
                 </Grid>
+
+                <!-- ═══ v1.6.0: Feature #21 — Кнопка «Выход» в сайдбаре ═══ -->
+                <Grid Margin="0,4,0,8">
+                    <Border CornerRadius="8" Width="52" Height="36"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <Button Style="{StaticResource NavIconBtn}"
+                            Command="{Binding ExitApplicationCommand}"
+                            ToolTip="Выход из приложения">
+                        <Button.Resources>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#4A5170" />
+                                <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+                                <Setter Property="FontSize" Value="18" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
+                                        <Setter Property="Foreground" Value="#E74C3C" />
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect Color="#E74C3C" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Resources>
+                        <TextBlock Text="&#xE7E8;" />
+                    </Button>
+                </Grid>
             </StackPanel>
 
             <!-- Active tab pill indicator -->

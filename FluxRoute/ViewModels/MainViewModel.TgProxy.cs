@@ -174,6 +174,10 @@ public partial class MainViewModel
 
     public void InitializeTgProxyOnStartup()
     {
+        // ═══ v1.6.0: Fix #56 — убиваем зависшие python.exe от предыдущего запуска ═══
+        KillOrphanedTgProxyProcesses();
+        // ════════════════════════════════════════════════════════════════════════════
+
         EnsureTgProxyStateInitialized();
 
         if (!TgProxyAutoStartOnAppLaunch || !TgProxyInstalled || TgProxyRunning)
@@ -187,6 +191,57 @@ public partial class MainViewModel
 
         StartTgProxy();
     }
+
+    // ═══ v1.6.0: Fix #56 — Автоматическое завершение зависших TG WS Proxy процессов ═══
+    /// <summary>
+    /// Сканирует все процессы python.exe и убивает те, что запущены из папки tg-proxy.
+    /// Это решает проблему занятия порта 1443 после некорректного завершения предыдущего запуска.
+    /// </summary>
+    private static void KillOrphanedTgProxyProcesses()
+    {
+        try
+        {
+            var tgProxyDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tg-proxy")
+                + Path.DirectorySeparatorChar;
+            var killed = 0;
+
+            foreach (var proc in Process.GetProcessesByName("python"))
+            {
+                try
+                {
+                    var exePath = proc.MainModule?.FileName;
+                    if (string.IsNullOrEmpty(exePath)
+                        || !exePath.StartsWith(tgProxyDir, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    Trace.TraceInformation(
+                        $"🗑 Найден зависший python.exe (PID {proc.Id}) от предыдущего запуска. Завершаю...");
+
+                    proc.Kill(entireProcessTree: true);
+                    proc.WaitForExit(2000);
+                    killed++;
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    // Игнорируем ошибки доступа к чужим процессам python.exe (не из нашей папки)
+                    // и процессы, которые уже завершились к моменту проверки
+                }
+                finally
+                {
+                    try { proc.Dispose(); } catch { }
+                }
+            }
+
+            if (killed > 0)
+                Trace.TraceInformation($"🗑 Завершено зависших процессов python.exe: {killed}");
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // Graceful degradation: ошибка сканирования процессов не должна ломать запуск приложения
+            Trace.TraceError($"⚠ Ошибка при сканировании зависших процессов TG Proxy: {ex.Message}");
+        }
+    }
+    // ═══════════════════════════════════════════════════════════════════════════════════════
 
     private void EnsureTgProxyStateInitialized()
     {

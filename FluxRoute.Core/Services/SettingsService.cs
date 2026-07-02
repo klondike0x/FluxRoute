@@ -71,6 +71,9 @@ public sealed class AppSettings
     // ═══ v1.6.0: Автозапуск последнего профиля ═══
     public bool AutoLaunchProfile { get; set; } = false;
 
+    // ═══ v1.6.0: Крестик сворачивает в трей ═══
+    public bool CloseToTray { get; set; } = true;
+
     // ═══ v1.6.0: Синхронизация доменов с UI ═══
     public bool SyncDomainsWithUI { get; set; } = true;
 

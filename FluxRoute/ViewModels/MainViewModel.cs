@@ -247,6 +247,154 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    // ═══ v1.6.0: Feature #53 — Массовый импорт доменов ═══
+
+    /// <summary>
+    /// Парсит сырой текст и нормализует домены. Разделители: пробел, запятая, точка с запятой, перенос строки.
+    /// </summary>
+    private List<string> ParseAndNormalizeDomains(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return new List<string>();
+
+        return System.Text.RegularExpressions.Regex.Split(raw, @"[\s,;]+")
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(NormalizeDomainInput)
+            .Where(d => !string.IsNullOrEmpty(d))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Добавляет только те домены, которых ещё нет в списке (регистронезависимая дедупликация).
+    /// </summary>
+    private int AddDomainsBulk(List<string> domains)
+    {
+        var list = SelectedTabMode == "Exclusions" ? CustomExcludeDomains : CustomTargetDomains;
+        var existing = new HashSet<string>(list, StringComparer.OrdinalIgnoreCase);
+        var added = 0;
+
+        foreach (var domain in domains)
+        {
+            if (existing.Add(domain))
+            {
+                list.Add(domain);
+                added++;
+            }
+        }
+
+        return added;
+    }
+
+    [RelayCommand]
+    private void ImportDomainsFromClipboard()
+    {
+        try
+        {
+            if (!System.Windows.Clipboard.ContainsText())
+            {
+                AddToRecentLogs("📋 Буфер обмена пуст или не содержит текст");
+                return;
+            }
+
+            var raw = System.Windows.Clipboard.GetText();
+            var domains = ParseAndNormalizeDomains(raw);
+
+            if (domains.Count == 0)
+            {
+                AddToRecentLogs("❌ Не найдено доменов в буфере обмена");
+                return;
+            }
+
+            var added = AddDomainsBulk(domains);
+            SaveSettings();
+            SyncCustomHostlist();
+            AddToRecentLogs($"✅ Импортировано {added} домен(ов) из буфера обмена (пропущено дубликатов: {domains.Count - added})");
+        }
+        catch (Exception ex)
+        {
+            AddToRecentLogs($"❌ Ошибка импорта из буфера обмена: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private void ImportDomainsFromFile()
+    {
+        try
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Текстовые файлы (*.txt)|*.txt|Все файлы (*.*)|*.*",
+                Title = "Выберите файл со списком доменов"
+            };
+
+            if (dialog.ShowDialog() != true)
+                return;
+
+            var raw = File.ReadAllText(dialog.FileName);
+            var domains = ParseAndNormalizeDomains(raw);
+
+            if (domains.Count == 0)
+            {
+                AddToRecentLogs($"❌ Не найдено доменов в файле: {dialog.FileName}");
+                return;
+            }
+
+            var added = AddDomainsBulk(domains);
+            SaveSettings();
+            SyncCustomHostlist();
+            AddToRecentLogs($"✅ Импортировано {added} домен(ов) из файла (пропущено дубликатов: {domains.Count - added})");
+        }
+        catch (Exception ex)
+        {
+            AddToRecentLogs($"❌ Ошибка импорта из файла: {ex.Message}");
+        }
+    }
+
+    // ═══ v1.6.0: Feature #53 — Сброс рейтинга стратегий ═══
+
+    [RelayCommand]
+    private void ResetProfileRatings()
+    {
+        if (!CustomDialog.Show(
+                "🔄 Сбросить рейтинг стратегий",
+                "Очистить историю оценок оркестратора и ИИ? Это заставит программу заново просканировать все стратегии.",
+                "Очистить",
+                "Отмена",
+                isDanger: true))
+            return;
+
+        ProfileScores.Clear();
+        SaveSettings();
+        _aiRegistry.ResetAll();
+        AddToRecentLogs("🔄 Рейтинг стратегий и история ИИ сброшены.");
+    }
+
+    // ═══ v1.6.0: Feature #21 — Команда выхода из приложения ═══
+
+    /// <summary>
+    /// Принудительный выход из приложения (обход CloseToTray, всегда показывает подтверждение).
+    /// </summary>
+    [RelayCommand]
+    private void ExitApplication()
+    {
+        if (CustomDialog.Show(
+                "Завершить работу FluxRoute?",
+                "Все активные службы (WinDivert, WinWS) будут остановлены, защита прекратит работу.",
+                "Завершить",
+                "Отмена",
+                isDanger: true))
+        {
+            Application.Current.Shutdown();
+        }
+    }
+
+    /// <summary>
+    /// Внешний метод для MainWindow — устанавливает флаг подтверждённого закрытия.
+    /// Вызывается из OnTrayExitRequested.
+    /// </summary>
+    public void ConfirmClose() => Application.Current.Shutdown();
+
     // ── События ──
     public event EventHandler? OpenSettingsRequested;
     public event EventHandler? OpenAboutRequested;
@@ -513,6 +661,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool minimizeToTray = true;
     partial void OnMinimizeToTrayChanged(bool value) => SaveSettings();
 
+    // ═══ v1.6.0: Крестик сворачивает в трей ═══
+    [ObservableProperty] private bool closeToTray = true;
+    partial void OnCloseToTrayChanged(bool value) => SaveSettings();
+
     // ═══ v1.6.0: Автозапуск через Планировщик задач ═══
     [ObservableProperty] private bool taskSchedulerAutoStart;
     partial void OnTaskSchedulerAutoStartChanged(bool value)
@@ -752,16 +904,24 @@ public partial class MainViewModel : ObservableObject
         {
             _ = Task.Run(async () =>
             {
-                await Task.Delay(2500);
-                Application.Current.Dispatcher.Invoke(() =>
+                try
                 {
-                    if (SelectedProfile is not null && !IsRunning)
+                    await Task.Delay(2500);
+                    Application.Current.Dispatcher.Invoke(() =>
                     {
-                        Logs.Add($"🚀 Автозапуск профиля: {SelectedProfile.DisplayName}");
-                        AddToRecentLogs($"🚀 Автозапуск профиля: {SelectedProfile.DisplayName}");
-                        Start();
-                    }
-                });
+                        if (SelectedProfile is not null && !IsRunning)
+                        {
+                            Logs.Add($"🚀 Автозапуск профиля: {SelectedProfile.DisplayName}");
+                            AddToRecentLogs($"🚀 Автозапуск профиля: {SelectedProfile.DisplayName}");
+                            Start();
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    // Автозапуск не должен ломать основной запуск приложения
+                    Trace.TraceError($"⚠ Ошибка автозапуска профиля: {ex.Message}");
+                }
             });
         }
     }
@@ -805,6 +965,7 @@ public partial class MainViewModel : ObservableObject
         AutoUpdateEnabled = settings.AutoUpdateEnabled;
         AutoStartEnabled = settings.AutoStartEnabled;
         MinimizeToTray = settings.MinimizeToTray;
+        CloseToTray = settings.CloseToTray;
         GameFilterProtocol = settings.GameFilterProtocol;
         ShowProfileSwitchWarning = settings.ShowProfileSwitchWarning;
 
@@ -866,6 +1027,7 @@ public partial class MainViewModel : ObservableObject
             AutoUpdateEnabled = AutoUpdateEnabled,
             AutoStartEnabled = AutoStartEnabled,
             MinimizeToTray = MinimizeToTray,
+            CloseToTray = CloseToTray,
             GameFilterProtocol = GameFilterProtocol,
             ShowProfileSwitchWarning = ShowProfileSwitchWarning,
             TaskSchedulerAutoStart = TaskSchedulerAutoStart,
