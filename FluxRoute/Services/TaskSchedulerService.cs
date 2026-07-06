@@ -9,7 +9,10 @@ namespace FluxRoute.Services;
 public interface ITaskSchedulerService
 {
     /// <summary>Создаёт задачу автозапуска FluxRoute при входе пользователя.</summary>
-    void CreateTask(string exePath);
+    /// <param name="exePath">Путь к исполняемому файлу.</param>
+    /// <param name="highPriority">Установить высокий приоритет задачи (AboveNormal).</param>
+    /// <param name="delaySeconds">Задержка запуска в секундах после входа в систему.</param>
+    void CreateTask(string exePath, bool highPriority = false, int delaySeconds = 30);
 
     /// <summary>Удаляет задачу автозапуска.</summary>
     void RemoveTask();
@@ -28,7 +31,7 @@ public sealed class TaskSchedulerService : ITaskSchedulerService
     private const string TaskDescription = "Автозапуск FluxRoute при входе пользователя в систему.";
 
     /// <inheritdoc/>
-    public void CreateTask(string exePath)
+    public void CreateTask(string exePath, bool highPriority = false, int delaySeconds = 30)
     {
         using var ts = new TaskService();
 
@@ -48,8 +51,21 @@ public sealed class TaskSchedulerService : ITaskSchedulerService
         td.Settings.ExecutionTimeLimit = TimeSpan.Zero; // без ограничения
         td.Settings.AllowHardTerminate = false;
 
+        // ═══ v1.6.0: Приоритет задачи ═══
+        td.Settings.Priority = highPriority
+            ? System.Diagnostics.ProcessPriorityClass.AboveNormal
+            : System.Diagnostics.ProcessPriorityClass.Normal;
+
         // Триггер: при входе любого пользователя
-        td.Triggers.Add(new LogonTrigger());
+        var logonTrigger = new LogonTrigger();
+
+        // ═══ v1.6.0: Отложенный запуск ═══
+        if (delaySeconds > 0)
+        {
+            logonTrigger.Delay = TimeSpan.FromSeconds(delaySeconds);
+        }
+
+        td.Triggers.Add(logonTrigger);
 
         // Действие: запуск FluxRoute.exe --minimized
         td.Actions.Add(new ExecAction(exePath, "--minimized", null));

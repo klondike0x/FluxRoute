@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Input;
@@ -486,6 +487,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string uptimeText = "—";
     public string AppVersion { get; } = GetAppVersion();
     public string AppBuildDate { get; } = GetBuildDate();
+    public string AppRuntime { get; } = $".NET {Environment.Version} ({RuntimeInformation.ProcessArchitecture})";
+    public string AppLogPath { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "FluxRoute", "logs");
     public string AppLicense { get; } = "GNU General Public License v3.0";
     public string AppRepositoryUrl { get; } = "https://github.com/klondike0x/FluxRoute";
 
@@ -669,16 +674,102 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool taskSchedulerAutoStart;
     partial void OnTaskSchedulerAutoStartChanged(bool value)
     {
+        if (_suppressTaskSchedulerChanged) return;
         var exePath = Environment.ProcessPath
             ?? System.Reflection.Assembly.GetEntryAssembly()?.Location ?? "";
         if (!string.IsNullOrEmpty(exePath))
         {
-            if (value)
-                _taskScheduler.CreateTask(exePath);
-            else
-                _taskScheduler.RemoveTask();
+            try
+            {
+                if (value)
+                    _taskScheduler.CreateTask(exePath, HighPriorityStartupEnabled, DelayedAutoStartSeconds);
+                else
+                    _taskScheduler.RemoveTask();
+
+                AddToRecentLogs(value ? "✅ Задача автозапуска создана" : "🗑 Задача автозапуска удалена");
+            }
+            catch (Exception ex)
+            {
+                // ═══ v1.6.0: Диагностика автозапуска — показываем понятное сообщение ═══
+                var message = ex.Message.Contains("Access", StringComparison.OrdinalIgnoreCase)
+                    ? "Недостаточно прав для создания задачи в Планировщике. Запустите приложение от администратора."
+                    : $"Ошибка Планировщика задач: {ex.Message}";
+                Logs.Add($"❌ {message}");
+                AddToRecentLogs($"❌ Ошибка автозапуска: {ex.Message}");
+
+                CustomDialog.Show(
+                    "❌ Ошибка автозапуска",
+                    message,
+                    "OK", isDanger: true);
+
+                // Откатываем чекбокс
+                _ = Application.Current?.Dispatcher.BeginInvoke(() =>
+                {
+                    _suppressTaskSchedulerChanged = true;
+                    TaskSchedulerAutoStart = false;
+                    _suppressTaskSchedulerChanged = false;
+                });
+                // ═══════════════════════════════════════════════════════════
+                return;
+            }
         }
         SaveSettings();
+    }
+    private bool _suppressTaskSchedulerChanged;
+
+    // ═══ v1.6.0: Высокий приоритет автозагрузки ═══
+    [ObservableProperty] private bool highPriorityStartupEnabled;
+    partial void OnHighPriorityStartupEnabledChanged(bool value)
+    {
+        SaveSettings();
+        // Пересоздаём задачу с новым приоритетом, если она существует
+        if (_settingsLoaded && TaskSchedulerAutoStart)
+        {
+            var exePath = Environment.ProcessPath
+                ?? System.Reflection.Assembly.GetEntryAssembly()?.Location ?? "";
+            if (!string.IsNullOrEmpty(exePath))
+            {
+                try
+                {
+                    _taskScheduler.CreateTask(exePath, value, DelayedAutoStartSeconds);
+                    AddToRecentLogs(value
+                        ? "⚡ Приоритет автозагрузки: высокий"
+                        : "🔹 Приоритет автозагрузки: нормальный");
+                }
+                catch (Exception ex)
+                {
+                    Logs.Add($"❌ Ошибка изменения приоритета: {ex.Message}");
+                }
+            }
+        }
+    }
+
+    // ═══ v1.6.0: Отложенный автозапуск ═══
+    [ObservableProperty] private int delayedAutoStartSeconds = 30;
+    partial void OnDelayedAutoStartSecondsChanged(int value)
+    {
+        // Валидация: не меньше 0 и не больше 300 (5 минут)
+        if (value < 0) DelayedAutoStartSeconds = 0;
+        if (value > 300) DelayedAutoStartSeconds = 300;
+        SaveSettings();
+        // Пересоздаём задачу с новой задержкой
+        if (_settingsLoaded && TaskSchedulerAutoStart)
+        {
+            var exePath = Environment.ProcessPath
+                ?? System.Reflection.Assembly.GetEntryAssembly()?.Location ?? "";
+            if (!string.IsNullOrEmpty(exePath))
+            {
+                try
+                {
+                    _taskScheduler.CreateTask(exePath, HighPriorityStartupEnabled, DelayedAutoStartSeconds);
+                    AddToRecentLogs($"⏱ Задержка автозапуска: {DelayedAutoStartSeconds} сек");
+                }
+                catch (Exception ex)
+                {
+                    Logs.Add($"❌ Ошибка изменения задержки: {ex.Message}");
+                }
+            }
+        }
     }
 
     // ═══ v1.6.0: Автоматический запуск последнего профиля ═══
@@ -973,6 +1064,8 @@ public partial class MainViewModel : ObservableObject
 
         // ═══ v1.6.0 ═══
         TaskSchedulerAutoStart = settings.TaskSchedulerAutoStart;
+        HighPriorityStartupEnabled = settings.HighPriorityStartupEnabled;
+        DelayedAutoStartSeconds = settings.DelayedAutoStartSeconds > 0 ? settings.DelayedAutoStartSeconds : 30;
         AutoLaunchProfile = settings.AutoLaunchProfile;
         SyncDomainsWithUI = settings.SyncDomainsWithUI;
         DefaultProfileFileName = settings.DefaultProfileFileName; // Дефолтный профиль для триггеров
@@ -1035,6 +1128,8 @@ public partial class MainViewModel : ObservableObject
             GameFilterProtocol = GameFilterProtocol,
             ShowProfileSwitchWarning = ShowProfileSwitchWarning,
             TaskSchedulerAutoStart = TaskSchedulerAutoStart,
+            HighPriorityStartupEnabled = HighPriorityStartupEnabled,
+            DelayedAutoStartSeconds = DelayedAutoStartSeconds,
             AutoLaunchProfile = AutoLaunchProfile,
             SyncDomainsWithUI = SyncDomainsWithUI,
             Ai = BuildAiSettingsSnapshot(),
@@ -1142,7 +1237,7 @@ public partial class MainViewModel : ObservableObject
                     domains.Add(d.Trim());
             }
 
-            // Записываем в файл
+            // Записываем list-general-user.txt
             if (domains.Count > 0)
             {
                 // Используем явное удаление + запись, чтобы избежать кэширования
@@ -1162,10 +1257,34 @@ public partial class MainViewModel : ObservableObject
                     File.WriteAllText(userHostlistPath, "# custom domains empty\n", new UTF8Encoding(false));
                 Logs.Add("[Sync] list-general-user.txt очищен");
             }
+
+            // ═══ v1.6.0: Синхронизация list-exclude-user.txt ═══
+            var excludeHostlistPath = Path.Combine(listsDir, "list-exclude-user.txt");
+            var excludeDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var d in CustomExcludeDomains)
+            {
+                if (!string.IsNullOrWhiteSpace(d))
+                    excludeDomains.Add(d.Trim());
+            }
+
+            if (excludeDomains.Count > 0)
+            {
+                if (File.Exists(excludeHostlistPath))
+                {
+                    try { File.SetAttributes(excludeHostlistPath, FileAttributes.Normal); } catch { }
+                }
+                File.WriteAllLines(excludeHostlistPath, excludeDomains.OrderBy(x => x), new UTF8Encoding(false));
+                Logs.Add($"[Sync] Записано {excludeDomains.Count} исключений в list-exclude-user.txt");
+            }
+            else
+            {
+                if (File.Exists(excludeHostlistPath))
+                    File.Delete(excludeHostlistPath);
+            }
         }
         catch (Exception ex)
         {
-            Logs.Add($"❌ Ошибка записи list-general-user.txt: {ex.Message}");
+            Logs.Add($"❌ Ошибка синхронизации hostlist-файлов: {ex.Message}");
             Logs.Add($"   Stack: {ex.StackTrace?.Split('\n')[0]}");
         }
     }

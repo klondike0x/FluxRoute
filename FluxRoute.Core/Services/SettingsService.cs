@@ -68,6 +68,12 @@ public sealed class AppSettings
     // ═══ v1.6.0: Автозапуск через планировщик ═══
     public bool TaskSchedulerAutoStart { get; set; } = false;
 
+    // ═══ v1.6.0: Высокий приоритет автозагрузки ═══
+    public bool HighPriorityStartupEnabled { get; set; } = false;
+
+    // ═══ v1.6.0: Отложенный автозапуск (секунды) ═══
+    public int DelayedAutoStartSeconds { get; set; } = 30;
+
     // ═══ v1.6.0: Автозапуск последнего профиля ═══
     public bool AutoLaunchProfile { get; set; } = false;
 

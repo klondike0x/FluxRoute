@@ -20,6 +20,8 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Версия сборки:" FontFamily="Segoe UI"
                                Foreground="#8B949E" FontSize="12" Margin="0,0,12,4" />
@@ -29,18 +31,28 @@
                                Foreground="#8B949E" FontSize="12" Margin="0,0,12,4" />
                     <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AppBuildDate}" FontFamily="Consolas"
                                Foreground="#C9D1D9" FontSize="12" Margin="0,0,0,4" />
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Репозиторий:" FontFamily="Segoe UI"
+                    <!-- ═══ v1.6.0: Runtime info ═══ -->
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Платформа:" FontFamily="Segoe UI"
                                Foreground="#8B949E" FontSize="12" Margin="0,0,12,4" />
-                    <TextBlock Grid.Row="2" Grid.Column="1" FontFamily="Consolas" FontSize="12" Margin="0,0,0,4">
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding AppRuntime}" FontFamily="Consolas"
+                               Foreground="#C9D1D9" FontSize="12" Margin="0,0,0,4" />
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Репозиторий:" FontFamily="Segoe UI"
+                               Foreground="#8B949E" FontSize="12" Margin="0,0,12,4" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" FontFamily="Consolas" FontSize="12" Margin="0,0,0,4">
                         <Hyperlink NavigateUri="{Binding AppRepositoryUrl}"
                                    RequestNavigate="Hyperlink_RequestNavigate" Foreground="#58A6FF"
                                    FontFamily="Consolas">github.com/klondike0x/FluxRoute</Hyperlink>
                     </TextBlock>
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Лицензия:" FontFamily="Segoe UI"
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Лицензия:" FontFamily="Segoe UI"
                                Foreground="#8B949E" FontSize="12" Margin="0,0,12,4" />
-                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding AppLicense}" FontFamily="Segoe UI"
+                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding AppLicense}" FontFamily="Segoe UI"
                                Foreground="#C9D1D9" FontSize="12" Margin="0,0,0,4" />
-                    <TextBlock Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" FontFamily="Segoe UI"
+                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Логи:" FontFamily="Segoe UI"
+                               Foreground="#8B949E" FontSize="12" Margin="0,0,12,4" />
+                    <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding AppLogPath}" FontFamily="Consolas"
+                               Foreground="#C9D1D9" FontSize="12" Margin="0,0,0,4"
+                               ToolTip="Путь к файлам логов Serilog" />
+                    <TextBlock Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" FontFamily="Segoe UI"
                                Foreground="#4A5170" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
                                Text="FluxRoute — свободное программное обеспечение. Вы можете распространять и/или модифицировать его в соответствии с условиями GNU GPLv3." />
                 </Grid>

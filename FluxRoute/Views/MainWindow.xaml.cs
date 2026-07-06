@@ -107,14 +107,16 @@ public partial class MainWindow : Window
         // Обновление таблетки при ресайзе
         SizeChanged += OnWindowSizeChanged;
 
-        // Если запуск с --minimized (автозапуск), сворачиваем в трей
+        // Если запуск с --minimized (автозапуск через планировщик), сворачиваем в трей.
+        // Также сворачиваем если MinimizeToTray == true (пользовательская настройка).
         // НЕЛЬЗЯ вызывать Hide() в конструкторе — WPF ещё не отрисовал окно,
         // и планировщик задач покажет «битое» окно. Откладываем до Loaded.
         var args = Environment.GetCommandLineArgs();
-        if (args.Contains("--minimized", StringComparer.OrdinalIgnoreCase))
+        if (args.Contains("--minimized", StringComparer.OrdinalIgnoreCase) || _vm.MinimizeToTray)
         {
             Loaded += OnLoadedForMinimizedStart;
-            _logger?.LogInformation("Minimized start scheduled — window will hide after Loaded.");
+            _logger?.LogInformation("Minimized start scheduled — window will hide after Loaded (--minimized={Arg}, MinimizeToTray={Setting}).",
+                args.Contains("--minimized", StringComparer.OrdinalIgnoreCase), _vm.MinimizeToTray);
         }
 
         _logger?.LogInformation("Main window initialized.");
@@ -150,23 +152,25 @@ public partial class MainWindow : Window
 
     private void OnTrayExitRequested(object? sender, EventArgs e)
     {
-        _isClosingConfirmed = true;
-        Close();
+        // Показываем модальное подтверждение перед закрытием
+        if (CustomDialog.Show(
+                "Завершить работу FluxRoute?",
+                "Все активные службы (WinDivert, WinWS) будут остановлены, защита прекратит работу.",
+                "Завершить",
+                "Отмена",
+                isDanger: true))
+        {
+            _isClosingConfirmed = true;
+            Close();
+        }
     }
 
     protected override void OnStateChanged(EventArgs e)
     {
         base.OnStateChanged(e);
 
-        // Сворачивание (—) → прячем в трей
-        if (WindowState == WindowState.Minimized)
-        {
-            ShowInTaskbar = false;
-            Hide();
-            // Явно убеждаемся, что tray icon видим перед показом balloon
-            _trayIcon.SetVisible(true);
-            _trayIcon.ShowBalloon("FluxRoute", "Приложение свёрнуто в трей");
-        }
+        // Сворачивание (—): стандартное поведение Windows — окно остаётся на панели задач.
+        // Трей — только через кнопку закрытия (CloseToTray).
     }
 
     protected override void OnClosing(CancelEventArgs e)
@@ -253,6 +257,9 @@ public partial class MainWindow : Window
 
         if (e.PropertyName == nameof(MainViewModel.IsRunning))
         {
+            _trayIcon.UpdateIcon(_vm.IsRunning);
+            UpdateTrayMenu();
+
             if (_vm.IsRunning)
             {
                 // Burst: кольца расходятся наружу при включении
@@ -273,6 +280,27 @@ public partial class MainWindow : Window
                 PlayWave(outward: false, strength: 0.65, duration: 1400);
             }
         }
+
+        // ═══ v1.6.0: Обновление меню трея при изменении статусов ═══
+        if (e.PropertyName is nameof(MainViewModel.SelectedProfile)
+            or nameof(MainViewModel.OrchestratorEnabled)
+            or nameof(MainViewModel.TgProxyRunning)
+            or nameof(MainViewModel.GameFilterEnabled))
+        {
+            UpdateTrayMenu();
+        }
+    }
+
+    /// <summary>
+    /// Синхронизирует контекстное меню трея с текущим состоянием ViewModel.
+    /// </summary>
+    private void UpdateTrayMenu()
+    {
+        _trayIcon.UpdateMenu(
+            strategy: _vm.SelectedProfile?.DisplayName,
+            orchestratorRunning: _vm.OrchestratorEnabled,
+            tgProxyRunning: _vm.TgProxyRunning,
+            gameFilterEnabled: _vm.GameFilterEnabled);
     }
 
     private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
