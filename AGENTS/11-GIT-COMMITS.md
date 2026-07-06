@@ -41,7 +41,7 @@
 
 **Summary (заголовок):**
 ```
-<type>(<scope>): <краткое описание>
+<type>(<scope>): <краткое описание (до 50 символов)>
 ```
 
 **Description (тело коммита):**
@@ -134,4 +134,4 @@ breaking-change: поле Id переименовано в Identifier
 
 ---
 
-**Следующий файл:** [12-CHECKLIST.md](12-CHECKLIST.md)
+**Следующий файл:** [12-CHECKLIST.md](https://12-CHECKLIST.md)
