@@ -5,6 +5,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.IO;
+using System.Text;
 using Application = System.Windows.Application;
 using FluxRoute.Controls;
 using FluxRoute.Core.Models;
@@ -920,5 +921,113 @@ public partial class MainViewModel
                 // ═══════════════════════════════════════════════════════════════
             }
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  v1.6.0: Вкладка HOSTS — просмотр и редактирование системного hosts
+    // ═══════════════════════════════════════════════════════════════
+
+    private const string HostsFilePath = @"C:\Windows\System32\drivers\etc\hosts";
+
+    [ObservableProperty] private string hostsFileContent = "";
+    [ObservableProperty] private string hostsStatusText = "";
+    [ObservableProperty] private bool hostsHasChanges;
+
+    /// <summary>Переключает режим на «Hosts» и загружает файл.</summary>
+    [RelayCommand]
+    private void SetHostsMode()
+    {
+        SelectedTabMode = "Hosts";
+        NewSiteInput = "";
+        LoadHostsFile();
+    }
+
+    /// <summary>Читает системный файл hosts.</summary>
+    private void LoadHostsFile()
+    {
+        try
+        {
+            if (!File.Exists(HostsFilePath))
+            {
+                HostsFileContent = $"# Файл не найден: {HostsFilePath}";
+                HostsStatusText = "❌ Файл отсутствует";
+                HostsHasChanges = false;
+                return;
+            }
+
+            HostsFileContent = File.ReadAllText(HostsFilePath, new UTF8Encoding(false));
+            var lines = HostsFileContent.Split('\n').Length;
+            HostsStatusText = $"📄 {HostsFilePath} ({lines} стр.)";
+            HostsHasChanges = false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            HostsFileContent = "# Нет прав на чтение файла.\n# Запустите приложение от имени администратора.";
+            HostsStatusText = "🔒 Нет прав на чтение";
+            HostsHasChanges = false;
+        }
+        catch (Exception ex)
+        {
+            HostsFileContent = $"# Ошибка чтения: {ex.Message}";
+            HostsStatusText = "❌ Ошибка чтения";
+            HostsHasChanges = false;
+        }
+    }
+
+    /// <summary>Сохраняет изменения в hosts с резервной копией.</summary>
+    [RelayCommand]
+    private void SaveHosts()
+    {
+        try
+        {
+            if (!CustomDialog.Show(
+                    "💾 Сохранить hosts?",
+                    "Изменения будут записаны в системный файл hosts. Предыдущая версия будет сохранена в .bak.",
+                    "Сохранить", "Отмена", isDanger: false))
+                return;
+
+            // Резервная копия
+            var bakPath = HostsFilePath + ".bak";
+            if (File.Exists(HostsFilePath))
+                File.Copy(HostsFilePath, bakPath, overwrite: true);
+
+            File.WriteAllText(HostsFilePath, HostsFileContent, new UTF8Encoding(false));
+
+            HostsHasChanges = false;
+            var lines = HostsFileContent.Split('\n').Length;
+            HostsStatusText = $"✅ Сохранено ({lines} стр.) · резервная копия: hosts.bak";
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 💾 hosts сохранён ({lines} стр.)");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            CustomDialog.Show(
+                "🔒 Нет прав на запись",
+                "Для редактирования системного файла hosts требуются права администратора.\n\nПерезапустите FluxRoute от имени администратора.",
+                "OK", isDanger: true);
+            HostsStatusText = "🔒 Нет прав — перезапустите от админа";
+        }
+        catch (Exception ex)
+        {
+            CustomDialog.Show(
+                "❌ Ошибка сохранения",
+                $"Не удалось записать файл hosts:\n{ex.Message}",
+                "OK", isDanger: true);
+            HostsStatusText = $"❌ Ошибка: {ex.Message}";
+        }
+    }
+
+    /// <summary>Отменяет изменения — перечитывает файл.</summary>
+    [RelayCommand]
+    private void RevertHosts()
+    {
+        LoadHostsFile();
+        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ hosts: изменения отменены");
+    }
+
+    partial void OnHostsFileContentChanged(string value)
+    {
+        // Флаг изменений поднимается только если мы в режиме Hosts
+        if (SelectedTabMode == "Hosts")
+            HostsHasChanges = true;
     }
 }
