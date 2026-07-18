@@ -258,6 +258,28 @@ public partial class MainViewModel
     }
     // ═══════════════════════════════════════════════════════════════════════════════════════
 
+    // ═══ v1.6.0 (#56): Проверка доступности TCP-порта ═══
+    /// <summary>
+    /// Проверяет, свободен ли указанный TCP-порт на localhost.
+    /// Использует временный TcpListener без фактического захвата порта.
+    /// </summary>
+    private static bool IsPortAvailable(int port)
+    {
+        try
+        {
+            var listener = new System.Net.Sockets.TcpListener(
+                System.Net.IPAddress.Loopback, port);
+            listener.Start();
+            listener.Stop();
+            return true;
+        }
+        catch (System.Net.Sockets.SocketException)
+        {
+            return false;
+        }
+    }
+    // ════════════════════════════════════════════════════════
+
     private void EnsureTgProxyStateInitialized()
     {
         TgProxyInstalled = File.Exists(PythonExe) && File.Exists(ProxyScript);
@@ -743,6 +765,23 @@ public partial class MainViewModel
             AddTgProxyLog("❌ Secret не задан. Нажмите для генерации.");
             return;
         }
+
+        // ═══ v1.6.0 (#56): Проверка доступности порта перед запуском ═══
+        if (int.TryParse(TgProxyPort, out var port) && !IsPortAvailable(port))
+        {
+            AddTgProxyLog($"⚠️ Порт {port} занят. Пробуем освободить...");
+            KillOrphanedTgProxyProcesses();
+            // Даём время на освобождение порта
+            Thread.Sleep(800);
+            if (!IsPortAvailable(port))
+            {
+                AddTgProxyLog($"❌ Порт {port} всё ещё занят другим процессом.");
+                AddTgProxyLog("💡 Закройте программу, использующую этот порт, или смените порт в настройках.");
+                return;
+            }
+            AddTgProxyLog($"✅ Порт {port} освобождён.");
+        }
+        // ═══════════════════════════════════════════════════════════
 
         EnsureTgProxyDomainsInHostlist();
 
