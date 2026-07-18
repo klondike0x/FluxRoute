@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.Input;
 using FluxRoute.Core.Services;
+using FluxRoute.Updater.Services;
 using FluxRoute.Views;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
@@ -50,7 +51,21 @@ public partial class MainViewModel
     private string ProxyScriptDir => Path.Combine(TgProxyDir, "proxy");
     private string ProxyScript => Path.Combine(ProxyScriptDir, "tg_ws_proxy.py");
 
-    private const string TgProxyReleasesAtomUrl = "https://github.com/Flowseal/tg-ws-proxy/releases.atom";
+    private const string TgProxyReleasesAtomUrl = MirrorUrls.TgProxyReleasesAtom;
+
+    // ═══ v1.6.0 (#60): Fallback-зеркала для tg-proxy ═══
+    private static readonly string[] TgProxyTagFallbackUrls =
+    {
+        MirrorUrls.TgProxyReleasesAtom,
+        MirrorUrls.TgProxyReleasesAtomMirrorSf, // SourceForge-зеркало
+    };
+
+    private static readonly string[] TgProxyZipFallbackUrlsTemplate =
+    {
+        MirrorUrls.TgProxyZipTemplate,
+        MirrorUrls.TgProxyZipTemplateMirrorSf, // SourceForge-зеркало
+    };
+    // ════════════════════════════════════════════════════
 
     // ── Состояние ──
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
@@ -373,75 +388,91 @@ public partial class MainViewModel
     /// </summary>
     private async Task<bool> DownloadAndExtractProxyFolderAsync(HttpClient http, string tagName)
     {
-        var zipUrl = $"https://github.com/Flowseal/tg-ws-proxy/archive/{tagName}.zip";
         var tempZipPath = Path.Combine(TgProxyDir, "tg-ws-proxy-temp.zip");
         var tempExtractDir = Path.Combine(TgProxyDir, "tg-ws-proxy-extracted");
 
-        try
+        // ═══ v1.6.0 (#60): Пробуем основной URL → fallback-зеркала ═══
+        for (var i = 0; i < TgProxyZipFallbackUrlsTemplate.Length; i++)
         {
-            AddTgProxyLog($"   URL: {zipUrl}");
+            var zipUrl = string.Format(TgProxyZipFallbackUrlsTemplate[i], tagName);
+            var label = i == 0 ? "основной источник" : $"зеркало #{i}";
 
-            // Скачиваем ZIP
-            using var response = await http.GetAsync(zipUrl, HttpCompletionOption.ResponseHeadersRead);
-            response.EnsureSuccessStatusCode();
-
-            await using (var contentStream = await response.Content.ReadAsStreamAsync())
-            await using (var fileStream = File.Create(tempZipPath))
+            try
             {
-                await contentStream.CopyToAsync(fileStream);
+                AddTgProxyLog($"   URL ({label}): {zipUrl}");
+
+                // Скачиваем ZIP
+                using var response = await http.GetAsync(zipUrl, HttpCompletionOption.ResponseHeadersRead);
+                response.EnsureSuccessStatusCode();
+
+                await using (var contentStream = await response.Content.ReadAsStreamAsync())
+                await using (var fileStream = File.Create(tempZipPath))
+                {
+                    await contentStream.CopyToAsync(fileStream);
+                }
+
+                AddTgProxyLog($"✅ Архив скачан через {label} ({new FileInfo(tempZipPath).Length / 1024} KB)");
+
+                // Распаковываем во временную директорию
+                if (Directory.Exists(tempExtractDir))
+                    Directory.Delete(tempExtractDir, recursive: true);
+
+                Directory.CreateDirectory(tempExtractDir);
+                ZipFile.ExtractToDirectory(tempZipPath, tempExtractDir);
+
+                // Ищем папку proxy/ внутри распакованного архива
+                var extractedRoot = Directory.GetDirectories(tempExtractDir).FirstOrDefault();
+                if (extractedRoot is null)
+                {
+                    if (i < TgProxyZipFallbackUrlsTemplate.Length - 1) continue;
+                    AddTgProxyLog("❌ Архив пуст");
+                    return false;
+                }
+
+                var proxySourceDir = Path.Combine(extractedRoot, "proxy");
+                if (!Directory.Exists(proxySourceDir))
+                {
+                    if (i < TgProxyZipFallbackUrlsTemplate.Length - 1) continue;
+                    AddTgProxyLog("❌ Папка proxy/ не найдена в архиве");
+                    return false;
+                }
+
+                // Копируем proxy/ в целевую директорию
+                if (Directory.Exists(ProxyScriptDir))
+                    Directory.Delete(ProxyScriptDir, recursive: true);
+
+                CopyDirectory(proxySourceDir, ProxyScriptDir);
+
+                var fileCount = Directory.GetFiles(ProxyScriptDir, "*", SearchOption.AllDirectories).Length;
+                AddTgProxyLog($"✅ Исходники proxy/ распакованы ({fileCount} файлов)");
+
+                // Сохраняем версию
+                File.WriteAllText(Path.Combine(TgProxyDir, "version.txt"), tagName);
+                TgProxyVersion = tagName;
+
+                return true;
             }
-
-            AddTgProxyLog($"✅ Архив скачан ({new FileInfo(tempZipPath).Length / 1024} KB)");
-
-            // Распаковываем во временную директорию
-            if (Directory.Exists(tempExtractDir))
-                Directory.Delete(tempExtractDir, recursive: true);
-
-            Directory.CreateDirectory(tempExtractDir);
-            ZipFile.ExtractToDirectory(tempZipPath, tempExtractDir);
-
-            // Ищем папку proxy/ внутри распакованного архива
-            // GitHub создаёт структуру: tg-ws-proxy-{tagName}/proxy/
-            var extractedRoot = Directory.GetDirectories(tempExtractDir).FirstOrDefault();
-            if (extractedRoot is null)
+            catch (Exception ex) when (i < TgProxyZipFallbackUrlsTemplate.Length - 1)
             {
-                AddTgProxyLog("❌ Архив пуст");
+                AddTgProxyLog($"⚠️ {label} недоступен: {ex.Message}");
+                // Продолжаем к следующему зеркалу
+            }
+            catch (Exception ex)
+            {
+                AddTgProxyLog($"❌ Ошибка скачивания tg-proxy (все источники): {ex.Message}");
                 return false;
             }
-
-            var proxySourceDir = Path.Combine(extractedRoot, "proxy");
-            if (!Directory.Exists(proxySourceDir))
+            finally
             {
-                AddTgProxyLog("❌ Папка proxy/ не найдена в архиве");
-                return false;
+                // Чистим временные файлы между попытками
+                try { if (File.Exists(tempZipPath)) File.Delete(tempZipPath); } catch { }
+                try { if (Directory.Exists(tempExtractDir)) Directory.Delete(tempExtractDir, recursive: true); } catch { }
             }
-
-            // Копируем proxy/ в целевую директорию
-            if (Directory.Exists(ProxyScriptDir))
-                Directory.Delete(ProxyScriptDir, recursive: true);
-
-            CopyDirectory(proxySourceDir, ProxyScriptDir);
-
-            var fileCount = Directory.GetFiles(ProxyScriptDir, "*", SearchOption.AllDirectories).Length;
-            AddTgProxyLog($"✅ Исходники proxy/ распакованы ({fileCount} файлов)");
-
-            // Сохраняем версию
-            File.WriteAllText(Path.Combine(TgProxyDir, "version.txt"), tagName);
-            TgProxyVersion = tagName;
-
-            return true;
         }
-        catch (Exception ex)
-        {
-            AddTgProxyLog($"❌ Ошибка распаковки: {ex.Message}");
-            return false;
-        }
-        finally
-        {
-            // Чистим временные файлы
-            try { if (File.Exists(tempZipPath)) File.Delete(tempZipPath); } catch { }
-            try { if (Directory.Exists(tempExtractDir)) Directory.Delete(tempExtractDir, recursive: true); } catch { }
-        }
+        // ═══════════════════════════════════════════════════════════════
+
+        AddTgProxyLog("❌ Не удалось скачать tg-proxy ни с одного источника");
+        return false;
     }
 
     /// <summary>
@@ -952,7 +983,9 @@ public partial class MainViewModel
     /// </summary>
     private async Task<string?> GetLatestTgProxyTagAsync(HttpClient http, CancellationToken ct = default)
     {
-        // Способ 1: редирект releases/latest
+        // ═══ v1.6.0 (#60): Цепочка получения тега: GitHub → SourceForge → Atom ═══
+
+        // Способ 1: редирект releases/latest (GitHub)
         try
         {
             using var noRedirectHandler = new HttpClientHandler { AllowAutoRedirect = false };
@@ -961,7 +994,7 @@ public partial class MainViewModel
             noRedirectHttp.Timeout = TimeSpan.FromSeconds(10);
 
             var response = await noRedirectHttp.GetAsync(
-                "https://github.com/Flowseal/tg-ws-proxy/releases/latest", ct);
+                MirrorUrls.TgProxyLatestRelease, ct);
             if (response.StatusCode is System.Net.HttpStatusCode.Redirect
                                      or System.Net.HttpStatusCode.MovedPermanently
                                      or System.Net.HttpStatusCode.TemporaryRedirect
@@ -972,15 +1005,46 @@ public partial class MainViewModel
                 if (IsValidGitTag(tag)) return tag;
             }
         }
-        catch { /* fallback to atom */ }
+        catch { /* fallback */ }
 
-        // Способ 2: Atom feed (надёжно, без лимитов API)
+        // Способ 1a: редирект releases/latest (SourceForge-зеркало)
+        try
+        {
+            using var noRedirectHandler = new HttpClientHandler { AllowAutoRedirect = false };
+            using var noRedirectHttp = new HttpClient(noRedirectHandler);
+            noRedirectHttp.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
+            noRedirectHttp.Timeout = TimeSpan.FromSeconds(10);
+
+            var response = await noRedirectHttp.GetAsync(
+                MirrorUrls.TgProxyLatestReleaseMirrorSf, ct);
+            if (response.StatusCode is System.Net.HttpStatusCode.Redirect
+                                     or System.Net.HttpStatusCode.MovedPermanently
+                                     or System.Net.HttpStatusCode.TemporaryRedirect
+                                     or System.Net.HttpStatusCode.PermanentRedirect
+                && response.Headers.Location is { } location)
+            {
+                var tag = location.ToString().Split('/').LastOrDefault();
+                if (IsValidGitTag(tag)) return tag;
+            }
+        }
+        catch { /* fallback */ }
+
+        // Способ 2: Atom feed (GitHub, надёжно, без лимитов API)
         try
         {
             var xml = await http.GetStringAsync(TgProxyReleasesAtomUrl, ct);
             return ParseTgProxyTagFromAtom(xml);
         }
+        catch { /* fallback */ }
+
+        // Способ 2a: Atom feed (SourceForge-зеркало)
+        try
+        {
+            var xml = await http.GetStringAsync(MirrorUrls.TgProxyReleasesAtomMirrorSf, ct);
+            return ParseTgProxyTagFromAtom(xml);
+        }
         catch { return null; }
+        // ═══════════════════════════════════════════════════════════════
     }
 
     private static string? ParseTgProxyTagFromAtom(string xml)

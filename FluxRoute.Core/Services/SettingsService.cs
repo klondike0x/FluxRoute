@@ -83,6 +83,21 @@ public sealed class AppSettings
     // ═══ v1.6.0: Синхронизация доменов с UI ═══
     public bool SyncDomainsWithUI { get; set; } = true;
 
+    // ═══ v1.6.0: Fallback-зеркала для загрузок (#60, #58) ═══
+    /// <summary>
+    /// Пользовательские URL-зеркала для скачивания engine, ipset, hosts и tg-proxy.
+    /// Если основной источник (Flowseal) недоступен, приложение пробует эти зеркала по порядку.
+    /// Формат ключа: "engine.version", "engine.zip", "ipset", "hosts", "tgproxy.releases", "tgproxy.zip".
+    /// Значение: список URL, разделённых переводом строки или запятой.
+    /// Пример:
+    /// {
+    ///   "engine.version": "https://my-mirror.example.com/version.txt",
+    ///   "ipset": "https://my-mirror.example.com/ipset.txt,https://mirror2.example.com/ipset.txt"
+    /// }
+    /// </summary>
+    public Dictionary<string, string> FallbackMirrors { get; set; } = new();
+    // ═══════════════════════════════════════════════════════════
+
     // TG WS Proxy
     public TgProxySettings TgProxy { get; set; } = new();
 
@@ -323,6 +338,7 @@ public sealed class SettingsService : ISettingsService
         settings.CustomTargetDomains ??= new List<string>();
         settings.CustomExcludeDomains ??= new List<string>();
         settings.Presets ??= new List<ConfigPreset>();
+        settings.FallbackMirrors ??= new Dictionary<string, string>();
 
         // ═══ v1.6.0: Инициализация дефолтного профиля для триггеров (бэквард-совместимость) ═══
         // DefaultProfileFileName может быть null, это нормально — означает использовать текущий профиль

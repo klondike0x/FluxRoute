@@ -119,7 +119,7 @@ public sealed class UpdaterServiceTests : IDisposable
         var (update, error) = await svc.GetLatestReleaseAsync(default);
 
         Assert.Null(update);
-        Assert.Contains("Сервер GitHub не отвечает", error);
+        Assert.Contains("Не удалось проверить версию", error);
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public sealed class UpdaterServiceTests : IDisposable
         var (update, error) = await svc.GetLatestReleaseAsync(default);
 
         Assert.Null(update);
-        Assert.Contains("Сервер GitHub не отвечает", error);
+        Assert.Contains("Не удалось проверить версию", error);
     }
 
     [Fact]
@@ -168,7 +168,7 @@ public sealed class UpdaterServiceTests : IDisposable
         var (update, error) = await svc.GetLatestReleaseAsync(default);
 
         Assert.Null(update);
-        Assert.Contains("Пустая версия", error);
+        Assert.Contains("Не удалось проверить версию", error);
     }
 
     // ── InstallUpdateAsync: timeout handling ──
@@ -252,10 +252,66 @@ public sealed class UpdaterServiceTests : IDisposable
         var (update, error) = await svc.GetLatestReleaseAsync(default);
 
         Assert.Null(update);
-        Assert.Contains("защищённое соединение", error);
+        Assert.Contains("Не удалось проверить версию", error);
     }
 
     // ── Helpers ──
+
+    // ═══ v1.6.0 (#60): Тесты fallback-логики ═══
+
+    /// <summary>
+    /// Проверяет, что при недоступности основного URL (GitHub)
+    /// пробуется SourceForge-зеркало и возвращается корректный результат.
+    /// </summary>
+    [Fact]
+    public async Task GetLatestReleaseAsync_PrimaryFails_FallsBackToSourceForge()
+    {
+        // Первый запрос (GitHub) — 404
+        var callCount = 0;
+        var handlerMock = CreateHandlerMock((req, ct) =>
+        {
+            callCount++;
+            if (callCount == 1)
+            {
+                // GitHub возвращает 404 (Flowseal заблокирован)
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+            }
+            // SourceForge возвращает версию
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("2.0.0-sf")
+            });
+        });
+
+        var (svc, _) = CreateServiceWithMockFactory(handlerMock, HttpClientNames.Updater);
+
+        var (update, error) = await svc.GetLatestReleaseAsync(default);
+
+        Assert.Null(error);
+        Assert.NotNull(update);
+        Assert.Equal("2.0.0-sf", update!.Version);
+        Assert.Contains("зеркало", update.ReleaseNotes); // Загружено через зеркало
+        Assert.Equal(2, callCount); // Оба URL были опробованы
+    }
+
+    /// <summary>
+    /// Проверяет, что при недоступности всех URL (GitHub + SourceForge)
+    /// возвращается понятная ошибка.
+    /// </summary>
+    [Fact]
+    public async Task GetLatestReleaseAsync_AllMirrorsFail_ReturnsError()
+    {
+        var handlerMock = CreateHandlerMock((req, ct) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
+
+        var (svc, _) = CreateServiceWithMockFactory(handlerMock, HttpClientNames.Updater);
+
+        var (update, error) = await svc.GetLatestReleaseAsync(default);
+
+        Assert.Null(update);
+        Assert.Contains("Не удалось проверить версию", error);
+    }
+    // ═══════════════════════════════════════════════
 
     /// <summary>Создаёт mock HttpMessageHandler с заданной логикой SendAsync.</summary>
     private static Mock<HttpMessageHandler> CreateHandlerMock(

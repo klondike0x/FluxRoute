@@ -212,7 +212,28 @@ public partial class App : Application
         // ════════════════════════════════════════════════════════════════
 
         services.AddSingleton<ISettingsService, SettingsService>();
-        services.AddSingleton<IUpdaterService, UpdaterService>();
+        services.AddSingleton<IUpdaterService>(sp =>
+        {
+            var factory = sp.GetRequiredService<IHttpClientFactory>();
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<UpdaterService>>();
+            var settings = sp.GetRequiredService<ISettingsService>();
+
+            // ═══ v1.6.0 (#60): Передаём функцию получения зеркал из настроек ═══
+            Func<IReadOnlyList<string>>? getVersionMirrors = () =>
+            {
+                var s = settings.Load();
+                if (s.FallbackMirrors.TryGetValue("engine.version", out var raw)
+                    && !string.IsNullOrWhiteSpace(raw))
+                {
+                    return raw.Split(new[] { '\n', '\r', ',' },
+                        StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                }
+                return Array.Empty<string>();
+            };
+            // ═══════════════════════════════════════════════════════════════
+
+            return new UpdaterService(factory, logger, getVersionMirrors);
+        });
         services.AddSingleton<IAppUpdaterService, AppUpdaterService>();
         services.AddSingleton<IConnectivityChecker, ConnectivityChecker>();
         services.AddSingleton<ITaskSchedulerService, TaskSchedulerService>();
