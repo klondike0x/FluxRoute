@@ -5,6 +5,9 @@ using System.Net.Http;
 using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using FluxRoute.Core.Helpers;
+using FluxRoute.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace FluxRoute.Updater.Services;
 
@@ -25,24 +28,48 @@ public interface IUpdaterService
 
 public sealed partial class UpdaterService : IUpdaterService
 {
-    // Flowseal хранит актуальную версию здесь — raw-файл, НЕ GitHub REST API (без лимита 60/час)
+    // ═══ v1.6.0 (#60): Основной источник + fallback-зеркала ═══
+    // Первичный URL версии движка (Flowseal, может быть недоступен)
     private const string RemoteVersionUrl =
         "https://raw.githubusercontent.com/Flowseal/zapret-discord-youtube/main/.service/version.txt";
 
-    // Шаблон ссылки на ZIP-архив релиза (скачивание release asset — тоже без API лимита)
-    // Тег и имя файла у Flowseal БЕЗ префикса 'v': /download/1.9.7b/zapret-discord-youtube-1.9.7b.zip
+    // Шаблон ссылки на ZIP-архив релиза
     private const string ZipUrlTemplate =
         "https://github.com/Flowseal/zapret-discord-youtube/releases/download/{0}/zapret-discord-youtube-{0}.zip";
+
+    // Fallback-зеркала для version.txt (включая первичный URL)
+    private static readonly string[] FallbackVersionUrls =
+    {
+        RemoteVersionUrl,
+        MirrorUrls.EngineVersionMirrorSf, // ═══ v1.6.0: SourceForge-зеркало ═══
+    };
 
     private const string VersionFile    = "version.txt";
     private const string StagingDirName = ".staging";
     private const string BackupDirName  = ".rollback";
 
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<UpdaterService> _logger;
+    private readonly Func<IReadOnlyList<string>>? _getVersionMirrors;
 
     public UpdaterService(IHttpClientFactory httpClientFactory)
     {
         _httpClientFactory = httpClientFactory;
+        _logger = null!; // Для обратной совместимости (designer / тесты без DI)
+    }
+
+    /// <summary>
+    /// Конструктор с поддержкой fallback-зеркал.
+    /// getVersionMirrors — делегат, возвращающий дополнительные URL зеркал из AppSettings.
+    /// </summary>
+    public UpdaterService(
+        IHttpClientFactory httpClientFactory,
+        ILogger<UpdaterService> logger,
+        Func<IReadOnlyList<string>>? getVersionMirrors = null)
+    {
+        _httpClientFactory = httpClientFactory;
+        _logger = logger;
+        _getVersionMirrors = getVersionMirrors;
     }
 
     /// <summary>
@@ -118,52 +145,45 @@ public sealed partial class UpdaterService : IUpdaterService
     }
 
     /// <summary>
-    /// Получает информацию о последнем релизе Flowseal.
-    /// Версия — из raw.githubusercontent.com/.service/version.txt (без лимита).
-    /// ZIP-ссылка — по шаблону (скачивание release asset, тоже без лимита).
+    /// Получает информацию о последнем релизе движка.
+    /// Пробует основной URL → пользовательские зеркала → hardcoded fallback-зеркала.
     /// Использует HttpClient с таймаутом 60с и Polly retry (3 попытки).
     /// </summary>
     public async Task<(UpdateInfo? update, string? error)> GetLatestReleaseAsync(CancellationToken ct = default)
     {
-        try
-        {
-            // Один GET к статическому файлу — не тратит API rate limit
-            using var http = _httpClientFactory.CreateClient(HttpClientNames.Updater);
-            var raw = await http.GetStringAsync(RemoteVersionUrl, ct).ConfigureAwait(false);
-            var remoteVersion = raw.Trim();
+        var http = _httpClientFactory.CreateClient(HttpClientNames.Updater);
 
-            if (string.IsNullOrWhiteSpace(remoteVersion))
-                return (null, "Пустая версия в .service/version.txt");
+        // ═══ v1.6.0 (#60): Строим цепочку URL для проверки версии ═══
+        var userMirrors = _getVersionMirrors?.Invoke();
+        var versionUrls = FallbackHttpHelper.BuildUrlChain(
+            RemoteVersionUrl,
+            userMirrors,
+            FallbackVersionUrls.Skip(1).ToArray()); // Все URL кроме первого (он уже primary)
 
-            var zipUrl = string.Format(ZipUrlTemplate, remoteVersion);
+        var fetchResult = await FallbackHttpHelper.TryFetchFromMirrorsAsync(
+            versionUrls, http, _logger, "engine.version", ct).ConfigureAwait(false);
 
-            return (new UpdateInfo
-            {
-                Version = remoteVersion,
-                DownloadUrl = zipUrl,
-                ReleaseNotes = ""
-            }, null);
-        }
-        catch (HttpRequestException ex) when (ex.InnerException is AuthenticationException)
+        if (fetchResult is not { } success)
         {
-            return (null, "Не удалось установить защищённое соединение с GitHub. Проверьте интернет-соединение или попробуйте позже.");
+            return (null, "Не удалось проверить версию движка ни через один источник.");
         }
-        catch (HttpRequestException ex) when (ex.InnerException is TimeoutException)
+
+        var (raw, mirrorIndex) = success;
+        var remoteVersion = raw.Trim();
+        var sourceLabel = mirrorIndex == 0 ? "Flowseal" : $"зеркало #{mirrorIndex}";
+        // ═══════════════════════════════════════════════════════════════
+
+        if (string.IsNullOrWhiteSpace(remoteVersion))
+            return (null, $"Пустая версия от {sourceLabel}");
+
+        var zipUrl = string.Format(ZipUrlTemplate, remoteVersion);
+
+        return (new UpdateInfo
         {
-            return (null, "Сервер GitHub не отвечает. Проверьте интернет-соединение и попробуйте позже.");
-        }
-        catch (HttpRequestException ex)
-        {
-            return (null, $"Ошибка сети при проверке обновлений: {ex.Message}");
-        }
-        catch (TaskCanceledException)
-        {
-            return (null, "Сервер GitHub не отвечает. Проверьте интернет-соединение и попробуйте позже.");
-        }
-        catch (Exception ex)
-        {
-            return (null, $"Ошибка при проверке обновлений: {ex.Message}");
-        }
+            Version = remoteVersion,
+            DownloadUrl = zipUrl,
+            ReleaseNotes = $"Загружено через {sourceLabel}"
+        }, null);
     }
 
     /// <summary>Скачивает и устанавливает обновление c полным staging → backup → rollback.

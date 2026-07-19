@@ -12,6 +12,14 @@ public sealed class AppSettings
     // Стратегия
     public string? LastProfileFileName { get; set; }
 
+    // ═══ v1.6.0: Дефолтный профиль для триггеров ═══
+    /// <summary>
+    /// Имя файла профиля, который используется по умолчанию при возврате из триггера.
+    /// Если не задан, используется профиль, который был активен до срабатывания триггера.
+    /// </summary>
+    public string? DefaultProfileFileName { get; set; }
+    // ═══════════════════════════════════════════════
+
     // Оркестратор
     public string OrchestratorInterval { get; set; } = "1";
     public bool OrchestratorEnabled { get; set; } = false;
@@ -56,6 +64,39 @@ public sealed class AppSettings
 
     // Предупреждение при смене стратегии
     public bool ShowProfileSwitchWarning { get; set; } = true;
+
+    // ═══ v1.6.0: Автозапуск через планировщик ═══
+    public bool TaskSchedulerAutoStart { get; set; } = false;
+
+    // ═══ v1.6.0: Высокий приоритет автозагрузки ═══
+    public bool HighPriorityStartupEnabled { get; set; } = false;
+
+    // ═══ v1.6.0: Отложенный автозапуск (секунды) ═══
+    public int DelayedAutoStartSeconds { get; set; } = 30;
+
+    // ═══ v1.6.0: Автозапуск последнего профиля ═══
+    public bool AutoLaunchProfile { get; set; } = false;
+
+    // ═══ v1.6.0: Крестик сворачивает в трей ═══
+    public bool CloseToTray { get; set; } = true;
+
+    // ═══ v1.6.0: Синхронизация доменов с UI ═══
+    public bool SyncDomainsWithUI { get; set; } = true;
+
+    // ═══ v1.6.0: Fallback-зеркала для загрузок (#60, #58) ═══
+    /// <summary>
+    /// Пользовательские URL-зеркала для скачивания engine, ipset, hosts и tg-proxy.
+    /// Если основной источник (Flowseal) недоступен, приложение пробует эти зеркала по порядку.
+    /// Формат ключа: "engine.version", "engine.zip", "ipset", "hosts", "tgproxy.releases", "tgproxy.zip".
+    /// Значение: список URL, разделённых переводом строки или запятой.
+    /// Пример:
+    /// {
+    ///   "engine.version": "https://my-mirror.example.com/version.txt",
+    ///   "ipset": "https://my-mirror.example.com/ipset.txt,https://mirror2.example.com/ipset.txt"
+    /// }
+    /// </summary>
+    public Dictionary<string, string> FallbackMirrors { get; set; } = new();
+    // ═══════════════════════════════════════════════════════════
 
     // TG WS Proxy
     public TgProxySettings TgProxy { get; set; } = new();
@@ -297,6 +338,11 @@ public sealed class SettingsService : ISettingsService
         settings.CustomTargetDomains ??= new List<string>();
         settings.CustomExcludeDomains ??= new List<string>();
         settings.Presets ??= new List<ConfigPreset>();
+        settings.FallbackMirrors ??= new Dictionary<string, string>();
+
+        // ═══ v1.6.0: Инициализация дефолтного профиля для триггеров (бэквард-совместимость) ═══
+        // DefaultProfileFileName может быть null, это нормально — означает использовать текущий профиль
+        // ═════════════════════════════════════════════════════════════════════════════════════
 
         // Миграция: сброс старого дефолтного домена www.google.com.
         if (settings.TgProxy.Domain == "www.google.com")

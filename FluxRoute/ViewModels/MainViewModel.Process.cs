@@ -4,10 +4,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
+using FluxRoute.Core.Models;
 using FluxRoute.Core.Services;
+using FluxRoute.Views;
 using Application = System.Windows.Application;
 
 namespace FluxRoute.ViewModels;
@@ -61,6 +64,83 @@ public partial class MainViewModel
         Logs.Add("Обновляем список стратегий...");
         LoadProfiles();
         RefreshDiagnostics();
+    }
+
+    /// <summary>
+    /// v1.6.0: Переустанавливает выбранную стратегию — удаляет .bat и перезаписывает из оригинала.
+    /// Полезно после ручного редактирования или при повреждении файла.
+    /// </summary>
+    [RelayCommand]
+    private void ReinstallProfile(ProfileItem? profile)
+    {
+        if (profile is null)
+        {
+            AddToRecentLogs("❌ Стратегия не выбрана");
+            return;
+        }
+
+        if (!CustomDialog.Show(
+                "🔄 Переустановить стратегию",
+                $"Удалить «{profile.DisplayName}» и перезаписать из оригинала?\nФайл: {profile.FileName}",
+                "Переустановить", "Отмена", isDanger: true))
+            return;
+
+        try
+        {
+            var targetPath = profile.FullPath;
+            var wasRunning = IsRunning;
+            var wasSelected = SelectedProfile == profile;
+
+            if (wasRunning)
+                Stop();
+
+            if (File.Exists(targetPath))
+                File.Delete(targetPath);
+
+            var backupPath = targetPath + ".bak";
+            if (File.Exists(backupPath))
+            {
+                File.Copy(backupPath, targetPath);
+                Logs.Add($"✅ Восстановлено из резервной копии: {profile.DisplayName}");
+            }
+            else
+            {
+                File.WriteAllText(targetPath,
+                    $"@echo off\n" +
+                    $"rem [{profile.DisplayName}] — переустановлен {DateTime.Now:yyyy-MM-dd HH:mm}\n" +
+                    $"rem Оригинальный файл будет восстановлен при следующем обновлении engine.\n" +
+                    $"echo [FluxRoute] Стратегия '{profile.DisplayName}' ожидает восстановления из engine.\n" +
+                    $"pause\n",
+                    new UTF8Encoding(false));
+                Logs.Add($"⚠️ Резервная копия не найдена. Создан placeholder для {profile.DisplayName}.");
+                Logs.Add($"💡 Запустите обновление engine на вкладке «Обновление» для полного восстановления.");
+            }
+
+            LoadProfiles();
+
+            if (wasSelected)
+            {
+                var restored = Profiles.FirstOrDefault(p =>
+                    string.Equals(p.FileName, profile.FileName, StringComparison.OrdinalIgnoreCase));
+                SelectedProfile = restored ?? Profiles.FirstOrDefault();
+            }
+
+            AddToRecentLogs($"🔄 Стратегия переустановлена: {profile.DisplayName}");
+
+            if (wasRunning && SelectedProfile is not null)
+            {
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(800);
+                    Application.Current.Dispatcher.Invoke(Start);
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"❌ Ошибка переустановки: {ex.Message}");
+            AddToRecentLogs($"❌ Ошибка: {ex.Message}");
+        }
     }
 
     [RelayCommand]

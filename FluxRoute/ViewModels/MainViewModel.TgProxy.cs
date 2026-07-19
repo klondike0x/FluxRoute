@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.Input;
 using FluxRoute.Core.Services;
+using FluxRoute.Updater.Services;
 using FluxRoute.Views;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
@@ -50,7 +51,21 @@ public partial class MainViewModel
     private string ProxyScriptDir => Path.Combine(TgProxyDir, "proxy");
     private string ProxyScript => Path.Combine(ProxyScriptDir, "tg_ws_proxy.py");
 
-    private const string TgProxyReleasesAtomUrl = "https://github.com/Flowseal/tg-ws-proxy/releases.atom";
+    private const string TgProxyReleasesAtomUrl = MirrorUrls.TgProxyReleasesAtom;
+
+    // ═══ v1.6.0 (#60): Fallback-зеркала для tg-proxy ═══
+    private static readonly string[] TgProxyTagFallbackUrls =
+    {
+        MirrorUrls.TgProxyReleasesAtom,
+        MirrorUrls.TgProxyReleasesAtomMirrorSf, // SourceForge-зеркало
+    };
+
+    private static readonly string[] TgProxyZipFallbackUrlsTemplate =
+    {
+        MirrorUrls.TgProxyZipTemplate,
+        MirrorUrls.TgProxyZipTemplateMirrorSf, // SourceForge-зеркало
+    };
+    // ════════════════════════════════════════════════════
 
     // ── Состояние ──
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
@@ -174,6 +189,10 @@ public partial class MainViewModel
 
     public void InitializeTgProxyOnStartup()
     {
+        // ═══ v1.6.0: Fix #56 — убиваем зависшие python.exe от предыдущего запуска ═══
+        KillOrphanedTgProxyProcesses();
+        // ════════════════════════════════════════════════════════════════════════════
+
         EnsureTgProxyStateInitialized();
 
         if (!TgProxyAutoStartOnAppLaunch || !TgProxyInstalled || TgProxyRunning)
@@ -187,6 +206,79 @@ public partial class MainViewModel
 
         StartTgProxy();
     }
+
+    // ═══ v1.6.0: Fix #56 — Автоматическое завершение зависших TG WS Proxy процессов ═══
+    /// <summary>
+    /// Сканирует все процессы python.exe и убивает те, что запущены из папки tg-proxy.
+    /// Это решает проблему занятия порта 1443 после некорректного завершения предыдущего запуска.
+    /// </summary>
+    private static void KillOrphanedTgProxyProcesses()
+    {
+        try
+        {
+            var tgProxyDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tg-proxy")
+                + Path.DirectorySeparatorChar;
+            var killed = 0;
+
+            foreach (var proc in Process.GetProcessesByName("python"))
+            {
+                try
+                {
+                    var exePath = proc.MainModule?.FileName;
+                    if (string.IsNullOrEmpty(exePath)
+                        || !exePath.StartsWith(tgProxyDir, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    Trace.TraceInformation(
+                        $"🗑 Найден зависший python.exe (PID {proc.Id}) от предыдущего запуска. Завершаю...");
+
+                    proc.Kill(entireProcessTree: true);
+                    proc.WaitForExit(2000);
+                    killed++;
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    // Игнорируем ошибки доступа к чужим процессам python.exe (не из нашей папки)
+                    // и процессы, которые уже завершились к моменту проверки
+                }
+                finally
+                {
+                    try { proc.Dispose(); } catch { }
+                }
+            }
+
+            if (killed > 0)
+                Trace.TraceInformation($"🗑 Завершено зависших процессов python.exe: {killed}");
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // Graceful degradation: ошибка сканирования процессов не должна ломать запуск приложения
+            Trace.TraceError($"⚠ Ошибка при сканировании зависших процессов TG Proxy: {ex.Message}");
+        }
+    }
+    // ═══════════════════════════════════════════════════════════════════════════════════════
+
+    // ═══ v1.6.0 (#56): Проверка доступности TCP-порта ═══
+    /// <summary>
+    /// Проверяет, свободен ли указанный TCP-порт на localhost.
+    /// Использует временный TcpListener без фактического захвата порта.
+    /// </summary>
+    private static bool IsPortAvailable(int port)
+    {
+        try
+        {
+            var listener = new System.Net.Sockets.TcpListener(
+                System.Net.IPAddress.Loopback, port);
+            listener.Start();
+            listener.Stop();
+            return true;
+        }
+        catch (System.Net.Sockets.SocketException)
+        {
+            return false;
+        }
+    }
+    // ════════════════════════════════════════════════════════
 
     private void EnsureTgProxyStateInitialized()
     {
@@ -318,75 +410,91 @@ public partial class MainViewModel
     /// </summary>
     private async Task<bool> DownloadAndExtractProxyFolderAsync(HttpClient http, string tagName)
     {
-        var zipUrl = $"https://github.com/Flowseal/tg-ws-proxy/archive/{tagName}.zip";
         var tempZipPath = Path.Combine(TgProxyDir, "tg-ws-proxy-temp.zip");
         var tempExtractDir = Path.Combine(TgProxyDir, "tg-ws-proxy-extracted");
 
-        try
+        // ═══ v1.6.0 (#60): Пробуем основной URL → fallback-зеркала ═══
+        for (var i = 0; i < TgProxyZipFallbackUrlsTemplate.Length; i++)
         {
-            AddTgProxyLog($"   URL: {zipUrl}");
+            var zipUrl = string.Format(TgProxyZipFallbackUrlsTemplate[i], tagName);
+            var label = i == 0 ? "основной источник" : $"зеркало #{i}";
 
-            // Скачиваем ZIP
-            using var response = await http.GetAsync(zipUrl, HttpCompletionOption.ResponseHeadersRead);
-            response.EnsureSuccessStatusCode();
-
-            await using (var contentStream = await response.Content.ReadAsStreamAsync())
-            await using (var fileStream = File.Create(tempZipPath))
+            try
             {
-                await contentStream.CopyToAsync(fileStream);
+                AddTgProxyLog($"   URL ({label}): {zipUrl}");
+
+                // Скачиваем ZIP
+                using var response = await http.GetAsync(zipUrl, HttpCompletionOption.ResponseHeadersRead);
+                response.EnsureSuccessStatusCode();
+
+                await using (var contentStream = await response.Content.ReadAsStreamAsync())
+                await using (var fileStream = File.Create(tempZipPath))
+                {
+                    await contentStream.CopyToAsync(fileStream);
+                }
+
+                AddTgProxyLog($"✅ Архив скачан через {label} ({new FileInfo(tempZipPath).Length / 1024} KB)");
+
+                // Распаковываем во временную директорию
+                if (Directory.Exists(tempExtractDir))
+                    Directory.Delete(tempExtractDir, recursive: true);
+
+                Directory.CreateDirectory(tempExtractDir);
+                ZipFile.ExtractToDirectory(tempZipPath, tempExtractDir);
+
+                // Ищем папку proxy/ внутри распакованного архива
+                var extractedRoot = Directory.GetDirectories(tempExtractDir).FirstOrDefault();
+                if (extractedRoot is null)
+                {
+                    if (i < TgProxyZipFallbackUrlsTemplate.Length - 1) continue;
+                    AddTgProxyLog("❌ Архив пуст");
+                    return false;
+                }
+
+                var proxySourceDir = Path.Combine(extractedRoot, "proxy");
+                if (!Directory.Exists(proxySourceDir))
+                {
+                    if (i < TgProxyZipFallbackUrlsTemplate.Length - 1) continue;
+                    AddTgProxyLog("❌ Папка proxy/ не найдена в архиве");
+                    return false;
+                }
+
+                // Копируем proxy/ в целевую директорию
+                if (Directory.Exists(ProxyScriptDir))
+                    Directory.Delete(ProxyScriptDir, recursive: true);
+
+                CopyDirectory(proxySourceDir, ProxyScriptDir);
+
+                var fileCount = Directory.GetFiles(ProxyScriptDir, "*", SearchOption.AllDirectories).Length;
+                AddTgProxyLog($"✅ Исходники proxy/ распакованы ({fileCount} файлов)");
+
+                // Сохраняем версию
+                File.WriteAllText(Path.Combine(TgProxyDir, "version.txt"), tagName);
+                TgProxyVersion = tagName;
+
+                return true;
             }
-
-            AddTgProxyLog($"✅ Архив скачан ({new FileInfo(tempZipPath).Length / 1024} KB)");
-
-            // Распаковываем во временную директорию
-            if (Directory.Exists(tempExtractDir))
-                Directory.Delete(tempExtractDir, recursive: true);
-
-            Directory.CreateDirectory(tempExtractDir);
-            ZipFile.ExtractToDirectory(tempZipPath, tempExtractDir);
-
-            // Ищем папку proxy/ внутри распакованного архива
-            // GitHub создаёт структуру: tg-ws-proxy-{tagName}/proxy/
-            var extractedRoot = Directory.GetDirectories(tempExtractDir).FirstOrDefault();
-            if (extractedRoot is null)
+            catch (Exception ex) when (i < TgProxyZipFallbackUrlsTemplate.Length - 1)
             {
-                AddTgProxyLog("❌ Архив пуст");
+                AddTgProxyLog($"⚠️ {label} недоступен: {ex.Message}");
+                // Продолжаем к следующему зеркалу
+            }
+            catch (Exception ex)
+            {
+                AddTgProxyLog($"❌ Ошибка скачивания tg-proxy (все источники): {ex.Message}");
                 return false;
             }
-
-            var proxySourceDir = Path.Combine(extractedRoot, "proxy");
-            if (!Directory.Exists(proxySourceDir))
+            finally
             {
-                AddTgProxyLog("❌ Папка proxy/ не найдена в архиве");
-                return false;
+                // Чистим временные файлы между попытками
+                try { if (File.Exists(tempZipPath)) File.Delete(tempZipPath); } catch { }
+                try { if (Directory.Exists(tempExtractDir)) Directory.Delete(tempExtractDir, recursive: true); } catch { }
             }
-
-            // Копируем proxy/ в целевую директорию
-            if (Directory.Exists(ProxyScriptDir))
-                Directory.Delete(ProxyScriptDir, recursive: true);
-
-            CopyDirectory(proxySourceDir, ProxyScriptDir);
-
-            var fileCount = Directory.GetFiles(ProxyScriptDir, "*", SearchOption.AllDirectories).Length;
-            AddTgProxyLog($"✅ Исходники proxy/ распакованы ({fileCount} файлов)");
-
-            // Сохраняем версию
-            File.WriteAllText(Path.Combine(TgProxyDir, "version.txt"), tagName);
-            TgProxyVersion = tagName;
-
-            return true;
         }
-        catch (Exception ex)
-        {
-            AddTgProxyLog($"❌ Ошибка распаковки: {ex.Message}");
-            return false;
-        }
-        finally
-        {
-            // Чистим временные файлы
-            try { if (File.Exists(tempZipPath)) File.Delete(tempZipPath); } catch { }
-            try { if (Directory.Exists(tempExtractDir)) Directory.Delete(tempExtractDir, recursive: true); } catch { }
-        }
+        // ═══════════════════════════════════════════════════════════════
+
+        AddTgProxyLog("❌ Не удалось скачать tg-proxy ни с одного источника");
+        return false;
     }
 
     /// <summary>
@@ -658,6 +766,23 @@ public partial class MainViewModel
             return;
         }
 
+        // ═══ v1.6.0 (#56): Проверка доступности порта перед запуском ═══
+        if (int.TryParse(TgProxyPort, out var port) && !IsPortAvailable(port))
+        {
+            AddTgProxyLog($"⚠️ Порт {port} занят. Пробуем освободить...");
+            KillOrphanedTgProxyProcesses();
+            // Даём время на освобождение порта
+            Thread.Sleep(800);
+            if (!IsPortAvailable(port))
+            {
+                AddTgProxyLog($"❌ Порт {port} всё ещё занят другим процессом.");
+                AddTgProxyLog("💡 Закройте программу, использующую этот порт, или смените порт в настройках.");
+                return;
+            }
+            AddTgProxyLog($"✅ Порт {port} освобождён.");
+        }
+        // ═══════════════════════════════════════════════════════════
+
         EnsureTgProxyDomainsInHostlist();
 
         var scriptArgs = BuildArguments();
@@ -897,7 +1022,9 @@ public partial class MainViewModel
     /// </summary>
     private async Task<string?> GetLatestTgProxyTagAsync(HttpClient http, CancellationToken ct = default)
     {
-        // Способ 1: редирект releases/latest
+        // ═══ v1.6.0 (#60): Цепочка получения тега: GitHub → SourceForge → Atom ═══
+
+        // Способ 1: редирект releases/latest (GitHub)
         try
         {
             using var noRedirectHandler = new HttpClientHandler { AllowAutoRedirect = false };
@@ -906,7 +1033,7 @@ public partial class MainViewModel
             noRedirectHttp.Timeout = TimeSpan.FromSeconds(10);
 
             var response = await noRedirectHttp.GetAsync(
-                "https://github.com/Flowseal/tg-ws-proxy/releases/latest", ct);
+                MirrorUrls.TgProxyLatestRelease, ct);
             if (response.StatusCode is System.Net.HttpStatusCode.Redirect
                                      or System.Net.HttpStatusCode.MovedPermanently
                                      or System.Net.HttpStatusCode.TemporaryRedirect
@@ -917,15 +1044,46 @@ public partial class MainViewModel
                 if (IsValidGitTag(tag)) return tag;
             }
         }
-        catch { /* fallback to atom */ }
+        catch { /* fallback */ }
 
-        // Способ 2: Atom feed (надёжно, без лимитов API)
+        // Способ 1a: редирект releases/latest (SourceForge-зеркало)
+        try
+        {
+            using var noRedirectHandler = new HttpClientHandler { AllowAutoRedirect = false };
+            using var noRedirectHttp = new HttpClient(noRedirectHandler);
+            noRedirectHttp.DefaultRequestHeaders.Add("User-Agent", "FluxRoute");
+            noRedirectHttp.Timeout = TimeSpan.FromSeconds(10);
+
+            var response = await noRedirectHttp.GetAsync(
+                MirrorUrls.TgProxyLatestReleaseMirrorSf, ct);
+            if (response.StatusCode is System.Net.HttpStatusCode.Redirect
+                                     or System.Net.HttpStatusCode.MovedPermanently
+                                     or System.Net.HttpStatusCode.TemporaryRedirect
+                                     or System.Net.HttpStatusCode.PermanentRedirect
+                && response.Headers.Location is { } location)
+            {
+                var tag = location.ToString().Split('/').LastOrDefault();
+                if (IsValidGitTag(tag)) return tag;
+            }
+        }
+        catch { /* fallback */ }
+
+        // Способ 2: Atom feed (GitHub, надёжно, без лимитов API)
         try
         {
             var xml = await http.GetStringAsync(TgProxyReleasesAtomUrl, ct);
             return ParseTgProxyTagFromAtom(xml);
         }
+        catch { /* fallback */ }
+
+        // Способ 2a: Atom feed (SourceForge-зеркало)
+        try
+        {
+            var xml = await http.GetStringAsync(MirrorUrls.TgProxyReleasesAtomMirrorSf, ct);
+            return ParseTgProxyTagFromAtom(xml);
+        }
         catch { return null; }
+        // ═══════════════════════════════════════════════════════════════
     }
 
     private static string? ParseTgProxyTagFromAtom(string xml)

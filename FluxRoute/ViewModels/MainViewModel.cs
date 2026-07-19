@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Input;
@@ -134,29 +135,71 @@ public partial class MainViewModel : ObservableObject
     }
 
     // ── Команды менеджера доменов ──
+
+    /// <summary>
+    /// Нормализует ввод домена: убирает пробелы, протоколы, www., завершающий слеш.
+    /// </summary>
+    private string NormalizeDomainInput(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return "";
+
+        // Убираем пробелы в начале/конце
+        input = input.Trim();
+
+        // Удаляем протоколы (регистронезависимо)
+        input = System.Text.RegularExpressions.Regex.Replace(input, @"^https?://", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // Удаляем www. (регистронезависимо)
+        input = System.Text.RegularExpressions.Regex.Replace(input, @"^www\.", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // Убираем завершающий слеш
+        input = input.TrimEnd('/');
+
+        // Удаляем оставшиеся пробелы (лишние, если были)
+        input = input.Trim();
+
+        return input;
+    }
+
     [RelayCommand]
     private void AddCustomDomain()
     {
         var input = NewSiteInput.Trim();
-        if (string.IsNullOrEmpty(input)) return;
+        if (string.IsNullOrEmpty(input))
+        {
+            NewSiteInput = "";
+            return;
+        }
 
-        // Нормализация: убираем протоколы и www
-        input = input.Replace("http://", "").Replace("https://", "").Replace("www.", "").TrimEnd('/');
-        if (string.IsNullOrEmpty(input)) return;
+        // Нормализуем ввод
+        input = NormalizeDomainInput(input);
+        if (string.IsNullOrEmpty(input))
+        {
+            NewSiteInput = "";
+            return;
+        }
 
         var list = SelectedTabMode == "Exclusions" ? CustomExcludeDomains : CustomTargetDomains;
-        if (!list.Contains(input, StringComparer.OrdinalIgnoreCase))
+        var modeName = SelectedTabMode == "Exclusions" ? "исключение" : "проверка";
+
+        // Проверяем на дубликаты (регистронезависимо)
+        if (list.Any(d => string.Equals(d, input, StringComparison.OrdinalIgnoreCase)))
         {
-            list.Add(input);
+            // Домен уже существует — показываем ошибку через CustomDialog
+            CustomDialog.Show(
+                "⚠️ Дубликат домена",
+                $"Домен «{input}» уже добавлен в список {modeName}.",
+                "OK", isDanger: false);
             NewSiteInput = "";
-            SaveSettings();
-            SyncCustomHostlist();
-            AddToRecentLogs($"✅ Добавлен домен: {input} ({(SelectedTabMode == "Exclusions" ? "исключение" : "проверка")})");
+            return;
         }
-        else
-        {
-            NewSiteInput = "";
-        }
+
+        list.Add(input);
+        NewSiteInput = "";
+        SaveSettings();
+        SyncCustomHostlist();
+        AddToRecentLogs($"✅ Добавлен домен: {input} ({modeName})");
     }
 
     [RelayCommand]
@@ -205,6 +248,154 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    // ═══ v1.6.0: Feature #53 — Массовый импорт доменов ═══
+
+    /// <summary>
+    /// Парсит сырой текст и нормализует домены. Разделители: пробел, запятая, точка с запятой, перенос строки.
+    /// </summary>
+    private List<string> ParseAndNormalizeDomains(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return new List<string>();
+
+        return System.Text.RegularExpressions.Regex.Split(raw, @"[\s,;]+")
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(NormalizeDomainInput)
+            .Where(d => !string.IsNullOrEmpty(d))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Добавляет только те домены, которых ещё нет в списке (регистронезависимая дедупликация).
+    /// </summary>
+    private int AddDomainsBulk(List<string> domains)
+    {
+        var list = SelectedTabMode == "Exclusions" ? CustomExcludeDomains : CustomTargetDomains;
+        var existing = new HashSet<string>(list, StringComparer.OrdinalIgnoreCase);
+        var added = 0;
+
+        foreach (var domain in domains)
+        {
+            if (existing.Add(domain))
+            {
+                list.Add(domain);
+                added++;
+            }
+        }
+
+        return added;
+    }
+
+    [RelayCommand]
+    private void ImportDomainsFromClipboard()
+    {
+        try
+        {
+            if (!System.Windows.Clipboard.ContainsText())
+            {
+                AddToRecentLogs("📋 Буфер обмена пуст или не содержит текст");
+                return;
+            }
+
+            var raw = System.Windows.Clipboard.GetText();
+            var domains = ParseAndNormalizeDomains(raw);
+
+            if (domains.Count == 0)
+            {
+                AddToRecentLogs("❌ Не найдено доменов в буфере обмена");
+                return;
+            }
+
+            var added = AddDomainsBulk(domains);
+            SaveSettings();
+            SyncCustomHostlist();
+            AddToRecentLogs($"✅ Импортировано {added} домен(ов) из буфера обмена (пропущено дубликатов: {domains.Count - added})");
+        }
+        catch (Exception ex)
+        {
+            AddToRecentLogs($"❌ Ошибка импорта из буфера обмена: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private void ImportDomainsFromFile()
+    {
+        try
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Текстовые файлы (*.txt)|*.txt|Все файлы (*.*)|*.*",
+                Title = "Выберите файл со списком доменов"
+            };
+
+            if (dialog.ShowDialog() != true)
+                return;
+
+            var raw = File.ReadAllText(dialog.FileName);
+            var domains = ParseAndNormalizeDomains(raw);
+
+            if (domains.Count == 0)
+            {
+                AddToRecentLogs($"❌ Не найдено доменов в файле: {dialog.FileName}");
+                return;
+            }
+
+            var added = AddDomainsBulk(domains);
+            SaveSettings();
+            SyncCustomHostlist();
+            AddToRecentLogs($"✅ Импортировано {added} домен(ов) из файла (пропущено дубликатов: {domains.Count - added})");
+        }
+        catch (Exception ex)
+        {
+            AddToRecentLogs($"❌ Ошибка импорта из файла: {ex.Message}");
+        }
+    }
+
+    // ═══ v1.6.0: Feature #53 — Сброс рейтинга стратегий ═══
+
+    [RelayCommand]
+    private void ResetProfileRatings()
+    {
+        if (!CustomDialog.Show(
+                "🔄 Сбросить рейтинг стратегий",
+                "Очистить историю оценок оркестратора и ИИ? Это заставит программу заново просканировать все стратегии.",
+                "Очистить",
+                "Отмена",
+                isDanger: true))
+            return;
+
+        ProfileScores.Clear();
+        SaveSettings();
+        _aiRegistry.ResetAll();
+        AddToRecentLogs("🔄 Рейтинг стратегий и история ИИ сброшены.");
+    }
+
+    // ═══ v1.6.0: Feature #21 — Команда выхода из приложения ═══
+
+    /// <summary>
+    /// Принудительный выход из приложения (обход CloseToTray, всегда показывает подтверждение).
+    /// </summary>
+    [RelayCommand]
+    private void ExitApplication()
+    {
+        if (CustomDialog.Show(
+                "Завершить работу FluxRoute?",
+                "Все активные службы (WinDivert, WinWS) будут остановлены, защита прекратит работу.",
+                "Завершить",
+                "Отмена",
+                isDanger: true))
+        {
+            Application.Current.Shutdown();
+        }
+    }
+
+    /// <summary>
+    /// Внешний метод для MainWindow — устанавливает флаг подтверждённого закрытия.
+    /// Вызывается из OnTrayExitRequested.
+    /// </summary>
+    public void ConfirmClose() => Application.Current.Shutdown();
+
     // ── События ──
     public event EventHandler? OpenSettingsRequested;
     public event EventHandler? OpenAboutRequested;
@@ -243,6 +434,51 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    // ═══ v1.6.0: Дефолтный профиль для триггеров ═══
+    /// <summary>
+    /// Имя файла дефолтного профиля, на который возвращаться после триггера.
+    /// Если не задан (пусто), используется профиль, активный до срабатывания триггера.
+    /// </summary>
+    [ObservableProperty] private string? defaultProfileFileName;
+
+    partial void OnDefaultProfileFileNameChanged(string? value)
+    {
+        SaveSettings();
+        if (!string.IsNullOrEmpty(value))
+        {
+            AddToRecentLogs($"📌 Дефолтный профиль установлен: {value}");
+        }
+        else
+        {
+            AddToRecentLogs($"📌 Дефолтный профиль очищен");
+        }
+    }
+
+    /// <summary>
+    /// Устанавливает профиль как дефолтный для триггеров.
+    /// </summary>
+    [RelayCommand]
+    private void SetDefaultProfile(ProfileItem? profile)
+    {
+        if (profile is null)
+        {
+            DefaultProfileFileName = null;
+            return;
+        }
+
+        DefaultProfileFileName = profile.FileName;
+    }
+
+    /// <summary>
+    /// Очищает дефолтный профиль.
+    /// </summary>
+    [RelayCommand]
+    private void ClearDefaultProfile()
+    {
+        DefaultProfileFileName = null;
+    }
+    // ═════════════════════════════════════════════════
+
     // ── Статус ──
     [ObservableProperty] private string statusText = "Не запущено";
     [ObservableProperty] private string updateText = "Обновления не проверялись";
@@ -251,6 +487,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string uptimeText = "—";
     public string AppVersion { get; } = GetAppVersion();
     public string AppBuildDate { get; } = GetBuildDate();
+    public string AppRuntime { get; } = $".NET {Environment.Version} ({RuntimeInformation.ProcessArchitecture})";
+    public string AppLogPath { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "FluxRoute", "logs");
     public string AppLicense { get; } = "GNU General Public License v3.0";
     public string AppRepositoryUrl { get; } = "https://github.com/klondike0x/FluxRoute";
 
@@ -426,6 +666,123 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool minimizeToTray = true;
     partial void OnMinimizeToTrayChanged(bool value) => SaveSettings();
 
+    // ═══ v1.6.0: Крестик сворачивает в трей ═══
+    [ObservableProperty] private bool closeToTray = true;
+    partial void OnCloseToTrayChanged(bool value) => SaveSettings();
+
+    // ═══ v1.6.0: Автозапуск через Планировщик задач ═══
+    [ObservableProperty] private bool taskSchedulerAutoStart;
+    partial void OnTaskSchedulerAutoStartChanged(bool value)
+    {
+        if (_suppressTaskSchedulerChanged) return;
+        var exePath = Environment.ProcessPath
+            ?? System.Reflection.Assembly.GetEntryAssembly()?.Location ?? "";
+        if (!string.IsNullOrEmpty(exePath))
+        {
+            try
+            {
+                if (value)
+                    _taskScheduler.CreateTask(exePath, HighPriorityStartupEnabled, DelayedAutoStartSeconds);
+                else
+                    _taskScheduler.RemoveTask();
+
+                AddToRecentLogs(value ? "✅ Задача автозапуска создана" : "🗑 Задача автозапуска удалена");
+            }
+            catch (Exception ex)
+            {
+                // ═══ v1.6.0: Диагностика автозапуска — показываем понятное сообщение ═══
+                var message = ex.Message.Contains("Access", StringComparison.OrdinalIgnoreCase)
+                    ? "Недостаточно прав для создания задачи в Планировщике. Запустите приложение от администратора."
+                    : $"Ошибка Планировщика задач: {ex.Message}";
+                Logs.Add($"❌ {message}");
+                AddToRecentLogs($"❌ Ошибка автозапуска: {ex.Message}");
+
+                CustomDialog.Show(
+                    "❌ Ошибка автозапуска",
+                    message,
+                    "OK", isDanger: true);
+
+                // Откатываем чекбокс
+                _ = Application.Current?.Dispatcher.BeginInvoke(() =>
+                {
+                    _suppressTaskSchedulerChanged = true;
+                    TaskSchedulerAutoStart = false;
+                    _suppressTaskSchedulerChanged = false;
+                });
+                // ═══════════════════════════════════════════════════════════
+                return;
+            }
+        }
+        SaveSettings();
+    }
+    private bool _suppressTaskSchedulerChanged;
+
+    // ═══ v1.6.0: Высокий приоритет автозагрузки ═══
+    [ObservableProperty] private bool highPriorityStartupEnabled;
+    partial void OnHighPriorityStartupEnabledChanged(bool value)
+    {
+        SaveSettings();
+        // Пересоздаём задачу с новым приоритетом, если она существует
+        if (_settingsLoaded && TaskSchedulerAutoStart)
+        {
+            var exePath = Environment.ProcessPath
+                ?? System.Reflection.Assembly.GetEntryAssembly()?.Location ?? "";
+            if (!string.IsNullOrEmpty(exePath))
+            {
+                try
+                {
+                    _taskScheduler.CreateTask(exePath, value, DelayedAutoStartSeconds);
+                    AddToRecentLogs(value
+                        ? "⚡ Приоритет автозагрузки: высокий"
+                        : "🔹 Приоритет автозагрузки: нормальный");
+                }
+                catch (Exception ex)
+                {
+                    Logs.Add($"❌ Ошибка изменения приоритета: {ex.Message}");
+                }
+            }
+        }
+    }
+
+    // ═══ v1.6.0: Отложенный автозапуск ═══
+    [ObservableProperty] private int delayedAutoStartSeconds = 30;
+    partial void OnDelayedAutoStartSecondsChanged(int value)
+    {
+        // Валидация: не меньше 0 и не больше 300 (5 минут)
+        if (value < 0) DelayedAutoStartSeconds = 0;
+        if (value > 300) DelayedAutoStartSeconds = 300;
+        SaveSettings();
+        // Пересоздаём задачу с новой задержкой
+        if (_settingsLoaded && TaskSchedulerAutoStart)
+        {
+            var exePath = Environment.ProcessPath
+                ?? System.Reflection.Assembly.GetEntryAssembly()?.Location ?? "";
+            if (!string.IsNullOrEmpty(exePath))
+            {
+                try
+                {
+                    _taskScheduler.CreateTask(exePath, HighPriorityStartupEnabled, DelayedAutoStartSeconds);
+                    AddToRecentLogs($"⏱ Задержка автозапуска: {DelayedAutoStartSeconds} сек");
+                }
+                catch (Exception ex)
+                {
+                    Logs.Add($"❌ Ошибка изменения задержки: {ex.Message}");
+                }
+            }
+        }
+    }
+
+    // ═══ v1.6.0: Автоматический запуск последнего профиля ═══
+    [ObservableProperty] private bool autoLaunchProfile;
+    partial void OnAutoLaunchProfileChanged(bool value) => SaveSettings();
+
+    // ═══ v1.6.0: Синхронизация доменов с UI ═══
+    [ObservableProperty] private bool syncDomainsWithUI = true;
+    partial void OnSyncDomainsWithUIChanged(bool value) => SaveSettings();
+
+    // ═══ v1.6.0: Поле ввода для подбора стратегии по домену/IP ═══
+    [ObservableProperty] private string findBestStrategyTarget = "";
+
     // ── Обновления (wrappers → UpdatesViewModel) ──
     public string UpdateStatus => Updates.UpdateStatus;
     public string CurrentEngineVersion => Updates.CurrentEngineVersion;
@@ -434,6 +791,9 @@ public partial class MainViewModel : ObservableObject
     public string EngineDownloadStatus => Updates.EngineDownloadStatus;
 
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ITaskSchedulerService _taskScheduler;
+    private readonly TrayIconService? _trayIcon;
+    private readonly StrategyEvolver _evolver;
 
     public MainViewModel(
         ISettingsService settingsService,
@@ -447,7 +807,9 @@ public partial class MainViewModel : ObservableObject
         BanditSelector aiBandit,
         StrategyEvolver aiEvolver,
         BatMaterializer aiMaterializer,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        ITaskSchedulerService? taskScheduler = null,
+        TrayIconService? trayIcon = null)
     {
         _settingsService = settingsService;
         _updater = updaterService;
@@ -457,6 +819,9 @@ public partial class MainViewModel : ObservableObject
         _aiHistoryStore = aiHistoryStore;
         _aiFingerprints = aiFingerprints;
         _httpClientFactory = httpClientFactory;
+        _taskScheduler = taskScheduler ?? new TaskSchedulerService();
+        _trayIcon = trayIcon;
+        _evolver = aiEvolver;
 
         // ── Инициализация feature ViewModels ──
         Diagnostics = new DiagnosticsViewModel(
@@ -624,6 +989,32 @@ public partial class MainViewModel : ObservableObject
         RebuildAiStrategyRows();
 
         InitializeTgProxyOnStartup();
+
+        // ═══ v1.6.0: Автозапуск последнего профиля через 2.5 сек ═══
+        if (AutoLaunchProfile && SelectedProfile is not null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(2500);
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        if (SelectedProfile is not null && !IsRunning)
+                        {
+                            Logs.Add($"🚀 Автозапуск профиля: {SelectedProfile.DisplayName}");
+                            AddToRecentLogs($"🚀 Автозапуск профиля: {SelectedProfile.DisplayName}");
+                            Start();
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    // Автозапуск не должен ломать основной запуск приложения
+                    Trace.TraceError($"⚠ Ошибка автозапуска профиля: {ex.Message}");
+                }
+            });
+        }
     }
 
     // ── Настройки ──
@@ -665,8 +1056,19 @@ public partial class MainViewModel : ObservableObject
         AutoUpdateEnabled = settings.AutoUpdateEnabled;
         AutoStartEnabled = settings.AutoStartEnabled;
         MinimizeToTray = settings.MinimizeToTray;
+        // ═══ v1.6.0: Крестик сворачивает в трей ═══
+        CloseToTray = settings.CloseToTray;
+        // ═══════════════════════════════════════
         GameFilterProtocol = settings.GameFilterProtocol;
         ShowProfileSwitchWarning = settings.ShowProfileSwitchWarning;
+
+        // ═══ v1.6.0 ═══
+        TaskSchedulerAutoStart = settings.TaskSchedulerAutoStart;
+        HighPriorityStartupEnabled = settings.HighPriorityStartupEnabled;
+        DelayedAutoStartSeconds = settings.DelayedAutoStartSeconds > 0 ? settings.DelayedAutoStartSeconds : 30;
+        AutoLaunchProfile = settings.AutoLaunchProfile;
+        SyncDomainsWithUI = settings.SyncDomainsWithUI;
+        DefaultProfileFileName = settings.DefaultProfileFileName; // Дефолтный профиль для триггеров
 
         settings.Ai ??= new AiSettings();
         AiEnabled = settings.Ai.Enabled;
@@ -701,6 +1103,7 @@ public partial class MainViewModel : ObservableObject
         var settings = new AppSettings
         {
             LastProfileFileName = SelectedProfile?.FileName,
+            DefaultProfileFileName = DefaultProfileFileName, // Дефолтный профиль для триггеров
             OrchestratorInterval = OrchestratorInterval,
             OrchestratorEnabled = OrchestratorEnabled,
             SiteYouTube = SiteYouTube,
@@ -719,8 +1122,16 @@ public partial class MainViewModel : ObservableObject
             AutoUpdateEnabled = AutoUpdateEnabled,
             AutoStartEnabled = AutoStartEnabled,
             MinimizeToTray = MinimizeToTray,
+            // ═══ v1.6.0: Крестик сворачивает в трей ═══
+            CloseToTray = CloseToTray,
+            // ═══════════════════════════════════════
             GameFilterProtocol = GameFilterProtocol,
             ShowProfileSwitchWarning = ShowProfileSwitchWarning,
+            TaskSchedulerAutoStart = TaskSchedulerAutoStart,
+            HighPriorityStartupEnabled = HighPriorityStartupEnabled,
+            DelayedAutoStartSeconds = DelayedAutoStartSeconds,
+            AutoLaunchProfile = AutoLaunchProfile,
+            SyncDomainsWithUI = SyncDomainsWithUI,
             Ai = BuildAiSettingsSnapshot(),
             ProfileRatings = ProfileScores.Select(s => new ProfileRatingEntry
             {
@@ -796,9 +1207,12 @@ public partial class MainViewModel : ObservableObject
     }
 
     // ── Синхронизация пользовательских доменов с движком (winws.exe) ──
-    // ── Синхронизация пользовательских доменов с движком (winws.exe) ──
     private void SyncCustomHostlist()
     {
+        // v1.6.0: Пропускаем синхронизацию, если пользователь её отключил
+        if (!SyncDomainsWithUI)
+            return;
+
         try
         {
             var listsDir = Path.Combine(EngineDir, "lists");
@@ -823,7 +1237,7 @@ public partial class MainViewModel : ObservableObject
                     domains.Add(d.Trim());
             }
 
-            // Записываем в файл
+            // Записываем list-general-user.txt
             if (domains.Count > 0)
             {
                 // Используем явное удаление + запись, чтобы избежать кэширования
@@ -843,10 +1257,34 @@ public partial class MainViewModel : ObservableObject
                     File.WriteAllText(userHostlistPath, "# custom domains empty\n", new UTF8Encoding(false));
                 Logs.Add("[Sync] list-general-user.txt очищен");
             }
+
+            // ═══ v1.6.0: Синхронизация list-exclude-user.txt ═══
+            var excludeHostlistPath = Path.Combine(listsDir, "list-exclude-user.txt");
+            var excludeDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var d in CustomExcludeDomains)
+            {
+                if (!string.IsNullOrWhiteSpace(d))
+                    excludeDomains.Add(d.Trim());
+            }
+
+            if (excludeDomains.Count > 0)
+            {
+                if (File.Exists(excludeHostlistPath))
+                {
+                    try { File.SetAttributes(excludeHostlistPath, FileAttributes.Normal); } catch { }
+                }
+                File.WriteAllLines(excludeHostlistPath, excludeDomains.OrderBy(x => x), new UTF8Encoding(false));
+                Logs.Add($"[Sync] Записано {excludeDomains.Count} исключений в list-exclude-user.txt");
+            }
+            else
+            {
+                if (File.Exists(excludeHostlistPath))
+                    File.Delete(excludeHostlistPath);
+            }
         }
         catch (Exception ex)
         {
-            Logs.Add($"❌ Ошибка записи list-general-user.txt: {ex.Message}");
+            Logs.Add($"❌ Ошибка синхронизации hostlist-файлов: {ex.Message}");
             Logs.Add($"   Stack: {ex.StackTrace?.Split('\n')[0]}");
         }
     }

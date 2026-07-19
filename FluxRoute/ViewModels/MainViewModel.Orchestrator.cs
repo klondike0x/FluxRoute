@@ -5,6 +5,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.IO;
+using System.Text;
 using Application = System.Windows.Application;
 using FluxRoute.Controls;
 using FluxRoute.Core.Models;
@@ -114,6 +115,13 @@ public partial class MainViewModel
                 {
                     SortProfileScores();
                     SaveSettings();
+                }
+
+                // ═══ v1.6.0: Toast-уведомления при создании новых стратегий ═══
+                if (e.Message.Contains("ИИ: эволюция завершена", StringComparison.OrdinalIgnoreCase) ||
+                    e.Message.Contains("ИИ: проверка новой стратегии", StringComparison.OrdinalIgnoreCase))
+                {
+                    _trayIcon?.ShowBalloon("FluxRoute — ИИ", e.Message.Replace($"[{DateTime.Now:HH:mm:ss}] ", ""));
                 }
 
                 if (e.IsSwitched && e.NewProfile is not null)
@@ -775,6 +783,7 @@ public partial class MainViewModel
     // ── Мониторинг процессов для автопереключения пресетов ──
     private CancellationTokenSource? _processMonitorCts;
     private string? _presetBeforeGameTrigger; // имя пресета, который был активен до триггера
+    private ProfileItem? _profileBeforeTrigger; // профиль, активный до срабатывания триггера (для возврата)
 
     private void StartProcessMonitor()
     {
@@ -790,6 +799,7 @@ public partial class MainViewModel
         _processMonitorCts?.Cancel();
         _processMonitorCts = null;
         _activeTriggeredPreset = null;
+        _profileBeforeTrigger = null; // Очищаем запомненный профиль
     }
 
     private string? _activeTriggeredPreset; // Id активного тригерного пресета
@@ -846,26 +856,178 @@ public partial class MainViewModel
         {
             if (matched is not null)
             {
-                // Процесс появился → применяем пресет
+                // Процесс появился → запоминаем текущий профиль и применяем пресет
                 _activeTriggeredPreset = matchedId;
+
+                // ═══ v1.6.0: Запоминаем профиль перед триггером ═══
+                // Если не задан дефолтный профиль, используем текущий
+                if (string.IsNullOrEmpty(DefaultProfileFileName))
+                {
+                    _profileBeforeTrigger = SelectedProfile;
+                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 📌 Запомнен профиль до триггера: {_profileBeforeTrigger?.DisplayName ?? "—"}");
+                }
+                else
+                {
+                    // Дефолтный профиль задан, найдём его
+                    _profileBeforeTrigger = Profiles.FirstOrDefault(p => p.FileName == DefaultProfileFileName);
+                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 📌 Используется дефолтный профиль: {_profileBeforeTrigger?.DisplayName ?? DefaultProfileFileName}");
+                }
+                // ═════════════════════════════════════════════════
+
                 AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🎮 Обнаружен процесс «{matched.TriggerProcess}» → применяю пресет «{matched.Name}»");
                 _ = ApplyPreset(matched);
             }
             else if (_activeTriggeredPreset is not null)
             {
-                // Процесс исчез → возвращаем первый пресет без триггера (если есть)
+                // ═══ v1.6.0: Процесс исчез → возвращаем запомненный профиль ═══
                 _activeTriggeredPreset = null;
-                var fallback = Presets.FirstOrDefault(p => string.IsNullOrWhiteSpace(p.TriggerProcess));
-                if (fallback is not null)
+
+                if (_profileBeforeTrigger is not null)
                 {
-                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Процесс завершён → возврат к пресету «{fallback.Name}»");
-                    _ = ApplyPreset(fallback);
+                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Процесс завершён → возврат на профиль «{_profileBeforeTrigger.DisplayName}»");
+                    // Применяем запомненный профиль
+                    if (SelectedProfile != _profileBeforeTrigger)
+                    {
+                        _suppressProfileWarning = true;
+                        SelectedProfile = _profileBeforeTrigger;
+                        _suppressProfileWarning = false;
+
+                        // Перезапускаем защиту если она была запущена
+                        if (IsRunning)
+                        {
+                            Stop();
+                            _ = Task.Delay(1000).ContinueWith(_ =>
+                            {
+                                Application.Current?.Dispatcher.Invoke(Start);
+                            });
+                        }
+                    }
+                    _profileBeforeTrigger = null;
                 }
                 else
                 {
-                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Процесс завершён (пресет возврата не задан)");
+                    // Если профиль не был запомнен, пытаемся вернуться к первому пресету без триггера
+                    var fallback = Presets.FirstOrDefault(p => string.IsNullOrWhiteSpace(p.TriggerProcess));
+                    if (fallback is not null)
+                    {
+                        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Процесс завершён → возврат к пресету «{fallback.Name}»");
+                        _ = ApplyPreset(fallback);
+                    }
+                    else
+                    {
+                        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Процесс завершён (профиль/пресет возврата не задан)");
+                    }
                 }
+                // ═══════════════════════════════════════════════════════════════
             }
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  v1.6.0: Вкладка HOSTS — просмотр и редактирование системного hosts
+    // ═══════════════════════════════════════════════════════════════
+
+    private const string HostsFilePath = @"C:\Windows\System32\drivers\etc\hosts";
+
+    [ObservableProperty] private string hostsFileContent = "";
+    [ObservableProperty] private string hostsStatusText = "";
+    [ObservableProperty] private bool hostsHasChanges;
+
+    /// <summary>Переключает режим на «Hosts» и загружает файл.</summary>
+    [RelayCommand]
+    private void SetHostsMode()
+    {
+        SelectedTabMode = "Hosts";
+        NewSiteInput = "";
+        LoadHostsFile();
+    }
+
+    /// <summary>Читает системный файл hosts.</summary>
+    private void LoadHostsFile()
+    {
+        try
+        {
+            if (!File.Exists(HostsFilePath))
+            {
+                HostsFileContent = $"# Файл не найден: {HostsFilePath}";
+                HostsStatusText = "❌ Файл отсутствует";
+                HostsHasChanges = false;
+                return;
+            }
+
+            HostsFileContent = File.ReadAllText(HostsFilePath, new UTF8Encoding(false));
+            var lines = HostsFileContent.Split('\n').Length;
+            HostsStatusText = $"📄 {HostsFilePath} ({lines} стр.)";
+            HostsHasChanges = false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            HostsFileContent = "# Нет прав на чтение файла.\n# Запустите приложение от имени администратора.";
+            HostsStatusText = "🔒 Нет прав на чтение";
+            HostsHasChanges = false;
+        }
+        catch (Exception ex)
+        {
+            HostsFileContent = $"# Ошибка чтения: {ex.Message}";
+            HostsStatusText = "❌ Ошибка чтения";
+            HostsHasChanges = false;
+        }
+    }
+
+    /// <summary>Сохраняет изменения в hosts с резервной копией.</summary>
+    [RelayCommand]
+    private void SaveHosts()
+    {
+        try
+        {
+            if (!CustomDialog.Show(
+                    "💾 Сохранить hosts?",
+                    "Изменения будут записаны в системный файл hosts. Предыдущая версия будет сохранена в .bak.",
+                    "Сохранить", "Отмена", isDanger: false))
+                return;
+
+            // Резервная копия
+            var bakPath = HostsFilePath + ".bak";
+            if (File.Exists(HostsFilePath))
+                File.Copy(HostsFilePath, bakPath, overwrite: true);
+
+            File.WriteAllText(HostsFilePath, HostsFileContent, new UTF8Encoding(false));
+
+            HostsHasChanges = false;
+            var lines = HostsFileContent.Split('\n').Length;
+            HostsStatusText = $"✅ Сохранено ({lines} стр.) · резервная копия: hosts.bak";
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 💾 hosts сохранён ({lines} стр.)");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            CustomDialog.Show(
+                "🔒 Нет прав на запись",
+                "Для редактирования системного файла hosts требуются права администратора.\n\nПерезапустите FluxRoute от имени администратора.",
+                "OK", isDanger: true);
+            HostsStatusText = "🔒 Нет прав — перезапустите от админа";
+        }
+        catch (Exception ex)
+        {
+            CustomDialog.Show(
+                "❌ Ошибка сохранения",
+                $"Не удалось записать файл hosts:\n{ex.Message}",
+                "OK", isDanger: true);
+            HostsStatusText = $"❌ Ошибка: {ex.Message}";
+        }
+    }
+
+    /// <summary>Отменяет изменения — перечитывает файл.</summary>
+    [RelayCommand]
+    private void RevertHosts()
+    {
+        LoadHostsFile();
+        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ hosts: изменения отменены");
+    }
+
+    partial void OnHostsFileContentChanged(string value)
+    {
+        // Флаг изменений поднимается только если мы в режиме Hosts
+        if (SelectedTabMode == "Hosts")
+            HostsHasChanges = true;
     }
 }

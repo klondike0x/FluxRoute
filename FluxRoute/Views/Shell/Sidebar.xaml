@@ -54,7 +54,8 @@
                         </Border.Style>
                     </Border>
                     <Button Style="{StaticResource NavIconBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="0">
+                            Command="{Binding SelectTabCommand}" CommandParameter="0"
+                            ToolTip="Главная — статус защиты и управление">
                         <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE80F;">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -103,7 +104,8 @@
                         </Border.Style>
                     </Border>
                     <Button Style="{StaticResource NavIconBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="1">
+                            Command="{Binding SelectTabCommand}" CommandParameter="1"
+                            ToolTip="TG Прокси — настройка Telegram WebSocket прокси">
                         <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE724;">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -152,7 +154,8 @@
                         </Border.Style>
                     </Border>
                     <Button Style="{StaticResource NavIconBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="2">
+                            Command="{Binding SelectTabCommand}" CommandParameter="2"
+                            ToolTip="Оркестратор — авто-подбор и проверка стратегий">
                         <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE713;">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -201,7 +204,8 @@
                         </Border.Style>
                     </Border>
                     <Button Style="{StaticResource NavIconBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="3">
+                            Command="{Binding SelectTabCommand}" CommandParameter="3"
+                            ToolTip="ИИ — эволюция стратегий и подбор по домену">
                         <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE99A;">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -250,7 +254,8 @@
                         </Border.Style>
                     </Border>
                     <Button Style="{StaticResource NavIconBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="4">
+                            Command="{Binding SelectTabCommand}" CommandParameter="4"
+                            ToolTip="Обновление — проверка и загрузка engine">
                         <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE72C;">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -299,7 +304,8 @@
                         </Border.Style>
                     </Border>
                     <Button Style="{StaticResource NavIconBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="5">
+                            Command="{Binding SelectTabCommand}" CommandParameter="5"
+                            ToolTip="Диагностика — состояние системы и автозапуск">
                         <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE90F;">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -336,7 +342,8 @@
                         </Border.Style>
                     </Border>
                     <Button Style="{StaticResource NavIconBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="6">
+                            Command="{Binding SelectTabCommand}" CommandParameter="6"
+                            ToolTip="Сервис — игровой фильтр, IPSet, WinDivert">
                         <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE9F5;">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -385,7 +392,8 @@
                         </Border.Style>
                     </Border>
                     <Button Style="{StaticResource NavIconBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="8">
+                            Command="{Binding SelectTabCommand}" CommandParameter="8"
+                            ToolTip="Логи — просмотр событий приложения">
                         <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE9F9;">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -425,7 +433,8 @@
                         </Border.Style>
                     </Border>
                     <Button Style="{StaticResource NavIconBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="7">
+                            Command="{Binding SelectTabCommand}" CommandParameter="7"
+                            ToolTip="О программе — версия, лицензия, ссылки">
                         <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE897;">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">

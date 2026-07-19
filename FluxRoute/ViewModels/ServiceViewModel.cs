@@ -2,7 +2,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluxRoute.Core.Models;
 using FluxRoute.Core.Services;
+using FluxRoute.Updater.Services;
 using FluxRoute.Views;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -13,6 +15,7 @@ using System.Net.Http;
 using System.Windows;
 using System.Windows.Input;
 using Application = System.Windows.Application;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace FluxRoute.ViewModels;
 
@@ -27,6 +30,21 @@ public sealed partial class ServiceViewModel : ObservableObject
     private readonly Action<string> _addAppLog;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConnectivityChecker _connectivityChecker;
+    private readonly ILogger<ServiceViewModel>? _logger;
+
+    // ═══ v1.6.0 (#60): Fallback-зеркала для IPSet и Hosts ═══
+    private static readonly string[] IpSetFallbackUrls =
+    {
+        MirrorUrls.IpSetList,
+        MirrorUrls.IpSetListMirrorSf, // SourceForge-зеркало
+    };
+
+    private static readonly string[] HostsFallbackUrls =
+    {
+        MirrorUrls.HostsFile,
+        MirrorUrls.HostsFileMirrorSf, // SourceForge-зеркало
+    };
+    // ════════════════════════════════════════════════════════════
 
     private static readonly Dictionary<string, string> _protocolToFile = new()
     {
@@ -79,13 +97,15 @@ public sealed partial class ServiceViewModel : ObservableObject
         Func<string?> getSelectedProfileDisplayName,
         Action<string> addAppLog,
         IHttpClientFactory httpClientFactory,
-        IConnectivityChecker connectivityChecker)
+        IConnectivityChecker connectivityChecker,
+        ILogger<ServiceViewModel>? logger = null) // ═══ v1.6.0: ILogger (опционально для бэквард-совместимости) ═══
     {
         _getEngineDir = getEngineDir;
         _getSelectedProfileDisplayName = getSelectedProfileDisplayName;
         _addAppLog = addAppLog;
         _httpClientFactory = httpClientFactory;
         _connectivityChecker = connectivityChecker;
+        _logger = logger;
     }
 
     private string ProtocolToFileValue(string protocol) =>
@@ -257,9 +277,15 @@ public sealed partial class ServiceViewModel : ObservableObject
         AddLog("⬇️ Скачиваем ipset-all.txt...");
         try
         {
-            var url = "https://raw.githubusercontent.com/Flowseal/zapret-discord-youtube/refs/heads/main/.service/ipset-service.txt";
-            using var http = _httpClientFactory.CreateClient("Service");
-            var content = await http.GetStringAsync(url);
+            // ═══ v1.6.0 (#60): Пробуем основной URL → fallback-зеркала ═══
+            var content = await TryFetchFromMirrorsAsync(IpSetFallbackUrls, "ipset-all.txt");
+            if (content is null)
+            {
+                AddLog("❌ Не удалось скачать IPSet ни с одного источника");
+                return;
+            }
+            // ═══════════════════════════════════════════════════════════
+
             var listsDir = Path.GetDirectoryName(IpSetFilePath)!;
             Directory.CreateDirectory(listsDir);
             await File.WriteAllTextAsync(IpSetFilePath, content);
@@ -289,9 +315,15 @@ public sealed partial class ServiceViewModel : ObservableObject
         AddLog("⬇️ Проверяем hosts файл...");
         try
         {
-            var hostsUrl = "https://raw.githubusercontent.com/Flowseal/zapret-discord-youtube/refs/heads/main/.service/hosts";
-            using var http = _httpClientFactory.CreateClient("Service");
-            var newContent = await http.GetStringAsync(hostsUrl);
+            // ═══ v1.6.0 (#60): Пробуем основной URL → fallback-зеркала ═══
+            var newContent = await TryFetchFromMirrorsAsync(HostsFallbackUrls, "hosts");
+            if (newContent is null)
+            {
+                AddLog("❌ Не удалось скачать hosts ни с одного источника");
+                return;
+            }
+            // ═══════════════════════════════════════════════════════════
+
             var newLines = newContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
             var hostsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts");
             if (!File.Exists(hostsPath))
@@ -895,4 +927,50 @@ public sealed partial class ServiceViewModel : ObservableObject
                 RequestHideOverlay?.Invoke();
         }
     }
+
+    // ═══ v1.6.0 (#60): Fallback-хелпер для скачивания через цепочку URL ═══
+    /// <summary>
+    /// Пробует скачать контент по цепочке URL (основной → зеркала).
+    /// Логирует результаты через AddLog и ILogger (если доступен).
+    /// </summary>
+    private async Task<string?> TryFetchFromMirrorsAsync(string[] urls, string resourceName)
+    {
+        using var http = _httpClientFactory.CreateClient("Service");
+
+        for (var i = 0; i < urls.Length; i++)
+        {
+            var url = urls[i];
+            var label = i == 0 ? "основной источник" : $"зеркало #{i}";
+
+            try
+            {
+                _logger?.LogDebug("Попытка {Attempt}/{Total} ({Label}): {Url} — {Resource}",
+                    i + 1, urls.Length, label, url, resourceName);
+
+                var content = await http.GetStringAsync(url);
+                if (!string.IsNullOrWhiteSpace(content))
+                {
+                    if (i > 0)
+                        AddLog($"📡 {resourceName} загружен через {label}");
+                    _logger?.LogInformation("{Resource}: загружено через {Label} ({Index}/{Total})",
+                        resourceName, label, i + 1, urls.Length);
+                    return content;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "{Resource}: {Label} недоступен — {Url}",
+                    resourceName, label, url);
+
+                // Логируем в UI только первое и последнее падение для чистоты лога
+                if (i == 0)
+                    AddLog($"⚠️ {resourceName}: основной источник недоступен, пробуем зеркала...");
+                else if (i == urls.Length - 1)
+                    AddLog($"❌ {resourceName}: все источники (1 + {urls.Length - 1} зеркал) недоступны");
+            }
+        }
+
+        return null;
+    }
+    // ═══════════════════════════════════════════════════════════════════
 }

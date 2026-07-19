@@ -55,6 +55,9 @@
                 <TextBlock Style="{StaticResource Val}" Text="{Binding OrchestratorNextCheck}" />
             </StackPanel>
 
+            <CheckBox Content="Синхронизировать домены с интерфейсом (list-general-user.txt)"
+                IsChecked="{Binding SyncDomainsWithUI}" Margin="0,10,0,0" />
+
             <Rectangle Style="{StaticResource Sep}" />
 
             <TextBlock Style="{StaticResource SecH}" Text="САЙТЫ ДЛЯ ПРОВЕРКИ" />
@@ -84,12 +87,19 @@
                                    FontFamily="Segoe UI" FontSize="11" FontWeight="SemiBold"
                                    Foreground="#4A90E2" VerticalAlignment="Center" />
                         <StackPanel Grid.Column="2" Orientation="Horizontal">
-                            <Button Content="✅ Домены" Height="26" Width="90" Margin="0,0,5,0"
-                                    Padding="0" FontSize="11" Command="{Binding SetDomainsModeCommand}">
+                            <!-- Домены -->
+                            <Button Content="✅ Домены" Height="26" MinWidth="82" Padding="8,0"
+                                    FontSize="11" Command="{Binding SetDomainsModeCommand}">
                                 <Button.Style>
                                     <Style TargetType="Button" BasedOn="{StaticResource ActionBtnAccent}">
+                                        <Setter Property="Margin" Value="0,0,4,0" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding SelectedTabMode}" Value="Exclusions">
+                                                <Setter Property="Foreground" Value="#4A5170" />
+                                                <Setter Property="BorderBrush" Value="#1E2235" />
+                                                <Setter Property="Background" Value="#111520" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding SelectedTabMode}" Value="Hosts">
                                                 <Setter Property="Foreground" Value="#4A5170" />
                                                 <Setter Property="BorderBrush" Value="#1E2235" />
                                                 <Setter Property="Background" Value="#111520" />
@@ -98,15 +108,43 @@
                                     </Style>
                                 </Button.Style>
                             </Button>
-                            <Button Content="🚫 Исключения" Height="26" Width="90" Padding="0"
+                            <!-- Исключения -->
+                            <Button Content="🚫 Исключения" Height="26" MinWidth="98" Padding="8,0"
                                     FontSize="11" Command="{Binding SetExclusionsModeCommand}">
                                 <Button.Style>
                                     <Style TargetType="Button" BasedOn="{StaticResource ActionBtnRed}">
+                                        <Setter Property="Margin" Value="0,0,4,0" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding SelectedTabMode}" Value="Domains">
                                                 <Setter Property="Foreground" Value="#4A5170" />
                                                 <Setter Property="BorderBrush" Value="#1E2235" />
                                                 <Setter Property="Background" Value="#111520" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding SelectedTabMode}" Value="Hosts">
+                                                <Setter Property="Foreground" Value="#4A5170" />
+                                                <Setter Property="BorderBrush" Value="#1E2235" />
+                                                <Setter Property="Background" Value="#111520" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <!-- Разделитель -->
+                            <Border Width="1" Background="#21262D" Margin="4,3" />
+                            <!-- ═══ v1.6.0: Вкладка HOSTS ═══ -->
+                            <Button Content="🖥 HOSTS" Height="26" MinWidth="72" Padding="8,0"
+                                    FontSize="11" FontWeight="SemiBold"
+                                    Command="{Binding SetHostsModeCommand}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ActionBtn}">
+                                        <Setter Property="Foreground" Value="#4A5170" />
+                                        <Setter Property="BorderBrush" Value="#2D333B" />
+                                        <Setter Property="Background" Value="#111520" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedTabMode}" Value="Hosts">
+                                                <Setter Property="Foreground" Value="#E9E9F8" />
+                                                <Setter Property="BorderBrush" Value="#58A6FF" />
+                                                <Setter Property="Background" Value="#1A2333" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -123,11 +161,24 @@
                                     <DataTrigger Binding="{Binding SelectedTabMode}" Value="Exclusions">
                                         <Setter Property="Text" Value="Домены-исключения. Они НЕ будут проверяться оркестратором и ИИ." />
                                     </DataTrigger>
+                                    <DataTrigger Binding="{Binding SelectedTabMode}" Value="Hosts">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
+                    <!-- Домены: ввод и импорт (скрыты в режиме Hosts) -->
                     <Grid Margin="0,0,0,8">
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedTabMode}" Value="Hosts">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
@@ -150,8 +201,38 @@
                                 Command="{Binding ClearDomainListCommand}"
                                 ToolTip="Очистить текущий список" />
                     </Grid>
+                    <!-- ═══ v1.6.0: Feature #53 — Кнопки массового импорта доменов ═══ -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedTabMode}" Value="Hosts">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <Button Content="📋 Из буфера" Height="26" Padding="8,0" Margin="0,0,6,0"
+                                FontSize="11" Style="{StaticResource ActionBtnAccent}"
+                                Command="{Binding ImportDomainsFromClipboardCommand}"
+                                ToolTip="Импортировать домены из буфера обмена (разделители: пробел, запятая, ;, перенос строки)" />
+                        <Button Content="📂 Из файла" Height="26" Padding="8,0"
+                                FontSize="11" Style="{StaticResource ActionBtnAccent}"
+                                Command="{Binding ImportDomainsFromFileCommand}"
+                                ToolTip="Импортировать домены из текстового файла" />
+                    </StackPanel>
+                    <!-- ═══════════════════════════════════════════════════════════════════ -->
                     <Border Background="#161B22" BorderBrush="#21262D" BorderThickness="1"
                             CornerRadius="4" MaxHeight="180">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedTabMode}" Value="Hosts">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
                         <Grid>
                             <ItemsControl ItemsSource="{Binding CustomTargetDomains}">
                                 <ItemsControl.Style>
@@ -269,7 +350,81 @@
                             </TextBlock>
                         </Grid>
                     </Border>
+                    <!-- ═══ v1.6.0: HOSTS-редактор (видим только в режиме Hosts) ═══ -->
+                    <Border Background="#0D1117" BorderBrush="#1F6FEB" BorderThickness="1"
+                            CornerRadius="6" Padding="10" Margin="0,8,0,0">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedTabMode}" Value="Hosts">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" MinHeight="140" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Заголовок + путь + кнопки -->
+                            <Grid Grid.Row="0" Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <TextBlock Text="C:\Windows\System32\drivers\etc\hosts"
+                                               FontFamily="Consolas" FontSize="11" Foreground="#8B949E"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text=" *" Foreground="#F0C000" FontSize="12"
+                                               VerticalAlignment="Center" Margin="4,0,0,0"
+                                               Visibility="{Binding HostsHasChanges, Converter={StaticResource BoolToVis}}"
+                                               ToolTip="Есть несохранённые изменения" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Button Content="💾 Сохранить" Height="26" Padding="10,0" Margin="0,0,6,0"
+                                            FontSize="11" Style="{StaticResource ActionBtnGreen}"
+                                            Command="{Binding SaveHostsCommand}"
+                                            ToolTip="Сохранить изменения в системный файл hosts" />
+                                    <Button Content="↩ Отменить" Height="26" Padding="10,0"
+                                            FontSize="11" Style="{StaticResource ActionBtn}"
+                                            Command="{Binding RevertHostsCommand}"
+                                            ToolTip="Отменить изменения и перечитать файл" />
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Текстовый редактор -->
+                            <TextBox Grid.Row="1"
+                                     Text="{Binding HostsFileContent, UpdateSourceTrigger=PropertyChanged}"
+                                     Background="#0D1117" Foreground="#C9D1D9"
+                                     BorderBrush="#30363D" BorderThickness="1"
+                                     FontFamily="Consolas" FontSize="12"
+                                     AcceptsReturn="True" TextWrapping="NoWrap"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     VerticalScrollBarVisibility="Auto"
+                                     Padding="8,6" />
+
+                            <!-- Статус -->
+                            <TextBlock Grid.Row="2" Text="{Binding HostsStatusText}"
+                                       FontFamily="Consolas" FontSize="10" Foreground="#8B949E"
+                                       Margin="0,4,0,0" />
+                        </Grid>
+                    </Border>
+
                     <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedTabMode}" Value="Hosts">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
                         <TextBlock FontFamily="Segoe UI" FontSize="10" Foreground="#4A5170">
                             <Run Text="Доменов: " />
                             <Run Text="{Binding CustomTargetDomains.Count, Mode=OneWay}" Foreground="#00D68F" FontWeight="SemiBold" />
@@ -283,20 +438,27 @@
             <Rectangle Style="{StaticResource Sep}" />
 
             <TextBlock Style="{StaticResource SecH}" Text="РЕЙТИНГ СТРАТЕГИЙ" />
-            <Button HorizontalAlignment="Left" Margin="0,0,0,10"
-                    Command="{Binding ScanProfilesCommand}">
-                <Button.Style>
-                    <Style TargetType="Button" BasedOn="{StaticResource ActionBtnAccent}">
-                        <Setter Property="Content" Value="Сканировать все стратегии" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsScanning}" Value="True">
-                                <Setter Property="IsEnabled" Value="False" />
-                                <Setter Property="Content" Value="Сканирование..." />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Button.Style>
-            </Button>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <Button Margin="0,0,10,0"
+                        Command="{Binding ScanProfilesCommand}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ActionBtnAccent}">
+                            <Setter Property="Content" Value="Сканировать все стратегии" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsScanning}" Value="True">
+                                    <Setter Property="IsEnabled" Value="False" />
+                                    <Setter Property="Content" Value="Сканирование..." />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <!-- ═══ v1.6.0: Feature #53 — Кнопка сброса рейтинга ═══ -->
+                <Button Content="🔄 Сбросить рейтинг" Style="{StaticResource RedBtn}"
+                        Padding="12,5" FontSize="12"
+                        Command="{Binding ResetProfileRatingsCommand}"
+                        ToolTip="Очистить историю оценок оркестратора и ИИ" />
+            </StackPanel>
 
             <!-- Прогресс-бар сканирования (без Storyboard — анимация сбивалась при быстрых переключениях IsScanning) -->
             <Border Margin="0,0,0,8" CornerRadius="6" Padding="10,8"
