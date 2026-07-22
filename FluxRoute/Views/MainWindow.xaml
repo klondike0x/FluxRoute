@@ -22,7 +22,7 @@
     <!-- ROOT: Внешний Border с CornerRadius — WPF-рендеринг даёт гладкие углы,
          в отличие от WindowChrome.CornerRadius (DWM-клиппинг без сглаживания = зубцы).
          Невидимые грипы по краям обеспечивают ресайз через Win32 SendMessage. -->
-    <Border Background="#0c0f17" BorderBrush="#1C1F2E" BorderThickness="1" CornerRadius="16"
+    <Border x:Name="RootBorder" Background="#0c0f17" BorderBrush="#1C1F2E" BorderThickness="1" CornerRadius="16"
         ClipToBounds="True">
         <Grid>
             <Grid.RowDefinitions>
@@ -38,7 +38,7 @@
             <!-- ═══════════ BODY ═══════════ -->
             <Grid Grid.Row="1" Margin="0,0,10,10">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="66" />
+                    <ColumnDefinition x:Name="SidebarColumn" Width="66" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 

@@ -13,6 +13,17 @@ public partial class Sidebar : System.Windows.Controls.UserControl
         InitializeComponent();
     }
 
+    /// <summary>True — показывать текст рядом с иконками.</summary>
+    public bool IsExpanded
+    {
+        get => (bool)GetValue(IsExpandedProperty);
+        set => SetValue(IsExpandedProperty, value);
+    }
+
+    public static readonly DependencyProperty IsExpandedProperty =
+        DependencyProperty.Register(nameof(IsExpanded), typeof(bool), typeof(Sidebar),
+            new PropertyMetadata(false));
+
     /// <summary>
     /// Анимирует фиолетовую таблетку к активной вкладке.
     /// </summary>

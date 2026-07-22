@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Navigation;
 using FluxRoute.AI.Services;
 using FluxRoute.Core.Services;
@@ -75,6 +76,10 @@ public partial class MainWindow : Window
         ArgumentNullException.ThrowIfNull(trayIcon);
 
         InitializeComponent();
+
+        // Ограничиваем maximized-окно рабочей областью монитора,
+        // чтобы оно не перекрывало панель задач и не выходило за экран.
+        SourceInitialized += OnSourceInitialized;
 
         _vm = viewModel;
         _trayIcon = trayIcon;
@@ -168,6 +173,12 @@ public partial class MainWindow : Window
     protected override void OnStateChanged(EventArgs e)
     {
         base.OnStateChanged(e);
+
+        // В maximized-режиме внешние углы должны быть прямыми.
+        if (RootBorder is not null)
+            RootBorder.CornerRadius = WindowState == WindowState.Maximized
+                ? new CornerRadius(0)
+                : new CornerRadius(16);
 
         // Сворачивание (—): стандартное поведение Windows — окно остаётся на панели задач.
         // Трей — только через кнопку закрытия (CloseToTray).
@@ -305,31 +316,71 @@ public partial class MainWindow : Window
 
     private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        // Сбрасываем таймер при каждом изменении размера. 
+        // Сбрасываем таймер при каждом изменении размера.
         // Анимация сработает только когда ресайз прекратится на 80 мс.
         _navIndicatorResizeTimer.Stop();
         _navIndicatorResizeTimer.Start();
     }
 
     private void OnNavIndicatorResizeTimerTick(object? sender, EventArgs e)
-    {
-        // Останавливаем таймер, чтобы он не срабатывал повторно
-        _navIndicatorResizeTimer.Stop();
-
-        var tab = _vm.SelectedTabIndex;
-
-        // Откладываем вызов до момента, когда WPF полностью завершит 
-        // пересчёт layout (DispatcherPriority.Render).
-        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() =>
         {
-            SidebarControl?.AnimateNavIndicator(tab);
-        }));
-    }
+            // Останавливаем таймер, чтобы он не срабатывал повторно
+            _navIndicatorResizeTimer.Stop();
 
-    private void AnimateSidebar(bool expanded)
-    {
-        // No-op in v1.5.0: sidebar is fixed-width icon-only; no expand/collapse animation.
-    }
+            var tab = _vm.SelectedTabIndex;
+
+            // Откладываем вызов до момента, когда WPF полностью завершит
+            // пересчёт layout (DispatcherPriority.Render).
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() =>
+            {
+                SidebarControl?.AnimateNavIndicator(tab);
+            }));
+
+            // Авто-разворот Sidebar при ширине ≥ 1200
+            UpdateSidebarExpansion();
+        }
+
+        private void UpdateSidebarExpansion()
+        {
+            var shouldExpand = ActualWidth >= 1200;
+            if (_vm.IsSidebarExpanded != shouldExpand)
+            {
+                _vm.IsSidebarExpanded = shouldExpand;
+                AnimateSidebar(shouldExpand);
+            }
+        }
+
+        private void AnimateSidebar(bool expanded)
+        {
+            if (SidebarControl is null) return;
+            SidebarControl.IsExpanded = expanded;
+            AnimateSidebarWidth(SidebarColumn.Width.Value, expanded ? 241.0 : 66.0);
+        }
+
+        private void AnimateSidebarWidth(double from, double to)
+        {
+            var timer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(16)
+            };
+            var elapsed = 0.0;
+            const double duration = 200.0;
+            timer.Tick += (s, e) =>
+            {
+                elapsed += 16;
+                if (elapsed >= duration)
+                {
+                    SidebarColumn.Width = new GridLength(to);
+                    timer.Stop();
+                    return;
+                }
+                var t = elapsed / duration;
+                // EaseOut quadratic: 1 - (1-t)^2
+                var eased = 1 - (1 - t) * (1 - t);
+                SidebarColumn.Width = new GridLength(from + (to - from) * eased);
+            };
+            timer.Start();
+        }
 
     // ── Wave pulse (делегируем в HomePage UserControl) ──
 
@@ -454,5 +505,101 @@ public partial class MainWindow : Window
         var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
         ReleaseCapture();
         PostMessage(hwnd, WM_NCLBUTTONDOWN, (IntPtr)htCode, IntPtr.Zero);
+    }
+
+    private const int WmGetMinMaxInfo = 0x0024;
+    private const uint MonitorDefaultToNearest = 0x00000002;
+    private const double MinimumWindowWidth = 860;
+    private const double MinimumWindowHeight = 520;
+
+    private void OnSourceInitialized(object? sender, EventArgs e)
+    {
+        SourceInitialized -= OnSourceInitialized;
+        if (PresentationSource.FromVisual(this) is HwndSource source)
+            source.AddHook(WindowMessageHook);
+    }
+
+    private static IntPtr WindowMessageHook(
+        IntPtr hwnd,
+        int message,
+        IntPtr wParam,
+        IntPtr lParam,
+        ref bool handled)
+    {
+        if (message != WmGetMinMaxInfo)
+            return IntPtr.Zero;
+
+        var monitor = MonitorFromWindow(hwnd, MonitorDefaultToNearest);
+        if (monitor == IntPtr.Zero)
+            return IntPtr.Zero;
+
+        var monitorInfo = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+        if (!GetMonitorInfo(monitor, ref monitorInfo))
+            return IntPtr.Zero;
+
+        var minMaxInfo = Marshal.PtrToStructure<MinMaxInfo>(lParam);
+        var workArea = monitorInfo.WorkArea;
+        var monitorArea = monitorInfo.MonitorArea;
+
+        minMaxInfo.MaxPosition.X = workArea.Left - monitorArea.Left;
+        minMaxInfo.MaxPosition.Y = workArea.Top - monitorArea.Top;
+        minMaxInfo.MaxSize.X = workArea.Right - workArea.Left;
+        minMaxInfo.MaxSize.Y = workArea.Bottom - workArea.Top;
+
+        // Сохраняем WPF-ограничения минимального размера после перехвата сообщения.
+        var dpi = GetDpiForWindow(hwnd);
+        if (dpi == 0)
+            dpi = 96;
+        minMaxInfo.MinTrackSize.X = (int)Math.Ceiling(MinimumWindowWidth * dpi / 96d);
+        minMaxInfo.MinTrackSize.Y = (int)Math.Ceiling(MinimumWindowHeight * dpi / 96d);
+
+        Marshal.StructureToPtr(minMaxInfo, lParam, fDeleteOld: false);
+        handled = true;
+        return IntPtr.Zero;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo monitorInfo);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hwnd);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint
+    {
+        public int X;
+        public int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MinMaxInfo
+    {
+        public NativePoint Reserved;
+        public NativePoint MaxSize;
+        public NativePoint MaxPosition;
+        public NativePoint MinTrackSize;
+        public NativePoint MaxTrackSize;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    private struct MonitorInfo
+    {
+        public int Size;
+        public NativeRect MonitorArea;
+        public NativeRect WorkArea;
+        public uint Flags;
     }
 }
