@@ -2,7 +2,16 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:shell="clr-namespace:FluxRoute.Views.Shell">
-    <Border Background="#0C0F17">
+    <Border Background="#0C0F17"
+            BorderThickness="0,0,1,0">
+        <Border.BorderBrush>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Color="#00FFFFFF" Offset="0" />
+                <GradientStop Color="#1AFFFFFF" Offset="0.14" />
+                <GradientStop Color="#1AFFFFFF" Offset="0.86" />
+                <GradientStop Color="#00FFFFFF" Offset="1" />
+            </LinearGradientBrush>
+        </Border.BorderBrush>
         <Border.Resources>
             <Style x:Key="SidebarLabel" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="Segoe UI" />
@@ -78,7 +87,7 @@
                     <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE950;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Компоненты"/></StackPanel>
                 </Button>
                 <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="2" ToolTip="Оркестратор">
-                    <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE713;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Оркестратор"/></StackPanel>
+                    <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE99A;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Оркестратор"/></StackPanel>
                 </Button>
                 <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="3" ToolTip="Модификации">
                     <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE74C;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Модификации"/></StackPanel>
