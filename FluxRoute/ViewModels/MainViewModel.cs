@@ -548,6 +548,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool orchestratorEnabled;
     partial void OnOrchestratorEnabledChanged(bool value)
     {
+        OnPropertyChanged(nameof(ProtectionMode));
+        OnPropertyChanged(nameof(IsAutomaticProtectionMode));
+        OnPropertyChanged(nameof(IsManualProtectionMode));
         SaveSettings();
         if (_settingsLoaded)
             ApplyOrchestratorEnabledState();
@@ -569,6 +572,27 @@ public partial class MainViewModel : ObservableObject
 
     public string OrchestratorToggleLabel => OrchestratorRunning ? "Остановить оркестратор" : "Запустить оркестратор";
     partial void OnOrchestratorRunningChanged(bool value) => OnPropertyChanged(nameof(OrchestratorToggleLabel));
+
+    /// <summary>Текущий режим управления защитой на главном экране.</summary>
+    public ProtectionMode ProtectionMode =>
+        ProtectionModePolicy.FromOrchestratorEnabled(OrchestratorEnabled);
+
+    public bool IsAutomaticProtectionMode => ProtectionMode == ProtectionMode.Automatic;
+    public bool IsManualProtectionMode => ProtectionMode == ProtectionMode.Manual;
+
+    [RelayCommand]
+    private void SelectAutomaticProtectionMode()
+    {
+        if (!OrchestratorEnabled)
+            OrchestratorEnabled = true;
+    }
+
+    [RelayCommand]
+    private void SelectManualProtectionMode()
+    {
+        if (OrchestratorEnabled)
+            OrchestratorEnabled = false;
+    }
 
     // ── Настройки сайтов ──
     [ObservableProperty] private bool siteYouTube = true;

@@ -1,16 +1,213 @@
 <UserControl x:Class="FluxRoute.Views.Tabs.HomePage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <!-- Сегмент режима: собственная геометрия FluxRoute, не копия Zapret-Hub. -->
+        <Style x:Key="ProtectionModeSegment" TargetType="Button">
+            <Setter Property="Height" Value="38" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="Margin" Value="2" />
+            <Setter Property="Foreground" Value="#77849C" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="SegmentBackground"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="SegmentBackground" Property="Background" Value="#121B2D" />
+                                <Setter Property="Foreground" Value="#B9C6DB" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="SegmentBackground" Property="Background" Value="#0E1626" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
+        <!-- Быстрый компонент режима закреплён сверху справа -->
+        <!-- Быстрое переключение ручного и автоматического управления -->
+        <Border Grid.Row="0"
+                Background="#0A0E18"
+                BorderBrush="#1C2940"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="6"
+                Width="252"
+                Margin="0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Panel.ZIndex="10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Grid Margin="6,2,6,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Режим защиты"
+                                   Foreground="#DCE4F0"
+                                   FontFamily="Segoe UI"
+                                   FontSize="11"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Text="Управление стратегией FluxRoute"
+                                   Foreground="#55647D"
+                                   FontFamily="Segoe UI"
+                                   FontSize="9.5"
+                                   Margin="0,2,0,0" />
+                    </StackPanel>
+                    <Ellipse Grid.Column="1" Width="7" Height="7"
+                             Fill="#4D6BFE" VerticalAlignment="Center" Margin="20,0,0,0" />
+                </Grid>
+
+                <Border Grid.Row="1" Background="#0D1422" CornerRadius="10" Padding="2">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0"
+                                HorizontalAlignment="Stretch"
+                                Command="{Binding SelectAutomaticProtectionModeCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource ProtectionModeSegment}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsAutomaticProtectionMode}" Value="True">
+                                            <Setter Property="Foreground" Value="#F3F6FF" />
+                                            <Setter Property="Background" Value="#26355F" />
+                                            <Setter Property="BorderBrush" Value="#4D6BFE" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="◈" FontSize="13" Margin="0,0,7,0" />
+                                <TextBlock Text="Автовыбор" FontSize="11.5" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button Grid.Column="1"
+                                HorizontalAlignment="Stretch"
+                                Command="{Binding SelectManualProtectionModeCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource ProtectionModeSegment}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsManualProtectionMode}" Value="True">
+                                            <Setter Property="Foreground" Value="#F3F6FF" />
+                                            <Setter Property="Background" Value="#24233C" />
+                                            <Setter Property="BorderBrush" Value="#7755EE" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="≡" FontSize="15" Margin="0,0,7,0" />
+                                <TextBlock Text="Вручную" FontSize="11.5" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Выбранная стратегия всегда видна внутри быстрого компонента.
+                     В автоматическом режиме поле визуально приглушено и недоступно. -->
+                <StackPanel Grid.Row="2" Margin="4,9,4,2">
+                    <Grid Margin="2,0,2,5">
+                        <TextBlock Text="Стратегия"
+                                   Foreground="#8997AD"
+                                   FontFamily="Segoe UI"
+                                   FontSize="9.5" />
+                        <TextBlock HorizontalAlignment="Right"
+                                   FontFamily="Segoe UI"
+                                   FontSize="9.5">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Выбор вручную" />
+                                    <Setter Property="Foreground" Value="#7755EE" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsAutomaticProtectionMode}" Value="True">
+                                            <Setter Property="Text" Value="Управляет оркестратор" />
+                                            <Setter Property="Foreground" Value="#4B5870" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+
+                    <ComboBox ItemsSource="{Binding Profiles}"
+                              SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
+                              IsEnabled="{Binding IsManualProtectionMode}"
+                              Height="31"
+                              HorizontalAlignment="Stretch"
+                              ToolTip="В режиме «Вручную» можно выбрать стратегию запуска">
+                        <ComboBox.Style>
+                            <!-- Наследуем общий тёмный шаблон InputStyles.xaml.
+                                 Без BasedOn WPF использовал светлый системный disabled-шаблон. -->
+                            <Style TargetType="ComboBox"
+                                   BasedOn="{StaticResource {x:Type ComboBox}}">
+                                <Setter Property="Background" Value="#111827" />
+                                <Setter Property="Foreground" Value="#DCE4F0" />
+                                <Setter Property="BorderBrush" Value="#3B4A65" />
+                                <Setter Property="BorderThickness" Value="1" />
+                                <Setter Property="Opacity" Value="1" />
+                                <Style.Triggers>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Background" Value="#151D2B" />
+                                        <Setter Property="Foreground" Value="#95A2B5" />
+                                        <Setter Property="BorderBrush" Value="#566680" />
+                                        <Setter Property="Opacity" Value="1" />
+                                        <Setter Property="ToolTip" Value="Стратегию выбирает оркестратор. Переключитесь на «Вручную», чтобы изменить её." />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ComboBox.Style>
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DisplayName}"
+                                           Foreground="#DCE4F0"
+                                           FontFamily="Segoe UI"
+                                           FontSize="12"
+                                           TextTrimming="CharacterEllipsis" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+
         <!-- Только основное управление: кнопка, статус, стратегия -->
         <StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center">
-            <Grid Width="240" Height="240" HorizontalAlignment="Center">
-                <Ellipse Width="220" Height="220" Opacity="0.5">
+            <Grid Width="200" Height="200" HorizontalAlignment="Center">
+                <Ellipse Width="190" Height="190" Opacity="0.5">
                     <Ellipse.Fill>
                         <RadialGradientBrush>
                             <GradientStop Color="#203060C0" Offset="0.45" />
@@ -112,27 +309,6 @@
                         </TextBlock.Style>
                     </TextBlock>
                 </StackPanel>
-                <!-- Выбор активной стратегии -->
-                <ComboBox ItemsSource="{Binding Profiles}"
-                          SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
-                          Width="260" Height="30"
-                          HorizontalAlignment="Center"
-                          Margin="0,8,0,0"
-                          Background="#111520"
-                          Foreground="#DCE4F0"
-                          BorderBrush="#30363D"
-                          BorderThickness="1"
-                          ToolTip="Выберите стратегию запуска">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding DisplayName}"
-                                       Foreground="#DCE4F0"
-                                       FontFamily="Segoe UI"
-                                       FontSize="12"
-                                       TextTrimming="CharacterEllipsis" />
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
             </StackPanel>
         </StackPanel>
 
