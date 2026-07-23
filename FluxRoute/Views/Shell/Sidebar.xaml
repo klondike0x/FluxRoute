@@ -1,14 +1,9 @@
 <UserControl x:Class="FluxRoute.Views.Shell.Sidebar"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:shell="clr-namespace:FluxRoute.Views.Shell"
-             mc:Ignorable="d"
-             d:DesignHeight="480" d:DesignWidth="241">
-    <Border Background="#0C0F17" BorderThickness="0">
+             xmlns:shell="clr-namespace:FluxRoute.Views.Shell">
+    <Border Background="#0C0F17">
         <Border.Resources>
-            <!-- Текст: скрыт в collapsed, виден в expanded -->
             <Style x:Key="SidebarLabel" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="Segoe UI" />
                 <Setter Property="FontSize" Value="13" />
@@ -24,63 +19,27 @@
                 </Style.Triggers>
             </Style>
 
-            <!-- Кнопка навигации: collapsed=52px по центру, expanded=растянута, контент слева -->
             <Style x:Key="AdaptiveNavBtn" TargetType="Button">
-                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-                <Setter Property="OverridesDefaultStyle" Value="True" />
+                <Setter Property="Height" Value="40" />
                 <Setter Property="Width" Value="52" />
-                <Setter Property="Height" Value="36" />
-                <Setter Property="Cursor" Value="Hand" />
-                <Setter Property="Background" Value="Transparent" />
-                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Margin" Value="0,2" />
                 <Setter Property="HorizontalAlignment" Value="Center" />
                 <Setter Property="HorizontalContentAlignment" Value="Center" />
-                <Setter Property="Padding" Value="0" />
-                <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
-                <Setter Property="RenderTransform">
-                    <Setter.Value>
-                        <ScaleTransform ScaleX="1" ScaleY="1" />
-                    </Setter.Value>
-                </Setter>
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" Background="Transparent" CornerRadius="8">
+                            <Border x:Name="Bg" Background="{TemplateBinding Background}"
+                                    CornerRadius="8" Padding="{TemplateBinding Padding}">
                                 <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                  VerticalAlignment="Center"
-                                                  Margin="{TemplateBinding Padding}" />
+                                                  VerticalAlignment="Center" />
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Trigger.EnterActions>
-                                        <BeginStoryboard Name="HoverEnterSB">
-                                            <Storyboard>
-                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
-                                                                 To="1.08" Duration="0:0:0.15" FillBehavior="HoldEnd">
-                                                    <DoubleAnimation.EasingFunction>
-                                                        <CubicEase EasingMode="EaseOut" />
-                                                    </DoubleAnimation.EasingFunction>
-                                                </DoubleAnimation>
-                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
-                                                                 To="1.08" Duration="0:0:0.15" FillBehavior="HoldEnd">
-                                                    <DoubleAnimation.EasingFunction>
-                                                        <CubicEase EasingMode="EaseOut" />
-                                                    </DoubleAnimation.EasingFunction>
-                                                </DoubleAnimation>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </Trigger.EnterActions>
-                                    <Trigger.ExitActions>
-                                        <StopStoryboard BeginStoryboardName="HoverEnterSB" />
-                                        <BeginStoryboard>
-                                            <Storyboard>
-                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
-                                                                 To="1" Duration="0:0:0.15" />
-                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
-                                                                 To="1" Duration="0:0:0.15" />
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </Trigger.ExitActions>
+                                    <Setter TargetName="Bg" Property="Background" Value="#10FFFFFF" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -91,431 +50,63 @@
                         <Setter Property="Width" Value="Auto" />
                         <Setter Property="HorizontalAlignment" Value="Stretch" />
                         <Setter Property="HorizontalContentAlignment" Value="Left" />
-                        <Setter Property="Padding" Value="16,0,0,0" />
+                        <Setter Property="Padding" Value="16,0" />
+                        <Setter Property="Margin" Value="8,2" />
                     </DataTrigger>
                 </Style.Triggers>
             </Style>
 
-            <!-- Фоновая плашка: collapsed=52px центр, expanded=растянута -->
-            <Style x:Key="AdaptiveNavBg" TargetType="Border">
-                <Setter Property="CornerRadius" Value="8" />
-                <Setter Property="Width" Value="52" />
-                <Setter Property="Height" Value="36" />
-                <Setter Property="HorizontalAlignment" Value="Center" />
+            <Style x:Key="NavIcon" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="Foreground" Value="#71717A" />
                 <Setter Property="VerticalAlignment" Value="Center" />
-                <Style.Triggers>
-                    <DataTrigger Binding="{Binding IsExpanded, RelativeSource={RelativeSource AncestorType=shell:Sidebar}}" Value="True">
-                        <Setter Property="Width" Value="Auto" />
-                        <Setter Property="HorizontalAlignment" Value="Stretch" />
-                        <Setter Property="Margin" Value="8,0,8,0" />
-                    </DataTrigger>
-                </Style.Triggers>
             </Style>
         </Border.Resources>
+
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Rectangle Width="1" HorizontalAlignment="Right" VerticalAlignment="Stretch"
-                       Grid.RowSpan="2">
-                <Rectangle.Fill>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Color="#00181B28" Offset="0" />
-                        <GradientStop Color="#CC181B28" Offset="0.3" />
-                        <GradientStop Color="#CC181B28" Offset="0.7" />
-                        <GradientStop Color="#00181B28" Offset="1" />
-                    </LinearGradientBrush>
-                </Rectangle.Fill>
-            </Rectangle>
-
             <StackPanel Grid.Row="0" Margin="0,8,0,0">
-
-                <!-- Nav: Главная (0) -->
-                <Grid Margin="0,4,0,4">
-                    <Border>
-                        <Border.Style>
-                            <Style TargetType="Border" BasedOn="{StaticResource AdaptiveNavBg}">
-                                <Setter Property="Background" Value="Transparent" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedTabIndex}" Value="0">
-                                        <Setter Property="Background" Value="{StaticResource NavActiveBrush}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                    </Border>
-                    <Button Style="{StaticResource AdaptiveNavBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="0"
-                            ToolTip="Главная — статус защиты и управление">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE80F;">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="#4A5170" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SelectedTabIndex}" Value="0">
-                                                <Setter Property="Foreground" Value="#E9E9F8" />
-                                                <Setter Property="Effect">
-                                                    <Setter.Value>
-                                                        <DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                            <TextBlock Style="{StaticResource SidebarLabel}" Text="Главная" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
-
-                <!-- Nav: Стратегии (1) -->
-                <Grid Margin="0,4,0,4">
-                    <Border>
-                        <Border.Style>
-                            <Style TargetType="Border" BasedOn="{StaticResource AdaptiveNavBg}">
-                                <Setter Property="Background" Value="Transparent" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedTabIndex}" Value="1">
-                                        <Setter Property="Background" Value="{StaticResource NavActiveBrush}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                    </Border>
-                    <Button Style="{StaticResource AdaptiveNavBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="1"
-                            ToolTip="Стратегии — управление профилями">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE724;">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="#4A5170" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SelectedTabIndex}" Value="1">
-                                                <Setter Property="Foreground" Value="#E9E9F8" />
-                                                <Setter Property="Effect">
-                                                    <Setter.Value>
-                                                        <DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                            <TextBlock Style="{StaticResource SidebarLabel}" Text="Стратегии" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
-
-                <!-- Nav: Оркестратор (2) -->
-                <Grid Margin="0,4,0,4">
-                    <Border>
-                        <Border.Style>
-                            <Style TargetType="Border" BasedOn="{StaticResource AdaptiveNavBg}">
-                                <Setter Property="Background" Value="Transparent" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedTabIndex}" Value="2">
-                                        <Setter Property="Background" Value="{StaticResource NavActiveBrush}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                    </Border>
-                    <Button Style="{StaticResource AdaptiveNavBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="2"
-                            ToolTip="Оркестратор — авто-подбор и проверка стратегий">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE713;">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="#4A5170" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SelectedTabIndex}" Value="2">
-                                                <Setter Property="Foreground" Value="#E9E9F8" />
-                                                <Setter Property="Effect">
-                                                    <Setter.Value>
-                                                        <DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                            <TextBlock Style="{StaticResource SidebarLabel}" Text="Оркестратор" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
-
-                <!-- Nav: ИИ (3) -->
-                <Grid Margin="0,4,0,4">
-                    <Border>
-                        <Border.Style>
-                            <Style TargetType="Border" BasedOn="{StaticResource AdaptiveNavBg}">
-                                <Setter Property="Background" Value="Transparent" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedTabIndex}" Value="3">
-                                        <Setter Property="Background" Value="{StaticResource NavActiveBrush}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                    </Border>
-                    <Button Style="{StaticResource AdaptiveNavBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="3"
-                            ToolTip="ИИ — эволюция стратегий и подбор по домену">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE99A;">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="#4A5170" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SelectedTabIndex}" Value="3">
-                                                <Setter Property="Foreground" Value="#E9E9F8" />
-                                                <Setter Property="Effect">
-                                                    <Setter.Value>
-                                                        <DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                            <TextBlock Style="{StaticResource SidebarLabel}" Text="ИИ" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
-
-                <!-- Nav: Модификации (4) -->
-                <Grid Margin="0,4,0,4">
-                    <Border>
-                        <Border.Style>
-                            <Style TargetType="Border" BasedOn="{StaticResource AdaptiveNavBg}">
-                                <Setter Property="Background" Value="Transparent" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedTabIndex}" Value="4">
-                                        <Setter Property="Background" Value="{StaticResource NavActiveBrush}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                    </Border>
-                    <Button Style="{StaticResource AdaptiveNavBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="4"
-                            ToolTip="Модификации — управление дополнениями">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE72C;">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="#4A5170" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SelectedTabIndex}" Value="4">
-                                                <Setter Property="Foreground" Value="#E9E9F8" />
-                                                <Setter Property="Effect">
-                                                    <Setter.Value>
-                                                        <DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                            <TextBlock Style="{StaticResource SidebarLabel}" Text="Модификации" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
-
-                <!-- Nav: Диагностика (5) -->
-                <Grid Margin="0,4,0,4">
-                    <Border>
-                        <Border.Style>
-                            <Style TargetType="Border" BasedOn="{StaticResource AdaptiveNavBg}">
-                                <Setter Property="Background" Value="Transparent" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedTabIndex}" Value="5">
-                                        <Setter Property="Background" Value="{StaticResource NavActiveBrush}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                    </Border>
-                    <Button Style="{StaticResource AdaptiveNavBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="5"
-                            ToolTip="Диагностика — состояние системы и автозапуск">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE90F;">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="#4A5170" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SelectedTabIndex}" Value="5">
-                                                <Setter Property="Foreground" Value="#E9E9F8" />
-                                                <Setter Property="Effect">
-                                                    <Setter.Value>
-                                                        <DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                            <TextBlock Style="{StaticResource SidebarLabel}" Text="Диагностика" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
-
-                <!-- Nav: Настройки (6) -->
-                <Grid Margin="0,4,0,4">
-                    <Border>
-                        <Border.Style>
-                            <Style TargetType="Border" BasedOn="{StaticResource AdaptiveNavBg}">
-                                <Setter Property="Background" Value="Transparent" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedTabIndex}" Value="6">
-                                        <Setter Property="Background" Value="{StaticResource NavActiveBrush}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                    </Border>
-                    <Button Style="{StaticResource AdaptiveNavBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="6"
-                            ToolTip="Настройки — сервис, фильтры, WinDivert">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE9F5;">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="#4A5170" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SelectedTabIndex}" Value="6">
-                                                <Setter Property="Foreground" Value="#E9E9F8" />
-                                                <Setter Property="Effect">
-                                                    <Setter.Value>
-                                                        <DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                            <TextBlock Style="{StaticResource SidebarLabel}" Text="Настройки" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
-
-                <!-- Nav: Логи (8) -->
-                <Grid Margin="0,4,0,4">
-                    <Border>
-                        <Border.Style>
-                            <Style TargetType="Border" BasedOn="{StaticResource AdaptiveNavBg}">
-                                <Setter Property="Background" Value="Transparent" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedTabIndex}" Value="8">
-                                        <Setter Property="Background" Value="{StaticResource NavActiveBrush}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                    </Border>
-                    <Button Style="{StaticResource AdaptiveNavBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="8"
-                            ToolTip="Логи — просмотр событий приложения">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE9F9;">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="#4A5170" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SelectedTabIndex}" Value="8">
-                                                <Setter Property="Foreground" Value="#E9E9F8" />
-                                                <Setter Property="Effect">
-                                                    <Setter.Value>
-                                                        <DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                            <TextBlock Style="{StaticResource SidebarLabel}" Text="Логи" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
+                <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="0" ToolTip="Главная">
+                    <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE80F;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Главная"/></StackPanel>
+                </Button>
+                <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="1" ToolTip="Компоненты">
+                    <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE950;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Компоненты"/></StackPanel>
+                </Button>
+                <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="2" ToolTip="Оркестратор">
+                    <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE713;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Оркестратор"/></StackPanel>
+                </Button>
+                <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="3" ToolTip="Модификации">
+                    <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE74C;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Модификации"/></StackPanel>
+                </Button>
+                <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="4" ToolTip="Диагностика">
+                    <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE90F;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Диагностика"/></StackPanel>
+                </Button>
+                <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="5" ToolTip="Логи">
+                    <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE9F9;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Логи"/></StackPanel>
+                </Button>
             </StackPanel>
 
-            <!-- Bottom nav: О программе (7) -->
-            <StackPanel Grid.Row="1" Margin="0,0,0,0">
+            <StackPanel Grid.Row="1" Margin="0,0,0,8">
                 <Rectangle Height="1" Fill="#1E2235" Margin="8,4" />
-                <Grid Margin="0,4,0,4">
-                    <Border>
-                        <Border.Style>
-                            <Style TargetType="Border" BasedOn="{StaticResource AdaptiveNavBg}">
-                                <Setter Property="Background" Value="Transparent" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedTabIndex}" Value="7">
-                                        <Setter Property="Background" Value="{StaticResource NavActiveBrush}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                    </Border>
-                    <Button Style="{StaticResource AdaptiveNavBtn}"
-                            Command="{Binding SelectTabCommand}" CommandParameter="7"
-                            ToolTip="О программе — версия, лицензия, ссылки">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xE897;">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="#4A5170" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SelectedTabIndex}" Value="7">
-                                                <Setter Property="Foreground" Value="#E9E9F8" />
-                                                <Setter Property="Effect">
-                                                    <Setter.Value>
-                                                        <DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                            <TextBlock Style="{StaticResource SidebarLabel}" Text="О программе" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
+                <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="6" ToolTip="Настройки">
+                    <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE713;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Настройки"/></StackPanel>
+                </Button>
             </StackPanel>
 
-            <!-- Active tab pill indicator -->
-            <Border x:Name="NavIndicatorBorder"
-                    Width="3" Height="20"
-                    CornerRadius="1.5"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Top"
-                    Margin="0,20,0,0"
-                    Grid.RowSpan="2">
+            <Border x:Name="NavIndicatorBorder" Width="3" Height="20" CornerRadius="1.5"
+                    HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,20,0,0" Grid.RowSpan="2">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                         <GradientStop Color="#BB88FF" Offset="0" />
                         <GradientStop Color="#7744EE" Offset="1" />
                     </LinearGradientBrush>
                 </Border.Background>
-                <Border.Effect>
-                    <DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
-                </Border.Effect>
-                <Border.RenderTransform>
-                    <TranslateTransform x:Name="NavIndicatorTransform" />
-                </Border.RenderTransform>
+                <Border.RenderTransform><TranslateTransform x:Name="NavIndicatorTransform" /></Border.RenderTransform>
             </Border>
         </Grid>
     </Border>

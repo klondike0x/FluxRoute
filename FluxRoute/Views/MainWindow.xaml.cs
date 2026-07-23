@@ -87,6 +87,9 @@ public partial class MainWindow : Window
 
         DataContext = _vm;
 
+        // Инициализируем подсветку активного пункта Sidebar после построения визуального дерева.
+        Loaded += (_, _) => SidebarControl?.AnimateNavIndicator(_vm.SelectedTabIndex, animate: false);
+
         // Tray icon
         _trayIcon.SetVisible(true);
         _trayIcon.ShowRequested += OnTrayShowRequested;

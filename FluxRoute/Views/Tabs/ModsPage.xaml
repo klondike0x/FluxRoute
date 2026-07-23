@@ -1,0 +1,21 @@
+<UserControl x:Class="FluxRoute.Views.Tabs.ModsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="16,12">
+        <Border Background="#111520" BorderBrush="#21262D" BorderThickness="1"
+                CornerRadius="10" Padding="20" VerticalAlignment="Top">
+            <StackPanel>
+                <TextBlock Text="МОДИФИКАЦИИ" Style="{StaticResource SecH}" Margin="0,0,0,8" />
+                <TextBlock Text="Каталог модификаций Goshkow Marketplace"
+                           Foreground="#DCE4F0" FontSize="15" FontWeight="SemiBold" />
+                <TextBlock Text="Сервис маркетплейса пока не подключён к v2-dev. Страница подготовлена как точка интеграции веток feature/mods и feature/marketplace. После слияния здесь появятся каталог, установка, удаление и обновление модов."
+                           Foreground="#8B949E" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,14" />
+                <Border Background="#1C1800" BorderBrush="#4A3800" BorderThickness="1"
+                        CornerRadius="8" Padding="12,9">
+                    <TextBlock Text="Функции недоступны до интеграции сервисов — приложение продолжает работать без маркетплейса."
+                               Foreground="#F0B429" FontSize="11" TextWrapping="Wrap" />
+                </Border>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

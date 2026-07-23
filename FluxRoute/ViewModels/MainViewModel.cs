@@ -496,25 +496,12 @@ public partial class MainViewModel : ObservableObject
 
     // ── Навигация ──
     [ObservableProperty] private int selectedTabIndex = 0;
-    public string SelectedTabName => SelectedTabIndex switch
-    {
-        0 => "ГЛАВНАЯ",
-        1 => "TG ПРОКСИ",
-        2 => "ОРКЕСТРАТОР",
-        3 => "ИИ",
-        4 => "ОБНОВЛЕНИЕ",
-        5 => "ДИАГНОСТИКА",
-        6 => "СЕРВИС",
-        7 => "О ПРОГРАММЕ",
-        8 => "ЛОГИ",
-        _ => ""
-    };
+    public string SelectedTabName => MainNavigation.GetName(SelectedTabIndex);
     partial void OnSelectedTabIndexChanged(int value)
     {
         OnPropertyChanged(nameof(SelectedTabName));
         if (value == 1) OnTgProxyTabActivated();
-        if (value == 2) RebuildAiStrategyRows();
-        if (value == 3)
+        if (value == 2)
         {
             _aiOrchestrator.SyncRegistryFromEngine();
             RefreshAiDashboard();
@@ -1180,7 +1167,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ShowLogs() => SelectedTabIndex = 8;
+    private void ShowLogs() => SelectedTabIndex = 5;
 
     [RelayCommand]
     private void ToggleSettings() => OpenSettingsRequested?.Invoke(this, EventArgs.Empty);

@@ -3,11 +3,23 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using Brush = System.Windows.Media.Brush;
+using Brushes = System.Windows.Media.Brushes;
+using TextBlock = System.Windows.Controls.TextBlock;
 
 namespace FluxRoute.Views.Shell;
 
 public partial class Sidebar : System.Windows.Controls.UserControl
 {
+    private static readonly Brush ActiveBackground =
+        (Brush)new BrushConverter().ConvertFrom("#1A233A")!;
+    private static readonly Brush ActiveForeground =
+        (Brush)new BrushConverter().ConvertFrom("#DCE4F0")!;
+    private static readonly Brush ActiveIcon =
+        (Brush)new BrushConverter().ConvertFrom("#9966FF")!;
+    private static readonly Brush InactiveIcon =
+        (Brush)new BrushConverter().ConvertFrom("#71717A")!;
+
     public Sidebar()
     {
         InitializeComponent();
@@ -31,6 +43,8 @@ public partial class Sidebar : System.Windows.Controls.UserControl
     {
         if (NavIndicatorTransform == null) return;
 
+        UpdateActiveItem(tabIndex);
+
         double targetY = CalculateTargetY(tabIndex);
 
         if (!animate)
@@ -50,6 +64,27 @@ public partial class Sidebar : System.Windows.Controls.UserControl
         };
 
         NavIndicatorTransform.BeginAnimation(TranslateTransform.YProperty, animation);
+    }
+
+    /// <summary>Обновляет фон и цвет иконки выбранной вкладки.</summary>
+    private void UpdateActiveItem(int tabIndex)
+    {
+        foreach (var button in FindVisualChildren<System.Windows.Controls.Button>(this))
+        {
+            if (!int.TryParse(button.CommandParameter?.ToString(), out var index))
+                continue;
+
+            var isActive = index == tabIndex;
+            button.Background = isActive ? ActiveBackground : Brushes.Transparent;
+
+            foreach (var text in FindVisualChildren<TextBlock>(button))
+            {
+                if (text.FontFamily.Source == "Segoe MDL2 Assets")
+                    text.Foreground = isActive ? ActiveIcon : InactiveIcon;
+                else if (isActive)
+                    text.Foreground = ActiveForeground;
+            }
+        }
     }
 
     private double CalculateTargetY(int tabIndex)
@@ -80,17 +115,9 @@ public partial class Sidebar : System.Windows.Controls.UserControl
 
         // Фолбэк-логика (если кнопка не найдена)
         const double SlotHeight = 44.0;
-        const double AboutSlotY = 417.0;
-
-        if (tabIndex == 7) return AboutSlotY;
-
-        int visualIndex = tabIndex switch
-        {
-            6 => 6,
-            8 => 7,
-            _ => tabIndex
-        };
-        return visualIndex * SlotHeight;
+        const double SettingsSlotY = 285.0;
+        if (tabIndex == 6) return SettingsSlotY;
+        return tabIndex * SlotHeight;
     }
 
     private static T? FindVisualChild<T>(DependencyObject parent, Func<T, bool> predicate) where T : DependencyObject
@@ -104,5 +131,18 @@ public partial class Sidebar : System.Windows.Controls.UserControl
             if (result != null) return result;
         }
         return null;
+    }
+
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T match)
+                yield return match;
+
+            foreach (var nested in FindVisualChildren<T>(child))
+                yield return nested;
+        }
     }
 }
