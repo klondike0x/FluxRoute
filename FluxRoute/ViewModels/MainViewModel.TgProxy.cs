@@ -942,51 +942,60 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task CheckTgProxyUpdates()
     {
+        var local = GetTgProxyLocalVersion();
+        var dialog = new UpdateCheckDialog("TG WS Proxy", local);
+        dialog.ShowChecking("Проверяем обновление TG WS Proxy…");
+        dialog.OpenModal();
+
         AddTgProxyLog("🔍 Проверяем обновления TG WS Proxy...");
         try
         {
             using var http = _httpClientFactory.CreateClient("TgProxyDownloader");
             var latest = await GetLatestTgProxyTagAsync(http);
 
-            // ✅ Graceful degradation: если не можем определить тег — не пытаемся обновляться
+            // Graceful degradation: если не можем определить тег — не обновляемся.
             if (!IsValidGitTag(latest))
             {
+                const string message = "Не удалось определить последнюю версию TG WS Proxy. Возможно, источник обновлений недоступен из текущей сети.";
                 AddTgProxyLog("❌ Не удалось определить последнюю версию TG WS Proxy");
                 AddTgProxyLog("💡 Возможно, GitHub недоступен из текущей сети");
+                dialog.ShowError(message, local);
+                await dialog.WaitForResultAsync();
                 return;
             }
 
-            var local = GetTgProxyLocalVersion();
-            if (latest == local)
+            var latestTag = latest!;
+            if (UpdateVersionComparer.AreEqual(local, latestTag))
             {
                 AddTgProxyLog($"✅ Актуальная версия ({local})");
+                dialog.ShowUpToDate(local, latestTag);
+                await dialog.WaitForResultAsync();
+                return;
             }
+
+            AddTgProxyLog($"⬆️ Доступна версия {latestTag} (текущая {local})");
+            dialog.ShowUpdateAvailable(local, latestTag, autoInstall: true);
+            var success = await UpdateProxySourcesAsync(latestTag);
+            if (success)
+                dialog.ShowInstalled(latestTag, latestTag);
             else
-            {
-                AddTgProxyLog($"⬆️ Доступна версия {latest} (текущая {local})");
-                if (Application.Current != null && !Application.Current.Dispatcher.HasShutdownStarted)
-                {
-                    var update = Application.Current.Dispatcher.Invoke(() =>
-                        CustomDialog.Show("🔄 Обновление",
-                            $"Доступна версия {latest}.\nОбновить исходники прокси?",
-                            "Обновить", "Отмена"));
-                    if (update)
-                        await UpdateProxySourcesAsync(latest);
-                }
-            }
+                dialog.ShowError("Не удалось установить обновление TG WS Proxy. Подробности записаны в лог.", local, latestTag);
+            await dialog.WaitForResultAsync();
         }
         catch (Exception ex)
         {
             AddTgProxyLog($"❌ Ошибка проверки: {ex.Message}");
+            dialog.ShowError(ex.Message, local);
+            await dialog.WaitForResultAsync();
         }
     }
 
-    private async Task UpdateProxySourcesAsync(string tagName)
+    private async Task<bool> UpdateProxySourcesAsync(string tagName)
     {
         if (!IsValidGitTag(tagName))
         {
             AddTgProxyLog($"❌ Некорректный тег версии: '{tagName}'");
-            return;
+            return false;
         }
 
         AddTgProxyLog($"⬇️ Обновляем исходники до {tagName}...");
@@ -994,24 +1003,27 @@ public partial class MainViewModel
         {
             using var http = _httpClientFactory.CreateClient("TgProxyDownloader");
 
-            if (await DownloadAndExtractProxyFolderAsync(http, tagName))
-            {
-                TgProxyVersion = tagName;
-                AddTgProxyLog($"✅ Исходники обновлены до {tagName}");
+            if (!await DownloadAndExtractProxyFolderAsync(http, tagName))
+                return false;
 
-                // Перезапускаем прокси, если он запущен
-                if (TgProxyRunning)
-                {
-                    AddTgProxyLog("🔄 Перезапускаем прокси с новыми исходниками...");
-                    StopTgProxy();
-                    await Task.Delay(1000);
-                    StartTgProxy();
-                }
+            TgProxyVersion = tagName;
+            AddTgProxyLog($"✅ Исходники обновлены до {tagName}");
+
+            // Перезапускаем прокси, если он запущен.
+            if (TgProxyRunning)
+            {
+                AddTgProxyLog("🔄 Перезапускаем прокси с новыми исходниками...");
+                StopTgProxy();
+                await Task.Delay(1000);
+                StartTgProxy();
             }
+
+            return true;
         }
         catch (Exception ex)
         {
             AddTgProxyLog($"❌ Ошибка обновления: {ex.Message}");
+            return false;
         }
     }
 
