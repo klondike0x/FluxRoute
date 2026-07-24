@@ -519,8 +519,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool isRunning = false;
     [ObservableProperty] private bool isLogsVisible = false;
     [ObservableProperty] private string currentStrategy = "—";
-    [ObservableProperty] private string uploadSpeed = "0.0";
-    [ObservableProperty] private string downloadSpeed = "0.0";
+    [ObservableProperty] private string uploadSpeed = "0 Б/с";
+    [ObservableProperty] private string downloadSpeed = "0 Б/с";
     [ObservableProperty] private string lastStatusMessage = "Готово";
 
     public int ActiveServicesCount =>
@@ -530,13 +530,40 @@ public partial class MainViewModel : ObservableObject
 
     public string ActiveServicesSummary => $"{ActiveServicesCount} из 3 активны";
     public string PingSummary => "Нет данных";
-    public string CompactNetworkSummary => PingSummary;
+    public string CompactNetworkSummary =>
+        $"Пинг: {PingSummary}\n↓ {DownloadSpeed}   ↑ {UploadSpeed}";
     public string TrafficSpeedSummary => $"↓ {DownloadSpeed}  ↑ {UploadSpeed}";
 
     public string MainActionButtonText => IsRunning ? "⏹ Остановить" : "▶ Запустить";
-    partial void OnIsRunningChanged(bool value) => OnPropertyChanged(nameof(MainActionButtonText));
-    partial void OnUploadSpeedChanged(string value) => OnPropertyChanged(nameof(TrafficSpeedSummary));
-    partial void OnDownloadSpeedChanged(string value) => OnPropertyChanged(nameof(TrafficSpeedSummary));
+    partial void OnIsRunningChanged(bool value)
+    {
+        OnPropertyChanged(nameof(MainActionButtonText));
+        if (!value)
+        {
+            DownloadSpeed = "0 Б/с";
+            UploadSpeed = "0 Б/с";
+        }
+    }
+    partial void OnUploadSpeedChanged(string value)
+    {
+        OnPropertyChanged(nameof(TrafficSpeedSummary));
+        OnPropertyChanged(nameof(CompactNetworkSummary));
+    }
+    partial void OnDownloadSpeedChanged(string value)
+    {
+        OnPropertyChanged(nameof(TrafficSpeedSummary));
+        OnPropertyChanged(nameof(CompactNetworkSummary));
+    }
+
+    private void OnNetworkTrafficTimerTick(object? sender, EventArgs e)
+    {
+        if (_networkTrafficMonitor is null)
+            return;
+
+        var display = NetworkTrafficDisplay.Create(IsRunning, _networkTrafficMonitor.Sample());
+        DownloadSpeed = display.Download;
+        UploadSpeed = display.Upload;
+    }
 
     // ── Feature ViewModels ──
     public UpdatesViewModel Updates { get; private set; } = null!;
@@ -825,6 +852,8 @@ public partial class MainViewModel : ObservableObject
     private readonly ITaskSchedulerService _taskScheduler;
     private readonly TrayIconService? _trayIcon;
     private readonly StrategyEvolver _evolver;
+    private readonly INetworkTrafficMonitor? _networkTrafficMonitor;
+    private readonly DispatcherTimer? _networkTrafficTimer;
 
     public MainViewModel(
         ISettingsService settingsService,
@@ -840,7 +869,8 @@ public partial class MainViewModel : ObservableObject
         BatMaterializer aiMaterializer,
         IHttpClientFactory httpClientFactory,
         ITaskSchedulerService? taskScheduler = null,
-        TrayIconService? trayIcon = null)
+        TrayIconService? trayIcon = null,
+        INetworkTrafficMonitor? networkTrafficMonitor = null)
     {
         _settingsService = settingsService;
         _updater = updaterService;
@@ -853,6 +883,18 @@ public partial class MainViewModel : ObservableObject
         _taskScheduler = taskScheduler ?? new TaskSchedulerService();
         _trayIcon = trayIcon;
         _evolver = aiEvolver;
+        _networkTrafficMonitor = networkTrafficMonitor;
+
+        if (_networkTrafficMonitor is not null)
+        {
+            _networkTrafficTimer = new DispatcherTimer(DispatcherPriority.Background)
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            _networkTrafficTimer.Tick += OnNetworkTrafficTimerTick;
+            _ = _networkTrafficMonitor.Sample();
+            _networkTrafficTimer.Start();
+        }
 
         // ── Инициализация feature ViewModels ──
         Diagnostics = new DiagnosticsViewModel(
@@ -1339,6 +1381,11 @@ public partial class MainViewModel : ObservableObject
             _aiOrchestrator.Stop();
         _uptimeTimer?.Stop();
         _orchestratorUiTimer?.Stop();
+        if (_networkTrafficTimer is not null)
+        {
+            _networkTrafficTimer.Stop();
+            _networkTrafficTimer.Tick -= OnNetworkTrafficTimerTick;
+        }
         _hideWindowsCts?.Cancel();
         _hideWindowsCts?.Dispose();
     }

@@ -25,11 +25,6 @@ public partial class HomePage : System.Windows.Controls.UserControl
         WideGapColumn.Width = new GridLength(spec.DetailsGap);
         DetailsColumn.Width = new GridLength(spec.DetailsWidth);
 
-        ProtectionModeCard.SetValue(Grid.ColumnProperty, 2);
-        ProtectionModeCard.Width = double.NaN;
-        ProtectionModeCard.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
-        ProtectionModeCard.Visibility = spec.ShowWideDetails ? Visibility.Visible : Visibility.Collapsed;
-
         ServicesCard.Visibility = spec.ShowWideDetails ? Visibility.Visible : Visibility.Collapsed;
         ServicesCard.Opacity = spec.ShowWideDetails ? 1 : 0;
 

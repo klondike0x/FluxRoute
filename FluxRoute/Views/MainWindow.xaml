@@ -10,7 +10,9 @@
     ResizeMode="CanResize"
     WindowStyle="None"
     AllowsTransparency="True"
-    Background="Transparent">
+    Background="Transparent"
+    UseLayoutRounding="True"
+    SnapsToDevicePixels="True">
 
     <Border x:Name="RootBorder" Background="#0c0f17" BorderBrush="#1C1F2E"
             BorderThickness="1" CornerRadius="16" ClipToBounds="True">

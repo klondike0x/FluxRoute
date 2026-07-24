@@ -49,4 +49,17 @@ public sealed class AdaptiveHomeLayoutTests
         Assert.Equal(280, spec.DetailsWidth);
         Assert.Equal(24, spec.DetailsGap);
     }
+
+    [Theory]
+    [InlineData(null, HomeLayoutMode.Compact, true)]
+    [InlineData(HomeLayoutMode.Compact, HomeLayoutMode.Compact, false)]
+    [InlineData(HomeLayoutMode.Compact, HomeLayoutMode.Wide, true)]
+    [InlineData(HomeLayoutMode.Wide, HomeLayoutMode.Wide, false)]
+    public void ShouldApply_OnlyWhenLayoutModeChanges(
+        HomeLayoutMode? current,
+        HomeLayoutMode requested,
+        bool expected)
+    {
+        Assert.Equal(expected, AdaptiveHomeLayout.ShouldApply(current, requested));
+    }
 }

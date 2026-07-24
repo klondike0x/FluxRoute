@@ -25,6 +25,9 @@ public static class AdaptiveHomeLayout
             ? HomeLayoutMode.Wide
             : HomeLayoutMode.Compact;
 
+    public static bool ShouldApply(HomeLayoutMode? current, HomeLayoutMode requested) =>
+        current != requested;
+
     public static HomeLayoutSpec GetSpec(HomeLayoutMode mode) => mode switch
     {
         HomeLayoutMode.Wide => new HomeLayoutSpec(

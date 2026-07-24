@@ -180,21 +180,67 @@
                         </TextBlock.Style>
                     </TextBlock>
                 </StackPanel>
-                <TextBlock Text="{Binding SelectedProfile.DisplayName, FallbackValue=Стратегия не выбрана}"
-                           Foreground="#66758E" FontFamily="Segoe UI" FontSize="10.5"
-                           TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" Margin="0,6,0,0" />
+                <ToggleButton x:Name="ModeToggleButton"
+                              IsChecked="{Binding IsOpen, ElementName=ProtectionModePopup, Mode=TwoWay}"
+                              HorizontalAlignment="Center" Margin="0,8,0,0" Cursor="Hand"
+                              ToolTip="Изменить режим защиты и стратегию">
+                    <ToggleButton.Template>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="ModeSurface" Background="#0D1422" BorderBrush="#253553"
+                                    BorderThickness="1" CornerRadius="9" Padding="11,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="6" Height="6" Fill="#4D6BFE" Margin="0,0,7,0" VerticalAlignment="Center" />
+                                    <TextBlock FontFamily="Segoe UI" FontSize="10.5" FontWeight="SemiBold"
+                                               Foreground="#A9B7CD" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="Автовыбор" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsManualProtectionMode}" Value="True">
+                                                        <Setter Property="Text" Value="Вручную" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text=" · " Foreground="#4B5870" FontSize="10.5" />
+                                    <TextBlock Text="{Binding SelectedProfile.DisplayName, FallbackValue=Стратегия не выбрана}"
+                                               Foreground="#7E8DA5" FontFamily="Segoe UI" FontSize="10.5"
+                                               MaxWidth="150" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="⌄" Foreground="#66758E" FontSize="12" Margin="8,-1,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="ModeSurface" Property="Background" Value="#111A2B" />
+                                    <Setter TargetName="ModeSurface" Property="BorderBrush" Value="#405785" />
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="ModeSurface" Property="BorderBrush" Value="#4D6BFE" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </ToggleButton.Template>
+                </ToggleButton>
+                <TextBlock HorizontalAlignment="Center" Margin="0,6,0,0" FontFamily="Segoe UI"
+                           FontSize="10" Foreground="#5D6B82">
+                    <Run Text="Аптайм  " />
+                    <Run Text="{Binding UptimeText}" Foreground="#8997AD" FontWeight="SemiBold" />
+                </TextBlock>
             </StackPanel>
         </StackPanel>
 
-        <!-- Быстрое управление в compact закрепляется справа, а в wide становится верхней карточкой колонки. -->
+        <!-- Одинаковое всплывающее управление режимом доступно из Hero в обоих layout. -->
+        <Popup x:Name="ProtectionModePopup"
+               PlacementTarget="{Binding ElementName=ModeToggleButton}"
+               Placement="Right" HorizontalOffset="10" VerticalOffset="-132"
+               AllowsTransparency="True" StaysOpen="False" PopupAnimation="Fade">
         <Border x:Name="ProtectionModeCard"
-                Grid.Row="0" Grid.Column="0"
                 Style="{StaticResource DashboardCard}"
-                Width="252"
-                Padding="6"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Panel.ZIndex="10">
+                Width="280"
+                Padding="8"
+                Background="#0B101B"
+                BorderBrush="#33466D">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -308,12 +354,13 @@
                 </StackPanel>
             </Grid>
         </Border>
+        </Popup>
 
         <!-- В широком режиме справа появляется оперативная сводка служб. -->
         <Border x:Name="ServicesCard"
                 Grid.Row="0" Grid.Column="2"
                 Style="{StaticResource DashboardCard}"
-                Margin="0,184,0,0"
+                Margin="0,0,0,174"
                 VerticalAlignment="Stretch"
                 Visibility="Collapsed"
                 Opacity="0">
@@ -392,39 +439,55 @@
                 <StackPanel>
                     <TextBlock Text="СЕТЬ / ПИНГ" Style="{StaticResource MetricLabel}" />
                     <TextBlock Text="{Binding CompactNetworkSummary}" Style="{StaticResource MetricValue}"
-                               TextTrimming="CharacterEllipsis" />
+                               TextWrapping="Wrap" LineHeight="17" />
                 </StackPanel>
             </Border>
         </Grid>
 
-        <!-- Wide: мини-монитор занимает нижнюю строку. -->
+        <!-- Wide: мини-монитор располагается в правой колонке под активными службами. -->
         <Border x:Name="MetricsCard"
-                Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                Grid.Row="0" Grid.Column="2"
                 Style="{StaticResource DashboardCard}"
-                HorizontalAlignment="Center"
-                Margin="0,12,0,0">
+                Padding="8"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Bottom"
+                Margin="0">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="1" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="1" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <StackPanel HorizontalAlignment="Center">
-                    <TextBlock Style="{StaticResource MetricLabel}" Text="ПИНГ" HorizontalAlignment="Center" />
-                    <TextBlock Style="{StaticResource MetricValue}" Text="{Binding PingSummary}" HorizontalAlignment="Center" />
-                </StackPanel>
-                <Rectangle Grid.Column="1" Width="1" Fill="#263149" Margin="16,0" />
-                <StackPanel Grid.Column="2" HorizontalAlignment="Center">
-                    <TextBlock Style="{StaticResource MetricLabel}" Text="АКТИВНЫЕ СЛУЖБЫ" HorizontalAlignment="Center" />
-                    <TextBlock Style="{StaticResource MetricValue}" Text="{Binding ActiveServicesSummary}" HorizontalAlignment="Center" />
-                </StackPanel>
-                <Rectangle Grid.Column="3" Width="1" Fill="#263149" Margin="16,0" />
-                <StackPanel Grid.Column="4" HorizontalAlignment="Center">
-                    <TextBlock Style="{StaticResource MetricLabel}" Text="СКОРОСТЬ" HorizontalAlignment="Center" />
-                    <TextBlock Style="{StaticResource MetricValue}" Text="{Binding TrafficSpeedSummary}" HorizontalAlignment="Center" />
-                </StackPanel>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="6" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="6" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="#0D1422" BorderBrush="#1C2940"
+                        BorderThickness="1" CornerRadius="8" Padding="10,7">
+                    <Grid>
+                        <TextBlock Style="{StaticResource MetricLabel}" Text="ПИНГ" VerticalAlignment="Center" />
+                        <TextBlock Style="{StaticResource MetricValue}" Text="{Binding PingSummary}"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0" />
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="2" Background="#0D1422" BorderBrush="#1C2940"
+                        BorderThickness="1" CornerRadius="8" Padding="10,7">
+                    <Grid>
+                        <TextBlock Style="{StaticResource MetricLabel}" Text="АКТИВНЫЕ СЛУЖБЫ" VerticalAlignment="Center" />
+                        <TextBlock Style="{StaticResource MetricValue}" Text="{Binding ActiveServicesSummary}"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0" />
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="4" Background="#0D1422" BorderBrush="#1C2940"
+                        BorderThickness="1" CornerRadius="8" Padding="10,7">
+                    <Grid>
+                        <TextBlock Style="{StaticResource MetricLabel}" Text="СКОРОСТЬ" VerticalAlignment="Center" />
+                        <TextBlock Style="{StaticResource MetricValue}" Text="{Binding TrafficSpeedSummary}"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0"
+                                   TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                </Border>
             </Grid>
         </Border>
     </Grid>

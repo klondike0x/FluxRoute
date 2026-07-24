@@ -275,6 +275,8 @@ public partial class App : Application
 
         services.AddSingleton(sp =>
             new NetworkChangeWatcher(sp.GetRequiredService<NetworkFingerprintProvider>()));
+        services.AddSingleton<INetworkTrafficCounterSource, NetworkInterfaceTrafficCounterSource>();
+        services.AddSingleton<INetworkTrafficMonitor, NetworkTrafficMonitor>();
 
         services.AddSingleton<MainViewModel>(sp =>
         {
@@ -292,6 +294,7 @@ public partial class App : Application
             var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
             var taskScheduler = sp.GetRequiredService<ITaskSchedulerService>();
             var trayIcon = sp.GetRequiredService<TrayIconService>();
+            var networkTrafficMonitor = sp.GetRequiredService<INetworkTrafficMonitor>();
 
             return new MainViewModel(
                 settingsService,
@@ -307,7 +310,8 @@ public partial class App : Application
                 materializer,
                 httpClientFactory,
                 taskScheduler,
-                trayIcon);
+                trayIcon,
+                networkTrafficMonitor);
         });
         services.AddSingleton<ITrayPopupService, TrayPopupService>();
         services.AddSingleton<TrayIconService>();

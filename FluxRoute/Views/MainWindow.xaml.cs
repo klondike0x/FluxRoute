@@ -26,6 +26,12 @@ public partial class MainWindow : Window
 
     // Таймер для троттлинга (защита от дёрганий таблетки при частом ресайзе окна)
     private readonly System.Windows.Threading.DispatcherTimer _navIndicatorResizeTimer;
+    private readonly System.Windows.Threading.DispatcherTimer _sidebarAnimationTimer;
+    private readonly Stopwatch _sidebarAnimationClock = new();
+    private double _sidebarAnimationFrom;
+    private double _sidebarAnimationTarget = double.NaN;
+    private const double SidebarAnimationDurationMs = 180;
+    private HomeLayoutMode? _appliedHomeLayoutMode;
 
     // Parameterless constructor is intentionally kept for the WPF designer
     // and as a safe fallback if the window is ever instantiated outside DI.
@@ -115,11 +121,17 @@ public partial class MainWindow : Window
         // Unified logs tab
         _vm.UnifiedLogEntries.CollectionChanged += UnifiedLogEntries_CollectionChanged;
 
-        // Инициализация таймера для троттлинга (задержка 0 мс)
+        // Debounce тяжёлой перестройки после паузы в потоке SizeChanged.
         _navIndicatorResizeTimer = new System.Windows.Threading.DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(0)
+            Interval = TimeSpan.FromMilliseconds(AdaptiveSidebarLayout.ResizeDebounceMilliseconds)
         };
+        _sidebarAnimationTimer = new System.Windows.Threading.DispatcherTimer(
+            System.Windows.Threading.DispatcherPriority.Render)
+        {
+            Interval = TimeSpan.FromMilliseconds(16)
+        };
+        _sidebarAnimationTimer.Tick += SidebarAnimationTimer_Tick;
         _navIndicatorResizeTimer.Tick += OnNavIndicatorResizeTimerTick;
 
         // Обновление таблетки при ресайзе
@@ -271,6 +283,12 @@ public partial class MainWindow : Window
         _vm.ProfileSwitchNotification -= OnProfileSwitched;
         _vm.ServiceLogs.CollectionChanged -= ServiceLogs_CollectionChanged;
         _vm.PropertyChanged -= OnViewModelPropertyChanged;
+        SizeChanged -= OnWindowSizeChanged;
+        _navIndicatorResizeTimer.Stop();
+        _navIndicatorResizeTimer.Tick -= OnNavIndicatorResizeTimerTick;
+        _sidebarAnimationTimer.Stop();
+        _sidebarAnimationTimer.Tick -= SidebarAnimationTimer_Tick;
+        _sidebarAnimationClock.Stop();
 
         _trayIcon.Dispose();
         _logger?.LogInformation("Main window cleanup completed.");
@@ -342,8 +360,8 @@ public partial class MainWindow : Window
 
     private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        // Сбрасываем таймер при каждом изменении размера.
-        // Анимация сработает только когда ресайз прекратится на 80 мс.
+        // Во время системного live-resize не запускаем тяжёлый WPF layout на каждый пиксель.
+        // Один проход выполняется после короткой паузы в потоке SizeChanged.
         _navIndicatorResizeTimer.Stop();
         _navIndicatorResizeTimer.Start();
     }
@@ -369,7 +387,12 @@ public partial class MainWindow : Window
 
         private void ApplyHomeLayout()
         {
-            HomeTab?.ApplyLayout(AdaptiveHomeLayout.FromWindowWidth(ActualWidth));
+            var requestedMode = AdaptiveHomeLayout.FromWindowWidth(ActualWidth);
+            if (!AdaptiveHomeLayout.ShouldApply(_appliedHomeLayoutMode, requestedMode))
+                return;
+
+            HomeTab?.ApplyLayout(requestedMode);
+            _appliedHomeLayoutMode = requestedMode;
         }
 
         private void UpdateSidebarExpansion()
@@ -401,27 +424,37 @@ public partial class MainWindow : Window
 
         private void AnimateSidebarWidth(double from, double to)
         {
-            var timer = new System.Windows.Threading.DispatcherTimer
+            if (!AdaptiveSidebarLayout.ShouldStartAnimation(
+                    _sidebarAnimationTimer.IsEnabled,
+                    _sidebarAnimationTarget,
+                    to))
             {
-                Interval = TimeSpan.FromMilliseconds(16)
-            };
-            var elapsed = 0.0;
-            const double duration = 200.0;
-            timer.Tick += (s, e) =>
+                return;
+            }
+
+            _sidebarAnimationTimer.Stop();
+            _sidebarAnimationFrom = double.IsFinite(from) ? from : to;
+            _sidebarAnimationTarget = to;
+            _sidebarAnimationClock.Restart();
+            _sidebarAnimationTimer.Start();
+        }
+
+        private void SidebarAnimationTimer_Tick(object? sender, EventArgs e)
+        {
+            var progress = _sidebarAnimationClock.Elapsed.TotalMilliseconds / SidebarAnimationDurationMs;
+            if (progress >= 1)
             {
-                elapsed += 16;
-                if (elapsed >= duration)
-                {
-                    SidebarColumn.Width = new GridLength(to);
-                    timer.Stop();
-                    return;
-                }
-                var t = elapsed / duration;
-                // EaseOut quadratic: 1 - (1-t)^2
-                var eased = 1 - (1 - t) * (1 - t);
-                SidebarColumn.Width = new GridLength(from + (to - from) * eased);
-            };
-            timer.Start();
+                SidebarColumn.Width = new GridLength(_sidebarAnimationTarget);
+                _sidebarAnimationTimer.Stop();
+                _sidebarAnimationClock.Stop();
+                return;
+            }
+
+            SidebarColumn.Width = new GridLength(
+                AdaptiveSidebarLayout.InterpolateWidth(
+                    _sidebarAnimationFrom,
+                    _sidebarAnimationTarget,
+                    progress));
         }
 
     // ── Wave pulse (делегируем в HomePage UserControl) ──
@@ -499,18 +532,7 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    //  RESIZE GRIPS (для AllowsTransparency=True, WindowStyle=None)
-    //
-    //  Паттерн ReleaseCapture + PostMessage(WM_NCLBUTTONDOWN, HT*)
-    //  — стандартный Win32-способ добавить ресайз в кастомный хром.
-    //  SendMessage НЕ подходит для WindowStyle=None — он блокирует
-    //  цикл сообщений, и окно не входит в режим sizing.
-    // ═══════════════════════════════════════════════════════════════
-
     private const int WM_NCLBUTTONDOWN = 0x00A1;
-
-    // HT* (hit-test) константы — соответствуют областям окна
     private const int HTTOP = 12;
     private const int HTBOTTOM = 15;
     private const int HTLEFT = 10;
@@ -541,10 +563,11 @@ public partial class MainWindow : Window
     private void ResizeGrip_MouseDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Left) return;
-        if (sender is not FrameworkElement { Tag: string tag } || !ResizeEdges.TryGetValue(tag, out var htCode))
+        if (sender is not FrameworkElement { Tag: string tag }
+            || !ResizeEdges.TryGetValue(tag, out var htCode))
             return;
 
-        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        var hwnd = new WindowInteropHelper(this).Handle;
         ReleaseCapture();
         PostMessage(hwnd, WM_NCLBUTTONDOWN, (IntPtr)htCode, IntPtr.Zero);
     }
