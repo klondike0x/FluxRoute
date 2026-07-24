@@ -155,7 +155,12 @@ public partial class MainViewModel
 
     // ── Текст кнопки запуска ──
     public string TgProxyToggleText => TgProxyRunning ? "⏹ Остановить прокси" : "▶ Запустить прокси";
-    partial void OnTgProxyRunningChanged(bool value) => OnPropertyChanged(nameof(TgProxyToggleText));
+    partial void OnTgProxyRunningChanged(bool value)
+    {
+        OnPropertyChanged(nameof(TgProxyToggleText));
+        OnPropertyChanged(nameof(ActiveServicesCount));
+        OnPropertyChanged(nameof(ActiveServicesSummary));
+    }
 
     // ── Инициализация при первом входе на вкладку ──
     private bool _tgProxyTabVisited = false;

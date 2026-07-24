@@ -61,6 +61,7 @@ public sealed class AppSettings
     // Системные
     public bool AutoStartEnabled { get; set; } = false;
     public bool MinimizeToTray { get; set; } = true;
+    public StartupWindowMode StartupWindowMode { get; set; } = StartupWindowMode.Minimal;
 
     // Предупреждение при смене стратегии
     public bool ShowProfileSwitchWarning { get; set; } = true;

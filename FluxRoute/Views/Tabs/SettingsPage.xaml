@@ -143,10 +143,46 @@
                                 CornerRadius="8"
                                 Padding="12"
                                 Margin="0,10,0,0">
-                            <TextBlock Text="Настройки темы и языка будут добавлены после появления соответствующих параметров в конфигурации."
-                                       Foreground="#8B949E"
-                                       FontSize="11"
-                                       TextWrapping="Wrap" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,20,0">
+                                    <TextBlock Text="Окно при запуске"
+                                               Foreground="#DCE4F0"
+                                               FontSize="12"
+                                               FontWeight="SemiBold" />
+                                    <TextBlock Text="Современное — 1440×826, минималистическое — 860×520. Изменение применяется при следующем запуске."
+                                               Foreground="#8B949E"
+                                               FontSize="10.5"
+                                               Margin="0,4,0,0"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1"
+                                          Width="190"
+                                          Height="32"
+                                          ItemsSource="{Binding StartupWindowModes}"
+                                          SelectedItem="{Binding StartupWindowMode, Mode=TwoWay}"
+                                          VerticalAlignment="Center">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Foreground="#DCE4F0">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="Минималистическое · 860×520" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding}" Value="Modern">
+                                                                <Setter Property="Text" Value="Современное · 1440×826" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </Grid>
                         </Border>
                     </StackPanel>
                 </ScrollViewer>

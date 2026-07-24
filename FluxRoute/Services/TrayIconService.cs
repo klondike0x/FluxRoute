@@ -1,97 +1,50 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace FluxRoute.Services;
 
 /// <summary>
-/// v1.6.0: Расширенный трей-сервис с динамическим контекстным меню и индикаторами статуса.
+/// Управляет системной иконкой FluxRoute и собственным WPF-окном трея.
 /// </summary>
 public sealed class TrayIconService : IDisposable
 {
     private readonly NotifyIcon _notifyIcon;
-    private bool _disposed;
-
-    // Динамические пункты меню — храним ссылки для обновления Enabled/Text без пересоздания
-    private readonly ToolStripMenuItem _strategyItem;
-    private readonly ToolStripMenuItem _orchestratorItem;
-    private readonly ToolStripMenuItem _tgProxyItem;
-    private readonly ToolStripMenuItem _gameFilterItem;
-
-    // Иконки для разных статусов (кешируем, чтобы не грузить из ресурсов каждый раз)
+    private readonly ITrayPopupService _popupService;
     private readonly Icon _iconDefault;
     private Icon? _iconRunning;
     private Icon? _iconError;
+    private bool _disposed;
 
     public event EventHandler? ShowRequested;
     public event EventHandler? ExitRequested;
 
-    public TrayIconService()
+    public TrayIconService(ITrayPopupService popupService)
     {
+        _popupService = popupService ?? throw new ArgumentNullException(nameof(popupService));
         _iconDefault = LoadEmbeddedIcon();
 
-        // Пункты меню создаются один раз при конструировании
-        var showItem = new ToolStripMenuItem("Открыть");
-        showItem.Click += (_, _) => ShowRequested?.Invoke(this, EventArgs.Empty);
-
-        _strategyItem = new ToolStripMenuItem("Стратегия: —")
-        {
-            Enabled = false,
-            ForeColor = Color.FromArgb(0x8B, 0x94, 0x9E)
-        };
-
-        _orchestratorItem = new ToolStripMenuItem("Оркестратор: ВЫКЛ")
-        {
-            Enabled = false,
-            ForeColor = Color.FromArgb(0x4A, 0x51, 0x70)
-        };
-
-        _tgProxyItem = new ToolStripMenuItem("Telegram-прокси: ВЫКЛ")
-        {
-            Enabled = false,
-            ForeColor = Color.FromArgb(0x4A, 0x51, 0x70)
-        };
-
-        _gameFilterItem = new ToolStripMenuItem("Игровой режим: ВЫКЛ")
-        {
-            Enabled = false,
-            ForeColor = Color.FromArgb(0x4A, 0x51, 0x70)
-        };
-
-        var exitItem = new ToolStripMenuItem("Выход");
-        exitItem.Click += (_, _) => ExitRequested?.Invoke(this, EventArgs.Empty);
-
-        var menu = new ContextMenuStrip();
-        menu.Items.Add(showItem);
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(_strategyItem);
-        menu.Items.Add(_orchestratorItem);
-        menu.Items.Add(_tgProxyItem);
-        menu.Items.Add(_gameFilterItem);
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(exitItem);
+        _popupService.OpenApplicationRequested += OnPopupOpenApplicationRequested;
+        _popupService.ExitApplicationRequested += OnPopupExitApplicationRequested;
 
         _notifyIcon = new NotifyIcon
         {
             Text = "FluxRoute",
             Icon = _iconDefault,
-            Visible = false,
-            ContextMenuStrip = menu
+            Visible = false
         };
-
-        _notifyIcon.MouseClick += (_, args) =>
-        {
-            if (args.Button == MouseButtons.Left)
-                ShowRequested?.Invoke(this, EventArgs.Empty);
-        };
+        _notifyIcon.MouseClick += OnNotifyIconMouseClick;
     }
-
-    // ── Публичные методы (обратная совместимость) ──
 
     public void SetVisible(bool visible)
     {
+        ThrowIfDisposed();
         _notifyIcon.Visible = visible;
+
+        if (!visible)
+            _popupService.Close();
     }
 
     public void ShowBalloon(string title, string text, ToolTipIcon icon = ToolTipIcon.Info)
@@ -101,55 +54,49 @@ public sealed class TrayIconService : IDisposable
             {
                 try
                 {
-                    if (_notifyIcon.Visible)
+                    if (!_disposed && _notifyIcon.Visible)
                         _notifyIcon.ShowBalloonTip(3000, title, text, icon);
                 }
-                catch (InvalidOperationException) { }
+                catch (InvalidOperationException)
+                {
+                    // Windows может удалить handle иконки во время завершения приложения.
+                }
             }),
             System.Windows.Threading.DispatcherPriority.Background);
     }
 
     public void UpdateTooltip(string text)
     {
+        ThrowIfDisposed();
         _notifyIcon.Text = text.Length > 127 ? text[..127] : text;
     }
 
-    // ── v1.6.0: Динамическое обновление меню ──
-
-    private static readonly Color GreenOn = Color.FromArgb(0x00, 0xD6, 0x8F);
-    private static readonly Color GrayOff = Color.FromArgb(0x4A, 0x51, 0x70);
-
     /// <summary>
-    /// Обновляет все статусные пункты меню трея.
+    /// Синхронизирует содержимое собственного окна трея с состоянием приложения.
     /// </summary>
-    public void UpdateMenu(string? strategy, bool orchestratorRunning, bool tgProxyRunning, bool gameFilterEnabled)
+    public void UpdateMenu(
+        string? strategy,
+        bool protectionRunning,
+        bool orchestratorRunning,
+        bool tgProxyRunning,
+        bool gameFilterEnabled)
     {
-        _strategyItem.Text = string.IsNullOrEmpty(strategy)
-            ? "Стратегия: —"
-            : $"Стратегия: {strategy}";
-        _strategyItem.ForeColor = string.IsNullOrEmpty(strategy) ? GrayOff : Color.FromArgb(0xC9, 0xD1, 0xD9);
-
-        _orchestratorItem.Text = orchestratorRunning ? "Оркестратор: ВКЛ" : "Оркестратор: ВЫКЛ";
-        _orchestratorItem.ForeColor = orchestratorRunning ? GreenOn : GrayOff;
-
-        _tgProxyItem.Text = tgProxyRunning ? "Telegram-прокси: ВКЛ" : "Telegram-прокси: ВЫКЛ";
-        _tgProxyItem.ForeColor = tgProxyRunning ? GreenOn : GrayOff;
-
-        _gameFilterItem.Text = gameFilterEnabled ? "Игровой режим: ВКЛ" : "Игровой режим: ВЫКЛ";
-        _gameFilterItem.ForeColor = gameFilterEnabled ? GreenOn : GrayOff;
+        ThrowIfDisposed();
+        _popupService.UpdateState(
+            strategy,
+            protectionRunning,
+            orchestratorRunning,
+            tgProxyRunning,
+            gameFilterEnabled);
     }
 
-    // ── v1.6.0: Цветная иконка по статусу ──
-
-    private const int OverlayRadius = 5;
-    private const int OverlayMargin = 2;
-
     /// <summary>
-    /// Меняет иконку в трее в зависимости от статуса:
-    /// Running — зелёный кружок, Stopped — серая иконка, Error — красный кружок.
+    /// Меняет иконку в зависимости от состояния защиты.
     /// </summary>
     public void UpdateIcon(bool isRunning, bool isError = false)
     {
+        ThrowIfDisposed();
+
         if (isError)
         {
             _iconError ??= BuildOverlayIcon(Color.FromArgb(0xE7, 0x4C, 0x3C));
@@ -166,13 +113,29 @@ public sealed class TrayIconService : IDisposable
         }
     }
 
+    private void OnNotifyIconMouseClick(object? sender, MouseEventArgs e)
+    {
+        if (e.Button == MouseButtons.Left)
+        {
+            _popupService.Close();
+            ShowRequested?.Invoke(this, EventArgs.Empty);
+        }
+        else if (e.Button == MouseButtons.Right)
+        {
+            _popupService.ShowAtCursor();
+        }
+    }
+
+    private void OnPopupOpenApplicationRequested(object? sender, EventArgs e) =>
+        ShowRequested?.Invoke(this, EventArgs.Empty);
+
+    private void OnPopupExitApplicationRequested(object? sender, EventArgs e) =>
+        ExitRequested?.Invoke(this, EventArgs.Empty);
+
     private void TrySetIcon(Icon icon)
     {
-        // NotifyIcon.Icon — property, setter может бросить если handle не готов.
-        // Обёртка защищает от краша при быстрой смене состояний.
         try
         {
-            // Доступ через BeginInvoke на UI-потоке для thread-safety
             var dispatcher = System.Windows.Application.Current?.Dispatcher;
             if (dispatcher is null || dispatcher.HasShutdownStarted)
                 return;
@@ -182,65 +145,83 @@ public sealed class TrayIconService : IDisposable
             else
                 _ = dispatcher.BeginInvoke(() => ApplyIcon(icon));
         }
-        catch { }
+        catch (InvalidOperationException)
+        {
+            // Handle трея мог быть уничтожен при завершении приложения.
+        }
     }
 
     private void ApplyIcon(Icon icon)
     {
-        try { _notifyIcon.Icon = icon; }
-        catch (InvalidOperationException) { }
+        try
+        {
+            if (!_disposed)
+                _notifyIcon.Icon = icon;
+        }
+        catch (InvalidOperationException)
+        {
+            // Handle трея мог быть уничтожен при завершении приложения.
+        }
     }
 
-    /// <summary>
-    /// Накладывает цветной кружок в правый нижний угол иконки.
-    /// </summary>
     private Icon BuildOverlayIcon(Color overlayColor)
     {
-        var baseBitmap = _iconDefault.ToBitmap();
-        var w = baseBitmap.Width;
-        var h = baseBitmap.Height;
+        const int overlayRadius = 5;
+        const int overlayMargin = 2;
 
-        using var g = Graphics.FromImage(baseBitmap);
-        g.SmoothingMode = SmoothingMode.AntiAlias;
+        using var baseBitmap = _iconDefault.ToBitmap();
+        using var graphics = Graphics.FromImage(baseBitmap);
+        graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-        var x = w - OverlayRadius * 2 - OverlayMargin;
-        var y = h - OverlayRadius * 2 - OverlayMargin;
+        var x = baseBitmap.Width - overlayRadius * 2 - overlayMargin;
+        var y = baseBitmap.Height - overlayRadius * 2 - overlayMargin;
 
-        // Тёмная обводка для контраста
         using var outlineBrush = new SolidBrush(Color.FromArgb(0x0C, 0x0F, 0x17));
-        g.FillEllipse(outlineBrush, x - 1, y - 1, OverlayRadius * 2 + 2, OverlayRadius * 2 + 2);
+        graphics.FillEllipse(outlineBrush, x - 1, y - 1, overlayRadius * 2 + 2, overlayRadius * 2 + 2);
 
-        // Цветной индикатор
-        using var brush = new SolidBrush(overlayColor);
-        g.FillEllipse(brush, x, y, OverlayRadius * 2, OverlayRadius * 2);
+        using var statusBrush = new SolidBrush(overlayColor);
+        graphics.FillEllipse(statusBrush, x, y, overlayRadius * 2, overlayRadius * 2);
 
-        return Icon.FromHandle(baseBitmap.GetHicon());
+        var handle = baseBitmap.GetHicon();
+        try
+        {
+            return (Icon)Icon.FromHandle(handle).Clone();
+        }
+        finally
+        {
+            _ = DestroyIcon(handle);
+        }
     }
 
-    // ── Иконка по умолчанию ──
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DestroyIcon(IntPtr handle);
 
     private static Icon LoadEmbeddedIcon()
     {
         var assembly = Assembly.GetExecutingAssembly();
-        var stream = assembly.GetManifestResourceStream("FluxRoute.ico");
-        if (stream is not null)
-            return new Icon(stream);
-
-        return SystemIcons.Application;
+        using var stream = assembly.GetManifestResourceStream("FluxRoute.ico");
+        return stream is not null ? new Icon(stream) : SystemIcons.Application;
     }
 
-    // ── IDisposable ──
+    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (_disposed)
+            return;
 
+        _disposed = true;
+        _popupService.OpenApplicationRequested -= OnPopupOpenApplicationRequested;
+        _popupService.ExitApplicationRequested -= OnPopupExitApplicationRequested;
+        _popupService.Close();
+
+        _notifyIcon.MouseClick -= OnNotifyIconMouseClick;
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
 
-        _iconDefault?.Dispose();
         _iconRunning?.Dispose();
         _iconError?.Dispose();
+        _iconDefault.Dispose();
     }
 }

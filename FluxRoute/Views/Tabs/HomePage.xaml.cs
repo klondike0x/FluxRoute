@@ -1,6 +1,8 @@
 ﻿using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using FluxRoute.ViewModels;
 
 namespace FluxRoute.Views.Tabs;
 
@@ -14,6 +16,29 @@ public partial class HomePage : System.Windows.Controls.UserControl
     public HomePage()
     {
         InitializeComponent();
+    }
+
+    public void ApplyLayout(HomeLayoutMode mode)
+    {
+        var spec = AdaptiveHomeLayout.GetSpec(mode);
+
+        WideGapColumn.Width = new GridLength(spec.DetailsGap);
+        DetailsColumn.Width = new GridLength(spec.DetailsWidth);
+
+        ProtectionModeCard.SetValue(Grid.ColumnProperty, 2);
+        ProtectionModeCard.Width = double.NaN;
+        ProtectionModeCard.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
+        ProtectionModeCard.Visibility = spec.ShowWideDetails ? Visibility.Visible : Visibility.Collapsed;
+
+        ServicesCard.Visibility = spec.ShowWideDetails ? Visibility.Visible : Visibility.Collapsed;
+        ServicesCard.Opacity = spec.ShowWideDetails ? 1 : 0;
+
+        CompactSummaryPanel.Visibility = spec.ShowCompactSummaryCards
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        MetricsCard.Visibility = spec.ShowWideMonitor
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     public void PlayWave(bool outward, double strength, int duration)

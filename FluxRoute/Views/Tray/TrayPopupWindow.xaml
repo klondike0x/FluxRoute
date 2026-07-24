@@ -1,0 +1,245 @@
+<Window x:Class="FluxRoute.Views.Tray.TrayPopupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="FluxRoute Tray"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        SizeToContent="WidthAndHeight"
+        Topmost="True"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        PreviewKeyDown="OnPreviewKeyDown">
+    <Window.Resources>
+        <SolidColorBrush x:Key="TrayTextPrimary" Color="#DCE4F0" />
+        <SolidColorBrush x:Key="TrayTextSecondary" Color="#8994AA" />
+        <SolidColorBrush x:Key="TrayTextMuted" Color="#59657A" />
+        <SolidColorBrush x:Key="TrayAccent" Color="#4D6BFE" />
+
+        <Style x:Key="TrayActionButton" TargetType="Button">
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Margin" Value="8,1" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Foreground" Value="{StaticResource TrayTextPrimary}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Surface"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Surface" Property="Background" Value="#12FFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Surface" Property="Background" Value="#1EFFFFFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TrayStatusDot" TargetType="Ellipse">
+            <Setter Property="Width" Value="7" />
+            <Setter Property="Height" Value="7" />
+            <Setter Property="Fill" Value="#3B465A" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="Fill" Value="#35D79A" />
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect Color="#35D79A" BlurRadius="7" ShadowDepth="0" Opacity="0.65" />
+                        </Setter.Value>
+                    </Setter>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="TrayStatusLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TrayTextSecondary}" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="TrayStatusValue" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TrayTextMuted}" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="Foreground" Value="#62E6B1" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Border Width="292"
+            Margin="14"
+            Background="#F20C0F17"
+            BorderBrush="#28364B6A"
+            BorderThickness="1"
+            CornerRadius="14">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" BlurRadius="26" ShadowDepth="4" Opacity="0.62" />
+        </Border.Effect>
+
+        <StackPanel>
+            <Grid Margin="16,14,16,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Border Width="30" Height="30" CornerRadius="9" Background="#194D6BFE">
+                    <TextBlock Text="F"
+                               Foreground="{StaticResource TrayAccent}"
+                               FontFamily="Segoe UI"
+                               FontWeight="Bold"
+                               FontSize="15"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Border>
+
+                <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="FluxRoute"
+                               Foreground="{StaticResource TrayTextPrimary}"
+                               FontFamily="Segoe UI"
+                               FontSize="13"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="Центр управления"
+                               Foreground="{StaticResource TrayTextMuted}"
+                               FontFamily="Segoe UI"
+                               FontSize="10" />
+                </StackPanel>
+
+                <TextBlock Grid.Column="2"
+                           Text="{Binding Version}"
+                           Foreground="{StaticResource TrayTextMuted}"
+                           FontFamily="Segoe UI"
+                           FontSize="10"
+                           VerticalAlignment="Center" />
+            </Grid>
+
+            <Border Height="1" Background="#182238" />
+
+            <Border Margin="10,10,10,6"
+                    Padding="12,10"
+                    Background="#101722"
+                    BorderBrush="#182238"
+                    BorderThickness="1"
+                    CornerRadius="10">
+                <StackPanel>
+                    <Grid Margin="0,0,0,9">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Ellipse Style="{StaticResource TrayStatusDot}"
+                                 Tag="{Binding ProtectionRunning}"
+                                 Margin="0,0,9,0" />
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="{Binding ProtectionStatus}"
+                                       Foreground="{StaticResource TrayTextPrimary}"
+                                       FontFamily="Segoe UI"
+                                       FontSize="12"
+                                       FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding StrategyName, StringFormat=Стратегия: {0}}"
+                                       Foreground="{StaticResource TrayTextMuted}"
+                                       FontFamily="Segoe UI"
+                                       FontSize="10"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Ellipse Style="{StaticResource TrayStatusDot}" Tag="{Binding OrchestratorRunning}" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource TrayStatusLabel}" Text="Оркестратор" />
+                        <TextBlock Grid.Column="2" Style="{StaticResource TrayStatusValue}"
+                                   Tag="{Binding OrchestratorRunning}" Text="{Binding OrchestratorStatus}" />
+                    </Grid>
+
+                    <Grid Margin="0,3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Ellipse Style="{StaticResource TrayStatusDot}" Tag="{Binding TgProxyRunning}" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource TrayStatusLabel}" Text="Telegram-прокси" />
+                        <TextBlock Grid.Column="2" Style="{StaticResource TrayStatusValue}"
+                                   Tag="{Binding TgProxyRunning}" Text="{Binding TgProxyStatus}" />
+                    </Grid>
+
+                    <Grid Margin="0,3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Ellipse Style="{StaticResource TrayStatusDot}" Tag="{Binding GameFilterEnabled}" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource TrayStatusLabel}" Text="Игровой режим" />
+                        <TextBlock Grid.Column="2" Style="{StaticResource TrayStatusValue}"
+                                   Tag="{Binding GameFilterEnabled}" Text="{Binding GameFilterStatus}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Button Style="{StaticResource TrayActionButton}"
+                    Command="{Binding OpenApplicationCommand}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE8A7;"
+                               FontFamily="Segoe MDL2 Assets"
+                               Foreground="#93A5C4"
+                               FontSize="14"
+                               Width="24"
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="Открыть FluxRoute"
+                               FontFamily="Segoe UI"
+                               FontSize="12"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+
+            <Border Height="1" Background="#182238" Margin="10,5" />
+
+            <Button Style="{StaticResource TrayActionButton}"
+                    Foreground="#FF7A86"
+                    Margin="8,1,8,8"
+                    Command="{Binding ExitApplicationCommand}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE8AC;"
+                               FontFamily="Segoe MDL2 Assets"
+                               Foreground="#FF7A86"
+                               FontSize="14"
+                               Width="24"
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="Выход"
+                               FontFamily="Segoe UI"
+                               FontSize="12"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
+    </Border>
+</Window>

@@ -30,9 +30,12 @@ public partial class MainWindow : Window
     // Parameterless constructor is intentionally kept for the WPF designer
     // and as a safe fallback if the window is ever instantiated outside DI.
     public MainWindow()
-        : this(CreateDesignTimeViewModel(), new TrayIconService(), null)
+        : this(CreateDesignTimeViewModel(), CreateDesignTimeTrayIconService(), null)
     {
     }
+
+    private static TrayIconService CreateDesignTimeTrayIconService() =>
+        new(new TrayPopupService());
 
     /// <summary>
     /// ⚠️ WARNING: This method duplicates DI registration from App.xaml.cs.
@@ -86,14 +89,21 @@ public partial class MainWindow : Window
         _logger = logger;
 
         DataContext = _vm;
+        ApplyStartupWindowSize();
 
-        // Инициализируем подсветку активного пункта Sidebar после построения визуального дерева.
-        Loaded += (_, _) => SidebarControl?.AnimateNavIndicator(_vm.SelectedTabIndex, animate: false);
+        // Инициализируем подсветку и адаптивную раскладку после построения визуального дерева.
+        Loaded += (_, _) =>
+        {
+            SidebarControl?.AnimateNavIndicator(_vm.SelectedTabIndex, animate: false);
+            ApplyHomeLayout();
+            UpdateSidebarExpansion();
+        };
 
         // Tray icon
         _trayIcon.SetVisible(true);
         _trayIcon.ShowRequested += OnTrayShowRequested;
         _trayIcon.ExitRequested += OnTrayExitRequested;
+        UpdateTrayMenu();
 
         _vm.ProfileSwitchNotification += OnProfileSwitched;
 
@@ -128,6 +138,18 @@ public partial class MainWindow : Window
         }
 
         _logger?.LogInformation("Main window initialized.");
+    }
+
+    private void ApplyStartupWindowSize()
+    {
+        var workArea = SystemParameters.WorkArea;
+        var size = StartupWindowLayout.FitToWorkArea(
+            _vm.StartupWindowMode,
+            workArea.Width,
+            workArea.Height);
+
+        Width = size.Width;
+        Height = size.Height;
     }
 
     private void OnProfileSwitched(object? sender, string profileName)
@@ -312,6 +334,7 @@ public partial class MainWindow : Window
     {
         _trayIcon.UpdateMenu(
             strategy: _vm.SelectedProfile?.DisplayName,
+            protectionRunning: _vm.IsRunning,
             orchestratorRunning: _vm.OrchestratorEnabled,
             tgProxyRunning: _vm.TgProxyRunning,
             gameFilterEnabled: _vm.GameFilterEnabled);
@@ -341,16 +364,32 @@ public partial class MainWindow : Window
 
             // Авто-разворот Sidebar при ширине ≥ 1200
             UpdateSidebarExpansion();
+            ApplyHomeLayout();
+        }
+
+        private void ApplyHomeLayout()
+        {
+            HomeTab?.ApplyLayout(AdaptiveHomeLayout.FromWindowWidth(ActualWidth));
         }
 
         private void UpdateSidebarExpansion()
         {
-            var shouldExpand = ActualWidth >= 1200;
+            var shouldExpand = AdaptiveSidebarLayout.ShouldExpand(ActualWidth);
+            var requiresVisualSync = AdaptiveSidebarLayout.RequiresVisualSync(
+                shouldExpand,
+                SidebarControl.IsExpanded,
+                SidebarColumn.Width.Value);
+
             if (_vm.IsSidebarExpanded != shouldExpand)
             {
+                // PropertyChanged запустит AnimateSidebar ровно один раз.
                 _vm.IsSidebarExpanded = shouldExpand;
-                AnimateSidebar(shouldExpand);
+                return;
             }
+
+            // При старте VM уже может содержать правильное значение, а View — ещё нет.
+            if (requiresVisualSync)
+                AnimateSidebar(shouldExpand);
         }
 
         private void AnimateSidebar(bool expanded)
@@ -512,8 +551,8 @@ public partial class MainWindow : Window
 
     private const int WmGetMinMaxInfo = 0x0024;
     private const uint MonitorDefaultToNearest = 0x00000002;
-    private const double MinimumWindowWidth = 860;
-    private const double MinimumWindowHeight = 520;
+    private const double MinimumWindowWidth = AdaptiveHomeLayout.MinimumWindowWidth;
+    private const double MinimumWindowHeight = AdaptiveHomeLayout.MinimumWindowHeight;
 
     private void OnSourceInitialized(object? sender, EventArgs e)
     {

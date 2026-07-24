@@ -523,8 +523,20 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string downloadSpeed = "0.0";
     [ObservableProperty] private string lastStatusMessage = "Готово";
 
+    public int ActiveServicesCount =>
+        (OrchestratorEnabled ? 1 : 0)
+        + (TgProxyRunning ? 1 : 0)
+        + (GameFilterEnabled ? 1 : 0);
+
+    public string ActiveServicesSummary => $"{ActiveServicesCount} из 3 активны";
+    public string PingSummary => "Нет данных";
+    public string CompactNetworkSummary => PingSummary;
+    public string TrafficSpeedSummary => $"↓ {DownloadSpeed}  ↑ {UploadSpeed}";
+
     public string MainActionButtonText => IsRunning ? "⏹ Остановить" : "▶ Запустить";
     partial void OnIsRunningChanged(bool value) => OnPropertyChanged(nameof(MainActionButtonText));
+    partial void OnUploadSpeedChanged(string value) => OnPropertyChanged(nameof(TrafficSpeedSummary));
+    partial void OnDownloadSpeedChanged(string value) => OnPropertyChanged(nameof(TrafficSpeedSummary));
 
     // ── Feature ViewModels ──
     public UpdatesViewModel Updates { get; private set; } = null!;
@@ -551,6 +563,8 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(ProtectionMode));
         OnPropertyChanged(nameof(IsAutomaticProtectionMode));
         OnPropertyChanged(nameof(IsManualProtectionMode));
+        OnPropertyChanged(nameof(ActiveServicesCount));
+        OnPropertyChanged(nameof(ActiveServicesSummary));
         SaveSettings();
         if (_settingsLoaded)
             ApplyOrchestratorEnabledState();
@@ -676,6 +690,12 @@ public partial class MainViewModel : ObservableObject
     }
     [ObservableProperty] private bool minimizeToTray = true;
     partial void OnMinimizeToTrayChanged(bool value) => SaveSettings();
+
+    [ObservableProperty] private StartupWindowMode startupWindowMode = StartupWindowMode.Minimal;
+    partial void OnStartupWindowModeChanged(StartupWindowMode value) => SaveSettings();
+
+    public IReadOnlyList<StartupWindowMode> StartupWindowModes { get; } =
+        [StartupWindowMode.Modern, StartupWindowMode.Minimal];
 
     // ═══ v1.6.0: Крестик сворачивает в трей ═══
     [ObservableProperty] private bool closeToTray = true;
@@ -891,7 +911,15 @@ public partial class MainViewModel : ObservableObject
             addRecentLog: AddToRecentLogs);
 
         Diagnostics.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
-        Service.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
+        Service.PropertyChanged += (_, e) =>
+        {
+            OnPropertyChanged(e.PropertyName);
+            if (e.PropertyName == nameof(ServiceViewModel.GameFilterEnabled))
+            {
+                OnPropertyChanged(nameof(ActiveServicesCount));
+                OnPropertyChanged(nameof(ActiveServicesSummary));
+            }
+        };
         Updates.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
 
         Logs.Add("Приложение запущено.");
@@ -1067,6 +1095,7 @@ public partial class MainViewModel : ObservableObject
         AutoUpdateEnabled = settings.AutoUpdateEnabled;
         AutoStartEnabled = settings.AutoStartEnabled;
         MinimizeToTray = settings.MinimizeToTray;
+        StartupWindowMode = settings.StartupWindowMode;
         // ═══ v1.6.0: Крестик сворачивает в трей ═══
         CloseToTray = settings.CloseToTray;
         // ═══════════════════════════════════════
@@ -1133,6 +1162,7 @@ public partial class MainViewModel : ObservableObject
             AutoUpdateEnabled = AutoUpdateEnabled,
             AutoStartEnabled = AutoStartEnabled,
             MinimizeToTray = MinimizeToTray,
+            StartupWindowMode = StartupWindowMode,
             // ═══ v1.6.0: Крестик сворачивает в трей ═══
             CloseToTray = CloseToTray,
             // ═══════════════════════════════════════

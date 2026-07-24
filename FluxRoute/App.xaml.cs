@@ -72,6 +72,14 @@ public partial class App : Application
             var mainWindow = _host.Services.GetRequiredService<MainWindow>();
             MainWindow = mainWindow;
             mainWindow.Show();
+
+            if (TrayPopupService.IsPreviewRequested())
+            {
+                mainWindow.Hide();
+                mainWindow.ShowInTaskbar = false;
+                if (_host.Services.GetRequiredService<ITrayPopupService>() is TrayPopupService popup)
+                    popup.ShowPreview();
+            }
         }
         catch (Exception ex)
         {
@@ -301,6 +309,7 @@ public partial class App : Application
                 taskScheduler,
                 trayIcon);
         });
+        services.AddSingleton<ITrayPopupService, TrayPopupService>();
         services.AddSingleton<TrayIconService>();
         services.AddSingleton<MainWindow>();
     }
