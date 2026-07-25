@@ -101,7 +101,25 @@ public sealed class AppSettings
     // TG WS Proxy
     public TgProxySettings TgProxy { get; set; } = new();
 
+    // DNS-over-HTTPS
+    public DohSettings Doh { get; set; } = new();
+
     public AiSettings Ai { get; set; } = new();
+}
+
+public sealed class DohSettings
+{
+    public bool Enabled { get; set; }
+    public bool AutomaticSelection { get; set; } = true;
+    public DohEncryptionMode EncryptionMode { get; set; } = DohEncryptionMode.EncryptedOnly;
+    public string? SelectedProviderId { get; set; }
+    public string? AppliedProviderId { get; set; }
+    public DohEncryptionMode AppliedEncryptionMode { get; set; } = DohEncryptionMode.EncryptedOnly;
+    public string? InterfaceName { get; set; }
+    public bool PreviousDnsWasDhcp { get; set; }
+    public List<string> PreviousDnsAddresses { get; set; } = new();
+    public List<string> AppliedDnsAddresses { get; set; } = new();
+    public DohOperationJournal? OperationJournal { get; set; }
 }
 
 public sealed class TgProxySettings
@@ -247,6 +265,7 @@ public sealed class SettingsService : ISettingsService
         {
             Trace.TraceError($"FluxRoute settings save failed. Path='{SettingsPath}'. Error='{ex}'");
             TryDeleteTempFile(tempPath);
+            throw new IOException($"Не удалось сохранить настройки FluxRoute: {SettingsPath}", ex);
         }
     }
 
@@ -333,6 +352,9 @@ public sealed class SettingsService : ISettingsService
     {
         settings.ProfileRatings ??= new List<ProfileRatingEntry>();
         settings.TgProxy ??= new TgProxySettings();
+        settings.Doh ??= new DohSettings();
+        settings.Doh.PreviousDnsAddresses ??= new List<string>();
+        settings.Doh.AppliedDnsAddresses ??= new List<string>();
         settings.Ai ??= new AiSettings();
         settings.UserSites ??= new List<string>();
         settings.CustomTargetDomains ??= new List<string>();

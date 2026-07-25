@@ -36,9 +36,13 @@
                                         </Style>
                                     </ContentPresenter.Resources>
                                 </ContentPresenter>
-                                <TextBlock Grid.Column="1" Text="▾" Foreground="#4A5170"
-                                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                                    FontSize="11" />
+                                <Viewbox Grid.Column="1" Width="10" Height="6"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Path Data="M 1,1 L 5,5 L 9,1"
+                                          Stroke="#8FA1C7" StrokeThickness="1.6"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
                                 <ToggleButton Grid.Column="0" Grid.ColumnSpan="2"
                                     IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
                                     Background="Transparent" BorderThickness="0"

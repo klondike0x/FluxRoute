@@ -47,6 +47,8 @@ public partial class App : Application
 
             await _host.StartAsync();
 
+            await _host.Services.GetRequiredService<IDohStartupRecovery>().RecoverAsync();
+
             Log.Information("FluxRoute application host started. Arguments: {Arguments}", e.Args);
 
             if (!IsRunningAsAdmin())
@@ -186,6 +188,23 @@ public partial class App : Application
         })
         .AddStandardResilienceHandler();
 
+        // Клиент для DNS-over-HTTPS wire-format запросов.
+        services.AddHttpClient(FluxRoute.Core.Services.HttpClientNames.Doh, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(8);
+            client.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-DoH/1.7");
+        })
+        .AddStandardResilienceHandler(options =>
+        {
+            options.Retry.MaxRetryAttempts = 2;
+            options.Retry.Delay = TimeSpan.FromMilliseconds(250);
+            options.Retry.BackoffType = DelayBackoffType.Exponential;
+            options.Retry.UseJitter = true;
+            options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(4);
+            options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(8);
+            options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(10);
+        });
+
         // ═══ НОВЫЙ: Named HttpClient для ServiceViewModel (IPSet, Hosts) ═══
         services.AddHttpClient("Service", client =>
         {
@@ -236,6 +255,15 @@ public partial class App : Application
         });
         services.AddSingleton<IAppUpdaterService, AppUpdaterService>();
         services.AddSingleton<IConnectivityChecker, ConnectivityChecker>();
+        services.AddSingleton<IProcessRunner, ProcessRunner>();
+        services.AddSingleton<IDnsAdapterService, DnsAdapterService>();
+        services.AddSingleton<IDohSystemConfigurationService, DohPowerShellService>();
+        services.AddSingleton<IDohProviderService, DohProviderService>();
+        services.AddSingleton<IDohSelectionService, DohSelectionService>();
+        services.AddSingleton<IWindowsDohConfigurationService, WindowsDohConfigurationService>();
+        services.AddSingleton<IDohStartupRecovery, DohStartupRecovery>();
+        services.AddSingleton<IDohProviderSwitchService, DohProviderSwitchService>();
+        services.AddSingleton<DohViewModel>();
         services.AddSingleton<ITaskSchedulerService, TaskSchedulerService>();
 
         services.AddSingleton<NetworkFingerprintProvider>();
@@ -284,6 +312,7 @@ public partial class App : Application
             var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
             var taskScheduler = sp.GetRequiredService<ITaskSchedulerService>();
             var trayIcon = sp.GetRequiredService<TrayIconService>();
+            var doh = sp.GetRequiredService<DohViewModel>();
 
             return new MainViewModel(
                 settingsService,
@@ -299,7 +328,8 @@ public partial class App : Application
                 materializer,
                 httpClientFactory,
                 taskScheduler,
-                trayIcon);
+                trayIcon,
+                doh);
         });
         services.AddSingleton<TrayIconService>();
         services.AddSingleton<MainWindow>();

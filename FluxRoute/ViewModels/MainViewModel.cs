@@ -543,6 +543,7 @@ public partial class MainViewModel : ObservableObject
     public UpdatesViewModel Updates { get; private set; } = null!;
     public ServiceViewModel Service { get; private set; } = null!;
     public DiagnosticsViewModel Diagnostics { get; private set; } = null!;
+    public DohViewModel? Doh { get; }
 
     // ── Диагностика (wrappers → DiagnosticsViewModel) ──
     public bool IsAdmin => Diagnostics.IsAdmin;
@@ -809,7 +810,8 @@ public partial class MainViewModel : ObservableObject
         BatMaterializer aiMaterializer,
         IHttpClientFactory httpClientFactory,
         ITaskSchedulerService? taskScheduler = null,
-        TrayIconService? trayIcon = null)
+        TrayIconService? trayIcon = null,
+        DohViewModel? doh = null)
     {
         _settingsService = settingsService;
         _updater = updaterService;
@@ -822,6 +824,7 @@ public partial class MainViewModel : ObservableObject
         _taskScheduler = taskScheduler ?? new TaskSchedulerService();
         _trayIcon = trayIcon;
         _evolver = aiEvolver;
+        Doh = doh;
 
         // ── Инициализация feature ViewModels ──
         Diagnostics = new DiagnosticsViewModel(

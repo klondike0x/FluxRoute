@@ -3,10 +3,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:tabs="clr-namespace:FluxRoute.Views.Tabs"
              mc:Ignorable="d" d:DesignHeight="460" d:DesignWidth="760">
-    <Grid>
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="16,12">
+    <TabControl Background="Transparent" BorderThickness="0" SelectedIndex="0">
+        <TabItem Header="Компоненты">
+            <Grid>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16,12">
                 <!-- ── БЫСТРЫЕ ПРЕСЕТЫ ── -->
                 <TextBlock Style="{StaticResource SecH}" Text="БЫСТРЫЕ ПРЕСЕТЫ" Margin="0,0,0,4" />
                 <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
@@ -341,7 +344,12 @@
                         </ItemsControl>
                     </ScrollViewer>
                 </Border>
-            </StackPanel>
-        </ScrollViewer>
-    </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </TabItem>
+        <TabItem Header="DoH">
+            <tabs:DohPage DataContext="{Binding Doh}" />
+        </TabItem>
+    </TabControl>
 </UserControl>
