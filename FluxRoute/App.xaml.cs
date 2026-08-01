@@ -258,6 +258,9 @@ public partial class App : Application
         // ═══ v1.7.0: Flowseal + Zapret2 ═══
         services.AddSingleton<IFlowsealVersionManager, FlowsealVersionManager>();
         services.AddSingleton<IZapret2CompatibilityService, Zapret2CompatibilityService>();
+        // ═══ v1.7.0: Переключение движков + авто-подбор ═══
+        services.AddSingleton<IEngineSwitchService, EngineSwitchService>();
+        services.AddSingleton<AutoStrategyService>();
         services.AddSingleton(sp =>
             new BanditSelector(sp.GetRequiredService<AiStrategyRegistry>(), new Random()));
         services.AddSingleton(sp =>
