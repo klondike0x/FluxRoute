@@ -854,6 +854,8 @@ public partial class MainViewModel : ObservableObject
     private readonly StrategyEvolver _evolver;
     private readonly INetworkTrafficMonitor? _networkTrafficMonitor;
     private readonly DispatcherTimer? _networkTrafficTimer;
+    // ═══ v1.7.0: НОВОЕ — сервис исключений антивируса ═══
+    private readonly IAntivirusExclusionService? _antivirusExclusion;
 
     public MainViewModel(
         ISettingsService settingsService,
@@ -870,7 +872,9 @@ public partial class MainViewModel : ObservableObject
         IHttpClientFactory httpClientFactory,
         ITaskSchedulerService? taskScheduler = null,
         TrayIconService? trayIcon = null,
-        INetworkTrafficMonitor? networkTrafficMonitor = null)
+        INetworkTrafficMonitor? networkTrafficMonitor = null,
+        // ═══ v1.7.0: НОВОЕ ═══
+        IAntivirusExclusionService? antivirusExclusionService = null)
     {
         _settingsService = settingsService;
         _updater = updaterService;
@@ -884,6 +888,7 @@ public partial class MainViewModel : ObservableObject
         _trayIcon = trayIcon;
         _evolver = aiEvolver;
         _networkTrafficMonitor = networkTrafficMonitor;
+        _antivirusExclusion = antivirusExclusionService;
 
         if (_networkTrafficMonitor is not null)
         {
@@ -1369,6 +1374,54 @@ public partial class MainViewModel : ObservableObject
         {
             Logs.Add($"❌ Ошибка синхронизации hostlist-файлов: {ex.Message}");
             Logs.Add($"   Stack: {ex.StackTrace?.Split('\n')[0]}");
+        }
+    }
+
+    // ═══ v1.7.0: НОВОЕ — исключения антивируса ═══
+    [ObservableProperty]
+    private string _antivirusExclusionStatus = string.Empty;
+
+    [ObservableProperty]
+    private bool _antivirusExclusionInProgress;
+
+    /// <summary>
+    /// Добавляет папку программы в исключения Защитника Windows.
+    /// </summary>
+    [RelayCommand]
+    private async Task AddAntivirusExclusion()
+    {
+        if (_antivirusExclusion is null) return;
+        if (AntivirusExclusionInProgress) return;
+
+        AntivirusExclusionInProgress = true;
+        AntivirusExclusionStatus = "Добавление папки в исключения...";
+
+        try
+        {
+            var appDir = AppContext.BaseDirectory;
+            var result = await _antivirusExclusion.AddExclusionAsync(appDir);
+
+            AntivirusExclusionStatus = result.Message;
+
+            if (result.RequiresElevation)
+            {
+                AntivirusExclusionStatus = "⚠️ Требуются права администратора. Перезапустите программу от имени администратора.";
+            }
+            else if (!result.Success)
+            {
+                AntivirusExclusionStatus = $"❌ {result.Message}";
+            }
+
+            Logs.Add($"[Антивирус] {result.Message}");
+        }
+        catch (Exception ex)
+        {
+            AntivirusExclusionStatus = $"❌ Ошибка: {ex.Message}";
+            Logs.Add($"[Антивирус] Ошибка: {ex.Message}");
+        }
+        finally
+        {
+            AntivirusExclusionInProgress = false;
         }
     }
 

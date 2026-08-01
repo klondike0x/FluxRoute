@@ -278,6 +278,9 @@ public partial class App : Application
         services.AddSingleton<INetworkTrafficCounterSource, NetworkInterfaceTrafficCounterSource>();
         services.AddSingleton<INetworkTrafficMonitor, NetworkTrafficMonitor>();
 
+        // ═══ v1.7.0: НОВОЕ — сервис исключений антивируса ═══
+        services.AddSingleton<IAntivirusExclusionService, AntivirusExclusionService>();
+
         services.AddSingleton<MainViewModel>(sp =>
         {
             var settingsService = sp.GetRequiredService<ISettingsService>();
@@ -295,6 +298,7 @@ public partial class App : Application
             var taskScheduler = sp.GetRequiredService<ITaskSchedulerService>();
             var trayIcon = sp.GetRequiredService<TrayIconService>();
             var networkTrafficMonitor = sp.GetRequiredService<INetworkTrafficMonitor>();
+            var antivirusExclusion = sp.GetRequiredService<IAntivirusExclusionService>();
 
             return new MainViewModel(
                 settingsService,
@@ -311,7 +315,8 @@ public partial class App : Application
                 httpClientFactory,
                 taskScheduler,
                 trayIcon,
-                networkTrafficMonitor);
+                networkTrafficMonitor,
+                antivirusExclusion);
         });
         services.AddSingleton<ITrayPopupService, TrayPopupService>();
         services.AddSingleton<TrayIconService>();
