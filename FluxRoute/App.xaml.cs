@@ -238,6 +238,10 @@ public partial class App : Application
         services.AddSingleton<IConnectivityChecker, ConnectivityChecker>();
         services.AddSingleton<ITaskSchedulerService, TaskSchedulerService>();
 
+        // ═══ v1.7.0: MTProto + StrategyEditor ═══
+        services.AddSingleton<IMtProtoProxyService, MtProtoProxyService>();
+        services.AddSingleton<IStrategyEditorService, StrategyEditorService>();
+
         services.AddSingleton<NetworkFingerprintProvider>();
         services.AddSingleton(sp =>
         {
