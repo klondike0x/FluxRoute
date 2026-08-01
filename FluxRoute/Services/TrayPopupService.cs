@@ -28,7 +28,7 @@ public sealed class TrayPopupService : ITrayPopupService
             openApplication: RequestOpenApplication,
             exitApplication: RequestExitApplication)
         {
-            Version = $"v{typeof(App).Assembly.GetName().Version?.ToString(3) ?? "1.6.0"}"
+            Version = $"v{typeof(App).Assembly.GetName().Version?.ToString(3) ?? "1.7.0"}"
         };
     }
 
