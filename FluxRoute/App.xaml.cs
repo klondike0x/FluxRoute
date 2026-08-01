@@ -255,6 +255,9 @@ public partial class App : Application
             return new AiHistoryStore(Path.Combine(dir, "fluxroute-ai-history.jsonl"));
         });
         services.AddSingleton<BatMaterializer>();
+        // ═══ v1.7.0: Flowseal + Zapret2 ═══
+        services.AddSingleton<IFlowsealVersionManager, FlowsealVersionManager>();
+        services.AddSingleton<IZapret2CompatibilityService, Zapret2CompatibilityService>();
         services.AddSingleton(sp =>
             new BanditSelector(sp.GetRequiredService<AiStrategyRegistry>(), new Random()));
         services.AddSingleton(sp =>
