@@ -140,17 +140,18 @@ public sealed class ModManager : IModManager, IDisposable
         {
             _logger.LogInformation("Mod {Folder} activated without start script (files/lists)", folderName);
             await SetStatusAsync(folderName, ModStatus.Active).ConfigureAwait(false);
+            await CopyModBatsToEngineForFolder(folderName, ct).ConfigureAwait(false);
             return true;
         }
 
         var modDir = Path.Combine(_modsPath, folderName);
         var success = await RunScriptAsync(modDir, manifest.Scripts.Start, "start", ct).ConfigureAwait(false);
 
-        // Моды из Zapret-Hub имеют mark-скрипты (echo Mod active) — если скрипт не сработал,
-        // всё равно активируем (возможно, старый start.bat с call "ea.bat" упал)
+        // Всегда активируем + копируем .bat в engine/
         await SetStatusAsync(folderName,
             success ? ModStatus.Active : ModStatus.Active,
             success ? null : "Start script returned non-zero exit code (activated anyway)").ConfigureAwait(false);
+        await CopyModBatsToEngineForFolder(folderName, ct).ConfigureAwait(false);
         return true;
     }
 
@@ -293,6 +294,18 @@ public sealed class ModManager : IModManager, IDisposable
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Копирует .bat мода в engine/ по имени папки.
+    /// </summary>
+    private async Task CopyModBatsToEngineForFolder(string folderName, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(_engineDir))
+            return;
+        var modDir = Path.Combine(_modsPath, folderName);
+        if (Directory.Exists(modDir))
+            await CopyModBatsToEngineAsync(modDir, _engineDir, modDir, ct).ConfigureAwait(false);
     }
 
     /// <summary>
