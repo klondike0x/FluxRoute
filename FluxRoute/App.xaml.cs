@@ -241,6 +241,16 @@ public partial class App : Application
         // ═══ v1.7.0: MTProto + StrategyEditor ═══
         services.AddSingleton<IMtProtoProxyService, MtProtoProxyService>();
         services.AddSingleton<IStrategyEditorService, StrategyEditorService>();
+        // ── Система модов ──────────────────────────────────────────────
+        services.AddSingleton<IModManager>(sp =>
+        {
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ModManager>>();
+            var modsPath = Path.Combine(AppContext.BaseDirectory, "mods");
+            var enginePath = Path.Combine(AppContext.BaseDirectory, "engine");
+            return new ModManager(modsPath, logger, enginePath);
+        });
+        services.AddSingleton<ModsViewModel>();
+        // ─────────────────────────────────────────────────────────────────
 
         services.AddSingleton<NetworkFingerprintProvider>();
         services.AddSingleton(sp =>
@@ -288,8 +298,10 @@ public partial class App : Application
             var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
             var taskScheduler = sp.GetRequiredService<ITaskSchedulerService>();
             var trayIcon = sp.GetRequiredService<TrayIconService>();
+            var modsViewModel = sp.GetRequiredService<ModsViewModel>();
+            var modManager = sp.GetRequiredService<IModManager>();
 
-            return new MainViewModel(
+            var vm = new MainViewModel(
                 settingsService,
                 updaterService,
                 appUpdaterService,
@@ -302,8 +314,16 @@ public partial class App : Application
                 evolver,
                 materializer,
                 httpClientFactory,
+                modManager,
                 taskScheduler,
-                trayIcon);
+                trayIcon,
+                modsViewModel);
+            modsViewModel.OnModStatusChanged = () =>
+            {
+                Application.Current?.Dispatcher.BeginInvoke(
+                    new Action(vm.LoadProfiles), System.Windows.Threading.DispatcherPriority.Background);
+            };
+            return vm;
         });
         services.AddSingleton<TrayIconService>();
         services.AddSingleton<MainWindow>();

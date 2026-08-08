@@ -271,6 +271,30 @@
                             </Border.Style>
                             <tabs:LogsPage x:Name="LogsTab" />
                         </Border>
+
+                        <!-- ╔══════════ TAB 9: МОДЫ ══════════╗ -->
+                        <Border>
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Setter Property="Opacity" Value="0" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedTabIndex}" Value="9">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                    From="0" To="1" Duration="0:0:0.25" />
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <tabs:ModsPage x:Name="ModsTab" />
+                        </Border>
                     </Grid>
                 </Border>
             </Grid>

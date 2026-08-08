@@ -364,6 +364,56 @@
                     </Button>
                 </Grid>
 
+                <!-- Nav: Моды (9) -->
+                <Grid Margin="0,4,0,4">
+                    <Border CornerRadius="8" Width="52" Height="36"
+                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="Transparent" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedTabIndex}" Value="9">
+                                        <Setter Property="Background" Value="{StaticResource NavActiveBrush}" />
+                                        <DataTrigger.EnterActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                     From="0" To="1" Duration="0:0:0.18">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <CubicEase EasingMode="EaseOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </DataTrigger.EnterActions>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                    <Button Style="{StaticResource NavIconBtn}"
+                            Command="{Binding SelectTabCommand}" CommandParameter="9"
+                            ToolTip="Моды — установка и управление расширениями">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="18" Text="&#xECAA;">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#4A5170" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedTabIndex}" Value="9">
+                                            <Setter Property="Foreground" Value="#E9E9F8" />
+                                            <Setter Property="Effect">
+                                                <Setter.Value>
+                                                    <DropShadowEffect Color="#9966FF" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
+                                                </Setter.Value>
+                                            </Setter>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Button>
+                </Grid>
+
                 <!-- Nav: Логи (8) -->
                 <Grid Margin="0,4,0,4">
                     <Border CornerRadius="8" Width="52" Height="36"

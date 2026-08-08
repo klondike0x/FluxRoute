@@ -187,7 +187,8 @@ public partial class MainViewModel
         return "—";
     }
 
-    private void LoadProfiles()
+    [RelayCommand]
+    public void LoadProfiles()
     {
         var currentFileName = SelectedProfile?.FileName;
         Profiles.Clear();
@@ -222,8 +223,7 @@ public partial class MainViewModel
         foreach (var kv in batMap.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
             Profiles.Add(new ProfileItem { FileName = kv.Key, DisplayName = Path.GetFileNameWithoutExtension(kv.Key), FullPath = kv.Value });
 
-        _suppressProfileWarning = true;
-        try
+                try
         {
             if (currentFileName is not null)
                 SelectedProfile = Profiles.FirstOrDefault(p => p.FileName == currentFileName) ?? Profiles.FirstOrDefault();

@@ -65,6 +65,8 @@ public partial class MainWindow : Window
                 () => settings.Load().Ai),
             materializer,
             httpClientFactory,
+            new ModManager(Path.Combine(AppContext.BaseDirectory, "mods"),
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<ModManager>.Instance),
             taskScheduler: new TaskSchedulerService(),
             trayIcon: null);
     }
@@ -81,6 +83,10 @@ public partial class MainWindow : Window
         _logger = logger;
 
         DataContext = _vm;
+
+        // Моды — отдельный ViewModel, устанавливаем DataContext программно
+        // (XAML-привязка {Binding ModsViewModel} ненадёжна: свойство nullable)
+        ModsTab.DataContext = viewModel.ModsViewModel;
 
         // Tray icon
         _trayIcon.SetVisible(true);

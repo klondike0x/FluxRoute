@@ -492,7 +492,7 @@
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border x:Name="Bg" Background="Transparent" CornerRadius="6">
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text=""
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72C;"
                                                FontSize="13" Foreground="#3A5080"
                                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>

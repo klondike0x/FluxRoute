@@ -543,6 +543,7 @@ public partial class MainViewModel : ObservableObject
     public UpdatesViewModel Updates { get; private set; } = null!;
     public ServiceViewModel Service { get; private set; } = null!;
     public DiagnosticsViewModel Diagnostics { get; private set; } = null!;
+    public ModsViewModel? ModsViewModel { get; private set; }
 
     // ── Диагностика (wrappers → DiagnosticsViewModel) ──
     public bool IsAdmin => Diagnostics.IsAdmin;
@@ -794,6 +795,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ITaskSchedulerService _taskScheduler;
     private readonly TrayIconService? _trayIcon;
     private readonly StrategyEvolver _evolver;
+    private readonly IModManager _modManager;
 
     public MainViewModel(
         ISettingsService settingsService,
@@ -808,8 +810,10 @@ public partial class MainViewModel : ObservableObject
         StrategyEvolver aiEvolver,
         BatMaterializer aiMaterializer,
         IHttpClientFactory httpClientFactory,
+        IModManager modManager,
         ITaskSchedulerService? taskScheduler = null,
-        TrayIconService? trayIcon = null)
+        TrayIconService? trayIcon = null,
+        ModsViewModel? modsViewModel = null)
     {
         _settingsService = settingsService;
         _updater = updaterService;
@@ -822,8 +826,11 @@ public partial class MainViewModel : ObservableObject
         _taskScheduler = taskScheduler ?? new TaskSchedulerService();
         _trayIcon = trayIcon;
         _evolver = aiEvolver;
+        _modManager = modManager ?? throw new ArgumentNullException(nameof(modManager));
 
-        // ── Инициализация feature ViewModels ──
+        // ── ModsViewModel ──
+        ModsViewModel = modsViewModel;
+        // ────────────────────
         Diagnostics = new DiagnosticsViewModel(
             getEngineDir: () => EngineDir,
             getWinwsPath: () => WinwsPath,
