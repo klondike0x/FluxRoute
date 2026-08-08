@@ -101,6 +101,9 @@
             </StackPanel>
 
             <StackPanel Grid.Row="1" Margin="0,0,0,8">
+                <Button Style="{StaticResource AdaptiveNavBtn}" x:Name="DonateBtn" ToolTip="Поддержать автора" Click="DonateBtn_Click">
+                    <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Foreground="#F85149" Text="&#xEB52;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Поддержать"/></StackPanel>
+                </Button>
                 <Rectangle Height="1" Fill="#1E2235" Margin="8,4" />
                 <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="6" ToolTip="Настройки">
                     <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE713;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Настройки"/></StackPanel>

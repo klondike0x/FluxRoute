@@ -145,4 +145,10 @@ public partial class Sidebar : System.Windows.Controls.UserControl
                 yield return nested;
         }
     }
+
+    private void DonateBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var win = new DonateWindow { Owner = Window.GetWindow(this) };
+        win.ShowDialog();
+    }
 }
