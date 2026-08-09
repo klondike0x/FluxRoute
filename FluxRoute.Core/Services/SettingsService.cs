@@ -137,6 +137,7 @@ public sealed class TgProxySettings
     public bool CfProxyPriority { get; set; } = true;
     public bool CfDomainEnabled { get; set; } = false;
     public string CfDomain { get; set; } = "";
+    public string CfWorkerDomains { get; set; } = "";
 
     // Производительность
     public int BufKb { get; set; } = 256;

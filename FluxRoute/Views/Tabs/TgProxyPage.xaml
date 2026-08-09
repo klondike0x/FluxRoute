@@ -4,158 +4,205 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" d:DesignHeight="460" d:DesignWidth="760">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="16,12">
-            <Border Background="#1C1800" BorderBrush="#4A3800"
-                BorderThickness="1" CornerRadius="8"
-                Padding="10,8" Margin="0,0,0,12">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="Visibility" Value="Collapsed" />
-                        <Style.Triggers>
-                            <MultiDataTrigger>
-                                <MultiDataTrigger.Conditions>
-                                    <Condition Binding="{Binding TgProxyInstalled}" Value="False" />
-                                    <Condition Binding="{Binding IsTgProxyDownloading}" Value="False" />
-                                </MultiDataTrigger.Conditions>
-                                <Setter Property="Visibility" Value="Visible" />
-                            </MultiDataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-                <StackPanel>
-                    <TextBlock FontFamily="Segoe UI" Foreground="#F0B429"
-                        FontSize="12" FontWeight="SemiBold"
-                        Margin="0,0,0,4" Text="TG WS Proxy не установлен" />
-                    <Button Content="Установить TG WS Proxy"
-                        Style="{StaticResource ActionBtnAccent}"
-                        HorizontalAlignment="Left" Margin="0,6,0,0"
-                        Command="{Binding DownloadTgProxyCommand}" />
-                </StackPanel>
-            </Border>
-            <Border Background="#0D1F0D" BorderBrush="#1A4A1A"
-                BorderThickness="1" CornerRadius="8"
-                Padding="10,8" Margin="0,0,0,12"
-                Visibility="{Binding IsTgProxyDownloading, Converter={StaticResource BoolToVis}}">
-                <StackPanel>
-                    <TextBlock FontFamily="Segoe UI" Foreground="#66BB6A"
-                        FontSize="12" FontWeight="SemiBold"
-                        Margin="0,0,0,4" Text="Установка TG WS Proxy..." />
-                    <TextBlock Text="{Binding TgProxyDownloadStatus}"
-                        FontFamily="Segoe UI"
-                        Foreground="#A5D6A7" FontSize="11"
-                        TextWrapping="Wrap" />
-                </StackPanel>
-            </Border>
-            <TextBlock Style="{StaticResource SecH}" Text="УПРАВЛЕНИЕ" Margin="0,0,0,8" />
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                <Button Margin="0,0,10,0"
-                    Command="{Binding ToggleTgProxyCommand}"
-                    IsEnabled="{Binding TgProxyInstalled}">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource ActionBtnGreen}">
-                            <Setter Property="Content" Value="Запустить прокси" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding TgProxyRunning}" Value="True">
-                                    <Setter Property="Content" Value="Остановить прокси" />
-                                    <Setter Property="Foreground" Value="#E74C3C" />
-                                    <Setter Property="BorderBrush" Value="#6B1A1A" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
-                <Button Content="Открыть в Telegram"
-                    Style="{StaticResource ActionBtnAccent}"
-                    Margin="0,0,10,0"
-                    Command="{Binding OpenInTelegramCommand}"
-                    IsEnabled="{Binding TgProxyRunning}" />
-                <Button Content="Скопировать ссылку"
-                    Style="{StaticResource ActionBtn}"
-                    Command="{Binding CopyTgLinkCommand}"
-                    IsEnabled="{Binding TgProxyInstalled}" />
+    <UserControl.Resources>
+        <Style x:Key="SettingsCard" TargetType="Border" BasedOn="{StaticResource Card}">
+            <Setter Property="Padding" Value="14,12" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="CornerRadius" Value="9" />
+        </Style>
+        <Style x:Key="SettingsLabel" TargetType="TextBlock" BasedOn="{StaticResource Lbl}">
+            <Setter Property="Foreground" Value="#9AA8C2" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="0,0,0,5" />
+        </Style>
+        <Style x:Key="SettingsHint" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="Foreground" Value="#68748E" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="16,12,16,20">
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="TG WS Proxy" Foreground="#DCE4F0" FontSize="17" FontWeight="SemiBold" />
+                        <TextBlock Text="Встроенная реализация C# · изменения сохраняются автоматически"
+                                   Style="{StaticResource SettingsHint}" Margin="0,3,0,0" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse Width="7" Height="7" Margin="0,0,6,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="#E74C3C" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding TgProxyRunning}" Value="True">
+                                            <Setter Property="Fill" Value="#00D68F" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Foreground="#9AA8C2" FontSize="11">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Остановлен" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding TgProxyRunning}" Value="True">
+                                            <Setter Property="Text" Value="Работает" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Grid>
+
+                <Border Style="{StaticResource SettingsCard}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SecH}" Text="УПРАВЛЕНИЕ" Margin="0,0,0,9" />
+                        <WrapPanel>
+                            <Button Command="{Binding ToggleTgProxyCommand}" IsEnabled="{Binding TgProxyInstalled}" Margin="0,0,8,6">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ActionBtnGreen}">
+                                        <Setter Property="Content" Value="▶ Запустить прокси" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding TgProxyRunning}" Value="True">
+                                                <Setter Property="Content" Value="⏹ Остановить прокси" />
+                                                <Setter Property="Foreground" Value="#E74C3C" />
+                                                <Setter Property="BorderBrush" Value="#6B1A1A" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Content="Открыть в Telegram" Style="{StaticResource ActionBtnAccent}"
+                                    Command="{Binding OpenInTelegramCommand}" IsEnabled="{Binding TgProxyRunning}" Margin="0,0,8,6" />
+                            <Button Content="Копировать ссылку" Style="{StaticResource ActionBtn}"
+                                    Command="{Binding CopyTgProxyLinkCommand}" IsEnabled="{Binding TgProxyInstalled}" Margin="0,0,8,6" />
+                        </WrapPanel>
+                        <TextBlock Style="{StaticResource SettingsHint}" Margin="0,3,0,0">
+                            <Run Text="Версия: " />
+                            <Run Text="{Binding TgProxyVersion}" Foreground="#C8D4EC" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SettingsCard}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SecH}" Text="ПОДКЛЮЧЕНИЕ MTPROTO" Margin="0,0,0,9" />
+                        <Grid Margin="0,0,0,9">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="110" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SettingsLabel}" Text="IP-адрес" />
+                                <TextBox Text="{Binding TgProxyHost, UpdateSourceTrigger=PropertyChanged}" Height="32" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Style="{StaticResource SettingsLabel}" Text="Порт" />
+                                <TextBox Text="{Binding TgProxyPort, UpdateSourceTrigger=PropertyChanged}" Height="32" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Style="{StaticResource SettingsLabel}" Text="Secret" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="38" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding TgProxySecret, UpdateSourceTrigger=PropertyChanged}" Height="32" FontFamily="Consolas" />
+                            <Button Grid.Column="2" Height="32" Width="38" Padding="0" Style="{StaticResource ActionBtnAccent}"
+                                    Command="{Binding GenerateTgProxySecretCommand}" Content="↻" FontSize="15" ToolTip="Сгенерировать новый secret" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SettingsCard}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SecH}" Text="ДАТАЦЕНТРЫ TELEGRAM (DC → IP)" Margin="0,0,0,4" />
+                        <TextBlock Style="{StaticResource SettingsHint}" Text="По одному правилу на строку, формат: номер:IP" Margin="0,0,0,8" />
+                        <TextBox Text="{Binding TgProxyDcIps, UpdateSourceTrigger=PropertyChanged}"
+                                 AcceptsReturn="True" MinHeight="76" MaxHeight="120"
+                                 VerticalScrollBarVisibility="Auto" FontFamily="Consolas"
+                                 FontSize="11" VerticalContentAlignment="Top" Padding="8,7" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SettingsCard}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SecH}" Text="CLOUDFLARE PROXY" Margin="0,0,0,9" />
+                        <WrapPanel Margin="0,0,0,6">
+                            <CheckBox Content="Включить CF-прокси" IsChecked="{Binding TgProxyCfEnabled}" Margin="0,0,18,5" />
+                            <CheckBox Content="Приоритет" IsChecked="{Binding TgProxyCfPriority}"
+                                      IsEnabled="{Binding TgProxyCfEnabled}" Margin="0,0,0,5" />
+                        </WrapPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <CheckBox Grid.Column="0" IsChecked="{Binding TgProxyCfDomainEnabled}"
+                                      IsEnabled="{Binding TgProxyCfEnabled}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Style="{StaticResource SettingsLabel}" Text="Свой домен" VerticalAlignment="Center" Margin="0,0,0,4" />
+                        </Grid>
+                        <TextBox Text="{Binding TgProxyCfDomain, UpdateSourceTrigger=PropertyChanged}"
+                                 IsEnabled="{Binding TgProxyCfDomainEnabled}"
+                                 ToolTip="Например: example.com или домен с шаблоном &#x7B;dc&#x7D;"
+                                 Height="32" Margin="0,2,0,0" />
+                        <TextBlock Style="{StaticResource SettingsHint}" Text="Домен используется как дополнительный WebSocket-маршрут." Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SettingsCard}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SecH}" Text="CLOUDFLARE WORKER" Margin="0,0,0,4" />
+                        <TextBlock Style="{StaticResource SettingsHint}" Text="Домены Worker через запятую или с новой строки." Margin="0,0,0,8" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding TgProxyCfWorkerDomains, UpdateSourceTrigger=PropertyChanged}"
+                                     Height="32" ToolTip="worker.example.workers.dev, worker2.example.com" />
+                            <Button Grid.Column="1" Content="?" Width="34" Height="32" Margin="8,0,0,0"
+                                    Style="{StaticResource ActionBtnAccent}"
+                                    ToolTip="Worker-домены проверяются перед прямым подключением." />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SettingsCard}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SecH}" Text="ЛОГИ И ПРОИЗВОДИТЕЛЬНОСТЬ" Margin="0,0,0,9" />
+                        <CheckBox Content="Подробное логирование (verbose)" IsChecked="{Binding TgProxyVerbose}" Margin="0,0,0,10" />
+                        <TextBlock Style="{StaticResource SettingsLabel}" Text="Буфер, КБ (по умолчанию 256)" />
+                        <TextBox Text="{Binding TgProxyBufKb, UpdateSourceTrigger=PropertyChanged}" Height="32" Margin="0,0,0,9" />
+                        <TextBlock Style="{StaticResource SettingsLabel}" Text="Пул WebSocket-сессий (по умолчанию 4)" />
+                        <TextBox Text="{Binding TgProxyPoolSize, UpdateSourceTrigger=PropertyChanged}" Height="32" Margin="0,0,0,9" />
+                        <TextBlock Style="{StaticResource SettingsLabel}" Text="Макс. размер лога, МБ (по умолчанию 5)" />
+                        <TextBox Text="{Binding TgProxyLogMaxMb, UpdateSourceTrigger=PropertyChanged}" Height="32" Margin="0,0,0,9" />
+                        <CheckBox Content="Предпочитать IPv4" IsChecked="{Binding TgProxyPreferIPv4}" Margin="0,0,0,2" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SettingsCard}" Margin="0,0,0,0">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SecH}" Text="ЗАПУСК" Margin="0,0,0,9" />
+                        <CheckBox Content="Автоматически запускать прокси при запуске FluxRoute"
+                                  IsChecked="{Binding TgProxyAutoStartOnAppLaunch}" Margin="0,0,0,4" />
+                    </StackPanel>
+                </Border>
             </StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                <TextBlock Style="{StaticResource Lbl}" Text="Версия: " Margin="0,0,4,0" />
-                <TextBlock Style="{StaticResource Val}" Text="{Binding TgProxyVersion}" />
-            </StackPanel>
-            <Rectangle Style="{StaticResource Sep}" />
-            <TextBlock Style="{StaticResource SecH}" Text="ПОДКЛЮЧЕНИЕ" Margin="0,0,0,8" />
-            <Grid Margin="0,0,0,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="10" />
-                    <ColumnDefinition Width="100" />
-                </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0">
-                    <TextBlock Style="{StaticResource Lbl}" Text="IP-адрес" Margin="0,0,0,4" />
-                    <TextBox Text="{Binding TgProxyHost, UpdateSourceTrigger=PropertyChanged}"
-                        Height="30" VerticalContentAlignment="Center" />
-                </StackPanel>
-                <StackPanel Grid.Column="2">
-                    <TextBlock Style="{StaticResource Lbl}" Text="Порт" Margin="0,0,0,4" />
-                    <TextBox Text="{Binding TgProxyPort, UpdateSourceTrigger=PropertyChanged}"
-                        Height="30" VerticalContentAlignment="Center" />
-                </StackPanel>
-            </Grid>
-            <Grid Margin="0,0,0,4">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="6" />
-                    <ColumnDefinition Width="36" />
-                </Grid.ColumnDefinitions>
-                <TextBox Grid.Column="0"
-                    Text="{Binding TgProxySecret, UpdateSourceTrigger=PropertyChanged}"
-                    Height="30" VerticalContentAlignment="Center" FontFamily="Consolas" />
-                <Button Grid.Column="2" Height="30" Width="36"
-                    Style="{StaticResource ActionBtnAccent}" Padding="0"
-                    Command="{Binding GenerateTgProxySecretCommand}">
-                    <TextBlock Text="↻" FontSize="14" />
-                </Button>
-            </Grid>
-            <Rectangle Style="{StaticResource Sep}" />
-            <TextBlock Style="{StaticResource SecH}"
-                Text="ДАТАЦЕНТРЫ TELEGRAM (DC → IP)" Margin="0,0,0,6" />
-            <TextBlock Style="{StaticResource Lbl}" Text="Формат: номер:IP" Margin="0,0,0,4" />
-            <TextBox Text="{Binding TgProxyDcIps, UpdateSourceTrigger=PropertyChanged}"
-                AcceptsReturn="True" MinHeight="56" MaxHeight="100"
-                VerticalScrollBarVisibility="Auto" FontFamily="Consolas"
-                FontSize="11" VerticalContentAlignment="Top" Padding="6" Margin="0,0,0,12" />
-            <Rectangle Style="{StaticResource Sep}" />
-            <TextBlock Style="{StaticResource SecH}" Text="CLOUDFLARE PROXY" Margin="0,0,0,8" />
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                <CheckBox Content="Включить CF-прокси"
-                    IsChecked="{Binding TgProxyCfEnabled}" Margin="0,0,16,0"
-                    VerticalAlignment="Center" />
-                <CheckBox Content="Приоритет"
-                    IsChecked="{Binding TgProxyCfPriority}"
-                    IsEnabled="{Binding TgProxyCfEnabled}"
-                    VerticalAlignment="Center" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                <CheckBox IsChecked="{Binding TgProxyCfDomainEnabled}"
-                    IsEnabled="{Binding TgProxyCfEnabled}"
-                    VerticalAlignment="Center" Margin="0,0,8,0" />
-                <TextBox Text="{Binding TgProxyCfDomain, UpdateSourceTrigger=PropertyChanged}"
-                    Height="30" VerticalContentAlignment="Center" FontSize="12" Width="260"
-                    IsEnabled="{Binding TgProxyCfDomainEnabled}" />
-            </StackPanel>
-            <Rectangle Style="{StaticResource Sep}" />
-            <TextBlock Style="{StaticResource SecH}"
-                Text="ЛОГИ И ПРОИЗВОДИТЕЛЬНОСТЬ" Margin="0,0,0,8" />
-            <CheckBox Content="Подробное логирование (verbose)"
-                IsChecked="{Binding TgProxyVerbose}" Margin="0,0,0,8" />
-            <TextBlock Style="{StaticResource Lbl}" Text="Буфер, КБ" Margin="0,0,0,4" />
-            <TextBox Text="{Binding TgProxyBufKb, UpdateSourceTrigger=PropertyChanged}"
-                Height="30" VerticalContentAlignment="Center" Margin="0,0,0,8" />
-            <TextBlock Style="{StaticResource Lbl}" Text="Пул WebSocket-сессий" Margin="0,0,0,4" />
-            <TextBox Text="{Binding TgProxyPoolSize, UpdateSourceTrigger=PropertyChanged}"
-                Height="30" VerticalContentAlignment="Center" Margin="0,0,0,8" />
-            <TextBlock Style="{StaticResource Lbl}" Text="Макс. размер лога, МБ" Margin="0,0,0,4" />
-            <TextBox Text="{Binding TgProxyLogMaxMb, UpdateSourceTrigger=PropertyChanged}"
-                Height="30" VerticalContentAlignment="Center" Margin="0,0,0,8" />
-            <CheckBox Content="Предпочитать IPv4"
-                IsChecked="{Binding TgProxyPreferIPv4}" Margin="0,0,0,12" />
-        </StackPanel>
-    </ScrollViewer>
+        </ScrollViewer>
+    </Grid>
 </UserControl>
