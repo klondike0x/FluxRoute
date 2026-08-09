@@ -40,16 +40,9 @@ public partial class HomePage : System.Windows.Controls.UserControl
     {
         var spec = AdaptiveHomeLayout.GetSpec(mode);
 
-        WideGapColumn.Width = new GridLength(spec.DetailsGap);
-        DetailsColumn.Width = new GridLength(spec.DetailsWidth);
-
-        ServicesCard.Visibility = spec.ShowWideDetails ? Visibility.Visible : Visibility.Collapsed;
-        ServicesCard.Opacity = spec.ShowWideDetails ? 1 : 0;
-
+        // Правая панель (TG Proxy + кнопки + статусы) всегда видна в DetailsColumn.
+        // В компактном режиме скрываем сводку под hero, чтобы не дублировать статусы.
         CompactSummaryPanel.Visibility = spec.ShowCompactSummaryCards
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        MetricsCard.Visibility = spec.ShowWideMonitor
             ? Visibility.Visible
             : Visibility.Collapsed;
     }
