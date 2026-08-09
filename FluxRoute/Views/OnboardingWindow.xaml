@@ -12,15 +12,131 @@
         ShowInTaskbar="False"
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
     <Window.Resources>
-        <!-- Локальный стиль ComboBox — в изолированном Window нет глобального стиля -->
+        <!-- ═══ v1.8.1: Кастомный тёмный ComboBox ═══ -->
         <Style TargetType="ComboBox">
-            <Setter Property="Background" Value="#111827" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Background" Value="#0D1422" />
             <Setter Property="Foreground" Value="#DCE4F0" />
-            <Setter Property="BorderBrush" Value="#3B4A65" />
+            <Setter Property="BorderBrush" Value="#253553" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Padding" Value="10,0" />
             <Setter Property="FontFamily" Value="Segoe UI" />
             <Setter Property="FontSize" Value="12" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton"
+                                          Focusable="False"
+                                          ClickMode="Press"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="Surface"
+                                                Background="#0D1422"
+                                                BorderBrush="#253553"
+                                                BorderThickness="1"
+                                                CornerRadius="8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <ContentPresenter Grid.Column="0"
+                                                                  Margin="10,0,6,0"
+                                                                  VerticalAlignment="Center"
+                                                                  Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource TemplatedParent}}"
+                                                                  ContentTemplate="{Binding SelectionBoxItemTemplate, RelativeSource={RelativeSource TemplatedParent}}"
+                                                                  ContentStringFormat="{Binding SelectionBoxItemStringFormat, RelativeSource={RelativeSource TemplatedParent}}" />
+                                                <Border Grid.Column="1" Width="30" CornerRadius="0,8,8,0" Background="Transparent">
+                                                    <Path x:Name="ArrowPath"
+                                                          Data="M 0,0 L 4,4 L 8,0"
+                                                          Stroke="#66758E"
+                                                          StrokeThickness="1.6"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center" />
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Surface" Property="Background" Value="#111A2B" />
+                                                <Setter TargetName="Surface" Property="BorderBrush" Value="#405785" />
+                                            </Trigger>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="Surface" Property="Background" Value="#111A2B" />
+                                                <Setter TargetName="Surface" Property="BorderBrush" Value="#4D6BFE" />
+                                                <Setter TargetName="ArrowPath" Property="Stroke" Value="#4D6BFE" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <Popup x:Name="PART_Popup"
+                                   AllowsTransparency="True"
+                                   Placement="Bottom"
+                                   IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                   PopupAnimation="Fade"
+                                   StaysOpen="False">
+                                <Border x:Name="DropDownBorder"
+                                        Background="#0D1422"
+                                        BorderBrush="#33466D"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Margin="0,4,0,0"
+                                        MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="#000000" BlurRadius="18" ShadowDepth="3" Opacity="0.5" />
+                                    </Border.Effect>
+                                    <ScrollViewer Margin="4" VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <!-- Стиль элементов выпадающего списка -->
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Padding" Value="10,8" />
+                        <Setter Property="Margin" Value="2" />
+                        <Setter Property="Foreground" Value="#C8D4EC" />
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="Cursor" Value="Hand" />
+                        <Setter Property="HorizontalContentAlignment" Value="Left" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ComboBoxItem">
+                                    <Border x:Name="ItemSurface"
+                                            Background="{TemplateBinding Background}"
+                                            CornerRadius="6"
+                                            Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="ItemSurface" Property="Background" Value="#1A2333" />
+                                            <Setter Property="Foreground" Value="#F3F6FF" />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="ItemSurface" Property="Background" Value="#26355F" />
+                                            <Setter Property="Foreground" Value="#F3F6FF" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 
@@ -52,8 +168,7 @@
                             <TextBlock Text="1. Выберите компонент" Foreground="#DCE4F0"
                                        FontSize="12" FontWeight="SemiBold" Margin="0,0,0,8" />
                             <ComboBox ItemsSource="{Binding ComponentOptions}"
-                                      SelectedIndex="{Binding SelectedComponentIndex, Mode=TwoWay}"
-                                      Height="32" />
+                                      SelectedIndex="{Binding SelectedComponentIndex, Mode=TwoWay}" />
                             <TextBlock Foreground="#55647D" FontSize="9.5" Margin="0,4,0,0"
                                        Text="Zapret классический (WinDivert) или Zapret 2 (Flowseal)" />
                         </StackPanel>
@@ -68,8 +183,7 @@
                             <ComboBox ItemsSource="{Binding AvailableStrategies}"
                                       SelectedValue="{Binding SelectedStrategyFileName, Mode=TwoWay}"
                                       DisplayMemberPath="DisplayName"
-                                      SelectedValuePath="FileName"
-                                      Height="32" />
+                                      SelectedValuePath="FileName" />
                             <TextBlock Foreground="#55647D" FontSize="9.5" Margin="0,4,0,0"
                                        Text="Стратегия, с которой начнётся проверка доступности сайтов" />
                         </StackPanel>
