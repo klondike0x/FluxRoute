@@ -11,10 +11,21 @@ namespace FluxRoute.ViewModels;
 public partial class OnboardingViewModel : ObservableObject
 {
     [ObservableProperty] private int selectedComponentIndex;
-    [ObservableProperty] private string? selectedStrategyFileName;
+
+    /// <summary>
+    /// Имя файла выбранной стратегии. При изменении оповещает CanComplete.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanComplete))]
+    private string? selectedStrategyFileName;
 
     public List<string> ComponentOptions { get; } = ["Zapret", "Zapret 2", "Без основного"];
     public List<(string FileName, string DisplayName)> AvailableStrategies { get; }
+
+    /// <summary>
+    /// Кнопка «Настроить и продолжить» активна только когда выбрана стратегия.
+    /// </summary>
+    public bool CanComplete => !string.IsNullOrEmpty(SelectedStrategyFileName);
 
     public OnboardingViewModel(List<(string FileName, string DisplayName)> strategies)
     {
@@ -37,10 +48,11 @@ public partial class OnboardingViewModel : ObservableObject
     /// <summary>
     /// Завершить онбординг и сохранить выбор.
     /// </summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanComplete))]
     private void Complete(Window? window)
     {
-        window!.DialogResult = true;
+        if (window is null) return;
+        window.DialogResult = true;
         window.Close();
     }
 }
