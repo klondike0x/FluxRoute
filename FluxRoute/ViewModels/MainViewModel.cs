@@ -507,6 +507,9 @@ public partial class MainViewModel : ObservableObject
             RefreshAiDashboard();
             RebuildAiStrategyRows();
         }
+        // ═══ v1.7.0: Активация вкладки Хостлисты ═══
+        if (value == 3)
+            Hostlists.LoadHostlistFiles();
     }
 
     // ── Боковая панель ──
@@ -522,6 +525,23 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string uploadSpeed = "0 Б/с";
     [ObservableProperty] private string downloadSpeed = "0 Б/с";
     [ObservableProperty] private string lastStatusMessage = "Готово";
+
+    // ═══ v1.7.0: UI-Redesign — простой/расширенный режим ═══
+    [ObservableProperty] private bool simpleMode;
+    partial void OnSimpleModeChanged(bool value)
+    {
+        // В простом режиме доступны только Главная и Настройки.
+        // Если пользователь был на расширенной вкладке, возвращаем его на главный экран.
+        if (value && SelectedTabIndex is > 0 and not 7)
+            SelectedTabIndex = 0;
+
+        SaveSettings();
+        OnPropertyChanged(nameof(IsSimpleMode));
+    }
+    public bool IsSimpleMode => SimpleMode;
+    [RelayCommand]
+    private void ToggleSimpleMode() => SimpleMode = !SimpleMode;
+    // ═══════════════════════════════════════════════════════
 
     public int ActiveServicesCount =>
         (OrchestratorEnabled ? 1 : 0)
@@ -569,6 +589,8 @@ public partial class MainViewModel : ObservableObject
     public UpdatesViewModel Updates { get; private set; } = null!;
     public ServiceViewModel Service { get; private set; } = null!;
     public DiagnosticsViewModel Diagnostics { get; private set; } = null!;
+    // ═══ v1.7.0: UI-Redesign ═══
+    public HostlistsViewModel Hostlists { get; private set; } = null!;
 
     // ── Диагностика (wrappers → DiagnosticsViewModel) ──
     public bool IsAdmin => Diagnostics.IsAdmin;
@@ -698,6 +720,18 @@ public partial class MainViewModel : ObservableObject
     private readonly IConnectivityChecker _connectivity;
     private bool _settingsLoaded = false;
     private bool _suppressOrchestratorStop = false;
+    // Значения, которые выбираются в онбординге до создания MainViewModel.
+    // Их нужно сохранять в каждом снимке настроек, иначе первый SaveSettings()
+    // после запуска сбросит FirstRunComplete обратно в false.
+    private bool _firstRunComplete;
+    private string _selectedComponent = "zapret";
+
+    public string ActiveComponentName => _selectedComponent switch
+    {
+        "zapret2" => "Zapret 2",
+        "none" => "Не выбран",
+        _ => "Zapret"
+    };
 
     // ── Обновления ──
     [ObservableProperty] private bool autoUpdateEnabled = false;
@@ -969,6 +1003,12 @@ public partial class MainViewModel : ObservableObject
         };
         Updates.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
 
+        // ═══ v1.7.0: UI-Redesign — инициализация HostlistsViewModel ═══
+        Hostlists = new HostlistsViewModel(
+            getEngineDir: () => EngineDir,
+            addLog: msg => Logs.Add(msg));
+        // ════════════════════════════════════════════════════════════
+
         Logs.Add("Приложение запущено.");
         AddToRecentLogs("🚀 Приложение запущено");
 
@@ -1106,6 +1146,9 @@ public partial class MainViewModel : ObservableObject
     // ── Настройки ──
     private void ApplySettings(AppSettings settings)
     {
+        _firstRunComplete = settings.FirstRunComplete;
+        _selectedComponent = settings.SelectedComponent;
+        OnPropertyChanged(nameof(ActiveComponentName));
         OrchestratorInterval = settings.OrchestratorInterval;
         OrchestratorEnabled = settings.OrchestratorEnabled;
         SiteYouTube = settings.SiteYouTube;
@@ -1143,6 +1186,8 @@ public partial class MainViewModel : ObservableObject
         AutoStartEnabled = settings.AutoStartEnabled;
         MinimizeToTray = settings.MinimizeToTray;
         StartupWindowMode = settings.StartupWindowMode;
+        // ═══ v1.7.0: UI-Redesign ═══
+        SimpleMode = settings.SimpleMode;
         // ═══ v1.6.0: Крестик сворачивает в трей ═══
         CloseToTray = settings.CloseToTray;
         // ═══════════════════════════════════════
@@ -1190,6 +1235,8 @@ public partial class MainViewModel : ObservableObject
         var settings = new AppSettings
         {
             LastProfileFileName = SelectedProfile?.FileName,
+            SelectedComponent = _selectedComponent,
+            FirstRunComplete = _firstRunComplete,
             DefaultProfileFileName = DefaultProfileFileName, // Дефолтный профиль для триггеров
             OrchestratorInterval = OrchestratorInterval,
             OrchestratorEnabled = OrchestratorEnabled,
@@ -1210,6 +1257,8 @@ public partial class MainViewModel : ObservableObject
             AutoStartEnabled = AutoStartEnabled,
             MinimizeToTray = MinimizeToTray,
             StartupWindowMode = StartupWindowMode,
+            // ═══ v1.7.0: UI-Redesign ═══
+            SimpleMode = SimpleMode,
             // ═══ v1.6.0: Крестик сворачивает в трей ═══
             CloseToTray = CloseToTray,
             // ═══════════════════════════════════════
@@ -1252,7 +1301,14 @@ public partial class MainViewModel : ObservableObject
 
     // ── UI-команды ──
     [RelayCommand]
-    private void SelectTab(string index) => SelectedTabIndex = int.Parse(index);
+    private void SelectTab(string index)
+    {
+        var selectedIndex = int.Parse(index);
+        if (SimpleMode && selectedIndex is > 0 and not 7)
+            return;
+
+        SelectedTabIndex = selectedIndex;
+    }
 
     [RelayCommand]
     private void OpenEngineFolder()
@@ -1268,7 +1324,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ShowLogs() => SelectedTabIndex = 5;
+    private void ShowLogs() => SelectedTabIndex = 6;
 
     [RelayCommand]
     private void ToggleSettings() => OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
@@ -1278,6 +1334,29 @@ public partial class MainViewModel : ObservableObject
 
     [RelayCommand]
     private void ToggleLogs() => IsLogsVisible = !IsLogsVisible;
+
+    // ═══ v1.7.0: UI-Redesign — открыть редактор стратегии ═══
+    [RelayCommand]
+    private void EditStrategy(ProfileItem? profile)
+    {
+        if (profile is null) return;
+        var filePath = profile.FullPath;
+        if (!File.Exists(filePath))
+        {
+            AddToRecentLogs($"❌ Файл не найден: {filePath}");
+            return;
+        }
+
+        var editorVm = new StrategyEditorViewModel(filePath, onSaved: name =>
+        {
+            AddToRecentLogs($"✅ Стратегия сохранена: {name}");
+            LoadProfiles();
+        });
+
+        var editorWindow = new StrategyEditorWindow { DataContext = editorVm, Owner = Application.Current.MainWindow };
+        editorWindow.ShowDialog();
+    }
+    // ═════════════════════════════════════════════════════════
 
     [RelayCommand]
     private void MainAction()

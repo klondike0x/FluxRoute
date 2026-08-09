@@ -153,11 +153,7 @@
                                                Foreground="#DCE4F0"
                                                FontSize="12"
                                                FontWeight="SemiBold" />
-                                    <TextBlock Text="Современное — 1440×826, минималистическое — 860×520. Изменение применяется при следующем запуске."
-                                               Foreground="#8B949E"
-                                               FontSize="10.5"
-                                               Margin="0,4,0,0"
-                                               TextWrapping="Wrap" />
+                                    <TextBlock Text="Современное — 1440×826, минималистическое — 860×520. Изменение применяется сразу." Foreground="#8B949E" FontSize="10.5" Margin="0,4,0,0" TextWrapping="Wrap" />
                                 </StackPanel>
                                 <ComboBox Grid.Column="1"
                                           Width="190"

@@ -57,18 +57,22 @@
                         </Border>
                         <Border>
                             <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Setter Property="Opacity" Value="0"/><Style.Triggers><DataTrigger Binding="{Binding SelectedTabIndex}" Value="3"><Setter Property="Visibility" Value="Visible"/><DataTrigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.2"/></Storyboard></BeginStoryboard></DataTrigger.EnterActions></DataTrigger></Style.Triggers></Style></Border.Style>
-                            <tabs:ModsPage />
+                            <tabs:HostlistsPage x:Name="HostlistsTab" />
                         </Border>
                         <Border>
                             <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Setter Property="Opacity" Value="0"/><Style.Triggers><DataTrigger Binding="{Binding SelectedTabIndex}" Value="4"><Setter Property="Visibility" Value="Visible"/><DataTrigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.2"/></Storyboard></BeginStoryboard></DataTrigger.EnterActions></DataTrigger></Style.Triggers></Style></Border.Style>
-                            <tabs:DiagnosticsPage />
+                            <tabs:ModsPage />
                         </Border>
                         <Border>
                             <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Setter Property="Opacity" Value="0"/><Style.Triggers><DataTrigger Binding="{Binding SelectedTabIndex}" Value="5"><Setter Property="Visibility" Value="Visible"/><DataTrigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.2"/></Storyboard></BeginStoryboard></DataTrigger.EnterActions></DataTrigger></Style.Triggers></Style></Border.Style>
-                            <tabs:LogsPage x:Name="LogsTab" />
+                            <tabs:DiagnosticsPage />
                         </Border>
                         <Border>
                             <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Setter Property="Opacity" Value="0"/><Style.Triggers><DataTrigger Binding="{Binding SelectedTabIndex}" Value="6"><Setter Property="Visibility" Value="Visible"/><DataTrigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.2"/></Storyboard></BeginStoryboard></DataTrigger.EnterActions></DataTrigger></Style.Triggers></Style></Border.Style>
+                            <tabs:LogsPage x:Name="LogsTab" />
+                        </Border>
+                        <Border>
+                            <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Setter Property="Opacity" Value="0"/><Style.Triggers><DataTrigger Binding="{Binding SelectedTabIndex}" Value="7"><Setter Property="Visibility" Value="Visible"/><DataTrigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.2"/></Storyboard></BeginStoryboard></DataTrigger.EnterActions></DataTrigger></Style.Triggers></Style></Border.Style>
                             <tabs:SettingsPage />
                         </Border>
                     </Grid>

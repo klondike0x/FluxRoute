@@ -20,13 +20,16 @@ public sealed class TrayPopupService : ITrayPopupService
 
     public event EventHandler? OpenApplicationRequested;
     public event EventHandler? ExitApplicationRequested;
+    // ═══ v1.7.0: Событие перезапуска защиты ═══
+    public event EventHandler? RestartProtectionRequested;
 
     public TrayPopupService(ILogger<TrayPopupService>? logger = null)
     {
         _logger = logger;
         _viewModel = new TrayPopupViewModel(
             openApplication: RequestOpenApplication,
-            exitApplication: RequestExitApplication)
+            exitApplication: RequestExitApplication,
+            restartProtection: RequestRestartProtection)
         {
             Version = $"v{typeof(App).Assembly.GetName().Version?.ToString(3) ?? "1.7.0"}"
         };
@@ -132,6 +135,13 @@ public sealed class TrayPopupService : ITrayPopupService
     {
         CloseWindow();
         ExitApplicationRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    // ═══ v1.7.0 ═══
+    private void RequestRestartProtection()
+    {
+        CloseWindow();
+        RestartProtectionRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnWindowClosed(object? sender, EventArgs e)

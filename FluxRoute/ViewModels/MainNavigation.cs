@@ -15,10 +15,11 @@ public static class MainNavigation
         new(0, "ГЛАВНАЯ"),
         new(1, "КОМПОНЕНТЫ"),
         new(2, "ОРКЕСТРАТОР"),
-        new(3, "МОДИФИКАЦИИ"),
-        new(4, "ДИАГНОСТИКА"),
-        new(5, "ЛОГИ"),
-        new(6, "НАСТРОЙКИ")
+        new(3, "ХОСТЛИСТЫ"),
+        new(4, "МОДИФИКАЦИИ"),
+        new(5, "ДИАГНОСТИКА"),
+        new(6, "ЛОГИ"),
+        new(7, "НАСТРОЙКИ")
     ];
 
     public static string GetName(int index) =>

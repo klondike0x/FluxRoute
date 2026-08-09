@@ -53,13 +53,12 @@ public sealed partial class LogsViewModel : ObservableObject
 
     public IReadOnlyList<string> LogCategoryFilters { get; } =
     [
-        "Все логи",
+        "Все",
         "Приложение",
         "Оркестратор",
-        "Сканирование стратегий",
-        "Запуск стратегии / winws.exe",
-        "TG WS Proxy",
-        "Обновление engine",
+        "ИИ",
+        "TG Proxy",
+        "Обновления",
         "Сервис",
         "Ошибки"
     ];
@@ -74,7 +73,7 @@ public sealed partial class LogsViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    private string selectedLogCategory = "Все логи";
+    private string selectedLogCategory = "Все";
 
     partial void OnSelectedLogCategoryChanged(string value)
     {
@@ -96,6 +95,10 @@ public sealed partial class LogsViewModel : ObservableObject
     {
         RefreshFilter();
     }
+
+    // ═══ v1.7.0: UI-Redesign — автопрокрутка (включена по умолчанию) ═══
+    [ObservableProperty]
+    private bool logsAutoScroll = true;
 
     [ObservableProperty]
     private string unifiedLogsText = string.Empty;
@@ -294,7 +297,7 @@ public sealed partial class LogsViewModel : ObservableObject
             return false;
 
         if (!string.IsNullOrWhiteSpace(SelectedLogCategory) &&
-            !string.Equals(SelectedLogCategory, "Все логи", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(SelectedLogCategory, "Все", StringComparison.OrdinalIgnoreCase) &&
             !string.Equals(entry.CategoryText, SelectedLogCategory, StringComparison.OrdinalIgnoreCase))
             return false;
 

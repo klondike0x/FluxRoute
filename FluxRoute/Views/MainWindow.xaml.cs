@@ -97,6 +97,10 @@ public partial class MainWindow : Window
         DataContext = _vm;
         ApplyStartupWindowSize();
 
+        // ═══ v1.7.0: Привязка DataContext для хоста HostlistsPage ═══
+        if (HostlistsTab is not null)
+            HostlistsTab.DataContext = _vm.Hostlists;
+
         // Инициализируем подсветку и адаптивную раскладку после построения визуального дерева.
         Loaded += (_, _) =>
         {
@@ -110,6 +114,10 @@ public partial class MainWindow : Window
         _trayIcon.ShowRequested += OnTrayShowRequested;
         _trayIcon.ExitRequested += OnTrayExitRequested;
         UpdateTrayMenu();
+
+        // ═══ v1.7.0: Подписка на перезапуск защиты из трея ═══
+        if (_trayIcon.TryGetPopupService() is TrayPopupService popupService)
+            popupService.RestartProtectionRequested += OnTrayRestartProtectionRequested;
 
         _vm.ProfileSwitchNotification += OnProfileSwitched;
 
@@ -152,7 +160,7 @@ public partial class MainWindow : Window
         _logger?.LogInformation("Main window initialized.");
     }
 
-    private void ApplyStartupWindowSize()
+    private void ApplyStartupWindowSize(bool centerWindow = false)
     {
         var workArea = SystemParameters.WorkArea;
         var size = StartupWindowLayout.FitToWorkArea(
@@ -160,8 +168,24 @@ public partial class MainWindow : Window
             workArea.Width,
             workArea.Height);
 
+        // Apply the selected startup profile to the already opened window.
+        var previousWidth = ActualWidth > 0 ? ActualWidth : Width;
+        var previousHeight = ActualHeight > 0 ? ActualHeight : Height;
+        var previousCenterX = double.IsNaN(Left) ? double.NaN : Left + previousWidth / 2;
+        var previousCenterY = double.IsNaN(Top) ? double.NaN : Top + previousHeight / 2;
+
+        if (centerWindow && WindowState == WindowState.Maximized)
+            WindowState = WindowState.Normal;
+
         Width = size.Width;
         Height = size.Height;
+
+        if (!centerWindow || double.IsNaN(previousCenterX) || double.IsNaN(previousCenterY))
+            return;
+
+        // Keep the current center so switching modes does not jump the window.
+        Left = previousCenterX - Width / 2;
+        Top = previousCenterY - Height / 2;
     }
 
     private void OnProfileSwitched(object? sender, string profileName)
@@ -190,6 +214,19 @@ public partial class MainWindow : Window
         ShowInTaskbar = true;
         WindowState = WindowState.Normal;
         Activate();
+    }
+
+    // ═══ v1.7.0: Перезапуск защиты из трея ═══
+    private void OnTrayRestartProtectionRequested(object? sender, EventArgs e)
+    {
+        if (_vm.IsRunning)
+        {
+            _vm.StopCommand.Execute(null);
+            _ = Task.Delay(800).ContinueWith(_ =>
+            {
+                Dispatcher.Invoke(() => _vm.StartCommand.Execute(null));
+            }, TaskScheduler.Default);
+        }
     }
 
     private void OnTrayExitRequested(object? sender, EventArgs e)
@@ -304,6 +341,11 @@ public partial class MainWindow : Window
         if (e.PropertyName == nameof(MainViewModel.SelectedTabIndex))
         {
             SidebarControl.AnimateNavIndicator(_vm.SelectedTabIndex);
+        }
+
+        if (e.PropertyName == nameof(MainViewModel.StartupWindowMode))
+        {
+            ApplyStartupWindowSize(centerWindow: true);
         }
 
         if (e.PropertyName == nameof(MainViewModel.IsSidebarExpanded))

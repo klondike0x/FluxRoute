@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -18,22 +18,65 @@ public partial class HomePage : System.Windows.Controls.UserControl
         InitializeComponent();
     }
 
+    // ═══ v1.7.0: Переход на вкладку TG Proxy по клику на карточку ═══
+    private void TgProxyCard_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+            vm.SelectedTabIndex = 1; // TG Proxy вкладка
+    }
+
+    // ═══ v1.7.0: Копирование ссылки TG Proxy ═══
+    private void CopyTgProxyLink_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+        {
+            var link = $"https://t.me/proxy?server={vm.TgProxyHost}&port={vm.TgProxyPort}&secret={vm.TgProxySecret}";
+            System.Windows.Clipboard.SetText(link);
+            vm.Logs.Add("[TG Proxy] Ссылка скопирована в буфер обмена");
+        }
+    }
+
     public void ApplyLayout(HomeLayoutMode mode)
     {
-        var spec = AdaptiveHomeLayout.GetSpec(mode);
+        bool wide = mode == HomeLayoutMode.Wide;
+        MainDetailsColumn.Width = new GridLength(0);
+        SummaryBar.Visibility = Visibility.Visible;
+        SummaryBar.Columns = 5;
+        DetailsScrollViewer.Visibility = Visibility.Collapsed;
+        Grid.SetColumnSpan(HeroPanel, 2);
+        Grid.SetRowSpan(DetailsScrollViewer, 2);
 
-        WideGapColumn.Width = new GridLength(spec.DetailsGap);
-        DetailsColumn.Width = new GridLength(spec.DetailsWidth);
+        // In wide mode the detailed cards stay on the right; compact mode uses the summary only.
+        CompactBottomPanel.Visibility = Visibility.Collapsed;
+        PlaceIn(DetailsPanel, NetworkCard, 0);
+        PlaceIn(DetailsPanel, TgProxyCard, 1);
+        PlaceIn(DetailsPanel, StrategyActionsPanel, 2);
 
-        ServicesCard.Visibility = spec.ShowWideDetails ? Visibility.Visible : Visibility.Collapsed;
-        ServicesCard.Opacity = spec.ShowWideDetails ? 1 : 0;
+        var heroScale = 1.0;
+        HeroScaleTransform.ScaleX = heroScale;
+        HeroScaleTransform.ScaleY = heroScale;
 
-        CompactSummaryPanel.Visibility = spec.ShowCompactSummaryCards
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        MetricsCard.Visibility = spec.ShowWideMonitor
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        DetailsScaleTransform.ScaleX = 1.0;
+        DetailsScaleTransform.ScaleY = 1.0;
+        NetworkCard.Padding = wide
+            ? new Thickness(14, 11, 14, 11)
+            : new Thickness(10, 8, 10, 8);
+        NetworkCard.Margin = new Thickness(0, 0, 0, 0);
+        DetailsScrollViewer.Margin = new Thickness(0, 8, 0, 0);
+        DetailsScrollViewer.VerticalScrollBarVisibility = wide
+            ? ScrollBarVisibility.Auto
+            : ScrollBarVisibility.Disabled;
+    }
+
+    private static void PlaceIn(System.Windows.Controls.Panel target, FrameworkElement element, int index = -1)
+    {
+        if (element.Parent is System.Windows.Controls.Panel currentParent)
+            currentParent.Children.Remove(element);
+
+        if (index < 0 || index > target.Children.Count)
+            target.Children.Add(element);
+        else
+            target.Children.Insert(index, element);
     }
 
     public void PlayWave(bool outward, double strength, int duration)

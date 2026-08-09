@@ -12,6 +12,10 @@ public sealed class AppSettings
     // Стратегия
     public string? LastProfileFileName { get; set; }
 
+    // ═══ v1.7.0: UI-Redesign — выбранный компонент при онбординге ═══
+    /// <summary>"zapret", "zapret2" или "none"</summary>
+    public string SelectedComponent { get; set; } = "zapret";
+
     // ═══ v1.6.0: Дефолтный профиль для триггеров ═══
     /// <summary>
     /// Имя файла профиля, который используется по умолчанию при возврате из триггера.
@@ -57,6 +61,16 @@ public sealed class AppSettings
 
     // Обновления
     public bool AutoUpdateEnabled { get; set; } = false;
+
+    // ═══ v1.7.0: UI-Redesign — простой/расширенный режим ═══
+    public bool SimpleMode { get; set; } = false;
+
+    // ═══ v1.7.0: UI-Redesign — онбординг ═══
+    public bool FirstRunComplete { get; set; } = false;
+
+    // ═══ v1.7.0: UI-Redesign — запоминание выбора прав админа ═══
+    public bool RememberAdminChoice { get; set; } = false;
+    public bool AdminChoiceContinueWithout { get; set; } = true;
 
     // Системные
     public bool AutoStartEnabled { get; set; } = false;

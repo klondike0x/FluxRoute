@@ -65,6 +65,14 @@
                 </Style.Triggers>
             </Style>
 
+            <Style x:Key="AdvancedNavBtn" TargetType="Button" BasedOn="{StaticResource AdaptiveNavBtn}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding SimpleMode}" Value="True">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
             <Style x:Key="NavIcon" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
                 <Setter Property="FontSize" Value="18" />
@@ -83,19 +91,22 @@
                 <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="0" ToolTip="Главная">
                     <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE80F;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Главная"/></StackPanel>
                 </Button>
-                <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="1" ToolTip="Компоненты">
+                <Button Style="{StaticResource AdvancedNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="1" ToolTip="Компоненты">
                     <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE950;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Компоненты"/></StackPanel>
                 </Button>
-                <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="2" ToolTip="Оркестратор">
+                <Button Style="{StaticResource AdvancedNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="2" ToolTip="Оркестратор">
                     <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE99A;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Оркестратор"/></StackPanel>
                 </Button>
-                <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="3" ToolTip="Модификации">
+                <Button Style="{StaticResource AdvancedNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="3" ToolTip="Хостлисты">
+                    <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE8B7;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Хостлисты"/></StackPanel>
+                </Button>
+                <Button Style="{StaticResource AdvancedNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="4" ToolTip="Модификации">
                     <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE74C;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Модификации"/></StackPanel>
                 </Button>
-                <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="4" ToolTip="Диагностика">
+                <Button Style="{StaticResource AdvancedNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="5" ToolTip="Диагностика">
                     <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE90F;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Диагностика"/></StackPanel>
                 </Button>
-                <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="5" ToolTip="Логи">
+                <Button Style="{StaticResource AdvancedNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="6" ToolTip="Логи">
                     <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE9F9;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Логи"/></StackPanel>
                 </Button>
             </StackPanel>
@@ -105,7 +116,7 @@
                     <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Foreground="#F85149" Text="&#xEB52;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Поддержать"/></StackPanel>
                 </Button>
                 <Rectangle Height="1" Fill="#1E2235" Margin="8,4" />
-                <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="6" ToolTip="Настройки">
+                <Button Style="{StaticResource AdaptiveNavBtn}" Command="{Binding SelectTabCommand}" CommandParameter="7" ToolTip="Настройки">
                     <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE713;"/><TextBlock Style="{StaticResource SidebarLabel}" Text="Настройки"/></StackPanel>
                 </Button>
             </StackPanel>

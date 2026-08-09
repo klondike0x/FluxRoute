@@ -221,6 +221,23 @@
                 </StackPanel>
             </Button>
 
+            <!-- ═══ v1.7.0: Кнопка «Перезапустить защиту» ═══ -->
+            <Button Style="{StaticResource TrayActionButton}"
+                    Command="{Binding RestartProtectionCommand}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE72C;"
+                               FontFamily="Segoe MDL2 Assets"
+                               Foreground="#4D6BFE"
+                               FontSize="14"
+                               Width="24"
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="Перезапустить защиту"
+                               FontFamily="Segoe UI"
+                               FontSize="12"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+
             <Border Height="1" Background="#182238" Margin="10,5" />
 
             <Button Style="{StaticResource TrayActionButton}"

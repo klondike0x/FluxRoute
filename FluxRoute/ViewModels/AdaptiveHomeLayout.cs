@@ -42,7 +42,7 @@ public static class AdaptiveHomeLayout
             ShowWideDetails: false,
             ShowWideMonitor: false,
             CompactSummaryColumnCount: 3,
-            DetailsWidth: 0,
+            DetailsWidth: 280,
             DetailsGap: 0)
     };
 }
