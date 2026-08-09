@@ -507,6 +507,9 @@ public partial class MainViewModel : ObservableObject
             RefreshAiDashboard();
             RebuildAiStrategyRows();
         }
+        // ═══ v1.8.0: Активация вкладки Хостлисты ═══
+        if (value == 3)
+            Hostlists.LoadHostlistFiles();
     }
 
     // ── Боковая панель ──
@@ -522,6 +525,14 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string uploadSpeed = "0 Б/с";
     [ObservableProperty] private string downloadSpeed = "0 Б/с";
     [ObservableProperty] private string lastStatusMessage = "Готово";
+
+    // ═══ v1.8.0: UI-Redesign — простой/расширенный режим ═══
+    [ObservableProperty] private bool simpleMode;
+    partial void OnSimpleModeChanged(bool value) { SaveSettings(); OnPropertyChanged(nameof(IsSimpleMode)); }
+    public bool IsSimpleMode => SimpleMode;
+    [RelayCommand]
+    private void ToggleSimpleMode() => SimpleMode = !SimpleMode;
+    // ═══════════════════════════════════════════════════════
 
     public int ActiveServicesCount =>
         (OrchestratorEnabled ? 1 : 0)
@@ -569,6 +580,8 @@ public partial class MainViewModel : ObservableObject
     public UpdatesViewModel Updates { get; private set; } = null!;
     public ServiceViewModel Service { get; private set; } = null!;
     public DiagnosticsViewModel Diagnostics { get; private set; } = null!;
+    // ═══ v1.8.0: UI-Redesign ═══
+    public HostlistsViewModel Hostlists { get; private set; } = null!;
 
     // ── Диагностика (wrappers → DiagnosticsViewModel) ──
     public bool IsAdmin => Diagnostics.IsAdmin;
@@ -969,6 +982,12 @@ public partial class MainViewModel : ObservableObject
         };
         Updates.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
 
+        // ═══ v1.8.0: UI-Redesign — инициализация HostlistsViewModel ═══
+        Hostlists = new HostlistsViewModel(
+            getEngineDir: () => EngineDir,
+            addLog: msg => Logs.Add(msg));
+        // ════════════════════════════════════════════════════════════
+
         Logs.Add("Приложение запущено.");
         AddToRecentLogs("🚀 Приложение запущено");
 
@@ -1143,6 +1162,8 @@ public partial class MainViewModel : ObservableObject
         AutoStartEnabled = settings.AutoStartEnabled;
         MinimizeToTray = settings.MinimizeToTray;
         StartupWindowMode = settings.StartupWindowMode;
+        // ═══ v1.8.0: UI-Redesign ═══
+        SimpleMode = settings.SimpleMode;
         // ═══ v1.6.0: Крестик сворачивает в трей ═══
         CloseToTray = settings.CloseToTray;
         // ═══════════════════════════════════════
@@ -1210,6 +1231,8 @@ public partial class MainViewModel : ObservableObject
             AutoStartEnabled = AutoStartEnabled,
             MinimizeToTray = MinimizeToTray,
             StartupWindowMode = StartupWindowMode,
+            // ═══ v1.8.0: UI-Redesign ═══
+            SimpleMode = SimpleMode,
             // ═══ v1.6.0: Крестик сворачивает в трей ═══
             CloseToTray = CloseToTray,
             // ═══════════════════════════════════════
@@ -1268,7 +1291,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ShowLogs() => SelectedTabIndex = 5;
+    private void ShowLogs() => SelectedTabIndex = 6;
 
     [RelayCommand]
     private void ToggleSettings() => OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
@@ -1278,6 +1301,29 @@ public partial class MainViewModel : ObservableObject
 
     [RelayCommand]
     private void ToggleLogs() => IsLogsVisible = !IsLogsVisible;
+
+    // ═══ v1.8.0: UI-Redesign — открыть редактор стратегии ═══
+    [RelayCommand]
+    private void EditStrategy(ProfileItem? profile)
+    {
+        if (profile is null) return;
+        var filePath = profile.FullPath;
+        if (!File.Exists(filePath))
+        {
+            AddToRecentLogs($"❌ Файл не найден: {filePath}");
+            return;
+        }
+
+        var editorVm = new StrategyEditorViewModel(filePath, onSaved: name =>
+        {
+            AddToRecentLogs($"✅ Стратегия сохранена: {name}");
+            LoadProfiles();
+        });
+
+        var editorWindow = new StrategyEditorWindow { DataContext = editorVm, Owner = Application.Current.MainWindow };
+        editorWindow.ShowDialog();
+    }
+    // ═════════════════════════════════════════════════════════
 
     [RelayCommand]
     private void MainAction()

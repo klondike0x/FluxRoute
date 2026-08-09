@@ -97,6 +97,10 @@ public partial class MainWindow : Window
         DataContext = _vm;
         ApplyStartupWindowSize();
 
+        // ═══ v1.8.0: Привязка DataContext для хоста HostlistsPage ═══
+        if (HostlistsTab is not null)
+            HostlistsTab.DataContext = _vm.Hostlists;
+
         // Инициализируем подсветку и адаптивную раскладку после построения визуального дерева.
         Loaded += (_, _) =>
         {
@@ -110,6 +114,10 @@ public partial class MainWindow : Window
         _trayIcon.ShowRequested += OnTrayShowRequested;
         _trayIcon.ExitRequested += OnTrayExitRequested;
         UpdateTrayMenu();
+
+        // ═══ v1.8.0: Подписка на перезапуск защиты из трея ═══
+        if (_trayIcon.TryGetPopupService() is TrayPopupService popupService)
+            popupService.RestartProtectionRequested += OnTrayRestartProtectionRequested;
 
         _vm.ProfileSwitchNotification += OnProfileSwitched;
 
@@ -190,6 +198,19 @@ public partial class MainWindow : Window
         ShowInTaskbar = true;
         WindowState = WindowState.Normal;
         Activate();
+    }
+
+    // ═══ v1.8.0: Перезапуск защиты из трея ═══
+    private void OnTrayRestartProtectionRequested(object? sender, EventArgs e)
+    {
+        if (_vm.IsRunning)
+        {
+            _vm.StopCommand.Execute(null);
+            _ = Task.Delay(800).ContinueWith(_ =>
+            {
+                Dispatcher.Invoke(() => _vm.StartCommand.Execute(null));
+            }, TaskScheduler.Default);
+        }
     }
 
     private void OnTrayExitRequested(object? sender, EventArgs e)

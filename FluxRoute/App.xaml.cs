@@ -1,6 +1,7 @@
 using System.IO;
 using System.Net.Http;
 using System.Security.Principal;
+using System.Diagnostics;
 using System.Windows;
 using FluxRoute.AI.Services;
 using FluxRoute.Core.Models;
@@ -53,21 +54,81 @@ public partial class App : Application
             {
                 Log.Warning("FluxRoute is running without administrator privileges.");
 
-                // Временно переключаем, чтобы закрытие диалога не завершило приложение.
-                ShutdownMode = ShutdownMode.OnExplicitShutdown;
-
-                var prompt = new AdminPromptWindow();
-                prompt.ShowDialog();
-
-                if (!prompt.ContinueWithoutAdmin)
+                // ═══ v1.8.0: Проверка сохранённого выбора прав ═══
+                var adminSettings = _host.Services.GetRequiredService<ISettingsService>().Load();
+                if (adminSettings.RememberAdminChoice)
                 {
-                    Log.Information("User declined to continue without administrator privileges.");
-                    Shutdown();
-                    return;
+                    if (adminSettings.AdminChoiceContinueWithout)
+                    {
+                        Log.Information("Admin prompt skipped: user chose to continue without admin (remembered).");
+                        // Продолжаем без прав
+                    }
+                    else
+                    {
+                        Log.Information("Admin prompt skipped: restarting as admin (remembered).");
+                        RestartAsAdmin();
+                        Shutdown();
+                        return;
+                    }
+                }
+                else
+                {
+                    // Временно переключаем, чтобы закрытие диалога не завершило приложение.
+                    ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+                    var prompt = new AdminPromptWindow();
+                    prompt.ShowDialog();
+
+                    if (prompt.RememberChoice)
+                    {
+                        adminSettings.RememberAdminChoice = true;
+                        adminSettings.AdminChoiceContinueWithout = prompt.ContinueWithoutAdmin;
+                        _host.Services.GetRequiredService<ISettingsService>().Save(adminSettings);
+                        Log.Information("Admin choice saved: continueWithout={Choice}", prompt.ContinueWithoutAdmin);
+                    }
+
+                    if (!prompt.ContinueWithoutAdmin)
+                    {
+                        Log.Information("User declined to continue without administrator privileges.");
+                        Shutdown();
+                        return;
+                    }
+                }
+                // ═══════════════════════════════════════════════════
+            }
+
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
+
+            // ═══ v1.8.0: Онбординг при первом запуске ═══
+            var settingsService = _host.Services.GetRequiredService<ISettingsService>();
+            var settings = settingsService.Load();
+            if (!settings.FirstRunComplete)
+            {
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                var profiles = LoadEngineProfilesForOnboarding();
+                var onboardingVm = new ViewModels.OnboardingViewModel(profiles);
+                var onboardingWindow = new Views.OnboardingWindow { DataContext = onboardingVm };
+                var dialogResult = onboardingWindow.ShowDialog();
+
+                if (dialogResult == true)
+                {
+                    settings.SelectedComponent = onboardingVm.SelectedComponent;
+                    settings.LastProfileFileName = onboardingVm.SelectedStrategyFileName;
+                    settings.FirstRunComplete = true;
+                    settingsService.Save(settings);
+                    Log.Information("Онбординг завершён. Компонент: {Component}, стратегия: {Strategy}",
+                        onboardingVm.SelectedComponent, onboardingVm.SelectedStrategyFileName);
+                }
+                else
+                {
+                    // Пользователь закрыл окно — просто отмечаем что был первый запуск
+                    settings.FirstRunComplete = true;
+                    settingsService.Save(settings);
                 }
             }
 
             ShutdownMode = ShutdownMode.OnMainWindowClose;
+            // ════════════════════════════════════
 
             var mainWindow = _host.Services.GetRequiredService<MainWindow>();
             MainWindow = mainWindow;
@@ -93,6 +154,36 @@ public partial class App : Application
 
             Shutdown(-1);
         }
+    }
+
+    /// <summary>
+    /// Загружает профили из engine/ для отображения в окне онбординга.
+    /// v1.8.0: UI-Redesign
+    /// </summary>
+    private static List<(string FileName, string DisplayName)> LoadEngineProfilesForOnboarding()
+    {
+        var result = new List<(string FileName, string DisplayName)>();
+        var engineDir = Path.Combine(AppContext.BaseDirectory, "engine");
+        try
+        {
+            if (Directory.Exists(engineDir))
+            {
+                var batFiles = Directory.GetFiles(engineDir, "*.bat");
+                foreach (var bat in batFiles)
+                {
+                    var fileName = Path.GetFileName(bat);
+                    var displayName = Path.GetFileNameWithoutExtension(bat)
+                        .Replace("_", " ")
+                        .Replace("-", " ");
+                    result.Add((fileName, displayName));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Не удалось загрузить профили engine/ для онбординга");
+        }
+        return result;
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -350,5 +441,27 @@ public partial class App : Application
         using var identity = WindowsIdentity.GetCurrent();
         var principal = new WindowsPrincipal(identity);
         return principal.IsInRole(WindowsBuiltInRole.Administrator);
+    }
+
+    // ═══ v1.8.0: Перезапуск от имени администратора ═══
+    private static void RestartAsAdmin()
+    {
+        try
+        {
+            var exePath = Environment.ProcessPath
+                ?? System.Reflection.Assembly.GetEntryAssembly()?.Location;
+            if (exePath is not null)
+            {
+                Process.Start(new ProcessStartInfo(exePath)
+                {
+                    UseShellExecute = true,
+                    Verb = "runas"
+                });
+            }
+        }
+        catch
+        {
+            // Пользователь отменил UAC
+        }
     }
 }

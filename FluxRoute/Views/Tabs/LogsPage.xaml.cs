@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using FluxRoute.ViewModels;
 using UserControl = System.Windows.Controls.UserControl;
 using TextBox = System.Windows.Controls.TextBox;
 
@@ -19,5 +20,15 @@ public partial class LogsPage : UserControl
             tb.CaretIndex = tb.Text.Length;
             tb.ScrollToEnd();
         }
+    }
+
+    /// <summary>
+    /// Автопрокрутка при изменении текста, если включён чекбокс.
+    /// v1.8.0: UI-Redesign
+    /// </summary>
+    private void UnifiedLogsTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (DataContext is LogsViewModel vm && vm.LogsAutoScroll)
+            ScrollToEnd();
     }
 }

@@ -7,6 +7,8 @@ public sealed partial class TrayPopupViewModel : ObservableObject
 {
     private readonly Action _openApplication;
     private readonly Action _exitApplication;
+    // ═══ v1.8.0: Действие перезапуска защиты ═══
+    private readonly Action? _restartProtection;
 
     [ObservableProperty]
     private string version = "v1.6.0";
@@ -26,10 +28,11 @@ public sealed partial class TrayPopupViewModel : ObservableObject
     [ObservableProperty]
     private bool gameFilterEnabled;
 
-    public TrayPopupViewModel(Action openApplication, Action exitApplication)
+    public TrayPopupViewModel(Action openApplication, Action exitApplication, Action? restartProtection = null)
     {
         _openApplication = openApplication ?? throw new ArgumentNullException(nameof(openApplication));
         _exitApplication = exitApplication ?? throw new ArgumentNullException(nameof(exitApplication));
+        _restartProtection = restartProtection;
     }
 
     public string ProtectionStatus => ProtectionRunning ? "Защита включена" : "Защита выключена";
@@ -61,4 +64,8 @@ public sealed partial class TrayPopupViewModel : ObservableObject
 
     [RelayCommand]
     private void ExitApplication() => _exitApplication();
+
+    // ═══ v1.8.0: Перезапуск защиты ═══
+    [RelayCommand]
+    private void RestartProtection() => _restartProtection?.Invoke();
 }

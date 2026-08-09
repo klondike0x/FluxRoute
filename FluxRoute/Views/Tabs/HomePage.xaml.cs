@@ -18,6 +18,24 @@ public partial class HomePage : System.Windows.Controls.UserControl
         InitializeComponent();
     }
 
+    // ═══ v1.8.0: Переход на вкладку TG Proxy по клику на карточку ═══
+    private void TgProxyCard_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+            vm.SelectedTabIndex = 1; // TG Proxy вкладка
+    }
+
+    // ═══ v1.8.0: Копирование ссылки TG Proxy ═══
+    private void CopyTgProxyLink_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+        {
+            var link = $"https://t.me/proxy?server={vm.TgProxyHost}&port={vm.TgProxyPort}&secret={vm.TgProxySecret}";
+            System.Windows.Clipboard.SetText(link);
+            vm.Logs.Add("[TG Proxy] Ссылка скопирована в буфер обмена");
+        }
+    }
+
     public void ApplyLayout(HomeLayoutMode mode)
     {
         var spec = AdaptiveHomeLayout.GetSpec(mode);

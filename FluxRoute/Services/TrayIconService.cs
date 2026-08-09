@@ -113,6 +113,9 @@ public sealed class TrayIconService : IDisposable
         }
     }
 
+    // ═══ v1.8.0: Доступ к сервису трей-попапа ═══
+    public ITrayPopupService? TryGetPopupService() => _popupService;
+
     private void OnNotifyIconMouseClick(object? sender, MouseEventArgs e)
     {
         if (e.Button == MouseButtons.Left)
