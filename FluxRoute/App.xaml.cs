@@ -105,25 +105,37 @@ public partial class App : Application
             if (!settings.FirstRunComplete)
             {
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
-                var profiles = LoadEngineProfilesForOnboarding();
-                var onboardingVm = new ViewModels.OnboardingViewModel(profiles);
-                var onboardingWindow = new Views.OnboardingWindow { DataContext = onboardingVm };
-                var dialogResult = onboardingWindow.ShowDialog();
 
-                if (dialogResult == true)
+                var onboardingVm = new ViewModels.OnboardingViewModel();
+                var engineDir = Path.Combine(AppContext.BaseDirectory, "engine");
+                onboardingVm.LoadProfiles(engineDir);
+
+                if (onboardingVm.AvailableStrategies.Count == 0)
                 {
-                    settings.SelectedComponent = onboardingVm.SelectedComponent;
-                    settings.LastProfileFileName = onboardingVm.SelectedStrategyFileName;
-                    settings.FirstRunComplete = true;
-                    settingsService.Save(settings);
-                    Log.Information("Онбординг завершён. Компонент: {Component}, стратегия: {Strategy}",
-                        onboardingVm.SelectedComponent, onboardingVm.SelectedStrategyFileName);
+                    // Нет стратегий — engine ещё не скачан. Пропускаем онбординг,
+                    // FirstRunComplete НЕ ставим, чтобы окно показалось в следующий раз.
+                    Log.Warning("Онбординг пропущен: engine/ не содержит .bat файлов.");
                 }
                 else
                 {
-                    // Пользователь закрыл окно — просто отмечаем что был первый запуск
-                    settings.FirstRunComplete = true;
-                    settingsService.Save(settings);
+                    var onboardingWindow = new Views.OnboardingWindow { DataContext = onboardingVm };
+                    var dialogResult = onboardingWindow.ShowDialog();
+
+                    if (dialogResult == true)
+                    {
+                        settings.SelectedComponent = onboardingVm.SelectedComponent;
+                        settings.LastProfileFileName = onboardingVm.SelectedStrategyFileName;
+                        settings.FirstRunComplete = true;
+                        settingsService.Save(settings);
+                        Log.Information("Онбординг завершён. Компонент: {Component}, стратегия: {Strategy}",
+                            onboardingVm.SelectedComponent, onboardingVm.SelectedStrategyFileName);
+                    }
+                    else
+                    {
+                        // Пользователь закрыл окно — отмечаем что онбординг был
+                        settings.FirstRunComplete = true;
+                        settingsService.Save(settings);
+                    }
                 }
             }
 
@@ -154,36 +166,6 @@ public partial class App : Application
 
             Shutdown(-1);
         }
-    }
-
-    /// <summary>
-    /// Загружает профили из engine/ для отображения в окне онбординга.
-    /// v1.8.0: UI-Redesign
-    /// </summary>
-    private static List<(string FileName, string DisplayName)> LoadEngineProfilesForOnboarding()
-    {
-        var result = new List<(string FileName, string DisplayName)>();
-        var engineDir = Path.Combine(AppContext.BaseDirectory, "engine");
-        try
-        {
-            if (Directory.Exists(engineDir))
-            {
-                var batFiles = Directory.GetFiles(engineDir, "*.bat");
-                foreach (var bat in batFiles)
-                {
-                    var fileName = Path.GetFileName(bat);
-                    var displayName = Path.GetFileNameWithoutExtension(bat)
-                        .Replace("_", " ")
-                        .Replace("-", " ");
-                    result.Add((fileName, displayName));
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "Не удалось загрузить профили engine/ для онбординга");
-        }
-        return result;
     }
 
     protected override void OnExit(ExitEventArgs e)
