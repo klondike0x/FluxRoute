@@ -507,7 +507,7 @@ public partial class MainViewModel : ObservableObject
             RefreshAiDashboard();
             RebuildAiStrategyRows();
         }
-        // ═══ v1.8.0: Активация вкладки Хостлисты ═══
+        // ═══ v1.7.0: Активация вкладки Хостлисты ═══
         if (value == 3)
             Hostlists.LoadHostlistFiles();
     }
@@ -526,7 +526,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string downloadSpeed = "0 Б/с";
     [ObservableProperty] private string lastStatusMessage = "Готово";
 
-    // ═══ v1.8.0: UI-Redesign — простой/расширенный режим ═══
+    // ═══ v1.7.0: UI-Redesign — простой/расширенный режим ═══
     [ObservableProperty] private bool simpleMode;
     partial void OnSimpleModeChanged(bool value)
     {
@@ -589,7 +589,7 @@ public partial class MainViewModel : ObservableObject
     public UpdatesViewModel Updates { get; private set; } = null!;
     public ServiceViewModel Service { get; private set; } = null!;
     public DiagnosticsViewModel Diagnostics { get; private set; } = null!;
-    // ═══ v1.8.0: UI-Redesign ═══
+    // ═══ v1.7.0: UI-Redesign ═══
     public HostlistsViewModel Hostlists { get; private set; } = null!;
 
     // ── Диагностика (wrappers → DiagnosticsViewModel) ──
@@ -725,6 +725,13 @@ public partial class MainViewModel : ObservableObject
     // после запуска сбросит FirstRunComplete обратно в false.
     private bool _firstRunComplete;
     private string _selectedComponent = "zapret";
+
+    public string ActiveComponentName => _selectedComponent switch
+    {
+        "zapret2" => "Zapret 2",
+        "none" => "Не выбран",
+        _ => "Zapret"
+    };
 
     // ── Обновления ──
     [ObservableProperty] private bool autoUpdateEnabled = false;
@@ -996,7 +1003,7 @@ public partial class MainViewModel : ObservableObject
         };
         Updates.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
 
-        // ═══ v1.8.0: UI-Redesign — инициализация HostlistsViewModel ═══
+        // ═══ v1.7.0: UI-Redesign — инициализация HostlistsViewModel ═══
         Hostlists = new HostlistsViewModel(
             getEngineDir: () => EngineDir,
             addLog: msg => Logs.Add(msg));
@@ -1141,6 +1148,7 @@ public partial class MainViewModel : ObservableObject
     {
         _firstRunComplete = settings.FirstRunComplete;
         _selectedComponent = settings.SelectedComponent;
+        OnPropertyChanged(nameof(ActiveComponentName));
         OrchestratorInterval = settings.OrchestratorInterval;
         OrchestratorEnabled = settings.OrchestratorEnabled;
         SiteYouTube = settings.SiteYouTube;
@@ -1178,7 +1186,7 @@ public partial class MainViewModel : ObservableObject
         AutoStartEnabled = settings.AutoStartEnabled;
         MinimizeToTray = settings.MinimizeToTray;
         StartupWindowMode = settings.StartupWindowMode;
-        // ═══ v1.8.0: UI-Redesign ═══
+        // ═══ v1.7.0: UI-Redesign ═══
         SimpleMode = settings.SimpleMode;
         // ═══ v1.6.0: Крестик сворачивает в трей ═══
         CloseToTray = settings.CloseToTray;
@@ -1249,7 +1257,7 @@ public partial class MainViewModel : ObservableObject
             AutoStartEnabled = AutoStartEnabled,
             MinimizeToTray = MinimizeToTray,
             StartupWindowMode = StartupWindowMode,
-            // ═══ v1.8.0: UI-Redesign ═══
+            // ═══ v1.7.0: UI-Redesign ═══
             SimpleMode = SimpleMode,
             // ═══ v1.6.0: Крестик сворачивает в трей ═══
             CloseToTray = CloseToTray,
@@ -1327,7 +1335,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void ToggleLogs() => IsLogsVisible = !IsLogsVisible;
 
-    // ═══ v1.8.0: UI-Redesign — открыть редактор стратегии ═══
+    // ═══ v1.7.0: UI-Redesign — открыть редактор стратегии ═══
     [RelayCommand]
     private void EditStrategy(ProfileItem? profile)
     {

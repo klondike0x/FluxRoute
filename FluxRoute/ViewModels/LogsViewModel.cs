@@ -96,7 +96,7 @@ public sealed partial class LogsViewModel : ObservableObject
         RefreshFilter();
     }
 
-    // ═══ v1.8.0: UI-Redesign — автопрокрутка (включена по умолчанию) ═══
+    // ═══ v1.7.0: UI-Redesign — автопрокрутка (включена по умолчанию) ═══
     [ObservableProperty]
     private bool logsAutoScroll = true;
 

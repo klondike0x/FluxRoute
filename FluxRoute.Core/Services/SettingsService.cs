@@ -12,7 +12,7 @@ public sealed class AppSettings
     // Стратегия
     public string? LastProfileFileName { get; set; }
 
-    // ═══ v1.8.0: UI-Redesign — выбранный компонент при онбординге ═══
+    // ═══ v1.7.0: UI-Redesign — выбранный компонент при онбординге ═══
     /// <summary>"zapret", "zapret2" или "none"</summary>
     public string SelectedComponent { get; set; } = "zapret";
 
@@ -62,13 +62,13 @@ public sealed class AppSettings
     // Обновления
     public bool AutoUpdateEnabled { get; set; } = false;
 
-    // ═══ v1.8.0: UI-Redesign — простой/расширенный режим ═══
+    // ═══ v1.7.0: UI-Redesign — простой/расширенный режим ═══
     public bool SimpleMode { get; set; } = false;
 
-    // ═══ v1.8.0: UI-Redesign — онбординг ═══
+    // ═══ v1.7.0: UI-Redesign — онбординг ═══
     public bool FirstRunComplete { get; set; } = false;
 
-    // ═══ v1.8.0: UI-Redesign — запоминание выбора прав админа ═══
+    // ═══ v1.7.0: UI-Redesign — запоминание выбора прав админа ═══
     public bool RememberAdminChoice { get; set; } = false;
     public bool AdminChoiceContinueWithout { get; set; } = true;
 

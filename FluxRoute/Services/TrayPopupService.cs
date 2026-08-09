@@ -20,7 +20,7 @@ public sealed class TrayPopupService : ITrayPopupService
 
     public event EventHandler? OpenApplicationRequested;
     public event EventHandler? ExitApplicationRequested;
-    // ═══ v1.8.0: Событие перезапуска защиты ═══
+    // ═══ v1.7.0: Событие перезапуска защиты ═══
     public event EventHandler? RestartProtectionRequested;
 
     public TrayPopupService(ILogger<TrayPopupService>? logger = null)
@@ -137,7 +137,7 @@ public sealed class TrayPopupService : ITrayPopupService
         ExitApplicationRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    // ═══ v1.8.0 ═══
+    // ═══ v1.7.0 ═══
     private void RequestRestartProtection()
     {
         CloseWindow();

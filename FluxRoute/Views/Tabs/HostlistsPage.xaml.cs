@@ -5,7 +5,7 @@ namespace FluxRoute.Views.Tabs;
 
 /// <summary>
 /// Вкладка Хостлисты — редактирование списков доменов.
-/// v1.8.0: UI-Redesign
+/// v1.7.0: UI-Redesign
 /// </summary>
 public partial class HostlistsPage : WpfUserControl
 {

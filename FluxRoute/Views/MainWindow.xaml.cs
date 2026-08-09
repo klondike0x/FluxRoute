@@ -97,7 +97,7 @@ public partial class MainWindow : Window
         DataContext = _vm;
         ApplyStartupWindowSize();
 
-        // ═══ v1.8.0: Привязка DataContext для хоста HostlistsPage ═══
+        // ═══ v1.7.0: Привязка DataContext для хоста HostlistsPage ═══
         if (HostlistsTab is not null)
             HostlistsTab.DataContext = _vm.Hostlists;
 
@@ -115,7 +115,7 @@ public partial class MainWindow : Window
         _trayIcon.ExitRequested += OnTrayExitRequested;
         UpdateTrayMenu();
 
-        // ═══ v1.8.0: Подписка на перезапуск защиты из трея ═══
+        // ═══ v1.7.0: Подписка на перезапуск защиты из трея ═══
         if (_trayIcon.TryGetPopupService() is TrayPopupService popupService)
             popupService.RestartProtectionRequested += OnTrayRestartProtectionRequested;
 
@@ -216,7 +216,7 @@ public partial class MainWindow : Window
         Activate();
     }
 
-    // ═══ v1.8.0: Перезапуск защиты из трея ═══
+    // ═══ v1.7.0: Перезапуск защиты из трея ═══
     private void OnTrayRestartProtectionRequested(object? sender, EventArgs e)
     {
         if (_vm.IsRunning)

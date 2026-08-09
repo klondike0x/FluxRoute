@@ -7,7 +7,7 @@ public sealed partial class TrayPopupViewModel : ObservableObject
 {
     private readonly Action _openApplication;
     private readonly Action _exitApplication;
-    // ═══ v1.8.0: Действие перезапуска защиты ═══
+    // ═══ v1.7.0: Действие перезапуска защиты ═══
     private readonly Action? _restartProtection;
 
     [ObservableProperty]
@@ -65,7 +65,7 @@ public sealed partial class TrayPopupViewModel : ObservableObject
     [RelayCommand]
     private void ExitApplication() => _exitApplication();
 
-    // ═══ v1.8.0: Перезапуск защиты ═══
+    // ═══ v1.7.0: Перезапуск защиты ═══
     [RelayCommand]
     private void RestartProtection() => _restartProtection?.Invoke();
 }

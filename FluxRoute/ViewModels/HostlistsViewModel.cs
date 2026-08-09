@@ -7,7 +7,7 @@ namespace FluxRoute.ViewModels;
 
 /// <summary>
 /// ViewModel вкладки Хостлисты.
-/// v1.8.0: UI-Redesign
+/// v1.7.0: UI-Redesign
 /// </summary>
 public partial class HostlistsViewModel : ObservableObject
 {

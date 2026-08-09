@@ -9,7 +9,7 @@ namespace FluxRoute.ViewModels;
 
 /// <summary>
 /// ViewModel для окна онбординга при первом запуске.
-/// v1.8.0: UI-Redesign
+/// v1.7.0: UI-Redesign
 /// </summary>
 public partial class OnboardingViewModel : ObservableObject
 {

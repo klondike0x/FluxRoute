@@ -221,7 +221,7 @@
                 </StackPanel>
             </Button>
 
-            <!-- ═══ v1.8.0: Кнопка «Перезапустить защиту» ═══ -->
+            <!-- ═══ v1.7.0: Кнопка «Перезапустить защиту» ═══ -->
             <Button Style="{StaticResource TrayActionButton}"
                     Command="{Binding RestartProtectionCommand}">
                 <StackPanel Orientation="Horizontal">

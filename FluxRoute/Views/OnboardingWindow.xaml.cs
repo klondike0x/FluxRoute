@@ -5,7 +5,7 @@ namespace FluxRoute.Views;
 
 /// <summary>
 /// Окно онбординга при первом запуске FluxRoute.
-/// v1.8.0: UI-Redesign
+/// v1.7.0: UI-Redesign
 /// </summary>
 public partial class OnboardingWindow : Window
 {

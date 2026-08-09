@@ -54,7 +54,7 @@ public partial class App : Application
             {
                 Log.Warning("FluxRoute is running without administrator privileges.");
 
-                // ═══ v1.8.0: Проверка сохранённого выбора прав ═══
+                // ═══ v1.7.0: Проверка сохранённого выбора прав ═══
                 var adminSettings = _host.Services.GetRequiredService<ISettingsService>().Load();
                 if (adminSettings.RememberAdminChoice)
                 {
@@ -99,7 +99,7 @@ public partial class App : Application
 
             ShutdownMode = ShutdownMode.OnMainWindowClose;
 
-            // ═══ v1.8.0: Онбординг при первом запуске ═══
+            // ═══ v1.7.0: Онбординг при первом запуске ═══
             var settingsService = _host.Services.GetRequiredService<ISettingsService>();
             var settings = settingsService.Load();
 
@@ -435,7 +435,7 @@ public partial class App : Application
         return principal.IsInRole(WindowsBuiltInRole.Administrator);
     }
 
-    // ═══ v1.8.0: Перезапуск от имени администратора ═══
+    // ═══ v1.7.0: Перезапуск от имени администратора ═══
     private static void RestartAsAdmin()
     {
         try

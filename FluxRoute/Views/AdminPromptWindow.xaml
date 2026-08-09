@@ -38,7 +38,7 @@
                        Foreground="#7E89A8" FontSize="12" VerticalAlignment="Center"
                        Text="Вы можете продолжить без прав, но функциональность будет ограничена."/>
 
-            <!-- ═══ v1.8.0: Чекбокс «Запомнить выбор» ═══ -->
+            <!-- ═══ v1.7.0: Чекбокс «Запомнить выбор» ═══ -->
             <CheckBox x:Name="RememberCheckBox" Grid.Row="3"
                       Content="Запомнить выбор и больше не спрашивать"
                       Foreground="#8997AD" FontSize="11"

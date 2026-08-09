@@ -18,14 +18,14 @@ public partial class HomePage : System.Windows.Controls.UserControl
         InitializeComponent();
     }
 
-    // ═══ v1.8.0: Переход на вкладку TG Proxy по клику на карточку ═══
+    // ═══ v1.7.0: Переход на вкладку TG Proxy по клику на карточку ═══
     private void TgProxyCard_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (DataContext is MainViewModel vm)
             vm.SelectedTabIndex = 1; // TG Proxy вкладка
     }
 
-    // ═══ v1.8.0: Копирование ссылки TG Proxy ═══
+    // ═══ v1.7.0: Копирование ссылки TG Proxy ═══
     private void CopyTgProxyLink_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel vm)
@@ -39,41 +39,30 @@ public partial class HomePage : System.Windows.Controls.UserControl
     public void ApplyLayout(HomeLayoutMode mode)
     {
         bool wide = mode == HomeLayoutMode.Wide;
-        MainDetailsColumn.Width = new GridLength(wide ? 280 : 228);
+        MainDetailsColumn.Width = new GridLength(0);
+        SummaryBar.Visibility = Visibility.Visible;
+        SummaryBar.Columns = 5;
+        DetailsScrollViewer.Visibility = Visibility.Collapsed;
+        Grid.SetColumnSpan(HeroPanel, 2);
+        Grid.SetRowSpan(DetailsScrollViewer, 2);
 
-        // In the compact window, move the proxy and strategy actions below the hero.
-        if (wide)
-        {
-            CompactBottomPanel.Visibility = Visibility.Collapsed;
-            PlaceIn(DetailsPanel, TgProxyCard, 0);
-            PlaceIn(DetailsPanel, StrategyActionsPanel, 1);
-        }
-        else
-        {
-            PlaceIn(CompactBottomPanel, TgProxyCard);
-            PlaceIn(CompactBottomPanel, StrategyActionsPanel);
-            CompactBottomPanel.Visibility = Visibility.Visible;
-        }
+        // In wide mode the detailed cards stay on the right; compact mode uses the summary only.
+        CompactBottomPanel.Visibility = Visibility.Collapsed;
+        PlaceIn(DetailsPanel, NetworkCard, 0);
+        PlaceIn(DetailsPanel, TgProxyCard, 1);
+        PlaceIn(DetailsPanel, StrategyActionsPanel, 2);
 
-        var heroScale = wide ? 1.0 : 0.86;
+        var heroScale = 1.0;
         HeroScaleTransform.ScaleX = heroScale;
         HeroScaleTransform.ScaleY = heroScale;
 
-        // Keep the right-side controls at their normal size in both modes.
         DetailsScaleTransform.ScaleX = 1.0;
         DetailsScaleTransform.ScaleY = 1.0;
         NetworkCard.Padding = wide
             ? new Thickness(14, 11, 14, 11)
             : new Thickness(10, 8, 10, 8);
-        NetworkCard.Margin = wide
-            ? new Thickness(0, 10, 0, 0)
-            : new Thickness(0, 6, 0, 0);
-        OrchestratorCard.Padding = wide
-            ? new Thickness(16, 14, 16, 14)
-            : new Thickness(12, 10, 12, 10);
-        OrchestratorCard.Margin = wide
-            ? new Thickness(0, 10, 0, 0)
-            : new Thickness(0, 6, 0, 0);
+        NetworkCard.Margin = new Thickness(0, 0, 0, 0);
+        DetailsScrollViewer.Margin = new Thickness(0, 8, 0, 0);
         DetailsScrollViewer.VerticalScrollBarVisibility = wide
             ? ScrollBarVisibility.Auto
             : ScrollBarVisibility.Disabled;

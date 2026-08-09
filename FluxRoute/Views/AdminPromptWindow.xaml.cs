@@ -12,7 +12,7 @@ public partial class AdminPromptWindow : Window
     /// При перезапуске окно закрывается и процесс перезапускается от имени администратора.
     /// </summary>
     public bool ContinueWithoutAdmin { get; private set; }
-    // ═══ v1.8.0: UI-Redesign — запоминание выбора ═══
+    // ═══ v1.7.0: UI-Redesign — запоминание выбора ═══
     public bool RememberChoice => RememberCheckBox.IsChecked == true;
 
     public AdminPromptWindow()

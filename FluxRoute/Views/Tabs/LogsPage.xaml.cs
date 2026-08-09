@@ -24,7 +24,7 @@ public partial class LogsPage : UserControl
 
     /// <summary>
     /// Автопрокрутка при изменении текста, если включён чекбокс.
-    /// v1.8.0: UI-Redesign
+    /// v1.7.0: UI-Redesign
     /// </summary>
     private void UnifiedLogsTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
