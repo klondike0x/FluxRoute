@@ -48,9 +48,9 @@
                                                 <ContentPresenter Grid.Column="0"
                                                                   Margin="10,0,6,0"
                                                                   VerticalAlignment="Center"
-                                                                  Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource TemplatedParent}}"
-                                                                  ContentTemplate="{Binding SelectionBoxItemTemplate, RelativeSource={RelativeSource TemplatedParent}}"
-                                                                  ContentStringFormat="{Binding SelectionBoxItemStringFormat, RelativeSource={RelativeSource TemplatedParent}}" />
+                                                                  Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                                  ContentTemplate="{Binding SelectionBoxItemTemplate, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                                  ContentStringFormat="{Binding SelectionBoxItemStringFormat, RelativeSource={RelativeSource AncestorType=ComboBox}}" />
                                                 <Border Grid.Column="1" Width="30" CornerRadius="0,8,8,0" Background="Transparent">
                                                     <Path x:Name="ArrowPath"
                                                           Data="M 0,0 L 4,4 L 8,0"
