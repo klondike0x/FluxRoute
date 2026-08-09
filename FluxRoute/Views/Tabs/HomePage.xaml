@@ -131,7 +131,8 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />   <!-- 0: Mode toggle -->
             <RowDefinition Height="*" />       <!-- 1: Hero (слева) + RightPanel (справа) -->
-            <RowDefinition Height="Auto" />    <!-- 2: Compact summary -->
+            <RowDefinition Height="Auto" />    <!-- 2: Активные службы (растянуты) -->
+            <RowDefinition Height="Auto" />    <!-- 3: Compact summary -->
         </Grid.RowDefinitions>
 
         <!-- Row 0: Переключатель Простой/Расширенный -->
@@ -411,45 +412,40 @@
                 </Button>
             </StackPanel>
 
-            <!-- Статусы служб -->
-            <Border Style="{StaticResource DashboardCard}" Margin="0,10,0,0">
-                <StackPanel>
-                    <TextBlock Text="Активные службы" Foreground="#DCE4F0" FontSize="12" FontWeight="SemiBold" />
-                    <Grid Margin="0,6,0,0">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <Ellipse>
-                            <Ellipse.Style>
-                                <Style TargetType="Ellipse" BasedOn="{StaticResource ServiceStatusDot}">
-                                    <Style.Triggers><DataTrigger Binding="{Binding OrchestratorEnabled}" Value="True"><Setter Property="Fill" Value="#35D79A"/></DataTrigger></Style.Triggers>
-                                </Style>
-                            </Ellipse.Style>
-                        </Ellipse>
-                        <TextBlock Grid.Column="1" Text="Оркестратор" Foreground="#A9B5C8" FontSize="11" />
-                        <TextBlock Grid.Column="2" FontSize="10">
-                            <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="Выключен"/><Setter Property="Foreground" Value="#66758E"/><Style.Triggers><DataTrigger Binding="{Binding OrchestratorEnabled}" Value="True"><Setter Property="Text" Value="Включён"/><Setter Property="Foreground" Value="#62E6B1"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
-                        </TextBlock>
-                    </Grid>
-                    <Grid Margin="0,5">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <Ellipse>
-                            <Ellipse.Style><Style TargetType="Ellipse" BasedOn="{StaticResource ServiceStatusDot}"><Style.Triggers><DataTrigger Binding="{Binding TgProxyRunning}" Value="True"><Setter Property="Fill" Value="#35D79A"/></DataTrigger></Style.Triggers></Style></Ellipse.Style>
-                        </Ellipse>
-                        <TextBlock Grid.Column="1" Text="Telegram-прокси" Foreground="#A9B5C8" FontSize="11" />
-                        <TextBlock Grid.Column="2" FontSize="10">
-                            <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="Остановлен"/><Setter Property="Foreground" Value="#66758E"/><Style.Triggers><DataTrigger Binding="{Binding TgProxyRunning}" Value="True"><Setter Property="Text" Value="Работает"/><Setter Property="Foreground" Value="#62E6B1"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
-                        </TextBlock>
-                    </Grid>
-                    <Grid Margin="0,5">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <Ellipse>
-                            <Ellipse.Style><Style TargetType="Ellipse" BasedOn="{StaticResource ServiceStatusDot}"><Style.Triggers><DataTrigger Binding="{Binding GameFilterEnabled}" Value="True"><Setter Property="Fill" Value="#35D79A"/></DataTrigger></Style.Triggers></Style></Ellipse.Style>
-                        </Ellipse>
-                        <TextBlock Grid.Column="1" Text="Игровой режим" Foreground="#A9B5C8" FontSize="11" />
-                        <TextBlock Grid.Column="2" FontSize="10">
-                            <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="Выключен"/><Setter Property="Foreground" Value="#66758E"/><Style.Triggers><DataTrigger Binding="{Binding GameFilterEnabled}" Value="True"><Setter Property="Text" Value="Включён"/><Setter Property="Foreground" Value="#62E6B1"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
-                        </TextBlock>
-                    </Grid>
-                </StackPanel>
+            <!-- ═══ v1.8.1: Мини-монитор: пинг / службы / скорость (справа снизу) ═══ -->
+            <Border Style="{StaticResource DashboardCard}" Margin="0,10,0,0" Padding="8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" /><RowDefinition Height="6" />
+                        <RowDefinition Height="Auto" /><RowDefinition Height="6" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" Background="#0D1422" BorderBrush="#1C2940"
+                            BorderThickness="1" CornerRadius="8" Padding="10,7">
+                        <Grid>
+                            <TextBlock Style="{StaticResource MetricLabel}" Text="ПИНГ" VerticalAlignment="Center" />
+                            <TextBlock Style="{StaticResource MetricValue}" Text="{Binding PingSummary}"
+                                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0" />
+                        </Grid>
+                    </Border>
+                    <Border Grid.Row="2" Background="#0D1422" BorderBrush="#1C2940"
+                            BorderThickness="1" CornerRadius="8" Padding="10,7">
+                        <Grid>
+                            <TextBlock Style="{StaticResource MetricLabel}" Text="АКТИВНЫЕ СЛУЖБЫ" VerticalAlignment="Center" />
+                            <TextBlock Style="{StaticResource MetricValue}" Text="{Binding ActiveServicesSummary}"
+                                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0" />
+                        </Grid>
+                    </Border>
+                    <Border Grid.Row="4" Background="#0D1422" BorderBrush="#1C2940"
+                            BorderThickness="1" CornerRadius="8" Padding="10,7">
+                        <Grid>
+                            <TextBlock Style="{StaticResource MetricLabel}" Text="СКОРОСТЬ" VerticalAlignment="Center" />
+                            <TextBlock Style="{StaticResource MetricValue}" Text="{Binding TrafficSpeedSummary}"
+                                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0"
+                                       TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                    </Border>
+                </Grid>
             </Border>
         </StackPanel>
 
@@ -572,9 +568,129 @@
             </Border>
         </Popup>
 
+        <!-- Row 2: Активные службы — растянуты на всю ширину -->
+        <Grid Grid.Row="2" Grid.ColumnSpan="3" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource DashboardCard}" Padding="14,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Ellipse Grid.Column="0" Margin="0,0,10,0" VerticalAlignment="Center">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse" BasedOn="{StaticResource ServiceStatusDot}">
+                                <Style.Triggers><DataTrigger Binding="{Binding OrchestratorEnabled}" Value="True"><Setter Property="Fill" Value="#35D79A"/></DataTrigger></Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="ОРКЕСТРАТОР" Style="{StaticResource MetricLabel}" />
+                        <TextBlock Text="{Binding OrchestratorStatus}" Style="{StaticResource MetricValue}"
+                                   Foreground="#A9B5C8" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" VerticalAlignment="Center" FontSize="10">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="Выключен" />
+                                <Setter Property="Foreground" Value="#66758E" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding OrchestratorEnabled}" Value="True">
+                                        <Setter Property="Text" Value="Включён" />
+                                        <Setter Property="Foreground" Value="#62E6B1" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource DashboardCard}" Padding="14,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Ellipse Grid.Column="0" Margin="0,0,10,0" VerticalAlignment="Center">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse" BasedOn="{StaticResource ServiceStatusDot}">
+                                <Style.Triggers><DataTrigger Binding="{Binding TgProxyRunning}" Value="True"><Setter Property="Fill" Value="#35D79A"/></DataTrigger></Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="TELEGRAM-ПРОКСИ" Style="{StaticResource MetricLabel}" />
+                        <TextBlock Style="{StaticResource MetricValue}" Foreground="#A9B5C8">
+                            <Run Text="{Binding TgProxyHost, Mode=OneWay}" /><Run Text=":" /><Run Text="{Binding TgProxyPort, Mode=OneWay}" />
+                        </TextBlock>
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" VerticalAlignment="Center" FontSize="10">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="Остановлен" />
+                                <Setter Property="Foreground" Value="#66758E" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding TgProxyRunning}" Value="True">
+                                        <Setter Property="Text" Value="Работает" />
+                                        <Setter Property="Foreground" Value="#62E6B1" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="4" Style="{StaticResource DashboardCard}" Padding="14,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Ellipse Grid.Column="0" Margin="0,0,10,0" VerticalAlignment="Center">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse" BasedOn="{StaticResource ServiceStatusDot}">
+                                <Style.Triggers><DataTrigger Binding="{Binding GameFilterEnabled}" Value="True"><Setter Property="Fill" Value="#35D79A"/></DataTrigger></Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="ИГРОВОЙ РЕЖИМ" Style="{StaticResource MetricLabel}" />
+                        <TextBlock Text="{Binding GameFilterProtocol}" Style="{StaticResource MetricValue}"
+                                   Foreground="#A9B5C8" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" VerticalAlignment="Center" FontSize="10">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="Выключен" />
+                                <Setter Property="Foreground" Value="#66758E" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding GameFilterEnabled}" Value="True">
+                                        <Setter Property="Text" Value="Включён" />
+                                        <Setter Property="Foreground" Value="#62E6B1" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+            </Border>
+        </Grid>
+
         <!-- Compact: под Hero ряд из профиля, служб и сети -->
         <Grid x:Name="CompactSummaryPanel"
-              Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+              Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
               Margin="0,8,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
