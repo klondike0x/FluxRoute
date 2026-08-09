@@ -81,10 +81,6 @@
                          VerticalScrollBarVisibility="Auto"
                          HorizontalScrollBarVisibility="Auto"
                          IsUndoEnabled="True" />
-                <TextBlock Text="Выберите файл слева для редактирования"
-                           Foreground="#4B5870" FontSize="11"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                           Visibility="{Binding IsEditing, Converter={StaticResource InvBool}, FallbackValue=Visible}" />
             </Grid>
         </Border>
 
