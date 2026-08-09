@@ -67,7 +67,6 @@
             <Setter Property="Margin" Value="0,2,0,0" />
         </Style>
 
-        <!-- ═══ v1.8.0: Стиль для кнопки простого/расширенного режима ═══ -->
         <Style x:Key="ModeToggleBtn" TargetType="Button">
             <Setter Property="Height" Value="28" />
             <Setter Property="Cursor" Value="Hand" />
@@ -95,7 +94,6 @@
             </Setter>
         </Style>
 
-        <!-- ═══ v1.8.0: Стиль для большой кнопки действия ═══ -->
         <Style x:Key="BigActionButton" TargetType="Button">
             <Setter Property="Height" Value="44" />
             <Setter Property="Cursor" Value="Hand" />
@@ -123,6 +121,7 @@
         </Style>
     </UserControl.Resources>
 
+    <!-- ═══ v1.8.1: Исправленная сетка без наложений ═══ -->
     <Grid x:Name="LayoutRoot" Margin="24">
         <Grid.ColumnDefinitions>
             <ColumnDefinition x:Name="HeroColumn" Width="*" />
@@ -130,13 +129,16 @@
             <ColumnDefinition x:Name="DetailsColumn" Width="0" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />   <!-- 0: Mode toggle -->
+            <RowDefinition Height="Auto" />   <!-- 1: TG Proxy card -->
+            <RowDefinition Height="Auto" />   <!-- 2: Extended buttons (expanded mode) -->
+            <RowDefinition Height="*" />      <!-- 3: Hero circle (центрируется) -->
+            <RowDefinition Height="Auto" />   <!-- 4: Status + mode button + uptime -->
+            <RowDefinition Height="Auto" />   <!-- 5: Compact summary -->
         </Grid.RowDefinitions>
 
-        <!-- ═══ v1.8.0: Переключатель Простой/Расширенный в шапке ═══ -->
-        <Border Grid.Row="0" Grid.ColumnSpan="3" Margin="0,0,0,12" HorizontalAlignment="Center">
+        <!-- Row 0: Переключатель Простой/Расширенный -->
+        <Border Grid.Row="0" Grid.ColumnSpan="3" HorizontalAlignment="Center" Margin="0,0,0,8">
             <Button Style="{StaticResource ModeToggleBtn}" Command="{Binding ToggleSimpleModeCommand}">
                 <Button.Resources>
                     <Style TargetType="TextBlock" x:Key="ModeIconStyle">
@@ -170,247 +172,243 @@
             </Button>
         </Border>
 
-        <!-- Главный Hero-блок -->
-        <StackPanel x:Name="HeroPanel"
-                    Grid.Row="1" Grid.Column="0"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center">
-            <Grid Width="200" Height="200" HorizontalAlignment="Center">
-                <Ellipse Width="190" Height="190" Opacity="0.5">
-                    <Ellipse.Fill>
-                        <RadialGradientBrush>
-                            <GradientStop Color="#203060C0" Offset="0.45" />
-                            <GradientStop Color="#00000000" Offset="1" />
-                        </RadialGradientBrush>
-                    </Ellipse.Fill>
-                </Ellipse>
-
-                <Ellipse x:Name="WaveRing1" Width="168" Height="168" Stroke="#55AAFF"
-                         StrokeThickness="12" Opacity="0" RenderTransformOrigin="0.5,0.5">
-                    <Ellipse.RenderTransform><ScaleTransform x:Name="WaveRing1Scale" /></Ellipse.RenderTransform>
-                </Ellipse>
-                <Ellipse x:Name="WaveRing2" Width="168" Height="168" Stroke="#7755EE"
-                         StrokeThickness="8" Opacity="0" RenderTransformOrigin="0.5,0.5">
-                    <Ellipse.RenderTransform><ScaleTransform x:Name="WaveRing2Scale" /></Ellipse.RenderTransform>
-                </Ellipse>
-                <Ellipse x:Name="WaveRing3" Width="168" Height="168" Stroke="#9933DD"
-                         StrokeThickness="4" Opacity="0" RenderTransformOrigin="0.5,0.5">
-                    <Ellipse.RenderTransform><ScaleTransform x:Name="WaveRing3Scale" /></Ellipse.RenderTransform>
-                </Ellipse>
-
-                <Ellipse Width="168" Height="168" StrokeThickness="3.5">
-                    <Ellipse.Stroke>
-                        <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
-                            <GradientStop Color="#55AAFF" Offset="0" />
-                            <GradientStop Color="#7755EE" Offset="0.5" />
-                            <GradientStop Color="#9933DD" Offset="1" />
-                        </LinearGradientBrush>
-                    </Ellipse.Stroke>
-                </Ellipse>
-                <Ellipse Width="152" Height="152" Fill="#10121E" Stroke="#18FFFFFF" />
-
-                <Button Width="152" Height="152" Command="{Binding MainActionCommand}" Cursor="Hand">
+        <!-- Row 1: TG Proxy карточка -->
+        <Border Grid.Row="1" Grid.ColumnSpan="3" Margin="0,0,0,8" Width="260" HorizontalAlignment="Center"
+                Background="#0A0E18" BorderBrush="#1C2940" BorderThickness="1"
+                CornerRadius="10" Padding="12,10" Cursor="Hand"
+                MouseLeftButtonDown="TgProxyCard_Click">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18"
+                        Background="#0D1422" BorderBrush="#253553" BorderThickness="1"
+                        VerticalAlignment="Center" Margin="0,0,10,0">
+                    <TextBlock Text="&#xE907;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                               Foreground="#4D6BFE" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="TG Proxy" Foreground="#DCE4F0" FontSize="11.5" FontWeight="SemiBold" />
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                        <Ellipse Width="6" Height="6" VerticalAlignment="Center" Margin="0,0,5,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="#CC3030" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding TgProxyRunning}" Value="True">
+                                            <Setter Property="Fill" Value="#00D68F" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Foreground="#7E8DA5" FontSize="10">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Остановлен" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding TgProxyRunning}" Value="True">
+                                            <Setter Property="Text" Value="Работает" />
+                                            <Setter Property="Foreground" Value="#00D68F" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Text=" · " Foreground="#4B5870" FontSize="10" />
+                        <TextBlock Foreground="#66758E" FontSize="10">
+                            <Run Text="{Binding TgProxyHost, Mode=OneWay}" />
+                            <Run Text=":" />
+                            <Run Text="{Binding TgProxyPort, Mode=OneWay}" />
+                        </TextBlock>
+                    </StackPanel>
+                </StackPanel>
+                <Button Grid.Column="2" Width="30" Height="28" VerticalAlignment="Center"
+                        Cursor="Hand" ToolTip="Копировать ссылку"
+                        Click="CopyTgProxyLink_Click">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
-                            <Border x:Name="ButtonSurface" Background="Transparent" CornerRadius="76">
-                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <TextBlock Text="⏻" FontSize="48" Foreground="#55AAFF" HorizontalAlignment="Center" />
-                                    <TextBlock FontFamily="Segoe UI" FontSize="12" FontWeight="SemiBold"
-                                               HorizontalAlignment="Center" Margin="0,8,0,0">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text" Value="Запустить" />
-                                                <Setter Property="Foreground" Value="#DCE4F0" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                                        <Setter Property="Text" Value="Остановить" />
-                                                        <Setter Property="Foreground" Value="#00D68F" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </StackPanel>
+                            <Border Background="#0D1422" BorderBrush="#253553"
+                                    BorderThickness="1" CornerRadius="8">
+                                <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets"
+                                           FontSize="14" Foreground="#66758E"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="ButtonSurface" Property="Opacity" Value="0.85" />
-                                </Trigger>
-                            </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Button.Template>
                 </Button>
             </Grid>
+        </Border>
 
-            <StackPanel HorizontalAlignment="Center" Margin="0,12,0,0">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center">
-                        <Ellipse.Style>
-                            <Style TargetType="Ellipse">
-                                <Setter Property="Fill" Value="#CC3030" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                        <Setter Property="Fill" Value="#00D68F" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Ellipse.Style>
-                    </Ellipse>
-                    <TextBlock FontFamily="Segoe UI" FontSize="13" FontWeight="Medium">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Text" Value="Защита не активна" />
-                                <Setter Property="Foreground" Value="#8B949E" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                        <Setter Property="Text" Value="Защита активна" />
-                                        <Setter Property="Foreground" Value="#00D68F" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+        <!-- Row 2: Большие кнопки (только в расширенном режиме) -->
+        <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Margin="0,0,0,10" HorizontalAlignment="Center"
+                    Visibility="{Binding SimpleMode, Converter={StaticResource InvBool}}">
+            <Button Style="{StaticResource BigActionButton}" Width="240"
+                    Command="{Binding ScanProfilesCommand}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="15"
+                               Foreground="#4D6BFE" Margin="0,0,8,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Подобрать стратегию" VerticalAlignment="Center" />
                 </StackPanel>
-                <ToggleButton x:Name="ModeToggleButton"
-                              IsChecked="{Binding IsOpen, ElementName=ProtectionModePopup, Mode=TwoWay}"
-                              HorizontalAlignment="Center" Margin="0,8,0,0" Cursor="Hand"
-                              ToolTip="Изменить режим защиты и стратегию">
-                    <ToggleButton.Template>
-                        <ControlTemplate TargetType="ToggleButton">
-                            <Border x:Name="ModeSurface" Background="#0D1422" BorderBrush="#253553"
-                                    BorderThickness="1" CornerRadius="9" Padding="11,6">
-                                <StackPanel Orientation="Horizontal">
-                                    <Ellipse Width="6" Height="6" Fill="#4D6BFE" Margin="0,0,7,0" VerticalAlignment="Center" />
-                                    <TextBlock FontFamily="Segoe UI" FontSize="10.5" FontWeight="SemiBold"
-                                               Foreground="#A9B7CD" VerticalAlignment="Center">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text" Value="Автовыбор" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsManualProtectionMode}" Value="True">
-                                                        <Setter Property="Text" Value="Вручную" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                    <TextBlock Text=" · " Foreground="#4B5870" FontSize="10.5" />
-                                    <TextBlock Text="{Binding SelectedProfile.DisplayName, FallbackValue=Стратегия не выбрана}"
-                                               Foreground="#7E8DA5" FontFamily="Segoe UI" FontSize="10.5"
-                                               MaxWidth="150" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Text="⌄" Foreground="#66758E" FontSize="12" Margin="8,-1,0,0" />
-                                </StackPanel>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="ModeSurface" Property="Background" Value="#111A2B" />
-                                    <Setter TargetName="ModeSurface" Property="BorderBrush" Value="#405785" />
-                                </Trigger>
-                                <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="ModeSurface" Property="BorderBrush" Value="#4D6BFE" />
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </ToggleButton.Template>
-                </ToggleButton>
+            </Button>
+            <Button Style="{StaticResource BigActionButton}" Width="240" Margin="0,8,0,0"
+                    Command="{Binding RunAiEvolutionAsyncCommand}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="15"
+                               Foreground="#7755EE" Margin="0,0,8,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Сгенерировать стратегию" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
 
-                <!-- ═══ v1.8.0: TG Proxy карточка (под статусом) ═══ -->
-                <Border Margin="0,10,0,0" Width="260" HorizontalAlignment="Center"
-                        Background="#0A0E18" BorderBrush="#1C2940" BorderThickness="1"
-                        CornerRadius="10" Padding="12,10" Cursor="Hand"
-                        MouseLeftButtonDown="TgProxyCard_Click">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18"
-                                Background="#0D1422" BorderBrush="#253553" BorderThickness="1"
-                                VerticalAlignment="Center" Margin="0,0,10,0">
-                            <TextBlock Text="&#xE907;" FontFamily="Segoe MDL2 Assets" FontSize="16"
-                                       Foreground="#4D6BFE" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="TG Proxy" Foreground="#DCE4F0" FontSize="11.5" FontWeight="SemiBold" />
-                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                <Ellipse Width="6" Height="6" VerticalAlignment="Center" Margin="0,0,5,0">
-                                    <Ellipse.Style>
-                                        <Style TargetType="Ellipse">
-                                            <Setter Property="Fill" Value="#CC3030" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding TgProxyRunning}" Value="True">
-                                                    <Setter Property="Fill" Value="#00D68F" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Ellipse.Style>
-                                </Ellipse>
-                                <TextBlock Foreground="#7E8DA5" FontSize="10">
+        <!-- Row 3: Hero circle (центрируется в оставшемся пространстве) -->
+        <Grid Grid.Row="3" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center"
+              Width="200" Height="200">
+            <Ellipse Width="190" Height="190" Opacity="0.5">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#203060C0" Offset="0.45" />
+                        <GradientStop Color="#00000000" Offset="1" />
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+
+            <Ellipse x:Name="WaveRing1" Width="168" Height="168" Stroke="#55AAFF"
+                     StrokeThickness="12" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                <Ellipse.RenderTransform><ScaleTransform x:Name="WaveRing1Scale" /></Ellipse.RenderTransform>
+            </Ellipse>
+            <Ellipse x:Name="WaveRing2" Width="168" Height="168" Stroke="#7755EE"
+                     StrokeThickness="8" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                <Ellipse.RenderTransform><ScaleTransform x:Name="WaveRing2Scale" /></Ellipse.RenderTransform>
+            </Ellipse>
+            <Ellipse x:Name="WaveRing3" Width="168" Height="168" Stroke="#9933DD"
+                     StrokeThickness="4" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                <Ellipse.RenderTransform><ScaleTransform x:Name="WaveRing3Scale" /></Ellipse.RenderTransform>
+            </Ellipse>
+
+            <Ellipse Width="168" Height="168" StrokeThickness="3.5">
+                <Ellipse.Stroke>
+                    <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                        <GradientStop Color="#55AAFF" Offset="0" />
+                        <GradientStop Color="#7755EE" Offset="0.5" />
+                        <GradientStop Color="#9933DD" Offset="1" />
+                    </LinearGradientBrush>
+                </Ellipse.Stroke>
+            </Ellipse>
+            <Ellipse Width="152" Height="152" Fill="#10121E" Stroke="#18FFFFFF" />
+
+            <Button Width="152" Height="152" Command="{Binding MainActionCommand}" Cursor="Hand">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonSurface" Background="Transparent" CornerRadius="76">
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="⏻" FontSize="48" Foreground="#55AAFF" HorizontalAlignment="Center" />
+                                <TextBlock FontFamily="Segoe UI" FontSize="12" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" Margin="0,8,0,0">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
-                                            <Setter Property="Text" Value="Остановлен" />
+                                            <Setter Property="Text" Value="Запустить" />
+                                            <Setter Property="Foreground" Value="#DCE4F0" />
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding TgProxyRunning}" Value="True">
-                                                    <Setter Property="Text" Value="Работает" />
+                                                <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                                    <Setter Property="Text" Value="Остановить" />
                                                     <Setter Property="Foreground" Value="#00D68F" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
-                                <TextBlock Text=" · " Foreground="#4B5870" FontSize="10" />
-                                <TextBlock Foreground="#66758E" FontSize="10">
-                                    <Run Text="{Binding TgProxyHost, Mode=OneWay}" />
-                                    <Run Text=":" />
-                                    <Run Text="{Binding TgProxyPort, Mode=OneWay}" />
-                                </TextBlock>
                             </StackPanel>
-                        </StackPanel>
-                        <Button Grid.Column="2" Width="30" Height="28" VerticalAlignment="Center"
-                                Cursor="Hand" ToolTip="Копировать ссылку"
-                                Click="CopyTgProxyLink_Click">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border Background="#0D1422" BorderBrush="#253553"
-                                            BorderThickness="1" CornerRadius="8">
-                                        <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets"
-                                                   FontSize="14" Foreground="#66758E"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                    </Border>
-                                </ControlTemplate>
-                            </Button.Template>
-                        </Button>
-                    </Grid>
-                </Border>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonSurface" Property="Opacity" Value="0.85" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </Grid>
 
-                <!-- ═══ v1.8.0: Большие кнопки (видны в расширенном режиме) ═══ -->
-                <StackPanel x:Name="ExtendedButtonsPanel" Margin="0,14,0,0" HorizontalAlignment="Center"
-                            Visibility="{Binding SimpleMode, Converter={StaticResource InvBool}}">
-                    <Button Style="{StaticResource BigActionButton}" Width="240"
-                            Command="{Binding ScanProfilesCommand}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="15"
-                                       Foreground="#4D6BFE" Margin="0,0,8,0" VerticalAlignment="Center" />
-                            <TextBlock Text="Подобрать стратегию" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource BigActionButton}" Width="240" Margin="0,8,0,0"
-                            Command="{Binding RunAiEvolutionAsyncCommand}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="15"
-                                       Foreground="#7755EE" Margin="0,0,8,0" VerticalAlignment="Center" />
-                            <TextBlock Text="Сгенерировать стратегию" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-
-                <TextBlock HorizontalAlignment="Center" Margin="0,6,0,0" FontFamily="Segoe UI"
-                           FontSize="10" Foreground="#5D6B82">
-                    <Run Text="Аптайм  " />
-                    <Run Text="{Binding UptimeText}" Foreground="#8997AD" FontWeight="SemiBold" />
+        <!-- Row 4: Статус + режим + аптайм -->
+        <StackPanel Grid.Row="4" Grid.Column="0" HorizontalAlignment="Center" Margin="0,8,0,4">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center">
+                    <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                            <Setter Property="Fill" Value="#CC3030" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                    <Setter Property="Fill" Value="#00D68F" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Ellipse.Style>
+                </Ellipse>
+                <TextBlock FontFamily="Segoe UI" FontSize="13" FontWeight="Medium">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Text" Value="Защита не активна" />
+                            <Setter Property="Foreground" Value="#8B949E" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                    <Setter Property="Text" Value="Защита активна" />
+                                    <Setter Property="Foreground" Value="#00D68F" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
                 </TextBlock>
             </StackPanel>
+            <ToggleButton x:Name="ModeToggleButton"
+                          IsChecked="{Binding IsOpen, ElementName=ProtectionModePopup, Mode=TwoWay}"
+                          HorizontalAlignment="Center" Margin="0,6,0,0" Cursor="Hand"
+                          ToolTip="Изменить режим защиты и стратегию">
+                <ToggleButton.Template>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="ModeSurface" Background="#0D1422" BorderBrush="#253553"
+                                BorderThickness="1" CornerRadius="9" Padding="11,6">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="6" Height="6" Fill="#4D6BFE" Margin="0,0,7,0" VerticalAlignment="Center" />
+                                <TextBlock FontFamily="Segoe UI" FontSize="10.5" FontWeight="SemiBold"
+                                           Foreground="#A9B7CD" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="Автовыбор" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsManualProtectionMode}" Value="True">
+                                                    <Setter Property="Text" Value="Вручную" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Text=" · " Foreground="#4B5870" FontSize="10.5" />
+                                <TextBlock Text="{Binding SelectedProfile.DisplayName, FallbackValue=Стратегия не выбрана}"
+                                           Foreground="#7E8DA5" FontFamily="Segoe UI" FontSize="10.5"
+                                           MaxWidth="150" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="⌄" Foreground="#66758E" FontSize="12" Margin="8,-1,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ModeSurface" Property="Background" Value="#111A2B" />
+                                <Setter TargetName="ModeSurface" Property="BorderBrush" Value="#405785" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ModeSurface" Property="BorderBrush" Value="#4D6BFE" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </ToggleButton.Template>
+            </ToggleButton>
+            <TextBlock HorizontalAlignment="Center" Margin="0,4,0,0" FontFamily="Segoe UI"
+                       FontSize="10" Foreground="#5D6B82">
+                <Run Text="Аптайм  " />
+                <Run Text="{Binding UptimeText}" Foreground="#8997AD" FontWeight="SemiBold" />
+            </TextBlock>
         </StackPanel>
 
         <!-- Одинаковое всплывающее управление режимом -->
@@ -418,135 +416,127 @@
                PlacementTarget="{Binding ElementName=ModeToggleButton}"
                Placement="Right" HorizontalOffset="10" VerticalOffset="-132"
                AllowsTransparency="True" StaysOpen="False" PopupAnimation="Fade">
-        <Border x:Name="ProtectionModeCard"
-                Style="{StaticResource DashboardCard}"
-                Width="280"
-                Padding="8"
-                Background="#0B101B"
-                BorderBrush="#33466D">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-
-                <Grid Margin="6,2,6,8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <TextBlock Text="Режим защиты" Foreground="#DCE4F0" FontSize="11" FontWeight="SemiBold" />
-                        <TextBlock Text="Управление стратегией FluxRoute" Foreground="#55647D" FontSize="9.5" Margin="0,2,0,0" />
-                    </StackPanel>
-                    <Ellipse Grid.Column="1" Width="7" Height="7" Fill="#4D6BFE" VerticalAlignment="Center" Margin="20,0,0,0" />
-                </Grid>
-
-                <Border Grid.Row="1" Background="#0D1422" CornerRadius="10" Padding="2">
-                    <Grid>
+            <Border x:Name="ProtectionModeCard"
+                    Style="{StaticResource DashboardCard}"
+                    Width="280" Padding="8"
+                    Background="#0B101B" BorderBrush="#33466D">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid Margin="6,2,6,8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" HorizontalAlignment="Stretch" Command="{Binding SelectAutomaticProtectionModeCommand}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ProtectionModeSegment}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsAutomaticProtectionMode}" Value="True">
-                                            <Setter Property="Foreground" Value="#F3F6FF" />
-                                            <Setter Property="Background" Value="#26355F" />
-                                            <Setter Property="BorderBrush" Value="#4D6BFE" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="◈" FontSize="13" Margin="0,0,6,0" />
-                                <TextBlock Text="Автовыбор" FontSize="11" FontWeight="SemiBold" />
-                            </StackPanel>
-                        </Button>
-                        <Button Grid.Column="1" HorizontalAlignment="Stretch" Command="{Binding SelectManualProtectionModeCommand}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ProtectionModeSegment}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsManualProtectionMode}" Value="True">
-                                            <Setter Property="Foreground" Value="#F3F6FF" />
-                                            <Setter Property="Background" Value="#24233C" />
-                                            <Setter Property="BorderBrush" Value="#7755EE" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="≡" FontSize="15" Margin="0,0,6,0" />
-                                <TextBlock Text="Вручную" FontSize="11" FontWeight="SemiBold" />
-                            </StackPanel>
-                        </Button>
+                        <StackPanel>
+                            <TextBlock Text="Режим защиты" Foreground="#DCE4F0" FontSize="11" FontWeight="SemiBold" />
+                            <TextBlock Text="Управление стратегией FluxRoute" Foreground="#55647D" FontSize="9.5" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <Ellipse Grid.Column="1" Width="7" Height="7" Fill="#4D6BFE" VerticalAlignment="Center" Margin="20,0,0,0" />
                     </Grid>
-                </Border>
-
-                <StackPanel Grid.Row="2" Margin="4,8,4,2">
-                    <Grid Margin="2,0,2,5">
-                        <TextBlock Text="Стратегия" Foreground="#8997AD" FontSize="9.5" />
-                        <TextBlock HorizontalAlignment="Right" FontSize="9.5">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Text" Value="Выбор вручную" />
-                                    <Setter Property="Foreground" Value="#7755EE" />
+                    <Border Grid.Row="1" Background="#0D1422" CornerRadius="10" Padding="2">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" HorizontalAlignment="Stretch" Command="{Binding SelectAutomaticProtectionModeCommand}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ProtectionModeSegment}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsAutomaticProtectionMode}" Value="True">
+                                                <Setter Property="Foreground" Value="#F3F6FF" />
+                                                <Setter Property="Background" Value="#26355F" />
+                                                <Setter Property="BorderBrush" Value="#4D6BFE" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="◈" FontSize="13" Margin="0,0,6,0" />
+                                    <TextBlock Text="Автовыбор" FontSize="11" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="1" HorizontalAlignment="Stretch" Command="{Binding SelectManualProtectionModeCommand}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ProtectionModeSegment}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsManualProtectionMode}" Value="True">
+                                                <Setter Property="Foreground" Value="#F3F6FF" />
+                                                <Setter Property="Background" Value="#24233C" />
+                                                <Setter Property="BorderBrush" Value="#7755EE" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="≡" FontSize="15" Margin="0,0,6,0" />
+                                    <TextBlock Text="Вручную" FontSize="11" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+                    <StackPanel Grid.Row="2" Margin="4,8,4,2">
+                        <Grid Margin="2,0,2,5">
+                            <TextBlock Text="Стратегия" Foreground="#8997AD" FontSize="9.5" />
+                            <TextBlock HorizontalAlignment="Right" FontSize="9.5">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="Выбор вручную" />
+                                        <Setter Property="Foreground" Value="#7755EE" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsAutomaticProtectionMode}" Value="True">
+                                                <Setter Property="Text" Value="Управляет оркестратор" />
+                                                <Setter Property="Foreground" Value="#4B5870" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                        <ComboBox ItemsSource="{Binding Profiles}"
+                                  SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
+                                  IsEnabled="{Binding IsManualProtectionMode}"
+                                  Height="31" HorizontalAlignment="Stretch"
+                                  ToolTip="В режиме «Вручную» можно выбрать стратегию запуска">
+                            <ComboBox.Style>
+                                <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                                    <Setter Property="Background" Value="#111827" />
+                                    <Setter Property="Foreground" Value="#DCE4F0" />
+                                    <Setter Property="BorderBrush" Value="#3B4A65" />
+                                    <Setter Property="BorderThickness" Value="1" />
+                                    <Setter Property="Opacity" Value="1" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsAutomaticProtectionMode}" Value="True">
-                                            <Setter Property="Text" Value="Управляет оркестратор" />
-                                            <Setter Property="Foreground" Value="#4B5870" />
-                                        </DataTrigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Background" Value="#151D2B" />
+                                            <Setter Property="Foreground" Value="#95A2B5" />
+                                            <Setter Property="BorderBrush" Value="#566680" />
+                                            <Setter Property="Opacity" Value="1" />
+                                        </Trigger>
                                     </Style.Triggers>
                                 </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </Grid>
-                    <ComboBox ItemsSource="{Binding Profiles}"
-                              SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
-                              IsEnabled="{Binding IsManualProtectionMode}"
-                              Height="31"
-                              HorizontalAlignment="Stretch"
-                              ToolTip="В режиме «Вручную» можно выбрать стратегию запуска">
-                        <ComboBox.Style>
-                            <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
-                                <Setter Property="Background" Value="#111827" />
-                                <Setter Property="Foreground" Value="#DCE4F0" />
-                                <Setter Property="BorderBrush" Value="#3B4A65" />
-                                <Setter Property="BorderThickness" Value="1" />
-                                <Setter Property="Opacity" Value="1" />
-                                <Style.Triggers>
-                                    <Trigger Property="IsEnabled" Value="False">
-                                        <Setter Property="Background" Value="#151D2B" />
-                                        <Setter Property="Foreground" Value="#95A2B5" />
-                                        <Setter Property="BorderBrush" Value="#566680" />
-                                        <Setter Property="Opacity" Value="1" />
-                                        <Setter Property="ToolTip" Value="Стратегию выбирает оркестратор. Переключитесь на «Вручную», чтобы изменить её." />
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ComboBox.Style>
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding DisplayName}" Foreground="#DCE4F0" FontSize="12" TextTrimming="CharacterEllipsis" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </StackPanel>
-            </Grid>
-        </Border>
+                            </ComboBox.Style>
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding DisplayName}" Foreground="#DCE4F0" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                </Grid>
+            </Border>
         </Popup>
 
         <!-- В широком режиме справа появляется оперативная сводка служб -->
         <Border x:Name="ServicesCard"
-                Grid.Row="1" Grid.Column="2"
+                Grid.Row="3" Grid.RowSpan="2" Grid.Column="2"
                 Style="{StaticResource DashboardCard}"
                 Margin="0,0,0,174"
                 VerticalAlignment="Stretch"
-                Visibility="Collapsed"
-                Opacity="0">
+                Visibility="Collapsed" Opacity="0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -594,10 +584,10 @@
             </Grid>
         </Border>
 
-        <!-- Compact: под Hero расположен ряд из профиля, служб и сети -->
+        <!-- Compact: под Hero ряд из профиля, служб и сети -->
         <Grid x:Name="CompactSummaryPanel"
-              Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
-              Margin="0,12,0,0">
+              Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3"
+              Margin="0,8,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="12" />
@@ -627,23 +617,19 @@
             </Border>
         </Grid>
 
-        <!-- Wide: мини-монитор располагается в правой колонке под активными службами -->
+        <!-- Wide: мини-монитор -->
         <Border x:Name="MetricsCard"
-                Grid.Row="1" Grid.Column="2"
+                Grid.Row="3" Grid.RowSpan="2" Grid.Column="2"
                 Style="{StaticResource DashboardCard}"
                 Padding="8"
                 HorizontalAlignment="Stretch"
-                VerticalAlignment="Bottom"
-                Margin="0">
+                VerticalAlignment="Bottom" Margin="0">
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="6" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="6" />
+                    <RowDefinition Height="Auto" /><RowDefinition Height="6" />
+                    <RowDefinition Height="Auto" /><RowDefinition Height="6" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-
                 <Border Grid.Row="0" Background="#0D1422" BorderBrush="#1C2940"
                         BorderThickness="1" CornerRadius="8" Padding="10,7">
                     <Grid>
@@ -652,7 +638,6 @@
                                    HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0" />
                     </Grid>
                 </Border>
-
                 <Border Grid.Row="2" Background="#0D1422" BorderBrush="#1C2940"
                         BorderThickness="1" CornerRadius="8" Padding="10,7">
                     <Grid>
@@ -661,7 +646,6 @@
                                    HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0" />
                     </Grid>
                 </Border>
-
                 <Border Grid.Row="4" Background="#0D1422" BorderBrush="#1C2940"
                         BorderThickness="1" CornerRadius="8" Padding="10,7">
                     <Grid>

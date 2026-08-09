@@ -56,7 +56,7 @@ public partial class HostlistsViewModel : ObservableObject
         }
 
         var knownFiles = new[] { "list-general.txt", "list-exclude.txt", "list-google.txt",
-            "list-discord.txt", "list-youtube.txt" };
+            "list-discord.txt", "list-youtube.txt", "list-general-user.txt", "list-exclude-user.txt" };
         var knownSet = new HashSet<string>(knownFiles, StringComparer.OrdinalIgnoreCase);
 
         // Сначала известные файлы
@@ -84,6 +84,16 @@ public partial class HostlistsViewModel : ObservableObject
                 IsCustom = true
             });
         }
+
+        // ═══ v1.8.1: Системный файл hosts ═══
+        var systemHostsPath = @"C:\Windows\System32\drivers\etc\hosts";
+        Files.Add(new HostlistFileItem
+        {
+            FileName = "hosts (системный)",
+            FullPath = systemHostsPath,
+            Exists = File.Exists(systemHostsPath),
+            IsSystemHosts = true
+        });
 
         StatusText = $"Найдено файлов: {Files.Count}";
     }
@@ -189,7 +199,11 @@ public sealed class HostlistFileItem
     public string FullPath { get; set; } = string.Empty;
     public bool Exists { get; set; }
     public bool IsCustom { get; set; }
+    // ═══ v1.8.1: Флаг системного файла hosts ═══
+    public bool IsSystemHosts { get; set; }
 
-    public string DisplayText => $"{(Exists ? "◉" : "○")} {FileName}";
-    public string DisplayTooltip => FullPath;
+    public string DisplayText => $"{(Exists ? "◉" : "○")} {FileName}{(IsSystemHosts ? " 🔒" : "")}";
+    public string DisplayTooltip => IsSystemHosts
+        ? $"{FullPath}\nТребуются права администратора для сохранения"
+        : FullPath;
 }
