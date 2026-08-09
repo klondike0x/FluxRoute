@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -38,13 +38,56 @@ public partial class HomePage : System.Windows.Controls.UserControl
 
     public void ApplyLayout(HomeLayoutMode mode)
     {
-        var spec = AdaptiveHomeLayout.GetSpec(mode);
+        bool wide = mode == HomeLayoutMode.Wide;
+        MainDetailsColumn.Width = new GridLength(wide ? 280 : 228);
 
-        // Правая панель (TG Proxy + кнопки + статусы) всегда видна в DetailsColumn.
-        // В компактном режиме скрываем сводку под hero, чтобы не дублировать статусы.
-        CompactSummaryPanel.Visibility = spec.ShowCompactSummaryCards
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        // In the compact window, move the proxy and strategy actions below the hero.
+        if (wide)
+        {
+            CompactBottomPanel.Visibility = Visibility.Collapsed;
+            PlaceIn(DetailsPanel, TgProxyCard, 0);
+            PlaceIn(DetailsPanel, StrategyActionsPanel, 1);
+        }
+        else
+        {
+            PlaceIn(CompactBottomPanel, TgProxyCard);
+            PlaceIn(CompactBottomPanel, StrategyActionsPanel);
+            CompactBottomPanel.Visibility = Visibility.Visible;
+        }
+
+        var heroScale = wide ? 1.0 : 0.86;
+        HeroScaleTransform.ScaleX = heroScale;
+        HeroScaleTransform.ScaleY = heroScale;
+
+        // Keep the right-side controls at their normal size in both modes.
+        DetailsScaleTransform.ScaleX = 1.0;
+        DetailsScaleTransform.ScaleY = 1.0;
+        NetworkCard.Padding = wide
+            ? new Thickness(14, 11, 14, 11)
+            : new Thickness(10, 8, 10, 8);
+        NetworkCard.Margin = wide
+            ? new Thickness(0, 10, 0, 0)
+            : new Thickness(0, 6, 0, 0);
+        OrchestratorCard.Padding = wide
+            ? new Thickness(16, 14, 16, 14)
+            : new Thickness(12, 10, 12, 10);
+        OrchestratorCard.Margin = wide
+            ? new Thickness(0, 10, 0, 0)
+            : new Thickness(0, 6, 0, 0);
+        DetailsScrollViewer.VerticalScrollBarVisibility = wide
+            ? ScrollBarVisibility.Auto
+            : ScrollBarVisibility.Disabled;
+    }
+
+    private static void PlaceIn(System.Windows.Controls.Panel target, FrameworkElement element, int index = -1)
+    {
+        if (element.Parent is System.Windows.Controls.Panel currentParent)
+            currentParent.Children.Remove(element);
+
+        if (index < 0 || index > target.Children.Count)
+            target.Children.Add(element);
+        else
+            target.Children.Insert(index, element);
     }
 
     public void PlayWave(bool outward, double strength, int duration)

@@ -76,12 +76,7 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bg" Background="#0D1422" BorderBrush="#253553"
                                 BorderThickness="1" CornerRadius="14" Padding="12,3">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="Icon" Text="&#xE7C6;" FontFamily="Segoe MDL2 Assets"
-                                           FontSize="12" Foreground="#66758E" Margin="0,0,6,0" VerticalAlignment="Center" />
-                                <TextBlock x:Name="Label" Text="Простой" Foreground="#8997AD"
-                                           FontSize="10.5" FontWeight="SemiBold" VerticalAlignment="Center" />
-                            </StackPanel>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -121,34 +116,35 @@
         </Style>
     </UserControl.Resources>
 
-    <!-- ═══ v1.8.1: Сетка: hero слева, панель управления справа ═══ -->
+    <!-- Основной контент слева, оркестратор справа -->
     <Grid x:Name="LayoutRoot" Margin="24">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition x:Name="HeroColumn" Width="*" />
-            <ColumnDefinition x:Name="WideGapColumn" Width="24" />
-            <ColumnDefinition x:Name="DetailsColumn" Width="300" />
+            <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />   <!-- 0: Mode toggle -->
-            <RowDefinition Height="*" />       <!-- 1: Hero (слева) + RightPanel (справа) -->
-            <RowDefinition Height="Auto" />    <!-- 2: Compact summary (профиль/службы/сеть) -->
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Row 0: Переключатель Простой/Расширенный -->
-        <Border Grid.Row="0" Grid.ColumnSpan="3" HorizontalAlignment="Center" Margin="0,0,0,8">
+        <!-- Переключатель Простой/Расширенный -->
+        <Border Grid.Row="0" Grid.Column="0" HorizontalAlignment="Left" Margin="0,0,0,8">
             <Button Style="{StaticResource ModeToggleBtn}" Command="{Binding ToggleSimpleModeCommand}">
                 <Button.Resources>
-                    <Style TargetType="TextBlock" x:Key="ModeIconStyle">
-                        <Setter Property="Text" Value="&#xE7C6;" />
-                        <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
-                        <Setter Property="FontSize" Value="12" />
-                        <Setter Property="Foreground" Value="#66758E" />
+                    <Style TargetType="Path" x:Key="ModeIconStyle">
+                        <Setter Property="Data" Value="M2,4 H10 M8,2 L10,4 L8,6 M10,8 H2 M4,6 L2,8 L4,10" />
+                        <Setter Property="Stroke" Value="#66758E" />
+                        <Setter Property="StrokeThickness" Value="1.35" />
+                        <Setter Property="StrokeStartLineCap" Value="Round" />
+                        <Setter Property="StrokeEndLineCap" Value="Round" />
+                        <Setter Property="StrokeLineJoin" Value="Round" />
+                        <Setter Property="Width" Value="13" />
+                        <Setter Property="Height" Value="13" />
+                        <Setter Property="Stretch" Value="Uniform" />
                         <Setter Property="Margin" Value="0,0,6,0" />
                         <Setter Property="VerticalAlignment" Value="Center" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding SimpleMode}" Value="False">
-                                <Setter Property="Text" Value="&#xE946;" />
-                                <Setter Property="Foreground" Value="#4D6BFE" />
+                                <Setter Property="Stroke" Value="#4D6BFE" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -166,12 +162,28 @@
                         </Style.Triggers>
                     </Style>
                 </Button.Resources>
+                <StackPanel Orientation="Horizontal">
+                    <Path Style="{StaticResource ModeIconStyle}" />
+                    <TextBlock Style="{StaticResource ModeLabelStyle}" />
+                </StackPanel>
             </Button>
         </Border>
 
-        <!-- Row 1: Левая колонка — hero круг + статус + режим -->
-        <StackPanel Grid.Row="1" Grid.Column="0"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Grid Grid.Row="1" Grid.Column="0" Margin="0,0,16,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition x:Name="MainDetailsColumn" Width="228" />
+            </Grid.ColumnDefinitions>
+
+        <!-- Запуск, статус и выбранная стратегия -->
+        <StackPanel x:Name="HeroPanel" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <StackPanel.LayoutTransform>
+                <ScaleTransform x:Name="HeroScaleTransform" ScaleX="1" ScaleY="1" />
+            </StackPanel.LayoutTransform>
             <Grid Width="200" Height="200" HorizontalAlignment="Center">
                 <Ellipse Width="190" Height="190" Opacity="0.5">
                     <Ellipse.Fill>
@@ -318,12 +330,21 @@
             </StackPanel>
         </StackPanel>
 
-        <!-- Row 1: Правая колонка — TG Proxy + кнопки + статусы служб -->
-        <StackPanel Grid.Row="1" Grid.Column="2" VerticalAlignment="Center">
+        <!-- Compact bottom section for the minimal window -->
+        <StackPanel x:Name="CompactBottomPanel" Grid.Row="1" Grid.Column="0"
+                    Margin="0,8,16,8" Visibility="Collapsed" />
+        <!-- TG Proxy, действия со стратегиями и сетевые графики -->
+        <ScrollViewer x:Name="DetailsScrollViewer" Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                      VerticalAlignment="Stretch"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel x:Name="DetailsPanel" VerticalAlignment="Center">
+                <StackPanel.LayoutTransform>
+                    <ScaleTransform x:Name="DetailsScaleTransform" ScaleX="1" ScaleY="1" />
+                </StackPanel.LayoutTransform>
 
             <!-- TG Proxy карточка -->
-            <Border Background="#0A0E18" BorderBrush="#1C2940" BorderThickness="1"
-                    CornerRadius="10" Padding="12,10" Cursor="Hand"
+            <Border x:Name="TgProxyCard" Background="#0A0E18" BorderBrush="#1C2940" BorderThickness="1" CornerRadius="10" Padding="12,10" Cursor="Hand"
                     MouseLeftButtonDown="TgProxyCard_Click">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -391,8 +412,7 @@
             </Border>
 
             <!-- Большие кнопки (только в расширенном режиме) -->
-            <StackPanel Margin="0,10,0,0"
-                        Visibility="{Binding SimpleMode, Converter={StaticResource InvBool}}">
+            <StackPanel x:Name="StrategyActionsPanel" Margin="0,10,0,0" Visibility="{Binding SimpleMode, Converter={StaticResource InvBool}}">
                 <Button Style="{StaticResource BigActionButton}" HorizontalAlignment="Stretch"
                         Command="{Binding ScanProfilesCommand}">
                     <StackPanel Orientation="Horizontal">
@@ -411,8 +431,8 @@
                 </Button>
             </StackPanel>
 
-            <!-- ═══ v1.8.1: Блок «СЕТЬ»: крупные скорости ↓/↑ + пинг (справа снизу) ═══ -->
-            <Border Style="{StaticResource DashboardCard}" Margin="0,10,0,0">
+            <!-- Сетевые графики -->
+            <Border x:Name="NetworkCard" Style="{StaticResource DashboardCard}" Margin="0,10,0,0">
                 <StackPanel>
                     <Grid Margin="0,0,0,8">
                         <TextBlock Text="СЕТЬ" Style="{StaticResource MetricLabel}" VerticalAlignment="Center" />
@@ -456,17 +476,106 @@
                         </Border>
                     </Grid>
 
-                    <Border Background="#0D1422" BorderBrush="#1C2940" BorderThickness="1"
-                            CornerRadius="8" Padding="10,7" Margin="0,8,0,0">
-                        <Grid>
-                            <TextBlock Style="{StaticResource MetricLabel}" Text="АКТИВНЫЕ СЛУЖБЫ" VerticalAlignment="Center" />
-                            <TextBlock Style="{StaticResource MetricValue}" Text="{Binding ActiveServicesSummary}"
-                                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0" />
-                        </Grid>
-                    </Border>
                 </StackPanel>
             </Border>
+        <!-- Компактное управление оркестратором -->
+        <Border x:Name="OrchestratorCard" Margin="0,10,0,0" Style="{StaticResource DashboardCard}" VerticalAlignment="Center" Padding="16,14">
+            <StackPanel>
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="ОРКЕСТРАТОР" Style="{StaticResource MetricLabel}"
+                               FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse Width="7" Height="7" Margin="0,0,6,0" VerticalAlignment="Center">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="#CC3030" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding OrchestratorRunning}" Value="True">
+                                            <Setter Property="Fill" Value="#00D68F" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock FontSize="10" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Остановлен" />
+                                    <Setter Property="Foreground" Value="#7E8DA5" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding OrchestratorRunning}" Value="True">
+                                            <Setter Property="Text" Value="Работает" />
+                                            <Setter Property="Foreground" Value="#00D68F" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Grid>
+
+                <Border Background="#0D1422" BorderBrush="#1C2940" BorderThickness="1"
+                        CornerRadius="8" Padding="10,8" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="ПОСЛЕДНЕЕ СОБЫТИЕ" Style="{StaticResource MetricLabel}" />
+                        <TextBlock Text="{Binding OrchestratorStatus, Mode=OneWay, FallbackValue=Нет данных}"
+                                   Foreground="#A9B7CD" FontSize="10.5" Margin="0,4,0,0"
+                                   TextWrapping="Wrap" MaxHeight="36" />
+                    </StackPanel>
+                </Border>
+
+                <Button Command="{Binding ToggleOrchestratorCommand}" HorizontalAlignment="Stretch">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource BigActionButton}">
+                            <Setter Property="Content" Value="Запустить оркестратор" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding OrchestratorRunning}" Value="True">
+                                    <Setter Property="Content" Value="Остановить оркестратор" />
+                                    <Setter Property="Foreground" Value="#00D68F" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <Grid Margin="0,12,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="64" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="ИНТЕРВАЛ ПРОВЕРКИ" Style="{StaticResource MetricLabel}" />
+                        <TextBlock Text="минуты" Foreground="#4B5870" FontSize="9.5" Margin="0,2,0,0" />
+                    </StackPanel>
+                    <TextBox Grid.Column="1"
+                             Text="{Binding OrchestratorInterval, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Height="32" Padding="8,0" VerticalContentAlignment="Center"
+                             HorizontalContentAlignment="Center" />
+                </Grid>
+
+                <TextBlock Text="САЙТЫ ДЛЯ ПРОВЕРКИ" Style="{StaticResource MetricLabel}" Margin="0,0,0,5" />
+                <WrapPanel Margin="0,0,0,8">
+                    <CheckBox Content="YouTube" IsChecked="{Binding SiteYouTube, Mode=TwoWay}"
+                              Margin="0,4,12,4" />
+                    <CheckBox Content="Discord" IsChecked="{Binding SiteDiscord, Mode=TwoWay}"
+                              Margin="0,4,12,4" />
+                    <CheckBox Content="Google" IsChecked="{Binding SiteGoogle, Mode=TwoWay}"
+                              Margin="0,4,12,4" />
+                </WrapPanel>
+
+                <Button Content="Проверить сейчас"
+                        Style="{StaticResource BigActionButton}"
+                        Height="38" HorizontalAlignment="Stretch"
+                        Command="{Binding CheckNowCommand}" />
+            </StackPanel>
+        </Border>
         </StackPanel>
+        </ScrollViewer>
+        </Grid>
 
         <!-- Всплывающее управление режимом -->
         <Popup x:Name="ProtectionModePopup"
@@ -587,37 +696,5 @@
             </Border>
         </Popup>
 
-        <!-- Compact: под Hero ряд из профиля, служб и сети -->
-        <Grid x:Name="CompactSummaryPanel"
-              Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
-              Margin="0,8,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="12" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="12" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Style="{StaticResource DashboardCard}" Padding="12,10">
-                <StackPanel>
-                    <TextBlock Text="ПРОФИЛЬ" Style="{StaticResource MetricLabel}" />
-                    <TextBlock Text="{Binding SelectedProfile.DisplayName, FallbackValue=Не выбран}"
-                               Style="{StaticResource MetricValue}" TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-            </Border>
-            <Border Grid.Column="2" Style="{StaticResource DashboardCard}" Padding="12,10">
-                <StackPanel>
-                    <TextBlock Text="СЛУЖБЫ" Style="{StaticResource MetricLabel}" />
-                    <TextBlock Text="{Binding ActiveServicesSummary}" Style="{StaticResource MetricValue}" />
-                </StackPanel>
-            </Border>
-            <Border Grid.Column="4" Style="{StaticResource DashboardCard}" Padding="12,10">
-                <StackPanel>
-                    <TextBlock Text="СЕТЬ / ПИНГ" Style="{StaticResource MetricLabel}" />
-                    <TextBlock Text="{Binding CompactNetworkSummary}" Style="{StaticResource MetricValue}"
-                               TextWrapping="Wrap" LineHeight="17" />
-                </StackPanel>
-            </Border>
-        </Grid>
     </Grid>
 </UserControl>

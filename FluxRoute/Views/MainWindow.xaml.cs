@@ -160,7 +160,7 @@ public partial class MainWindow : Window
         _logger?.LogInformation("Main window initialized.");
     }
 
-    private void ApplyStartupWindowSize()
+    private void ApplyStartupWindowSize(bool centerWindow = false)
     {
         var workArea = SystemParameters.WorkArea;
         var size = StartupWindowLayout.FitToWorkArea(
@@ -168,8 +168,24 @@ public partial class MainWindow : Window
             workArea.Width,
             workArea.Height);
 
+        // Apply the selected startup profile to the already opened window.
+        var previousWidth = ActualWidth > 0 ? ActualWidth : Width;
+        var previousHeight = ActualHeight > 0 ? ActualHeight : Height;
+        var previousCenterX = double.IsNaN(Left) ? double.NaN : Left + previousWidth / 2;
+        var previousCenterY = double.IsNaN(Top) ? double.NaN : Top + previousHeight / 2;
+
+        if (centerWindow && WindowState == WindowState.Maximized)
+            WindowState = WindowState.Normal;
+
         Width = size.Width;
         Height = size.Height;
+
+        if (!centerWindow || double.IsNaN(previousCenterX) || double.IsNaN(previousCenterY))
+            return;
+
+        // Keep the current center so switching modes does not jump the window.
+        Left = previousCenterX - Width / 2;
+        Top = previousCenterY - Height / 2;
     }
 
     private void OnProfileSwitched(object? sender, string profileName)
@@ -325,6 +341,11 @@ public partial class MainWindow : Window
         if (e.PropertyName == nameof(MainViewModel.SelectedTabIndex))
         {
             SidebarControl.AnimateNavIndicator(_vm.SelectedTabIndex);
+        }
+
+        if (e.PropertyName == nameof(MainViewModel.StartupWindowMode))
+        {
+            ApplyStartupWindowSize(centerWindow: true);
         }
 
         if (e.PropertyName == nameof(MainViewModel.IsSidebarExpanded))

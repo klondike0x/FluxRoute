@@ -528,7 +528,16 @@ public partial class MainViewModel : ObservableObject
 
     // ═══ v1.8.0: UI-Redesign — простой/расширенный режим ═══
     [ObservableProperty] private bool simpleMode;
-    partial void OnSimpleModeChanged(bool value) { SaveSettings(); OnPropertyChanged(nameof(IsSimpleMode)); }
+    partial void OnSimpleModeChanged(bool value)
+    {
+        // В простом режиме доступны только Главная и Настройки.
+        // Если пользователь был на расширенной вкладке, возвращаем его на главный экран.
+        if (value && SelectedTabIndex is > 0 and not 7)
+            SelectedTabIndex = 0;
+
+        SaveSettings();
+        OnPropertyChanged(nameof(IsSimpleMode));
+    }
     public bool IsSimpleMode => SimpleMode;
     [RelayCommand]
     private void ToggleSimpleMode() => SimpleMode = !SimpleMode;
@@ -711,6 +720,11 @@ public partial class MainViewModel : ObservableObject
     private readonly IConnectivityChecker _connectivity;
     private bool _settingsLoaded = false;
     private bool _suppressOrchestratorStop = false;
+    // Значения, которые выбираются в онбординге до создания MainViewModel.
+    // Их нужно сохранять в каждом снимке настроек, иначе первый SaveSettings()
+    // после запуска сбросит FirstRunComplete обратно в false.
+    private bool _firstRunComplete;
+    private string _selectedComponent = "zapret";
 
     // ── Обновления ──
     [ObservableProperty] private bool autoUpdateEnabled = false;
@@ -1125,6 +1139,8 @@ public partial class MainViewModel : ObservableObject
     // ── Настройки ──
     private void ApplySettings(AppSettings settings)
     {
+        _firstRunComplete = settings.FirstRunComplete;
+        _selectedComponent = settings.SelectedComponent;
         OrchestratorInterval = settings.OrchestratorInterval;
         OrchestratorEnabled = settings.OrchestratorEnabled;
         SiteYouTube = settings.SiteYouTube;
@@ -1211,6 +1227,8 @@ public partial class MainViewModel : ObservableObject
         var settings = new AppSettings
         {
             LastProfileFileName = SelectedProfile?.FileName,
+            SelectedComponent = _selectedComponent,
+            FirstRunComplete = _firstRunComplete,
             DefaultProfileFileName = DefaultProfileFileName, // Дефолтный профиль для триггеров
             OrchestratorInterval = OrchestratorInterval,
             OrchestratorEnabled = OrchestratorEnabled,
@@ -1275,7 +1293,14 @@ public partial class MainViewModel : ObservableObject
 
     // ── UI-команды ──
     [RelayCommand]
-    private void SelectTab(string index) => SelectedTabIndex = int.Parse(index);
+    private void SelectTab(string index)
+    {
+        var selectedIndex = int.Parse(index);
+        if (SimpleMode && selectedIndex is > 0 and not 7)
+            return;
+
+        SelectedTabIndex = selectedIndex;
+    }
 
     [RelayCommand]
     private void OpenEngineFolder()

@@ -102,6 +102,16 @@ public partial class App : Application
             // ═══ v1.8.0: Онбординг при первом запуске ═══
             var settingsService = _host.Services.GetRequiredService<ISettingsService>();
             var settings = settingsService.Load();
+
+            // Миграция старых установок: профиль уже был выбран, но ранняя версия
+            // не сохраняла FirstRunComplete при последующих изменениях настроек.
+            if (!settings.FirstRunComplete && !string.IsNullOrWhiteSpace(settings.LastProfileFileName))
+            {
+                settings.FirstRunComplete = true;
+                settingsService.Save(settings);
+                Log.Information("Онбординг восстановлен как завершённый для существующей установки.");
+            }
+
             if (!settings.FirstRunComplete)
             {
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
