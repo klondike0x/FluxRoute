@@ -70,7 +70,7 @@
                                 </ToggleButton.Template>
                             </ToggleButton>
                             <!-- ContentPresenter на уровне шаблона ComboBox: TemplateBinding работает,
-                                 SelectionBoxItemTemplate из DisplayMemberPath применяется корректно -->
+                                 SelectionBoxItemTemplate из ItemTemplate применяется корректно -->
                             <ContentPresenter Content="{TemplateBinding SelectionBoxItem}"
                                               ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                               ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
