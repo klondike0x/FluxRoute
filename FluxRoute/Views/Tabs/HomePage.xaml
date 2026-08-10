@@ -54,7 +54,7 @@
         </Style>
 
         <Style x:Key="MetricLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#66758E" />
+            <Setter Property="Foreground" Value="#7E8DA5" />
             <Setter Property="FontFamily" Value="Segoe UI" />
             <Setter Property="FontSize" Value="10" />
         </Style>
@@ -168,7 +168,19 @@
                 </StackPanel>
             </Button>
         </Border>
-
+                <StackPanel Grid.Row="0" Grid.Column="0" HorizontalAlignment="Right" Margin="0,0,16,8">
+            <Border Grid.Row="0" Grid.Column="0" HorizontalAlignment="Right" Margin="0"
+                Background="#0A0E18" BorderBrush="#253553" BorderThickness="1" CornerRadius="14" Padding="10,4">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Движок" Foreground="#66758E" FontSize="10" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <ComboBox ItemsSource="{Binding ComponentOptions}"
+                          SelectedItem="{Binding SelectedComponentDisplayName, Mode=TwoWay}"
+                          Width="128" Height="24"
+                          Background="#0D1422" Foreground="#DCE4F0"
+                          BorderBrush="#304466" />
+            </StackPanel>
+        </Border>
+        </StackPanel>
         <Grid Grid.Row="1" Grid.Column="0" Margin="0,0,16,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
@@ -235,7 +247,17 @@
                                                         <Setter Property="Text" Value="Остановить" />
                                                         <Setter Property="Foreground" Value="#00D68F" />
                                                     </DataTrigger>
-                                                </Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsZapret2Selected}" Value="True">
+                        <Setter Property="Text" Value="{Binding Zapret2StatusText}" />
+                        <Setter Property="Foreground" Value="#FFB84D" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Zapret2Status.Status}" Value="Healthy"><Setter Property="Foreground" Value="#00D68F" /></DataTrigger>
+                    <DataTrigger Binding="{Binding Zapret2Status.Status}" Value="Starting"><Setter Property="Foreground" Value="#55AAFF" /></DataTrigger>
+                    <DataTrigger Binding="{Binding Zapret2Status.Status}" Value="Degraded"><Setter Property="Foreground" Value="#FFD166" /></DataTrigger>
+                    <DataTrigger Binding="{Binding Zapret2Status.Status}" Value="Error"><Setter Property="Foreground" Value="#FF5A67" /></DataTrigger>
+                    <DataTrigger Binding="{Binding Zapret2Status.Status}" Value="Stopped"><Setter Property="Foreground" Value="#8997AD" /></DataTrigger>
+                    <DataTrigger Binding="{Binding Zapret2Status.Status}" Value="Repairing"><Setter Property="Foreground" Value="#FF9F43" /></DataTrigger>
+</Style.Triggers>
                                             </Style>
                                         </TextBlock.Style>
                                     </TextBlock>
@@ -253,78 +275,16 @@
 
             <StackPanel HorizontalAlignment="Center" Margin="0,12,0,0">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center">
-                        <Ellipse.Style>
-                            <Style TargetType="Ellipse">
-                                <Setter Property="Fill" Value="#CC3030" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                        <Setter Property="Fill" Value="#00D68F" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Ellipse.Style>
-                    </Ellipse>
-                    <TextBlock FontFamily="Segoe UI" FontSize="13" FontWeight="Medium">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Text" Value="Защита не активна" />
-                                <Setter Property="Foreground" Value="#8B949E" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                        <Setter Property="Text" Value="Защита активна" />
-                                        <Setter Property="Foreground" Value="#00D68F" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+                                        <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center" Fill="{Binding MainStatusBrush}" />
+                                        <TextBlock Text="{Binding MainStatusText}"
+                               Foreground="{Binding MainStatusBrush}"
+                               FontFamily="Segoe UI" FontSize="13" FontWeight="Medium"
+                               HorizontalAlignment="Center" />
                 </StackPanel>
-                <ToggleButton x:Name="ModeToggleButton"
-                              IsChecked="{Binding IsOpen, ElementName=ProtectionModePopup, Mode=TwoWay}"
-                              HorizontalAlignment="Center" Margin="0,6,0,0" Cursor="Hand"
-                              ToolTip="Изменить режим защиты и стратегию">
-                    <ToggleButton.Template>
-                        <ControlTemplate TargetType="ToggleButton">
-                            <Border x:Name="ModeSurface" Background="#0D1422" BorderBrush="#253553"
-                                    BorderThickness="1" CornerRadius="9" Padding="11,6">
-                                <StackPanel Orientation="Horizontal">
-                                    <Ellipse Width="6" Height="6" Fill="#4D6BFE" Margin="0,0,7,0" VerticalAlignment="Center" />
-                                    <TextBlock FontFamily="Segoe UI" FontSize="10.5" FontWeight="SemiBold"
-                                               Foreground="#A9B7CD" VerticalAlignment="Center">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text" Value="Автовыбор" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsManualProtectionMode}" Value="True">
-                                                        <Setter Property="Text" Value="Вручную" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                    <TextBlock Text=" · " Foreground="#4B5870" FontSize="10.5" />
-                                    <TextBlock Text="{Binding SelectedProfile.DisplayName, FallbackValue=Стратегия не выбрана}"
-                                               Foreground="#7E8DA5" FontFamily="Segoe UI" FontSize="10.5"
-                                               MaxWidth="150" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Text="⌄" Foreground="#66758E" FontSize="12" Margin="8,-1,0,0" />
-                                </StackPanel>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="ModeSurface" Property="Background" Value="#111A2B" />
-                                    <Setter TargetName="ModeSurface" Property="BorderBrush" Value="#405785" />
-                                </Trigger>
-                                <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="ModeSurface" Property="BorderBrush" Value="#4D6BFE" />
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </ToggleButton.Template>
-                </ToggleButton>
-                <TextBlock HorizontalAlignment="Center" Margin="0,4,0,0" FontFamily="Segoe UI"
-                           FontSize="10" Foreground="#5D6B82">
-                    <Run Text="Аптайм  " />
+                                <TextBlock HorizontalAlignment="Center" Margin="0,4,0,0" FontFamily="Segoe UI"
+                           FontSize="10" Foreground="#5D6B82"
+                           Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}}">
+                    <Run Text="Время работы: " />
                     <Run Text="{Binding UptimeText}" Foreground="#8997AD" FontWeight="SemiBold" />
                 </TextBlock>
             </StackPanel>
@@ -338,63 +298,38 @@
                      Columns="5" Margin="0,10,0,0" Visibility="Collapsed">
             <Border Style="{StaticResource DashboardCard}" Margin="0,0,8,0">
                 <StackPanel>
-                    <TextBlock Text="ПРИЛОЖЕНИЕ" Style="{StaticResource MetricLabel}" />
-                    <TextBlock FontSize="12" FontWeight="SemiBold" Margin="0,5,0,0">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Text" Value="Остановлено" />
-                                <Setter Property="Foreground" Value="#CC6570" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                        <Setter Property="Text" Value="Работает" />
-                                        <Setter Property="Foreground" Value="#00D68F" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+                    <TextBlock Text="СОСТОЯНИЕ" Style="{StaticResource MetricLabel}" />
+                    <TextBlock Text="{Binding MainStatusText}" Foreground="{Binding MainStatusBrush}"
+                               FontSize="11" FontWeight="SemiBold" Margin="0,5,0,0" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
             <Border Style="{StaticResource DashboardCard}" Margin="0,0,8,0">
                 <StackPanel>
                     <TextBlock Text="ДВИЖОК" Style="{StaticResource MetricLabel}" />
-                    <TextBlock Text="{Binding ActiveComponentName, FallbackValue=Не выбран}"
-                               Foreground="#DCE4F0" FontSize="12" FontWeight="SemiBold"
-                               Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding EngineDisplayName}" Foreground="#DCE4F0"
+                               FontSize="12" FontWeight="SemiBold" Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding EngineVersionText}" Foreground="#66758E" FontSize="9.5" Margin="0,2,0,0" />
                 </StackPanel>
             </Border>
             <Border Style="{StaticResource DashboardCard}" Margin="0,0,8,0">
                 <StackPanel>
                     <TextBlock Text="TG PROXY" Style="{StaticResource MetricLabel}" />
-                    <TextBlock Text="Остановлен" Foreground="#CC6570" FontSize="12" FontWeight="SemiBold" Margin="0,5,0,0">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="#CC6570" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding TgProxyRunning}" Value="True">
-                                        <Setter Property="Text" Value="Работает" />
-                                        <Setter Property="Foreground" Value="#00D68F" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+                    <TextBlock Text="{Binding TgProxySummaryText}" Foreground="{Binding TgProxySummaryBrush}"
+                               FontSize="11" FontWeight="SemiBold" Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </Border>
             <Border Style="{StaticResource DashboardCard}" Margin="0,0,8,0">
                 <StackPanel>
-                    <TextBlock Text="СЕТЬ" Style="{StaticResource MetricLabel}" />
-                    <TextBlock Text="{Binding TrafficSpeedSummary, FallbackValue=↓ 0 Б/с  ↑ 0 Б/с}"
-                               Foreground="#55AAFF" FontSize="11.5" FontWeight="SemiBold"
-                               Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="АКТИВНЫЙ ПРОФИЛЬ" Style="{StaticResource MetricLabel}" />
+                    <TextBlock Text="{Binding ActiveProfileSummaryText}" Foreground="#DCE4F0"
+                               FontSize="11" FontWeight="SemiBold" Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </Border>
-            <Border Style="{StaticResource DashboardCard}">
+            <Border Style="{StaticResource DashboardCard}" Margin="0,0,8,0">
                 <StackPanel>
-                    <TextBlock Text="АКТИВНЫЕ СЛУЖБЫ" Style="{StaticResource MetricLabel}" />
-                    <TextBlock Text="{Binding ActiveServicesSummary, FallbackValue=0 из 3 активны}"
-                               Foreground="#DCE4F0" FontSize="12" FontWeight="SemiBold"
-                               Margin="0,5,0,0" />
+                    <TextBlock Text="ТРАФИК" Style="{StaticResource MetricLabel}" />
+                    <TextBlock Text="{Binding TrafficSummaryText}" Foreground="#55AAFF"
+                               FontSize="11" FontWeight="SemiBold" Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </Border>
         </UniformGrid>
@@ -477,6 +412,25 @@
             </Border>
 
             <!-- Большие кнопки (только в расширенном режиме) -->
+            <Border Background="#0A0E18" BorderBrush="#1C2940" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,10,0,0" Visibility="{Binding IsZapret2Selected, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Text="ZAPRET2" Foreground="#8997AD" FontSize="9" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Zapret2StatusText}" Foreground="#DCE4F0" FontSize="14" FontWeight="SemiBold" Margin="0,4,0,0" />
+                    <TextBlock Text="{Binding Zapret2Status.DiagnosticMessage}" Foreground="#8997AD" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0" />
+                    <TextBlock Text="{Binding Zapret2EngineText}" Foreground="#66758E" FontSize="10" Margin="0,7,0,0" />
+                    <TextBlock Text="{Binding Zapret2ProfileText}" Foreground="#66758E" FontSize="10" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Zapret2Winws2Text}" Foreground="#66758E" FontSize="10" Margin="0,6,0,0" />
+                    <TextBlock Text="{Binding Zapret2ConnectionText}" Foreground="#66758E" FontSize="10" />
+                    <TextBlock Text="{Binding Zapret2TrafficText}" Foreground="#66758E" FontSize="10" />
+                    <TextBlock Text="{Binding Zapret2LastCheckText}" Foreground="#55647D" FontSize="9" Margin="0,6,0,0" />
+                    <WrapPanel Margin="0,8,0,0">
+                        <Button Content="Проверить соединение" Command="{Binding CheckZapret2StatusCommand}" Margin="0,0,6,6" Padding="8,4" />
+                        <Button Content="Открыть логи" Command="{Binding OpenLogsCommand}" Margin="0,0,6,6" Padding="8,4" />
+                        <Button Content="Диагностика" Command="{Binding OpenDiagnosticsCommand}" Margin="0,0,6,0" Padding="8,4" />
+                        <Button Content="Восстановить" Command="{Binding RepairZapret2Command}" Padding="8,4" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
             <StackPanel x:Name="StrategyActionsPanel" Margin="0,10,0,0" Visibility="{Binding SimpleMode, Converter={StaticResource InvBool}}">
                 <Button Style="{StaticResource BigActionButton}" HorizontalAlignment="Stretch"
                         Command="{Binding ScanProfilesCommand}">
@@ -546,8 +500,33 @@
         </StackPanel>
         </ScrollViewer>
         </Grid>
-
-        <!-- Всплывающее управление режимом -->
+        <ToggleButton x:Name="ModeToggleButton"
+                              IsChecked="{Binding IsOpen, ElementName=ProtectionModePopup, Mode=TwoWay}"
+                              Grid.Row="1" Grid.Column="0" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,16,0" Cursor="Hand"
+                              ToolTip="Изменить режим защиты и стратегию">
+                    <ToggleButton.Template>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="ModeSurface" Background="#0D1422" BorderBrush="#253553"
+                                    BorderThickness="1" CornerRadius="9" Padding="11,6">
+                                <StackPanel Orientation="Vertical" MinWidth="190">
+                                    <TextBlock Text="{Binding ProtectionModeText}" Foreground="#A9B7CD" FontSize="10.5" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding ActiveProfileSummaryText}" Foreground="#7E8DA5" FontSize="10" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding StrategyStatusText}" Foreground="#66758E" FontSize="9.5" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="ModeSurface" Property="Background" Value="#111A2B" />
+                                    <Setter TargetName="ModeSurface" Property="BorderBrush" Value="#405785" />
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="ModeSurface" Property="BorderBrush" Value="#4D6BFE" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </ToggleButton.Template>
+                </ToggleButton>
+<!-- Всплывающее управление режимом -->
         <Popup x:Name="ProtectionModePopup"
                PlacementTarget="{Binding ElementName=ModeToggleButton}"
                Placement="Right" HorizontalOffset="10" VerticalOffset="-132"

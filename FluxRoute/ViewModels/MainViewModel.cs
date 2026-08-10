@@ -14,6 +14,7 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Application = System.Windows.Application;
@@ -25,6 +26,9 @@ public partial class MainViewModel : ObservableObject
     // ── Коллекции ──
     public ObservableCollection<string> Logs { get; } = new();
     public ObservableCollection<ProfileItem> Profiles { get; } = new();
+    private FileSystemWatcher? _profileWatcher;
+    private DispatcherTimer? _profileRefreshTimer;
+    private bool _isCleaningUp;
     public ObservableCollection<string> OrchestratorLogs { get; } = new();
     public ObservableCollection<ProfileScore> ProfileScores { get; } = new();
     public ObservableCollection<AiStrategyRowVm> AiStrategyRows { get; } = new();
@@ -381,7 +385,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (CustomDialog.Show(
                 "Завершить работу FluxRoute?",
-                "Все активные службы (WinDivert, WinWS) будут остановлены, защита прекратит работу.",
+                "Все активные службы и движки будут остановлены, обход DPI прекратит работу.",
                 "Завершить",
                 "Отмена",
                 isDanger: true))
@@ -426,6 +430,7 @@ public partial class MainViewModel : ObservableObject
         }
         OnPropertyChanged(nameof(SelectedScriptName));
         RunningScriptName = newValue?.FileName ?? "—";
+        NotifyEngineSummaryProperties();
         SaveSettings();
         if (!_suppressProfileWarning && _settingsLoaded && IsRunning && newValue is not null)
         {
@@ -549,15 +554,99 @@ public partial class MainViewModel : ObservableObject
         + (GameFilterEnabled ? 1 : 0);
 
     public string ActiveServicesSummary => $"{ActiveServicesCount} из 3 активны";
+    public string TgProxySummaryText => TgProxyRunning ? "Работает" : "Остановлен";
+    public System.Windows.Media.Brush TgProxySummaryBrush => TgProxyRunning
+        ? System.Windows.Media.Brushes.MediumSpringGreen
+        : System.Windows.Media.Brushes.IndianRed;
     public string PingSummary => "Нет данных";
     public string CompactNetworkSummary =>
         $"Пинг: {PingSummary}\n↓ {DownloadSpeed}   ↑ {UploadSpeed}";
     public string TrafficSpeedSummary => $"↓ {DownloadSpeed}  ↑ {UploadSpeed}";
+    public string MainStatusText => IsZapret2Selected
+        ? Zapret2StatusText
+        : _selectedComponent == "none"
+            ? "Движок не выбран"
+            : IsRunning ? "Обход DPI активен" : "Обход DPI неактивен";
+
+    public System.Windows.Media.Brush MainStatusBrush => IsZapret2Selected
+        ? Zapret2Status.Status switch
+        {
+            ProtectionStatus.Starting => System.Windows.Media.Brushes.DeepSkyBlue,
+            ProtectionStatus.Stopping => System.Windows.Media.Brushes.DarkOrange,
+            ProtectionStatus.Healthy => System.Windows.Media.Brushes.MediumSpringGreen,
+            ProtectionStatus.Degraded => System.Windows.Media.Brushes.Gold,
+            ProtectionStatus.Error => System.Windows.Media.Brushes.IndianRed,
+            ProtectionStatus.Repairing => System.Windows.Media.Brushes.DarkOrange,
+            _ => System.Windows.Media.Brushes.SlateGray
+        }
+        : _selectedComponent == "none"
+            ? System.Windows.Media.Brushes.SlateGray
+            : IsRunning ? System.Windows.Media.Brushes.MediumSpringGreen : System.Windows.Media.Brushes.IndianRed;
+
+    public string EngineDisplayName => _selectedComponent switch
+    {
+        "zapret2" => "Zapret2 · winws2",
+        "none" => "—",
+        _ => "Zapret · winws"
+    };
+
+    public string EngineVersionText => _selectedComponent switch
+    {
+        "zapret2" => "v2.x",
+        "none" => "—",
+        _ => "legacy"
+    };
+
+    public string EngineSupportText => IsZapret2Selected
+        ? (Zapret2Status.WinDivertAvailable ? "WinDivert: доступен" : "WinDivert: не найден")
+        : _selectedComponent == "none"
+            ? "Движок не выбран"
+            : (Diagnostics is not null && Diagnostics.WinDivertDllOk && Diagnostics.WinDivertDriverOk
+                ? "WinDivert: доступен"
+                : "WinDivert: не найден");
+
+    public string ActiveProfileSummaryText
+    {
+        get
+        {
+            if (_selectedComponent == "none")
+                return "—";
+
+            var profile = IsZapret2Selected
+                ? Zapret2Status.ActiveProfile
+                : SelectedProfile?.DisplayName;
+            return string.IsNullOrWhiteSpace(profile) || profile == "—"
+                ? "Не выбран"
+                : Path.GetFileNameWithoutExtension(profile);
+        }
+    }
+
+    public string TrafficSummaryText => IsAnyEngineRunning ? TrafficSpeedSummary : "—";
+    public bool IsAnyEngineRunning => IsRunning || (IsZapret2Selected && Zapret2Status.Winws2Running);
+    public string ProtectionModeText => IsManualProtectionMode ? "Режим: Вручную" : "Режим: Автовыбор";
+    public string StrategyStatusText => IsZapret2Selected
+        ? (Zapret2Status.StrategyActive ? "Стратегия: активна" : "Стратегия: не активна")
+        : (IsRunning ? "Стратегия: активна" : "Стратегия: не запущена");
+
+    private void NotifyEngineSummaryProperties()
+    {
+        OnPropertyChanged(nameof(MainStatusText));
+        OnPropertyChanged(nameof(MainStatusBrush));
+        OnPropertyChanged(nameof(EngineDisplayName));
+        OnPropertyChanged(nameof(EngineVersionText));
+        OnPropertyChanged(nameof(EngineSupportText));
+        OnPropertyChanged(nameof(ActiveProfileSummaryText));
+        OnPropertyChanged(nameof(TrafficSummaryText));
+        OnPropertyChanged(nameof(IsAnyEngineRunning));
+        OnPropertyChanged(nameof(ProtectionModeText));
+        OnPropertyChanged(nameof(StrategyStatusText));
+    }
 
     public string MainActionButtonText => IsRunning ? "⏹ Остановить" : "▶ Запустить";
     partial void OnIsRunningChanged(bool value)
     {
         OnPropertyChanged(nameof(MainActionButtonText));
+        NotifyEngineSummaryProperties();
         if (!value)
         {
             DownloadSpeed = "0 Б/с";
@@ -567,11 +656,13 @@ public partial class MainViewModel : ObservableObject
     partial void OnUploadSpeedChanged(string value)
     {
         OnPropertyChanged(nameof(TrafficSpeedSummary));
+        OnPropertyChanged(nameof(TrafficSummaryText));
         OnPropertyChanged(nameof(CompactNetworkSummary));
     }
     partial void OnDownloadSpeedChanged(string value)
     {
         OnPropertyChanged(nameof(TrafficSpeedSummary));
+        OnPropertyChanged(nameof(TrafficSummaryText));
         OnPropertyChanged(nameof(CompactNetworkSummary));
     }
 
@@ -580,7 +671,7 @@ public partial class MainViewModel : ObservableObject
         if (_networkTrafficMonitor is null)
             return;
 
-        var display = NetworkTrafficDisplay.Create(IsRunning, _networkTrafficMonitor.Sample());
+        var display = NetworkTrafficDisplay.Create(IsAnyEngineRunning, _networkTrafficMonitor.Sample());
         DownloadSpeed = display.Download;
         UploadSpeed = display.Upload;
     }
@@ -726,6 +817,54 @@ public partial class MainViewModel : ObservableObject
     private bool _firstRunComplete;
     private string _selectedComponent = "zapret";
 
+    public IReadOnlyList<string> ComponentOptions { get; } =
+    ["Zapret", "Zapret 2", "Без основного"];
+
+    public string SelectedComponentDisplayName
+    {
+        get => _selectedComponent switch
+        {
+            "zapret2" => "Zapret 2",
+            "none" => "Без основного",
+            _ => "Zapret"
+        };
+        set => SelectedComponent = value switch
+        {
+            "Zapret 2" => "zapret2",
+            "Без основного" => "none",
+            _ => "zapret"
+        };
+    }
+
+    public string SelectedComponent
+    {
+        get => _selectedComponent;
+        set
+        {
+            var normalized = string.IsNullOrWhiteSpace(value) ? "none" : value;
+            if (string.Equals(_selectedComponent, normalized, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (IsZapret2Selected && Zapret2Status.Winws2Running)
+                _ = StopZapret2Async();
+            else if (IsRunning)
+                Stop();
+
+            _selectedComponent = normalized;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ActiveComponentName));
+            OnPropertyChanged(nameof(SelectedComponentDisplayName));
+            OnPropertyChanged(nameof(IsZapret2Selected));
+            NotifyZapret2Properties();
+
+            if (IsZapret2Selected)
+                InitializeZapret2Status();
+            else
+                DisposeZapret2Status();
+
+            SaveSettings();
+        }
+    }
     public string ActiveComponentName => _selectedComponent switch
     {
         "zapret2" => "Zapret 2",
@@ -908,7 +1047,10 @@ public partial class MainViewModel : ObservableObject
         TrayIconService? trayIcon = null,
         INetworkTrafficMonitor? networkTrafficMonitor = null,
         // ═══ v1.7.0: НОВОЕ ═══
-        IAntivirusExclusionService? antivirusExclusionService = null)
+        IAntivirusExclusionService? antivirusExclusionService = null,
+        IZapret2StatusService? zapret2StatusService = null,
+        IZapret2DiagnosticsService? zapret2DiagnosticsService = null,
+        IZapret2RecoveryService? zapret2RecoveryService = null)
     {
         _settingsService = settingsService;
         _updater = updaterService;
@@ -923,6 +1065,9 @@ public partial class MainViewModel : ObservableObject
         _evolver = aiEvolver;
         _networkTrafficMonitor = networkTrafficMonitor;
         _antivirusExclusion = antivirusExclusionService;
+        _zapret2StatusService = zapret2StatusService;
+        _zapret2DiagnosticsService = zapret2DiagnosticsService;
+        _zapret2RecoveryService = zapret2RecoveryService;
 
         if (_networkTrafficMonitor is not null)
         {
@@ -1016,6 +1161,7 @@ public partial class MainViewModel : ObservableObject
         ApplySettings(settings);
 
         LoadProfiles();
+        InitializeProfileWatcher();
 
         if (settings.LastProfileFileName is not null)
         {
@@ -1039,6 +1185,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         _settingsLoaded = true;
+        InitializeZapret2Status();
 
         if (!Directory.Exists(EngineDir) || Directory.GetFiles(EngineDir, "*.bat").Length == 0)
         {
@@ -1149,6 +1296,8 @@ public partial class MainViewModel : ObservableObject
         _firstRunComplete = settings.FirstRunComplete;
         _selectedComponent = settings.SelectedComponent;
         OnPropertyChanged(nameof(ActiveComponentName));
+        OnPropertyChanged(nameof(SelectedComponentDisplayName));
+        NotifyEngineSummaryProperties();
         OrchestratorInterval = settings.OrchestratorInterval;
         OrchestratorEnabled = settings.OrchestratorEnabled;
         SiteYouTube = settings.SiteYouTube;
@@ -1359,10 +1508,33 @@ public partial class MainViewModel : ObservableObject
     // ═════════════════════════════════════════════════════════
 
     [RelayCommand]
-    private void MainAction()
+    private void OpenDiagnostics()
     {
-        if (IsRunning) Stop();
-        else Start();
+        SelectedTabIndex = 5;
+    }
+
+    [RelayCommand]
+    private void OpenLogs()
+    {
+        SelectedTabIndex = 6;
+    }
+    [RelayCommand]
+    private async Task MainActionAsync()
+    {
+        if (!IsZapret2Selected)
+        {
+            if (IsRunning) Stop();
+            else Start();
+            return;
+        }
+
+        if (Zapret2Status.Status is ProtectionStatus.Starting or ProtectionStatus.Repairing)
+            return;
+
+        if (Zapret2Status.Winws2Running && !_zapret2UserStopped)
+            await StopZapret2Async().ConfigureAwait(true);
+        else
+            await StartZapret2Async().ConfigureAwait(true);
     }
 
     private void AddToRecentLogs(string message)
@@ -1507,6 +1679,8 @@ public partial class MainViewModel : ObservableObject
     // ── Cleanup ──
     public void Cleanup()
     {
+        _isCleaningUp = true;
+        DisposeProfileWatcher();
         if (_orchestrator.IsRunning)
             _orchestrator.Stop();
         if (_aiOrchestrator.IsRunning)
@@ -1520,5 +1694,6 @@ public partial class MainViewModel : ObservableObject
         }
         _hideWindowsCts?.Cancel();
         _hideWindowsCts?.Dispose();
+        DisposeZapret2Status();
     }
 }

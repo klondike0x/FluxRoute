@@ -361,6 +361,11 @@ public partial class App : Application
         services.AddSingleton<INetworkTrafficCounterSource, NetworkInterfaceTrafficCounterSource>();
         services.AddSingleton<INetworkTrafficMonitor, NetworkTrafficMonitor>();
 
+        services.AddSingleton<IZapret2ProcessHost, Zapret2ProcessHost>();
+        services.AddSingleton<IZapret2DiagnosticsService, Zapret2DiagnosticsService>();
+        services.AddSingleton<IZapret2StatusService, Zapret2StatusService>();
+        services.AddSingleton<IZapret2RecoveryService, Zapret2RecoveryService>();
+
         // ═══ v1.7.0: НОВОЕ — сервис исключений антивируса ═══
         services.AddSingleton<IAntivirusExclusionService, AntivirusExclusionService>();
 
@@ -382,6 +387,9 @@ public partial class App : Application
             var trayIcon = sp.GetRequiredService<TrayIconService>();
             var networkTrafficMonitor = sp.GetRequiredService<INetworkTrafficMonitor>();
             var antivirusExclusion = sp.GetRequiredService<IAntivirusExclusionService>();
+            var zapret2Status = sp.GetRequiredService<IZapret2StatusService>();
+            var zapret2Diagnostics = sp.GetRequiredService<IZapret2DiagnosticsService>();
+            var zapret2Recovery = sp.GetRequiredService<IZapret2RecoveryService>();
 
             return new MainViewModel(
                 settingsService,
@@ -399,7 +407,10 @@ public partial class App : Application
                 taskScheduler,
                 trayIcon,
                 networkTrafficMonitor,
-                antivirusExclusion);
+                antivirusExclusion,
+                zapret2Status,
+                zapret2Diagnostics,
+                zapret2Recovery);
         });
         services.AddSingleton<ITrayPopupService, TrayPopupService>();
         services.AddSingleton<TrayIconService>();
