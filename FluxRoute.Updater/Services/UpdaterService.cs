@@ -318,34 +318,10 @@ public sealed partial class UpdaterService : IUpdaterService
     /// <summary>Останавливаем службу zapret и убиваем winws.exe</summary>
     private static void StopZapretService(Action<string> onProgress)
     {
-        try
-        {
-            using var sc = new System.Diagnostics.Process();
-            sc.StartInfo = new System.Diagnostics.ProcessStartInfo("sc", "query zapret")
-            {
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                RedirectStandardOutput = true
-            };
-            sc.Start();
-            var output = sc.StandardOutput.ReadToEnd();
-            sc.WaitForExit(3000);
-
-            if (output.Contains("RUNNING", StringComparison.OrdinalIgnoreCase))
-            {
-                onProgress("⏹ Останавливаем службу zapret...");
-                using var stop = new System.Diagnostics.Process();
-                stop.StartInfo = new System.Diagnostics.ProcessStartInfo("net", "stop zapret")
-                {
-                    CreateNoWindow = true,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true
-                };
-                stop.Start();
-                stop.WaitForExit(10000);
-            }
-        }
-        catch { }
+        // WinDivert — отдельная kernel-служба. Остановка только zapret не
+        // освобождает bin\WinDivert64.sys, поэтому обновление получает sharing
+        // violation даже после завершения winws.exe.
+        StopWindowsService("zapret", "⏹ Останавливаем службу zapret...", onProgress);
 
         // Убиваем winws.exe на случай если остался
         try
@@ -362,8 +338,77 @@ public sealed partial class UpdaterService : IUpdaterService
         }
         catch { }
 
+        // Освобождаем WinDivert64.sys перед заменой файлов движка.
+        StopWindowsService("WinDivert", "⏹ Останавливаем драйвер WinDivert...", onProgress);
+
         // Даём время на освобождение файлов
         Thread.Sleep(1500);
+    }
+
+    /// <summary>
+    /// Останавливает службу и ждёт состояния STOPPED. Запрос состояния нужен
+    /// потому, что sc stop возвращается раньше фактической выгрузки драйвера.
+    /// </summary>
+    private static void StopWindowsService(string serviceName, string progressMessage, Action<string> onProgress)
+    {
+        try
+        {
+            using var query = new System.Diagnostics.Process
+            {
+                StartInfo = new System.Diagnostics.ProcessStartInfo("sc.exe", $"query \"{serviceName}\"")
+                {
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true
+                }
+            };
+            query.Start();
+            var output = query.StandardOutput.ReadToEnd();
+            query.WaitForExit(3000);
+
+            if (!output.Contains("RUNNING", StringComparison.OrdinalIgnoreCase) &&
+                !output.Contains("STOP_PENDING", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            onProgress(progressMessage);
+            using var stop = new System.Diagnostics.Process
+            {
+                StartInfo = new System.Diagnostics.ProcessStartInfo("sc.exe", $"stop \"{serviceName}\"")
+                {
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                }
+            };
+            stop.Start();
+            stop.WaitForExit(10000);
+
+            // У WinDivert выгрузка драйвера может занимать несколько секунд.
+            var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+            while (DateTime.UtcNow < deadline)
+            {
+                using var poll = new System.Diagnostics.Process
+                {
+                    StartInfo = new System.Diagnostics.ProcessStartInfo("sc.exe", $"query \"{serviceName}\"")
+                    {
+                        CreateNoWindow = true,
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true
+                    }
+                };
+                poll.Start();
+                var state = poll.StandardOutput.ReadToEnd();
+                poll.WaitForExit(3000);
+                if (state.Contains("STOPPED", StringComparison.OrdinalIgnoreCase))
+                    break;
+                Thread.Sleep(250);
+            }
+        }
+        catch
+        {
+            // Служба может отсутствовать (например, при первом запуске).
+        }
     }
 
     /// <summary>Ищет папку с BAT файлами внутри распакованного архива (до 2 уровней)</summary>
@@ -448,21 +493,17 @@ public sealed partial class UpdaterService : IUpdaterService
 
             try
             {
-                File.Copy(file, destFile, overwrite: true);
+                if (TryCopyFileWithRetry(file, destFile))
+                    continue;
+
+                // Файл заблокирован — пробуем атомарную замену через временное имя.
+                var tmp = destFile + ".upd";
+                File.Copy(file, tmp, overwrite: true);
+                File.Move(tmp, destFile, overwrite: true);
             }
             catch (IOException)
             {
-                // Файл заблокирован — пробуем атомарную замену через временное имя
-                try
-                {
-                    var tmp = destFile + ".upd";
-                    File.Copy(file, tmp, overwrite: true);
-                    File.Move(tmp, destFile, overwrite: true);
-                }
-                catch
-                {
-                    failedFiles.Add(relativePath);
-                }
+                failedFiles.Add(relativePath);
             }
         }
 
@@ -472,7 +513,9 @@ public sealed partial class UpdaterService : IUpdaterService
         return failedFiles;
     }
 
-    /// <summary>Пытается откатить engine/ из backup. Возвращает true при полном успехе.</summary>
+    /// <summary>
+    /// Пытается откатить engine/ из backup. Возвращает true при полном успехе.
+    /// </summary>
     private static bool TryRollback(string backupDir, string engineDir, Action<string> onProgress)
     {
         if (!Directory.Exists(backupDir))
@@ -490,14 +533,8 @@ public sealed partial class UpdaterService : IUpdaterService
             var destFile     = Path.Combine(engineDir, relativePath);
 
             Directory.CreateDirectory(Path.GetDirectoryName(destFile)!);
-            try
-            {
-                File.Copy(file, destFile, overwrite: true);
-            }
-            catch
-            {
+            if (!TryCopyFileWithRetry(file, destFile))
                 failed.Add(relativePath);
-            }
         }
 
         if (failed.Count > 0)
@@ -507,6 +544,37 @@ public sealed partial class UpdaterService : IUpdaterService
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Повторяет копирование после остановки службы: Windows ещё может
+    /// удерживать handle драйвера во время асинхронной выгрузки.
+    /// </summary>
+    private static bool TryCopyFileWithRetry(string source, string destination)
+    {
+        const int attempts = 12;
+        for (var attempt = 0; attempt < attempts; attempt++)
+        {
+            try
+            {
+                File.Copy(source, destination, overwrite: true);
+                return true;
+            }
+            catch (IOException) when (attempt + 1 < attempts)
+            {
+                Thread.Sleep(250);
+            }
+            catch (UnauthorizedAccessException) when (attempt + 1 < attempts)
+            {
+                Thread.Sleep(250);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        return false;
     }
 
     private static int CountFiles(string dir) =>
