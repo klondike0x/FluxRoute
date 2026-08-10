@@ -82,27 +82,6 @@
                 </Button>
             </StackPanel>
             <Rectangle Style="{StaticResource Sep}" />
-
-            <TextBlock Style="{StaticResource SecH}" Text="TG WS PROXY" Margin="0,8,0,8" />
-            <Grid Margin="0,0,0,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="160" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="26" />
-                    <RowDefinition Height="26" />
-                </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Lbl}" Text="Текущая версия:" />
-                <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding TgProxyVersion}" />
-                <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Lbl}" Text="Установлен:" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}"
-                    Text="{Binding TgProxyInstalled, Converter={StaticResource BoolToInstalled}}" />
-            </Grid>
-            <Button Content="Проверить" Style="{StaticResource ActionBtn}"
-                HorizontalAlignment="Left" Margin="0,0,0,12"
-                Command="{Binding CheckTgProxyUpdatesCommand}"
-                IsEnabled="{Binding TgProxyInstalled}" />
         </StackPanel>
     </ScrollViewer>
 </UserControl>

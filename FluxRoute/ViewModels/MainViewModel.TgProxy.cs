@@ -1,7 +1,7 @@
+using FluxRoute.Views;
 using CommunityToolkit.Mvvm.Input;
 using FluxRoute.Core.Services;
 using FluxRoute.Updater.Services;
-using FluxRoute.Views;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -54,12 +54,6 @@ public partial class MainViewModel
     private const string TgProxyReleasesAtomUrl = MirrorUrls.TgProxyReleasesAtom;
 
     // ═══ v1.6.0 (#60): Fallback-зеркала для tg-proxy ═══
-    private static readonly string[] TgProxyTagFallbackUrls =
-    {
-        MirrorUrls.TgProxyReleasesAtom,
-        MirrorUrls.TgProxyReleasesAtomMirrorSf, // SourceForge-зеркало
-    };
-
     private static readonly string[] TgProxyZipFallbackUrlsTemplate =
     {
         MirrorUrls.TgProxyZipTemplate,
@@ -942,94 +936,6 @@ public partial class MainViewModel
 
         TgProxyRunning = false;
         AddTgProxyLog("⏹ TG WS Proxy остановлен");
-    }
-
-    [RelayCommand]
-    private async Task CheckTgProxyUpdates()
-    {
-        var local = GetTgProxyLocalVersion();
-        var dialog = new UpdateCheckDialog("TG WS Proxy", local);
-        dialog.ShowChecking("Проверяем обновление TG WS Proxy…");
-        dialog.OpenModal();
-
-        AddTgProxyLog("🔍 Проверяем обновления TG WS Proxy...");
-        try
-        {
-            using var http = _httpClientFactory.CreateClient("TgProxyDownloader");
-            var latest = await GetLatestTgProxyTagAsync(http);
-
-            // Graceful degradation: если не можем определить тег — не обновляемся.
-            if (!IsValidGitTag(latest))
-            {
-                const string message = "Не удалось определить последнюю версию TG WS Proxy. Возможно, источник обновлений недоступен из текущей сети.";
-                AddTgProxyLog("❌ Не удалось определить последнюю версию TG WS Proxy");
-                AddTgProxyLog("💡 Возможно, GitHub недоступен из текущей сети");
-                dialog.ShowError(message, local);
-                await dialog.WaitForResultAsync();
-                return;
-            }
-
-            var latestTag = latest!;
-            if (UpdateVersionComparer.AreEqual(local, latestTag))
-            {
-                AddTgProxyLog($"✅ Актуальная версия ({local})");
-                dialog.ShowUpToDate(local, latestTag);
-                await dialog.WaitForResultAsync();
-                return;
-            }
-
-            AddTgProxyLog($"⬆️ Доступна версия {latestTag} (текущая {local})");
-            dialog.ShowUpdateAvailable(local, latestTag, autoInstall: true);
-            var success = await UpdateProxySourcesAsync(latestTag);
-            if (success)
-                dialog.ShowInstalled(latestTag, latestTag);
-            else
-                dialog.ShowError("Не удалось установить обновление TG WS Proxy. Подробности записаны в лог.", local, latestTag);
-            await dialog.WaitForResultAsync();
-        }
-        catch (Exception ex)
-        {
-            AddTgProxyLog($"❌ Ошибка проверки: {ex.Message}");
-            dialog.ShowError(ex.Message, local);
-            await dialog.WaitForResultAsync();
-        }
-    }
-
-    private async Task<bool> UpdateProxySourcesAsync(string tagName)
-    {
-        if (!IsValidGitTag(tagName))
-        {
-            AddTgProxyLog($"❌ Некорректный тег версии: '{tagName}'");
-            return false;
-        }
-
-        AddTgProxyLog($"⬇️ Обновляем исходники до {tagName}...");
-        try
-        {
-            using var http = _httpClientFactory.CreateClient("TgProxyDownloader");
-
-            if (!await DownloadAndExtractProxyFolderAsync(http, tagName))
-                return false;
-
-            TgProxyVersion = tagName;
-            AddTgProxyLog($"✅ Исходники обновлены до {tagName}");
-
-            // Перезапускаем прокси, если он запущен.
-            if (TgProxyRunning)
-            {
-                AddTgProxyLog("🔄 Перезапускаем прокси с новыми исходниками...");
-                StopTgProxy();
-                await Task.Delay(1000);
-                StartTgProxy();
-            }
-
-            return true;
-        }
-        catch (Exception ex)
-        {
-            AddTgProxyLog($"❌ Ошибка обновления: {ex.Message}");
-            return false;
-        }
     }
 
     /// <summary>
