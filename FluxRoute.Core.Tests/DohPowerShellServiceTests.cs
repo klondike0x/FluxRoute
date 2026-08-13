@@ -331,6 +331,21 @@ public sealed class DohPowerShellServiceTests
     }
 
     [Fact]
+    public async Task CaptureSystemStateAsync_GlobalScriptRecognizesLocalizedDohOutput()
+    {
+        var runner = CreateCaptureRunner("{\"Mode\":\"auto\"}");
+        var service = CreateService(runner);
+
+        await service.CaptureSystemStateAsync(
+            "2E61C098-C635-4D56-AB43-E41ED7033B99", ["1.1.1.1"]);
+
+        runner.Verify(x => x.RunAsync(
+            "powershell.exe",
+            It.Is<IReadOnlyList<string>>(args => args.Last().Contains(@"\bDoH\b", StringComparison.Ordinal)
+                && args.Last().Contains("disabled|enabled|automatic|auto|yes|no", StringComparison.Ordinal)),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+    [Fact]
     public async Task CaptureSystemStateAsync_UnknownGlobalMode_FailsClosed()
     {
         var service = CreateService(CreateCaptureRunner("{\"Mode\":\"неизвестно\"}"));

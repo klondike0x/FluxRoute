@@ -357,7 +357,7 @@ public sealed class DohPowerShellService : IDohSystemConfigurationService
         var globalScript = "$ErrorActionPreference='Stop'; "
             + "$raw = & netsh.exe dnsclient show global 2>&1; "
             + "if ($LASTEXITCODE -ne 0) { throw ($raw -join [Environment]::NewLine) }; "
-            + "$mode = @($raw | ForEach-Object { if ($_ -match '(?i)\\b(?:doh\\s+)?global\\s+(?:setting|mode)\\s*[:=]\\s*(disabled|enabled|automatic|auto|yes|no)\\b') { switch ($Matches[1].ToLowerInvariant()) { 'disabled' { 'no'; break } 'enabled' { 'yes'; break } 'automatic' { 'auto'; break } default { $Matches[1].ToLowerInvariant() } } } } | Select-Object -Unique); "
+            + "$mode = @($raw | ForEach-Object { if ($_ -match '(?i)\\bDoH\\b.*?(?:[:=]\\s*|\\b(?:global\\s+)?(?:setting|mode)\\b\\s*[:=]\\s*)(disabled|enabled|automatic|auto|yes|no)\\b') { switch ($Matches[1].ToLowerInvariant()) { 'disabled' { 'no'; break } 'enabled' { 'yes'; break } 'automatic' { 'auto'; break } default { $Matches[1].ToLowerInvariant() } } } } | Select-Object -Unique); "
             + "if ($mode.Count -ne 1) { $mode = @('__unknown__') }; "
             + "[pscustomobject]@{Mode=$mode[0]} | ConvertTo-Json -Compress";
         var global = await RunPowerShellAsync(globalScript, ct).ConfigureAwait(false);
