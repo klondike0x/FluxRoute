@@ -103,9 +103,9 @@ public sealed class WindowsDohConfigurationService : IWindowsDohConfigurationSer
                 var settings = _settingsService.Load();
                 settings.Doh.OperationJournal = null;
                 _settingsService.Save(settings);
-                return failure;
+                return failure with { SwitchOutcome = DohProviderSwitchOutcome.RestoredPrevious };
             }
-            return new(false, $"{failure.Message} Откат не завершён: {rollback.Message}");
+            return new(false, $"{failure.Message} Откат не завершён: {rollback.Message}", DohProviderSwitchOutcome.RestoreFailed);
         }
 
         try

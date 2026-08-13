@@ -7,94 +7,67 @@ namespace FluxRoute.Core.Tests;
 public sealed class DohProviderSwitchServiceTests
 {
     [Fact]
-    public async Task SwitchAsync_WhenDhcpResetSucceeds_AppliesNewProviderAfterReset()
+    public async Task SwitchAsync_AppliesNewProviderDirectlyWithoutDhcpReset()
     {
-        // Arrange
-        var sequence = new MockSequence();
         var configuration = new Mock<IWindowsDohConfigurationService>();
-        configuration.InSequence(sequence)
-            .Setup(x => x.DisableAsync("Wi-Fi", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DohApplyResult(true, "DHCP"));
-        configuration.InSequence(sequence)
-            .Setup(x => x.ApplyAsync(
+        configuration.Setup(x => x.ApplyAsync(
                 "Wi-Fi", It.Is<DohProvider>(provider => provider.Id == "google"),
                 DohEncryptionMode.EncryptedOnly, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DohApplyResult(true, "Google включён"));
+            .ReturnsAsync(new DohApplyResult(true, "Google applied"));
         var service = new DohProviderSwitchService(configuration.Object);
 
-        // Act
         var result = await service.SwitchAsync(
-            "Wi-Fi", CreateProvider("google"), DohEncryptionMode.EncryptedOnly);
+            "Wi-Fi", CreateProvider("xbox"), DohEncryptionMode.EncryptedOnly,
+            CreateProvider("google"), DohEncryptionMode.EncryptedOnly);
 
-        // Assert
         Assert.True(result.IsSuccess);
         Assert.Equal(DohProviderSwitchOutcome.AppliedNew, result.SwitchOutcome);
-        Assert.Equal("Google включён", result.Message);
-        configuration.VerifyAll();
+        Assert.Equal("Google applied", result.Message);
+        configuration.Verify(x => x.DisableAsync(
+            It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task SwitchAsync_WhenDhcpResetFails_DoesNotApplyNewProvider()
+    public async Task SwitchAsync_WhenApplyFails_PreservesPreviousState()
     {
-        // Arrange
         var configuration = new Mock<IWindowsDohConfigurationService>();
-        configuration.Setup(x => x.DisableAsync("Wi-Fi", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DohApplyResult(false, "DHCP недоступен"));
-        var service = new DohProviderSwitchService(configuration.Object);
-
-        // Act
-        var result = await service.SwitchAsync(
-            "Wi-Fi", CreateProvider("google"), DohEncryptionMode.EncryptedWithFallback);
-
-        // Assert
-        Assert.False(result.IsSuccess);
-        configuration.Verify(x => x.ApplyAsync(
-            It.IsAny<string>(), It.IsAny<DohProvider>(), It.IsAny<DohEncryptionMode>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task SwitchAsync_WhenNewProviderFails_RestoresPreviousProviderWithCleanupToken()
-    {
-        var previous = CreateProvider("cloudflare");
-        var next = CreateProvider("google");
-        var configuration = new Mock<IWindowsDohConfigurationService>();
-        configuration.Setup(x => x.DisableAsync("Wi-Fi", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DohApplyResult(true, "DHCP"));
-        configuration.Setup(x => x.ApplyAsync("Wi-Fi", next, DohEncryptionMode.EncryptedOnly, It.IsAny<CancellationToken>()))
+        configuration.Setup(x => x.ApplyAsync(
+                "Wi-Fi", It.Is<DohProvider>(provider => provider.Id == "google"),
+                DohEncryptionMode.EncryptedOnly, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DohApplyResult(false, "new failed"));
-        configuration.Setup(x => x.ApplyAsync("Wi-Fi", previous, DohEncryptionMode.EncryptedWithFallback, CancellationToken.None))
-            .ReturnsAsync(new DohApplyResult(true, "restored"));
         var service = new DohProviderSwitchService(configuration.Object);
 
-        var result = await service.SwitchAsync("Wi-Fi", previous, DohEncryptionMode.EncryptedWithFallback,
-            next, DohEncryptionMode.EncryptedOnly);
+        var result = await service.SwitchAsync(
+            "Wi-Fi", CreateProvider("xbox"), DohEncryptionMode.EncryptedOnly,
+            CreateProvider("google"), DohEncryptionMode.EncryptedOnly);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(DohProviderSwitchOutcome.RestoredPrevious, result.SwitchOutcome);
-        Assert.Contains("восстановлен", result.Message, StringComparison.OrdinalIgnoreCase);
-        configuration.VerifyAll();
+        Assert.Contains("new failed", result.Message, StringComparison.OrdinalIgnoreCase);
+        configuration.Verify(x => x.DisableAsync(
+            It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task SwitchAsync_WhenPreviousProviderRestoreFails_ReturnsTypedFailure()
+    public async Task SwitchAsync_WhenApplyReportsRestoreFailure_ReturnsTypedFailure()
     {
-        var previous = CreateProvider("cloudflare");
-        var next = CreateProvider("google");
         var configuration = new Mock<IWindowsDohConfigurationService>();
-        configuration.Setup(x => x.DisableAsync("Wi-Fi", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DohApplyResult(true, "DHCP"));
-        configuration.Setup(x => x.ApplyAsync("Wi-Fi", next, DohEncryptionMode.EncryptedOnly, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DohApplyResult(false, "new failed"));
-        configuration.Setup(x => x.ApplyAsync("Wi-Fi", previous, DohEncryptionMode.EncryptedWithFallback, CancellationToken.None))
-            .ReturnsAsync(new DohApplyResult(false, "restore failed"));
+        configuration.Setup(x => x.ApplyAsync(
+                "Wi-Fi", It.Is<DohProvider>(provider => provider.Id == "google"),
+                DohEncryptionMode.EncryptedOnly, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DohApplyResult(
+                false, "rollback failed", DohProviderSwitchOutcome.RestoreFailed));
+        var service = new DohProviderSwitchService(configuration.Object);
 
-        var result = await new DohProviderSwitchService(configuration.Object).SwitchAsync(
-            "Wi-Fi", previous, DohEncryptionMode.EncryptedWithFallback, next, DohEncryptionMode.EncryptedOnly);
+        var result = await service.SwitchAsync(
+            "Wi-Fi", CreateProvider("xbox"), DohEncryptionMode.EncryptedOnly,
+            CreateProvider("google"), DohEncryptionMode.EncryptedOnly);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(DohProviderSwitchOutcome.RestoreFailed, result.SwitchOutcome);
-        Assert.Contains("restore failed", result.Message);
+        Assert.Contains("rollback failed", result.Message);
+        configuration.Verify(x => x.DisableAsync(
+            It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static DohProvider CreateProvider(string id) => new(

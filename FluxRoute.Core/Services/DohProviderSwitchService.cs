@@ -19,7 +19,7 @@ public interface IDohProviderSwitchService
         CancellationToken ct = default);
 }
 
-/// <summary>Атомарно переключает DoH-провайдера через промежуточный возврат DNS к DHCP.</summary>
+/// <summary>Переключает DoH-провайдера через транзакционное применение с автоматическим откатом.</summary>
 public sealed class DohProviderSwitchService : IDohProviderSwitchService
 {
     private readonly IWindowsDohConfigurationService _configurationService;
@@ -27,15 +27,6 @@ public sealed class DohProviderSwitchService : IDohProviderSwitchService
     public DohProviderSwitchService(IWindowsDohConfigurationService configurationService)
     {
         _configurationService = configurationService;
-    }
-
-    public async Task<DohApplyResult> SwitchAsync(
-        string interfaceName,
-        DohProvider provider,
-        DohEncryptionMode mode,
-        CancellationToken ct = default)
-    {
-        return await SwitchAsync(interfaceName, provider, mode, provider, mode, ct).ConfigureAwait(false);
     }
 
     public async Task<DohApplyResult> SwitchAsync(
@@ -49,16 +40,11 @@ public sealed class DohProviderSwitchService : IDohProviderSwitchService
         ArgumentException.ThrowIfNullOrWhiteSpace(interfaceName);
         ArgumentNullException.ThrowIfNull(provider);
 
-        var resetResult = await _configurationService
-            .DisableAsync(interfaceName, ct)
-            .ConfigureAwait(false);
-        if (!resetResult.IsSuccess)
-        {
-            return new DohApplyResult(
-                false,
-                $"Не удалось вернуть DNS к DHCP перед переключением: {resetResult.Message}",
-                DohProviderSwitchOutcome.RestoreFailed);
-        }
+        // ApplyAsync already captures the complete current state and restores it
+        // transactionally on failure. An extra DHCP reset here creates a race
+        // between Windows network reconfiguration and the next provider apply.
+        _ = previousProvider;
+        _ = previousMode;
 
         var applied = await _configurationService
             .ApplyAsync(interfaceName, provider, mode, ct)
@@ -68,11 +54,22 @@ public sealed class DohProviderSwitchService : IDohProviderSwitchService
             return applied;
         }
 
-        var restored = await _configurationService
-            .ApplyAsync(interfaceName, previousProvider, previousMode, CancellationToken.None)
-            .ConfigureAwait(false);
-        return restored.IsSuccess
-            ? new(false, $"{applied.Message} Предыдущий провайдер восстановлен.", DohProviderSwitchOutcome.RestoredPrevious)
-            : new(false, $"{applied.Message} Не удалось восстановить предыдущий провайдер: {restored.Message}", DohProviderSwitchOutcome.RestoreFailed);
+        var outcome = applied.SwitchOutcome == DohProviderSwitchOutcome.RestoreFailed
+            ? DohProviderSwitchOutcome.RestoreFailed
+            : DohProviderSwitchOutcome.RestoredPrevious;
+        return applied with
+        {
+            SwitchOutcome = outcome,
+            Message = outcome == DohProviderSwitchOutcome.RestoredPrevious
+                ? $"{applied.Message} Предыдущая конфигурация сохранена."
+                : applied.Message
+        };
     }
+
+    public Task<DohApplyResult> SwitchAsync(
+        string interfaceName,
+        DohProvider provider,
+        DohEncryptionMode mode,
+        CancellationToken ct = default) =>
+        SwitchAsync(interfaceName, provider, mode, provider, mode, ct);
 }
