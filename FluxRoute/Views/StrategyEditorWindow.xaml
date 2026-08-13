@@ -1,0 +1,70 @@
+<Window x:Class="FluxRoute.Views.StrategyEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{Binding WindowTitle}"
+        Width="650" Height="500"
+        MinWidth="450" MinHeight="300"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResizeWithGrip"
+        ShowInTaskbar="False"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+    <Border Background="#0C0F17" CornerRadius="12" BorderBrush="#1E2840" BorderThickness="1">
+        <Grid Margin="16,12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Заголовок -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Text="&#xE74C;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                           Foreground="#4D6BFE" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <TextBlock Text="{Binding WindowTitle}" Foreground="#DCE4F0"
+                           FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <!-- Редактор -->
+            <Border Grid.Row="1" Background="#080B12" BorderBrush="#1E2235"
+                    BorderThickness="1" CornerRadius="8">
+                <TextBox Text="{Binding EditorContent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         Background="Transparent" Foreground="#9BB0D0"
+                         BorderThickness="0"
+                         FontFamily="Consolas" FontSize="12" Padding="10"
+                         AcceptsReturn="True" AcceptsTab="True"
+                         VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Auto"
+                         IsUndoEnabled="True" />
+            </Border>
+
+            <!-- Статус и кнопки -->
+            <Grid Grid.Row="2" Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding StatusText}" Foreground="#66758E"
+                           FontSize="10" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="Отмена" Style="{StaticResource ActionBtn}"
+                            Height="30" Padding="12,0" Margin="0,0,8,0"
+                            Command="{Binding CancelCommand}"
+                            CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}" />
+                    <Button Content="Создать копию" Style="{StaticResource ActionBtnGreen}"
+                            Height="30" Padding="12,0" Margin="0,0,8,0"
+                            Command="{Binding CreateCopyCommand}"
+                            CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}" />
+                    <Button Content="Сохранить" Style="{StaticResource ActionBtnAccent}"
+                            Height="30" Padding="12,0"
+                            Command="{Binding SaveCommand}"
+                            CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
+                            IsEnabled="{Binding HasChanges}" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

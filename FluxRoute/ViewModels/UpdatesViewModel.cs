@@ -111,6 +111,11 @@ public sealed partial class UpdatesViewModel : ObservableObject
     [RelayCommand]
     private async Task CheckUpdates()
     {
+        var currentVersion = _getCurrentEngineVersion();
+        var dialog = CreateUpdateDialog("Flowseal Zapret", currentVersion);
+        dialog?.ShowChecking("Проверяем обновление движка Flowseal…");
+        dialog?.OpenModal();
+
         UpdateStatus = "🔍 Проверяем обновления...";
         LatestRemoteVersion = "…";
 
@@ -125,6 +130,9 @@ public sealed partial class UpdatesViewModel : ObservableObject
             UpdateStatus = $"❌ {errMsg}";
             _addAppLog($"Ошибка проверки: {errMsg}");
             AddLog($"❌ {errMsg}");
+            dialog?.ShowError(errMsg, currentVersion);
+            if (dialog is not null)
+                await dialog.WaitForResultAsync();
             return;
         }
 
@@ -143,6 +151,9 @@ public sealed partial class UpdatesViewModel : ObservableObject
             _addAppLog("Обновлений не найдено.");
             AddLog("✅ Обновлений не найдено");
             _pendingUpdate = null;
+            dialog?.ShowUpToDate(currentVersion, latest.Version);
+            if (dialog is not null)
+                await dialog.WaitForResultAsync();
             return;
         }
 
@@ -150,6 +161,9 @@ public sealed partial class UpdatesViewModel : ObservableObject
         UpdateStatus = $"⬆️ Доступна версия {latest.Version}";
         _addAppLog($"Доступно обновление: {latest.Version}");
         AddLog($"⬆️ Доступно: {latest.Version}");
+        dialog?.ShowUpdateAvailable(currentVersion, latest.Version, autoInstall: false);
+        if (dialog is not null && await dialog.WaitForResultAsync())
+            await InstallUpdateAsync();
     }
 
     [RelayCommand]
@@ -225,6 +239,10 @@ public sealed partial class UpdatesViewModel : ObservableObject
     [RelayCommand]
     private async Task CheckAppUpdate()
     {
+        var dialog = CreateUpdateDialog("FluxRoute", CurrentAppVersion);
+        dialog?.ShowChecking("Проверяем новую версию FluxRoute…");
+        dialog?.OpenModal();
+
         IsCheckingAppUpdate = true;
         AppUpdateStatus = "🔍 Проверяем обновление FluxRoute...";
         HasAppUpdate = false;
@@ -236,12 +254,14 @@ public sealed partial class UpdatesViewModel : ObservableObject
         {
             AppUpdateStatus = $"❌ {error}";
             AddLog($"❌ FluxRoute: {error}");
+            dialog?.ShowError(error, CurrentAppVersion);
         }
         else if (update is null)
         {
             AppUpdateStatus = $"✅ Актуальная версия FluxRoute ({CurrentAppVersion})";
             LatestAppVersion = CurrentAppVersion;
             AddLog("✅ FluxRoute: обновлений нет");
+            dialog?.ShowUpToDate(CurrentAppVersion, CurrentAppVersion);
         }
         else
         {
@@ -250,9 +270,20 @@ public sealed partial class UpdatesViewModel : ObservableObject
             LatestAppVersion = update.Version;
             AppUpdateStatus = $"⬆️ Доступна FluxRoute v{update.Version}";
             AddLog($"⬆️ FluxRoute: доступна версия {update.Version}");
+            dialog?.ShowUpdateAvailable(CurrentAppVersion, update.Version, autoInstall: false);
         }
 
         IsCheckingAppUpdate = false;
+        if (dialog is not null && await dialog.WaitForResultAsync() && _pendingAppUpdate is not null)
+            await InstallAppUpdate();
+    }
+
+    private static UpdateCheckDialog? CreateUpdateDialog(string componentName, string currentVersion)
+    {
+        if (Application.Current?.Dispatcher is not { HasShutdownStarted: false })
+            return null;
+
+        return new UpdateCheckDialog(componentName, currentVersion);
     }
 
     [RelayCommand]

@@ -14,6 +14,7 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Application = System.Windows.Application;
@@ -25,6 +26,9 @@ public partial class MainViewModel : ObservableObject
     // ── Коллекции ──
     public ObservableCollection<string> Logs { get; } = new();
     public ObservableCollection<ProfileItem> Profiles { get; } = new();
+    private FileSystemWatcher? _profileWatcher;
+    private DispatcherTimer? _profileRefreshTimer;
+    private bool _isCleaningUp;
     public ObservableCollection<string> OrchestratorLogs { get; } = new();
     public ObservableCollection<ProfileScore> ProfileScores { get; } = new();
     public ObservableCollection<AiStrategyRowVm> AiStrategyRows { get; } = new();
@@ -381,7 +385,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (CustomDialog.Show(
                 "Завершить работу FluxRoute?",
-                "Все активные службы (WinDivert, WinWS) будут остановлены, защита прекратит работу.",
+                "Все активные службы и движки будут остановлены, обход DPI прекратит работу.",
                 "Завершить",
                 "Отмена",
                 isDanger: true))
@@ -426,6 +430,7 @@ public partial class MainViewModel : ObservableObject
         }
         OnPropertyChanged(nameof(SelectedScriptName));
         RunningScriptName = newValue?.FileName ?? "—";
+        NotifyEngineSummaryProperties();
         SaveSettings();
         if (!_suppressProfileWarning && _settingsLoaded && IsRunning && newValue is not null)
         {
@@ -496,30 +501,20 @@ public partial class MainViewModel : ObservableObject
 
     // ── Навигация ──
     [ObservableProperty] private int selectedTabIndex = 0;
-    public string SelectedTabName => SelectedTabIndex switch
-    {
-        0 => "ГЛАВНАЯ",
-        1 => "TG ПРОКСИ",
-        2 => "ОРКЕСТРАТОР",
-        3 => "ИИ",
-        4 => "ОБНОВЛЕНИЕ",
-        5 => "ДИАГНОСТИКА",
-        6 => "СЕРВИС",
-        7 => "О ПРОГРАММЕ",
-        8 => "ЛОГИ",
-        _ => ""
-    };
+    public string SelectedTabName => MainNavigation.GetName(SelectedTabIndex);
     partial void OnSelectedTabIndexChanged(int value)
     {
         OnPropertyChanged(nameof(SelectedTabName));
         if (value == 1) OnTgProxyTabActivated();
-        if (value == 2) RebuildAiStrategyRows();
-        if (value == 3)
+        if (value == 2)
         {
             _aiOrchestrator.SyncRegistryFromEngine();
             RefreshAiDashboard();
             RebuildAiStrategyRows();
         }
+        // ═══ v1.7.0: Активация вкладки Хостлисты ═══
+        if (value == 3)
+            Hostlists.LoadHostlistFiles();
     }
 
     // ── Боковая панель ──
@@ -532,18 +527,163 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool isRunning = false;
     [ObservableProperty] private bool isLogsVisible = false;
     [ObservableProperty] private string currentStrategy = "—";
-    [ObservableProperty] private string uploadSpeed = "0.0";
-    [ObservableProperty] private string downloadSpeed = "0.0";
+    [ObservableProperty] private string uploadSpeed = "0 Б/с";
+    [ObservableProperty] private string downloadSpeed = "0 Б/с";
     [ObservableProperty] private string lastStatusMessage = "Готово";
 
+    // ═══ v1.7.0: UI-Redesign — простой/расширенный режим ═══
+    [ObservableProperty] private bool simpleMode;
+    partial void OnSimpleModeChanged(bool value)
+    {
+        // В простом режиме доступны только Главная и Настройки.
+        // Если пользователь был на расширенной вкладке, возвращаем его на главный экран.
+        if (value && SelectedTabIndex is > 0 and not 7)
+            SelectedTabIndex = 0;
+
+        SaveSettings();
+        OnPropertyChanged(nameof(IsSimpleMode));
+    }
+    public bool IsSimpleMode => SimpleMode;
+    [RelayCommand]
+    private void ToggleSimpleMode() => SimpleMode = !SimpleMode;
+    // ═══════════════════════════════════════════════════════
+
+    public int ActiveServicesCount =>
+        (OrchestratorEnabled ? 1 : 0)
+        + (TgProxyRunning ? 1 : 0)
+        + (GameFilterEnabled ? 1 : 0);
+
+    public string ActiveServicesSummary => $"{ActiveServicesCount} из 3 активны";
+    public string TgProxySummaryText => TgProxyRunning ? "Работает" : "Остановлен";
+    public System.Windows.Media.Brush TgProxySummaryBrush => TgProxyRunning
+        ? System.Windows.Media.Brushes.MediumSpringGreen
+        : System.Windows.Media.Brushes.IndianRed;
+    public string PingSummary => "Нет данных";
+    public string CompactNetworkSummary =>
+        $"Пинг: {PingSummary}\n↓ {DownloadSpeed}   ↑ {UploadSpeed}";
+    public string TrafficSpeedSummary => $"↓ {DownloadSpeed}  ↑ {UploadSpeed}";
+    public string MainStatusText => IsZapret2Selected
+        ? Zapret2StatusText
+        : _selectedComponent == "none"
+            ? "Движок не выбран"
+            : IsRunning ? "Обход DPI активен" : "Обход DPI неактивен";
+
+    public System.Windows.Media.Brush MainStatusBrush => IsZapret2Selected
+        ? Zapret2Status.Status switch
+        {
+            ProtectionStatus.Starting => System.Windows.Media.Brushes.DeepSkyBlue,
+            ProtectionStatus.Stopping => System.Windows.Media.Brushes.DarkOrange,
+            ProtectionStatus.Healthy => System.Windows.Media.Brushes.MediumSpringGreen,
+            ProtectionStatus.Degraded => System.Windows.Media.Brushes.Gold,
+            ProtectionStatus.Error => System.Windows.Media.Brushes.IndianRed,
+            ProtectionStatus.Repairing => System.Windows.Media.Brushes.DarkOrange,
+            _ => System.Windows.Media.Brushes.SlateGray
+        }
+        : _selectedComponent == "none"
+            ? System.Windows.Media.Brushes.SlateGray
+            : IsRunning ? System.Windows.Media.Brushes.MediumSpringGreen : System.Windows.Media.Brushes.IndianRed;
+
+    public string EngineDisplayName => _selectedComponent switch
+    {
+        "zapret2" => "Zapret2 · winws2",
+        "none" => "—",
+        _ => "Zapret · winws"
+    };
+
+    public string EngineVersionText => _selectedComponent switch
+    {
+        "zapret2" => "v2.x",
+        "none" => "—",
+        _ => "legacy"
+    };
+
+    public string EngineSupportText => IsZapret2Selected
+        ? (Zapret2Status.WinDivertAvailable ? "WinDivert: доступен" : "WinDivert: не найден")
+        : _selectedComponent == "none"
+            ? "Движок не выбран"
+            : (Diagnostics is not null && Diagnostics.WinDivertDllOk && Diagnostics.WinDivertDriverOk
+                ? "WinDivert: доступен"
+                : "WinDivert: не найден");
+
+    public string ActiveProfileSummaryText
+    {
+        get
+        {
+            if (_selectedComponent == "none")
+                return "—";
+
+            var profile = IsZapret2Selected
+                ? Zapret2Status.ActiveProfile
+                : SelectedProfile?.DisplayName;
+            return string.IsNullOrWhiteSpace(profile) || profile == "—"
+                ? "Не выбран"
+                : Path.GetFileNameWithoutExtension(profile);
+        }
+    }
+
+    public string TrafficSummaryText => IsAnyEngineRunning ? TrafficSpeedSummary : "—";
+    public bool IsAnyEngineRunning => IsRunning || (IsZapret2Selected && Zapret2Status.Winws2Running);
+    public string ProtectionModeText => IsManualProtectionMode ? "Режим: Вручную" : "Режим: Автовыбор";
+    public string StrategyStatusText => IsZapret2Selected
+        ? (Zapret2Status.StrategyActive ? "Стратегия: активна" : "Стратегия: не активна")
+        : (IsRunning ? "Стратегия: активна" : "Стратегия: не запущена");
+
+    private void NotifyEngineSummaryProperties()
+    {
+        OnPropertyChanged(nameof(MainStatusText));
+        OnPropertyChanged(nameof(MainStatusBrush));
+        OnPropertyChanged(nameof(EngineDisplayName));
+        OnPropertyChanged(nameof(EngineVersionText));
+        OnPropertyChanged(nameof(EngineSupportText));
+        OnPropertyChanged(nameof(ActiveProfileSummaryText));
+        OnPropertyChanged(nameof(TrafficSummaryText));
+        OnPropertyChanged(nameof(IsAnyEngineRunning));
+        OnPropertyChanged(nameof(ProtectionModeText));
+        OnPropertyChanged(nameof(StrategyStatusText));
+    }
+
     public string MainActionButtonText => IsRunning ? "⏹ Остановить" : "▶ Запустить";
-    partial void OnIsRunningChanged(bool value) => OnPropertyChanged(nameof(MainActionButtonText));
+    partial void OnIsRunningChanged(bool value)
+    {
+        OnPropertyChanged(nameof(MainActionButtonText));
+        NotifyEngineSummaryProperties();
+        if (!value)
+        {
+            DownloadSpeed = "0 Б/с";
+            UploadSpeed = "0 Б/с";
+        }
+    }
+    partial void OnUploadSpeedChanged(string value)
+    {
+        OnPropertyChanged(nameof(TrafficSpeedSummary));
+        OnPropertyChanged(nameof(TrafficSummaryText));
+        OnPropertyChanged(nameof(CompactNetworkSummary));
+    }
+    partial void OnDownloadSpeedChanged(string value)
+    {
+        OnPropertyChanged(nameof(TrafficSpeedSummary));
+        OnPropertyChanged(nameof(TrafficSummaryText));
+        OnPropertyChanged(nameof(CompactNetworkSummary));
+    }
+
+    private void OnNetworkTrafficTimerTick(object? sender, EventArgs e)
+    {
+        if (_networkTrafficMonitor is null)
+            return;
+
+        var display = NetworkTrafficDisplay.Create(IsAnyEngineRunning, _networkTrafficMonitor.Sample());
+        DownloadSpeed = display.Download;
+        UploadSpeed = display.Upload;
+    }
 
     // ── Feature ViewModels ──
     public UpdatesViewModel Updates { get; private set; } = null!;
     public ServiceViewModel Service { get; private set; } = null!;
     public DiagnosticsViewModel Diagnostics { get; private set; } = null!;
-    public DohViewModel? Doh { get; }
+    public DohViewModel? Doh { get; private set; }
+    public ModsViewModel? ModsViewModel { get; private set; }
+    // ═══ v1.7.0: UI-Redesign ═══
+    public HostlistsViewModel Hostlists { get; private set; } = null!;
 
     // ── Диагностика (wrappers → DiagnosticsViewModel) ──
     public bool IsAdmin => Diagnostics.IsAdmin;
@@ -562,6 +702,11 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool orchestratorEnabled;
     partial void OnOrchestratorEnabledChanged(bool value)
     {
+        OnPropertyChanged(nameof(ProtectionMode));
+        OnPropertyChanged(nameof(IsAutomaticProtectionMode));
+        OnPropertyChanged(nameof(IsManualProtectionMode));
+        OnPropertyChanged(nameof(ActiveServicesCount));
+        OnPropertyChanged(nameof(ActiveServicesSummary));
         SaveSettings();
         if (_settingsLoaded)
             ApplyOrchestratorEnabledState();
@@ -583,6 +728,27 @@ public partial class MainViewModel : ObservableObject
 
     public string OrchestratorToggleLabel => OrchestratorRunning ? "Остановить оркестратор" : "Запустить оркестратор";
     partial void OnOrchestratorRunningChanged(bool value) => OnPropertyChanged(nameof(OrchestratorToggleLabel));
+
+    /// <summary>Текущий режим управления защитой на главном экране.</summary>
+    public ProtectionMode ProtectionMode =>
+        ProtectionModePolicy.FromOrchestratorEnabled(OrchestratorEnabled);
+
+    public bool IsAutomaticProtectionMode => ProtectionMode == ProtectionMode.Automatic;
+    public bool IsManualProtectionMode => ProtectionMode == ProtectionMode.Manual;
+
+    [RelayCommand]
+    private void SelectAutomaticProtectionMode()
+    {
+        if (!OrchestratorEnabled)
+            OrchestratorEnabled = true;
+    }
+
+    [RelayCommand]
+    private void SelectManualProtectionMode()
+    {
+        if (OrchestratorEnabled)
+            OrchestratorEnabled = false;
+    }
 
     // ── Настройки сайтов ──
     [ObservableProperty] private bool siteYouTube = true;
@@ -647,6 +813,66 @@ public partial class MainViewModel : ObservableObject
     private readonly IConnectivityChecker _connectivity;
     private bool _settingsLoaded = false;
     private bool _suppressOrchestratorStop = false;
+    // Значения, которые выбираются в онбординге до создания MainViewModel.
+    // Их нужно сохранять в каждом снимке настроек, иначе первый SaveSettings()
+    // после запуска сбросит FirstRunComplete обратно в false.
+    private bool _firstRunComplete;
+    private string _selectedComponent = "zapret";
+
+    public IReadOnlyList<string> ComponentOptions { get; } =
+    ["Zapret", "Zapret 2", "Без основного"];
+
+    public string SelectedComponentDisplayName
+    {
+        get => _selectedComponent switch
+        {
+            "zapret2" => "Zapret 2",
+            "none" => "Без основного",
+            _ => "Zapret"
+        };
+        set => SelectedComponent = value switch
+        {
+            "Zapret 2" => "zapret2",
+            "Без основного" => "none",
+            _ => "zapret"
+        };
+    }
+
+    public string SelectedComponent
+    {
+        get => _selectedComponent;
+        set
+        {
+            var normalized = string.IsNullOrWhiteSpace(value) ? "none" : value;
+            if (string.Equals(_selectedComponent, normalized, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (IsZapret2Selected && Zapret2Status.Winws2Running)
+                _ = StopZapret2Async();
+            else if (IsRunning)
+                Stop();
+
+            _selectedComponent = normalized;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ActiveComponentName));
+            OnPropertyChanged(nameof(SelectedComponentDisplayName));
+            OnPropertyChanged(nameof(IsZapret2Selected));
+            NotifyZapret2Properties();
+
+            if (IsZapret2Selected)
+                InitializeZapret2Status();
+            else
+                DisposeZapret2Status();
+
+            SaveSettings();
+        }
+    }
+    public string ActiveComponentName => _selectedComponent switch
+    {
+        "zapret2" => "Zapret 2",
+        "none" => "Не выбран",
+        _ => "Zapret"
+    };
 
     // ── Обновления ──
     [ObservableProperty] private bool autoUpdateEnabled = false;
@@ -666,6 +892,12 @@ public partial class MainViewModel : ObservableObject
     }
     [ObservableProperty] private bool minimizeToTray = true;
     partial void OnMinimizeToTrayChanged(bool value) => SaveSettings();
+
+    [ObservableProperty] private StartupWindowMode startupWindowMode = StartupWindowMode.Minimal;
+    partial void OnStartupWindowModeChanged(StartupWindowMode value) => SaveSettings();
+
+    public IReadOnlyList<StartupWindowMode> StartupWindowModes { get; } =
+        [StartupWindowMode.Modern, StartupWindowMode.Minimal];
 
     // ═══ v1.6.0: Крестик сворачивает в трей ═══
     [ObservableProperty] private bool closeToTray = true;
@@ -795,6 +1027,10 @@ public partial class MainViewModel : ObservableObject
     private readonly ITaskSchedulerService _taskScheduler;
     private readonly TrayIconService? _trayIcon;
     private readonly StrategyEvolver _evolver;
+    private readonly INetworkTrafficMonitor? _networkTrafficMonitor;
+    private readonly DispatcherTimer? _networkTrafficTimer;
+    // ═══ v1.7.0: НОВОЕ — сервис исключений антивируса ═══
+    private readonly IAntivirusExclusionService? _antivirusExclusion;
 
     public MainViewModel(
         ISettingsService settingsService,
@@ -809,9 +1045,16 @@ public partial class MainViewModel : ObservableObject
         StrategyEvolver aiEvolver,
         BatMaterializer aiMaterializer,
         IHttpClientFactory httpClientFactory,
-        ITaskSchedulerService? taskScheduler = null,
+        ModsViewModel? modsViewModel = null,
+                ITaskSchedulerService? taskScheduler = null,
         TrayIconService? trayIcon = null,
-        DohViewModel? doh = null)
+        DohViewModel? doh = null,
+        INetworkTrafficMonitor? networkTrafficMonitor = null,
+        // ═══ v1.7.0: НОВОЕ ═══
+        IAntivirusExclusionService? antivirusExclusionService = null,
+        IZapret2StatusService? zapret2StatusService = null,
+        IZapret2DiagnosticsService? zapret2DiagnosticsService = null,
+        IZapret2RecoveryService? zapret2RecoveryService = null)
     {
         _settingsService = settingsService;
         _updater = updaterService;
@@ -823,8 +1066,25 @@ public partial class MainViewModel : ObservableObject
         _httpClientFactory = httpClientFactory;
         _taskScheduler = taskScheduler ?? new TaskSchedulerService();
         _trayIcon = trayIcon;
-        _evolver = aiEvolver;
         Doh = doh;
+        _evolver = aiEvolver;
+        ModsViewModel = modsViewModel;
+                _networkTrafficMonitor = networkTrafficMonitor;
+        _antivirusExclusion = antivirusExclusionService;
+        _zapret2StatusService = zapret2StatusService;
+        _zapret2DiagnosticsService = zapret2DiagnosticsService;
+        _zapret2RecoveryService = zapret2RecoveryService;
+
+        if (_networkTrafficMonitor is not null)
+        {
+            _networkTrafficTimer = new DispatcherTimer(DispatcherPriority.Background)
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            _networkTrafficTimer.Tick += OnNetworkTrafficTimerTick;
+            _ = _networkTrafficMonitor.Sample();
+            _networkTrafficTimer.Start();
+        }
 
         // ── Инициализация feature ViewModels ──
         Diagnostics = new DiagnosticsViewModel(
@@ -883,8 +1143,22 @@ public partial class MainViewModel : ObservableObject
             addRecentLog: AddToRecentLogs);
 
         Diagnostics.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
-        Service.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
+        Service.PropertyChanged += (_, e) =>
+        {
+            OnPropertyChanged(e.PropertyName);
+            if (e.PropertyName == nameof(ServiceViewModel.GameFilterEnabled))
+            {
+                OnPropertyChanged(nameof(ActiveServicesCount));
+                OnPropertyChanged(nameof(ActiveServicesSummary));
+            }
+        };
         Updates.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
+
+        // ═══ v1.7.0: UI-Redesign — инициализация HostlistsViewModel ═══
+        Hostlists = new HostlistsViewModel(
+            getEngineDir: () => EngineDir,
+            addLog: msg => Logs.Add(msg));
+        // ════════════════════════════════════════════════════════════
 
         Logs.Add("Приложение запущено.");
         AddToRecentLogs("🚀 Приложение запущено");
@@ -893,6 +1167,7 @@ public partial class MainViewModel : ObservableObject
         ApplySettings(settings);
 
         LoadProfiles();
+        InitializeProfileWatcher();
 
         if (settings.LastProfileFileName is not null)
         {
@@ -916,6 +1191,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         _settingsLoaded = true;
+        InitializeZapret2Status();
 
         if (!Directory.Exists(EngineDir) || Directory.GetFiles(EngineDir, "*.bat").Length == 0)
         {
@@ -1023,6 +1299,11 @@ public partial class MainViewModel : ObservableObject
     // ── Настройки ──
     private void ApplySettings(AppSettings settings)
     {
+        _firstRunComplete = settings.FirstRunComplete;
+        _selectedComponent = settings.SelectedComponent;
+        OnPropertyChanged(nameof(ActiveComponentName));
+        OnPropertyChanged(nameof(SelectedComponentDisplayName));
+        NotifyEngineSummaryProperties();
         OrchestratorInterval = settings.OrchestratorInterval;
         OrchestratorEnabled = settings.OrchestratorEnabled;
         SiteYouTube = settings.SiteYouTube;
@@ -1059,6 +1340,9 @@ public partial class MainViewModel : ObservableObject
         AutoUpdateEnabled = settings.AutoUpdateEnabled;
         AutoStartEnabled = settings.AutoStartEnabled;
         MinimizeToTray = settings.MinimizeToTray;
+        StartupWindowMode = settings.StartupWindowMode;
+        // ═══ v1.7.0: UI-Redesign ═══
+        SimpleMode = settings.SimpleMode;
         // ═══ v1.6.0: Крестик сворачивает в трей ═══
         CloseToTray = settings.CloseToTray;
         // ═══════════════════════════════════════
@@ -1106,6 +1390,8 @@ public partial class MainViewModel : ObservableObject
         var settings = new AppSettings
         {
             LastProfileFileName = SelectedProfile?.FileName,
+            SelectedComponent = _selectedComponent,
+            FirstRunComplete = _firstRunComplete,
             DefaultProfileFileName = DefaultProfileFileName, // Дефолтный профиль для триггеров
             OrchestratorInterval = OrchestratorInterval,
             OrchestratorEnabled = OrchestratorEnabled,
@@ -1125,6 +1411,9 @@ public partial class MainViewModel : ObservableObject
             AutoUpdateEnabled = AutoUpdateEnabled,
             AutoStartEnabled = AutoStartEnabled,
             MinimizeToTray = MinimizeToTray,
+            StartupWindowMode = StartupWindowMode,
+            // ═══ v1.7.0: UI-Redesign ═══
+            SimpleMode = SimpleMode,
             // ═══ v1.6.0: Крестик сворачивает в трей ═══
             CloseToTray = CloseToTray,
             // ═══════════════════════════════════════
@@ -1167,7 +1456,14 @@ public partial class MainViewModel : ObservableObject
 
     // ── UI-команды ──
     [RelayCommand]
-    private void SelectTab(string index) => SelectedTabIndex = int.Parse(index);
+    private void SelectTab(string index)
+    {
+        var selectedIndex = int.Parse(index);
+        if (SimpleMode && selectedIndex is > 0 and not 7)
+            return;
+
+        SelectedTabIndex = selectedIndex;
+    }
 
     [RelayCommand]
     private void OpenEngineFolder()
@@ -1183,7 +1479,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ShowLogs() => SelectedTabIndex = 8;
+    private void ShowLogs() => SelectedTabIndex = 6;
 
     [RelayCommand]
     private void ToggleSettings() => OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
@@ -1194,11 +1490,57 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void ToggleLogs() => IsLogsVisible = !IsLogsVisible;
 
+    // ═══ v1.7.0: UI-Redesign — открыть редактор стратегии ═══
     [RelayCommand]
-    private void MainAction()
+    private void EditStrategy(ProfileItem? profile)
     {
-        if (IsRunning) Stop();
-        else Start();
+        if (profile is null) return;
+        var filePath = profile.FullPath;
+        if (!File.Exists(filePath))
+        {
+            AddToRecentLogs($"❌ Файл не найден: {filePath}");
+            return;
+        }
+
+        var editorVm = new StrategyEditorViewModel(filePath, onSaved: name =>
+        {
+            AddToRecentLogs($"✅ Стратегия сохранена: {name}");
+            LoadProfiles();
+        });
+
+        var editorWindow = new StrategyEditorWindow { DataContext = editorVm, Owner = Application.Current.MainWindow };
+        editorWindow.ShowDialog();
+    }
+    // ═════════════════════════════════════════════════════════
+
+    [RelayCommand]
+    private void OpenDiagnostics()
+    {
+        SelectedTabIndex = 5;
+    }
+
+    [RelayCommand]
+    private void OpenLogs()
+    {
+        SelectedTabIndex = 6;
+    }
+    [RelayCommand]
+    private async Task MainActionAsync()
+    {
+        if (!IsZapret2Selected)
+        {
+            if (IsRunning) Stop();
+            else Start();
+            return;
+        }
+
+        if (Zapret2Status.Status is ProtectionStatus.Starting or ProtectionStatus.Repairing)
+            return;
+
+        if (Zapret2Status.Winws2Running && !_zapret2UserStopped)
+            await StopZapret2Async().ConfigureAwait(true);
+        else
+            await StartZapret2Async().ConfigureAwait(true);
     }
 
     private void AddToRecentLogs(string message)
@@ -1292,16 +1634,72 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    // ═══ v1.7.0: НОВОЕ — исключения антивируса ═══
+    [ObservableProperty]
+    private string _antivirusExclusionStatus = string.Empty;
+
+    [ObservableProperty]
+    private bool _antivirusExclusionInProgress;
+
+    /// <summary>
+    /// Добавляет папку программы в исключения Защитника Windows.
+    /// </summary>
+    [RelayCommand]
+    private async Task AddAntivirusExclusion()
+    {
+        if (_antivirusExclusion is null) return;
+        if (AntivirusExclusionInProgress) return;
+
+        AntivirusExclusionInProgress = true;
+        AntivirusExclusionStatus = "Добавление папки в исключения...";
+
+        try
+        {
+            var appDir = AppContext.BaseDirectory;
+            var result = await _antivirusExclusion.AddExclusionAsync(appDir);
+
+            AntivirusExclusionStatus = result.Message;
+
+            if (result.RequiresElevation)
+            {
+                AntivirusExclusionStatus = "⚠️ Требуются права администратора. Перезапустите программу от имени администратора.";
+            }
+            else if (!result.Success)
+            {
+                AntivirusExclusionStatus = $"❌ {result.Message}";
+            }
+
+            Logs.Add($"[Антивирус] {result.Message}");
+        }
+        catch (Exception ex)
+        {
+            AntivirusExclusionStatus = $"❌ Ошибка: {ex.Message}";
+            Logs.Add($"[Антивирус] Ошибка: {ex.Message}");
+        }
+        finally
+        {
+            AntivirusExclusionInProgress = false;
+        }
+    }
+
     // ── Cleanup ──
     public void Cleanup()
     {
+        _isCleaningUp = true;
+        DisposeProfileWatcher();
         if (_orchestrator.IsRunning)
             _orchestrator.Stop();
         if (_aiOrchestrator.IsRunning)
             _aiOrchestrator.Stop();
         _uptimeTimer?.Stop();
         _orchestratorUiTimer?.Stop();
+        if (_networkTrafficTimer is not null)
+        {
+            _networkTrafficTimer.Stop();
+            _networkTrafficTimer.Tick -= OnNetworkTrafficTimerTick;
+        }
         _hideWindowsCts?.Cancel();
         _hideWindowsCts?.Dispose();
+        DisposeZapret2Status();
     }
 }

@@ -260,4 +260,118 @@
         </Setter>
     </Style>
 
+    <!-- ══ DIALOG BUTTONS (глобально, используются CustomDialog и ModNameDialog) ══ -->
+    <Style x:Key="DialogCancelBtn" TargetType="Button">
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="#7E89A8"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="#1E2235"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="Margin" Value="0,0,10,0"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <Grid>
+                            <Border Background="{TemplateBinding Background}"/>
+                            <Border x:Name="HoverOverlay" Opacity="0">
+                                <Border.Background>
+                                    <SolidColorBrush Color="#161B22"/>
+                                </Border.Background>
+                            </Border>
+                            <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="#E6EDF3"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="AccentConfirmBtn" TargetType="Button">
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="#4A90E2"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="#1E3A7A"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <Grid>
+                            <Border Background="{TemplateBinding Background}"/>
+                            <Border x:Name="HoverOverlay" Opacity="0">
+                                <Border.Background>
+                                    <SolidColorBrush Color="#161B22"/>
+                                </Border.Background>
+                            </Border>
+                            <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="#E6EDF3"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ iOS-STYLE TOGGLE ══ -->
+    <Style x:Key="IosToggle" TargetType="CheckBox">
+        <Setter Property="Width" Value="44" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Grid>
+                        <!-- Трек -->
+                        <Border x:Name="Track" CornerRadius="12"
+                                Width="44" Height="24"
+                                Background="#30363D"
+                                BorderThickness="0" />
+                        <!-- Ползунок -->
+                        <Border x:Name="Thumb" CornerRadius="10"
+                                Width="20" Height="20"
+                                Background="#F0F6FC"
+                                HorizontalAlignment="Left"
+                                Margin="2,0,0,0">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#000000" BlurRadius="2"
+                                                  ShadowDepth="0" Opacity="0.3" />
+                            </Border.Effect>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Track" Property="Background" Value="#4D6BFE" />
+                            <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right" />
+                            <Setter TargetName="Thumb" Property="Margin" Value="0,0,2,0" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>

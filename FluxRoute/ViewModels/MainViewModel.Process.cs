@@ -155,6 +155,12 @@ public partial class MainViewModel
     [RelayCommand]
     private void Start()
     {
+        if (IsZapret2Selected)
+        {
+            _ = StartZapret2Async();
+            return;
+        }
+
         if (IsRunning)
         {
             Logs.Add("Процесс уже запущен.");
@@ -419,6 +425,12 @@ public partial class MainViewModel
     [RelayCommand]
     private void Stop()
     {
+        if (IsZapret2Selected)
+        {
+            _ = StopZapret2Async();
+            return;
+        }
+
         _hideWindowsCts?.Cancel();
 
         var pidsToKill = new HashSet<uint>(_trackedPids);
