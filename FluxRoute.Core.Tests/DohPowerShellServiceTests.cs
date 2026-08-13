@@ -59,6 +59,43 @@ public sealed class DohPowerShellServiceTests
     }
 
     [Fact]
+    public async Task RestoreSystemStateAsync_ReAddsMissingExistingMapping()
+    {
+        var runner = new Mock<IProcessRunner>();
+        runner.Setup(x => x.RunAsync(
+                "powershell.exe", It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessRunResult(0, "", ""));
+        runner.Setup(x => x.RunAsync(
+                "netsh.exe", It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessRunResult(0, "", ""));
+        runner.Setup(x => x.RunAsync(
+                "netsh.exe",
+                It.Is<IReadOnlyList<string>>(args => args.Contains("dnsclient") && args.Contains("set") && args.Contains("global")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessRunResult(1, "", "stop before verification"));
+        var service = CreateService(runner);
+        var journal = new DohOperationJournal
+        {
+            InterfaceName = "Ethernet",
+            GlobalDohMode = DohGlobalMode.Disabled,
+            ResolverMappings =
+            [
+                new("2a00:ab00:1233:26::50", true, "https://dns.example/dns-query", true, false)
+            ]
+        };
+
+        var result = await service.RestoreSystemStateAsync(journal);
+
+        Assert.False(result.IsSuccess);
+        runner.Verify(x => x.RunAsync(
+            "powershell.exe",
+            It.Is<IReadOnlyList<string>>(args => args.Last().Contains("Get-DnsClientDohServerAddress", StringComparison.Ordinal)
+                && args.Last().Contains("Add-DnsClientDohServerAddress", StringComparison.Ordinal)
+                && args.Last().Contains("Set-DnsClientDohServerAddress", StringComparison.Ordinal)),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task ConfigureAsync_PowerShellScript_ForcesUtf8Output()
     {
         // Arrange

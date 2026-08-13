@@ -414,7 +414,7 @@ public sealed class DohPowerShellService : IDohSystemConfigurationService
         {
             var script = !mapping.Exists
                 ? $"$v=Get-DnsClientDohServerAddress -ServerAddress '{Escape(mapping.Address)}' -ErrorAction SilentlyContinue; if($null -ne $v){{Remove-DnsClientDohServerAddress -ServerAddress '{Escape(mapping.Address)}' -Confirm:$false}}"
-                : $"Set-DnsClientDohServerAddress -ServerAddress '{Escape(mapping.Address)}' -DohTemplate '{Escape(mapping.Template ?? string.Empty)}' -AutoUpgrade ${mapping.AutoUpgrade} -AllowFallbackToUdp ${mapping.AllowFallbackToUdp}";
+                : $"$existing=Get-DnsClientDohServerAddress -ServerAddress '{Escape(mapping.Address)}' -ErrorAction SilentlyContinue; if($null -eq $existing){{Add-DnsClientDohServerAddress -ServerAddress '{Escape(mapping.Address)}' -DohTemplate '{Escape(mapping.Template ?? string.Empty)}' -AutoUpgrade ${mapping.AutoUpgrade} -AllowFallbackToUdp ${mapping.AllowFallbackToUdp}}}else{{Set-DnsClientDohServerAddress -ServerAddress '{Escape(mapping.Address)}' -DohTemplate '{Escape(mapping.Template ?? string.Empty)}' -AutoUpgrade ${mapping.AutoUpgrade} -AllowFallbackToUdp ${mapping.AllowFallbackToUdp}}}";
             var result = await RunPowerShellAsync("$ErrorActionPreference='Stop'; " + script, ct).ConfigureAwait(false);
             if (result.ExitCode != 0) return new(false, "Не удалось восстановить сопоставления DoH: " + result.StandardError.Trim());
         }
