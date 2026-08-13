@@ -38,18 +38,6 @@
                         </Style>
                     </Button.Style>
                 </Button>
-                <Button Command="{Binding InstallUpdatesCommand}">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource ActionBtnAccent}">
-                            <Setter Property="Content" Value="Обновить" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsUpdating}" Value="True">
-                                    <Setter Property="IsEnabled" Value="False" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
             </StackPanel>
             <CheckBox Content="Автоматически проверять при запуске"
                 IsChecked="{Binding AutoUpdateEnabled}" Margin="0,0,0,12" />
@@ -92,21 +80,6 @@
                         </Style>
                     </Button.Style>
                 </Button>
-                <Button Command="{Binding Updates.InstallAppUpdateCommand}">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource ActionBtnAccent}">
-                            <Setter Property="Content" Value="Установить" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Updates.HasAppUpdate}" Value="False">
-                                    <Setter Property="IsEnabled" Value="False" />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Updates.IsCheckingAppUpdate}" Value="True">
-                                    <Setter Property="IsEnabled" Value="False" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
             </StackPanel>
             <Rectangle Style="{StaticResource Sep}" />
 
@@ -126,7 +99,7 @@
                 <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Val}"
                     Text="{Binding TgProxyInstalled, Converter={StaticResource BoolToInstalled}}" />
             </Grid>
-            <Button Content="Проверить обновления TG Proxy" Style="{StaticResource ActionBtn}"
+            <Button Content="Проверить" Style="{StaticResource ActionBtn}"
                 HorizontalAlignment="Left" Margin="0,0,0,12"
                 Command="{Binding CheckTgProxyUpdatesCommand}"
                 IsEnabled="{Binding TgProxyInstalled}" />

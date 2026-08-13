@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Security.Principal;
 using System.Text;
 using System.Windows;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -140,7 +141,11 @@ public partial class MainViewModel
         catch (Exception ex) { Logs.Add($"❌ Ошибка экспорта бандла: {ex.Message}"); }
     }
 
-    private void RefreshDiagnostics() => Diagnostics.Refresh();
+    private void RefreshDiagnostics()
+    {
+        Diagnostics.Refresh();
+        NotifyEngineSummaryProperties();
+    }
 
     private void UpdateRuntimeInfo()
     {
@@ -235,6 +240,83 @@ public partial class MainViewModel
         RebuildAiStrategyRows();
     }
 
+    private void InitializeProfileWatcher()
+    {
+        DisposeProfileWatcher();
+        if (!Directory.Exists(EngineDir))
+            return;
+
+        _profileRefreshTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(500)
+        };
+        _profileRefreshTimer.Tick += OnProfileRefreshTimerTick;
+
+        _profileWatcher = new FileSystemWatcher(EngineDir, "*.bat")
+        {
+            IncludeSubdirectories = true,
+            NotifyFilter = NotifyFilters.FileName
+                | NotifyFilters.LastWrite
+                | NotifyFilters.CreationTime
+                | NotifyFilters.Size,
+            EnableRaisingEvents = true
+        };
+        _profileWatcher.Created += OnProfileFileChanged;
+        _profileWatcher.Changed += OnProfileFileChanged;
+        _profileWatcher.Deleted += OnProfileFileChanged;
+        _profileWatcher.Renamed += OnProfileFileRenamed;
+    }
+
+    private void OnProfileFileChanged(object sender, FileSystemEventArgs e) => ScheduleProfileRefresh();
+
+    private void OnProfileFileRenamed(object sender, RenamedEventArgs e) => ScheduleProfileRefresh();
+
+    private void ScheduleProfileRefresh()
+    {
+        if (_isCleaningUp)
+            return;
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+            return;
+
+        if (!dispatcher.CheckAccess())
+        {
+            dispatcher.BeginInvoke(ScheduleProfileRefresh);
+            return;
+        }
+
+        _profileRefreshTimer?.Stop();
+        _profileRefreshTimer?.Start();
+    }
+
+    private void OnProfileRefreshTimerTick(object? sender, EventArgs e)
+    {
+        _profileRefreshTimer?.Stop();
+        if (!_isCleaningUp)
+            LoadProfiles();
+    }
+
+    private void DisposeProfileWatcher()
+    {
+        if (_profileWatcher is not null)
+        {
+            _profileWatcher.EnableRaisingEvents = false;
+            _profileWatcher.Created -= OnProfileFileChanged;
+            _profileWatcher.Changed -= OnProfileFileChanged;
+            _profileWatcher.Deleted -= OnProfileFileChanged;
+            _profileWatcher.Renamed -= OnProfileFileRenamed;
+            _profileWatcher.Dispose();
+            _profileWatcher = null;
+        }
+
+        if (_profileRefreshTimer is not null)
+        {
+            _profileRefreshTimer.Stop();
+            _profileRefreshTimer.Tick -= OnProfileRefreshTimerTick;
+            _profileRefreshTimer = null;
+        }
+    }
     private string BuildDiagnosticsText() =>
         Diagnostics.BuildDiagnosticsText(AppVersion, StatusText, RunningScriptName, PidText, UptimeText, OrchestratorRunning);
 

@@ -39,6 +39,26 @@
                         </TextBlock.Style>
                     </TextBlock>
                 </Button>
+                <Button x:Name="MaximizeBtn" Style="{StaticResource TitleBtn}"
+                        ToolTip="Maximize / restore size"
+                        Click="MaximizeButton_Click">
+                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="9">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="&#xE922;" />
+                                <Setter Property="Foreground" Value="#4A5170" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Value="Maximized">
+                                        <Setter Property="Text" Value="&#xE923;" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsMouseOver, ElementName=MaximizeBtn}" Value="True">
+                                        <Setter Property="Foreground" Value="#C0C8E8" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Button>
                 <Button x:Name="CloseBtn" Style="{StaticResource CloseTitleBtn}"
                         Click="CloseButton_Click">
                     <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="9">
