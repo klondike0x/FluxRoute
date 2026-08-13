@@ -347,6 +347,38 @@ public sealed class DohPowerShellServiceTests
         Assert.True(verified);
     }
 
+    [Fact]
+    public async Task VerifySystemStateAsync_DhcpAcceptsAssignedDnsAddresses()
+    {
+        var runner = new Mock<IProcessRunner>();
+        runner.Setup(x => x.RunAsync(
+                "powershell.exe",
+                It.Is<IReadOnlyList<string>>(args => args.Last().Contains("Get-DnsClientServerAddress", StringComparison.Ordinal)),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessRunResult(
+                0,
+                "[{\"AddressFamily\":2,\"ServerAddresses\":[\"192.0.2.1\"],\"AddressOrigin\":\"Dhcp\"}," +
+                "{\"AddressFamily\":23,\"ServerAddresses\":[\"2001:db8::1\"],\"AddressOrigin\":\"Dhcp\"}]",
+                ""));
+        runner.Setup(x => x.RunAsync(
+                "powershell.exe",
+                It.Is<IReadOnlyList<string>>(args => args.Last().Contains("dnsclient show global", StringComparison.Ordinal)),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessRunResult(0, "{\"Mode\":\"no\"}", ""));
+        var service = CreateService(runner);
+        var journal = new DohOperationJournal
+        {
+            InterfaceName = "Ethernet",
+            InterfaceId = "2E61C098-C635-4D56-AB43-E41ED7033B99",
+            Ipv4 = new DnsFamilySnapshot(true, []),
+            Ipv6 = new DnsFamilySnapshot(true, []),
+            GlobalDohMode = DohGlobalMode.Disabled
+        };
+
+        var result = await service.VerifySystemStateAsync(journal);
+
+        Assert.True(result);
+    }
     [Theory]
     [InlineData("auto", DohGlobalMode.Automatic)]
     [InlineData("automatic", DohGlobalMode.Automatic)]

@@ -450,10 +450,12 @@ public sealed class DohPowerShellService : IDohSystemConfigurationService
         if (familyState is null
             || familyState.Value.Ipv4.IsDhcp != journal.Ipv4.IsDhcp
             || familyState.Value.Ipv6.IsDhcp != journal.Ipv6.IsDhcp
-            || !ToAddressSet(familyState.Value.Ipv4.Addresses, System.Net.Sockets.AddressFamily.InterNetwork)
-                .SetEquals(ToAddressSet(journal.Ipv4.Addresses, System.Net.Sockets.AddressFamily.InterNetwork))
-            || !ToAddressSet(familyState.Value.Ipv6.Addresses, System.Net.Sockets.AddressFamily.InterNetworkV6)
-                .SetEquals(ToAddressSet(journal.Ipv6.Addresses, System.Net.Sockets.AddressFamily.InterNetworkV6)))
+            || (!journal.Ipv4.IsDhcp
+                && !ToAddressSet(familyState.Value.Ipv4.Addresses, System.Net.Sockets.AddressFamily.InterNetwork)
+                    .SetEquals(ToAddressSet(journal.Ipv4.Addresses, System.Net.Sockets.AddressFamily.InterNetwork)))
+            || (!journal.Ipv6.IsDhcp
+                && !ToAddressSet(familyState.Value.Ipv6.Addresses, System.Net.Sockets.AddressFamily.InterNetworkV6)
+                    .SetEquals(ToAddressSet(journal.Ipv6.Addresses, System.Net.Sockets.AddressFamily.InterNetworkV6))))
             return false;
 
         var addresses = journal.ResolverMappings.Select(x => x.Address)
