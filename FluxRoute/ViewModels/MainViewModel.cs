@@ -680,6 +680,7 @@ public partial class MainViewModel : ObservableObject
     public UpdatesViewModel Updates { get; private set; } = null!;
     public ServiceViewModel Service { get; private set; } = null!;
     public DiagnosticsViewModel Diagnostics { get; private set; } = null!;
+    public DohViewModel? Doh { get; private set; }
     public ModsViewModel? ModsViewModel { get; private set; }
     // ═══ v1.7.0: UI-Redesign ═══
     public HostlistsViewModel Hostlists { get; private set; } = null!;
@@ -1047,6 +1048,7 @@ public partial class MainViewModel : ObservableObject
         ModsViewModel? modsViewModel = null,
                 ITaskSchedulerService? taskScheduler = null,
         TrayIconService? trayIcon = null,
+        DohViewModel? doh = null,
         INetworkTrafficMonitor? networkTrafficMonitor = null,
         // ═══ v1.7.0: НОВОЕ ═══
         IAntivirusExclusionService? antivirusExclusionService = null,
@@ -1064,6 +1066,7 @@ public partial class MainViewModel : ObservableObject
         _httpClientFactory = httpClientFactory;
         _taskScheduler = taskScheduler ?? new TaskSchedulerService();
         _trayIcon = trayIcon;
+        Doh = doh;
         _evolver = aiEvolver;
         ModsViewModel = modsViewModel;
                 _networkTrafficMonitor = networkTrafficMonitor;

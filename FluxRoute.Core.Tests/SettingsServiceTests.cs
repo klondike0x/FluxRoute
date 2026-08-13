@@ -2,6 +2,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using FluxRoute.Core.Services;
+using FluxRoute.Core.Models;
 
 namespace FluxRoute.Core.Tests;
 
@@ -129,6 +130,16 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Throws<ArgumentNullException>(() => svc.Save(null!));
     }
 
+    [Fact]
+    public void Save_WhenTargetDirectoryIsAFile_ThrowsIOException()
+    {
+        var blockedPath = Path.Combine(_tempDir, "blocked");
+        File.WriteAllText(blockedPath, "not a directory");
+        var svc = new SettingsService(blockedPath);
+
+        Assert.Throws<IOException>(() => svc.Save(new AppSettings()));
+    }
+
     // ── TgProxy round-trip ──
 
     [Fact]
@@ -157,6 +168,61 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.True(loaded.TgProxy.Verbose);
         Assert.False(loaded.TgProxy.CfProxyEnabled);
         Assert.False(loaded.TgProxy.AutoStartOnAppLaunch);
+    }
+
+    // ── DoH round-trip ──
+
+    [Fact]
+    public void Save_DohSettings_RoundTrips()
+    {
+        var svc = CreateService();
+        var settings = new AppSettings
+        {
+            Doh = new DohSettings
+            {
+                Enabled = true,
+                AutomaticSelection = false,
+                EncryptionMode = DohEncryptionMode.EncryptedWithFallback,
+                SelectedProviderId = "quad9",
+                InterfaceName = "Ethernet"
+            }
+        };
+
+        svc.Save(settings);
+        var loaded = svc.Load();
+
+        Assert.True(loaded.Doh.Enabled);
+        Assert.False(loaded.Doh.AutomaticSelection);
+        Assert.Equal(DohEncryptionMode.EncryptedWithFallback, loaded.Doh.EncryptionMode);
+        Assert.Equal("quad9", loaded.Doh.SelectedProviderId);
+        Assert.Equal("Ethernet", loaded.Doh.InterfaceName);
+    }
+
+    [Fact]
+    public void Save_DohOperationJournal_RoundTripsFamilyAndSystemState()
+    {
+        var svc = CreateService();
+        var settings = new AppSettings();
+        settings.Doh.OperationJournal = new DohOperationJournal
+        {
+            OperationId = Guid.NewGuid(),
+            InterfaceName = "Ethernet",
+            InterfaceId = "2E61C098-C635-4D56-AB43-E41ED7033B99",
+            Ipv4 = new DnsFamilySnapshot(true, ["192.0.2.53"]),
+            Ipv6 = new DnsFamilySnapshot(false, ["2001:db8::53"]),
+            GlobalDohMode = DohGlobalMode.Disabled,
+            ResolverMappings = [new DohResolverMappingSnapshot("1.1.1.1", true, "https://old.example/dns-query", false, true)],
+            InterfaceMappings = [new DohInterfaceMappingSnapshot("1.1.1.1", false, true, "https://old.example/dns-query", 21)]
+        };
+
+        svc.Save(settings);
+        var loaded = svc.Load().Doh.OperationJournal;
+
+        Assert.NotNull(loaded);
+        Assert.True(loaded.Ipv4.IsDhcp);
+        Assert.False(loaded.Ipv6.IsDhcp);
+        Assert.Equal(DohGlobalMode.Disabled, loaded.GlobalDohMode);
+        Assert.Equal(21, loaded.InterfaceMappings.Single().Flags);
     }
 
     // ── ProfileRatings round-trip ──

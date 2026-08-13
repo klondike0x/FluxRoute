@@ -48,6 +48,8 @@ public partial class App : Application
 
             await _host.StartAsync();
 
+            await _host.Services.GetRequiredService<IDohStartupRecovery>().RecoverAsync();
+
             Log.Information("FluxRoute application host started. Arguments: {Arguments}", e.Args);
 
             if (!IsRunningAsAdmin())
@@ -278,7 +280,23 @@ public partial class App : Application
         .AddStandardResilienceHandler();
 
         // ═══ НОВЫЙ: Named HttpClient для ServiceViewModel (IPSet, Hosts) ═══
-        services.AddHttpClient("Service", client =>
+
+        // Client for DNS-over-HTTPS wire-format requests.
+        services.AddHttpClient(FluxRoute.Core.Services.HttpClientNames.Doh, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(8);
+            client.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-DoH/1.7");
+        })
+        .AddStandardResilienceHandler(options =>
+        {
+            options.Retry.MaxRetryAttempts = 2;
+            options.Retry.Delay = TimeSpan.FromMilliseconds(250);
+            options.Retry.BackoffType = DelayBackoffType.Exponential;
+            options.Retry.UseJitter = true;
+            options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(4);
+            options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(8);
+            options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(10);
+        });        services.AddHttpClient("Service", client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
             client.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-Service");
@@ -327,6 +345,15 @@ public partial class App : Application
         });
         services.AddSingleton<IAppUpdaterService, AppUpdaterService>();
         services.AddSingleton<IConnectivityChecker, ConnectivityChecker>();
+        services.AddSingleton<IProcessRunner, ProcessRunner>();
+        services.AddSingleton<IDnsAdapterService, DnsAdapterService>();
+        services.AddSingleton<IDohSystemConfigurationService, DohPowerShellService>();
+        services.AddSingleton<IDohProviderService, DohProviderService>();
+        services.AddSingleton<IDohSelectionService, DohSelectionService>();
+        services.AddSingleton<IWindowsDohConfigurationService, WindowsDohConfigurationService>();
+        services.AddSingleton<IDohStartupRecovery, DohStartupRecovery>();
+        services.AddSingleton<IDohProviderSwitchService, DohProviderSwitchService>();
+        services.AddSingleton<DohViewModel>();
         services.AddSingleton<ITaskSchedulerService, TaskSchedulerService>();
         services.AddSingleton<IModManager>(sp =>
         {
@@ -399,6 +426,7 @@ public partial class App : Application
             var zapret2Diagnostics = sp.GetRequiredService<IZapret2DiagnosticsService>();
             var zapret2Recovery = sp.GetRequiredService<IZapret2RecoveryService>();
             var modsViewModel = sp.GetRequiredService<ModsViewModel>();
+            var doh = sp.GetRequiredService<DohViewModel>();
 
             return new MainViewModel(
                 settingsService,
@@ -416,6 +444,7 @@ public partial class App : Application
                 modsViewModel,
                 taskScheduler,
                 trayIcon,
+                doh,
                 networkTrafficMonitor,
                 antivirusExclusion,
                 zapret2Status,

@@ -5,8 +5,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" d:DesignHeight="460" d:DesignWidth="760">
     <Grid>
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="16,12">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16,12">
                 <!-- ── БЫСТРЫЕ ПРЕСЕТЫ ── -->
                 <TextBlock Style="{StaticResource SecH}" Text="БЫСТРЫЕ ПРЕСЕТЫ" Margin="0,0,0,4" />
                 <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
@@ -341,7 +341,7 @@
                         </ItemsControl>
                     </ScrollViewer>
                 </Border>
-            </StackPanel>
-        </ScrollViewer>
-    </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
 </UserControl>
