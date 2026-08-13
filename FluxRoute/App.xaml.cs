@@ -328,6 +328,14 @@ public partial class App : Application
         services.AddSingleton<IAppUpdaterService, AppUpdaterService>();
         services.AddSingleton<IConnectivityChecker, ConnectivityChecker>();
         services.AddSingleton<ITaskSchedulerService, TaskSchedulerService>();
+        services.AddSingleton<IModManager>(sp =>
+        {
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ModManager>>();
+            var modsPath = Path.Combine(AppContext.BaseDirectory, "mods");
+            var enginePath = Path.Combine(AppContext.BaseDirectory, "engine");
+            return new ModManager(modsPath, logger, enginePath);
+        });
+        services.AddSingleton<ModsViewModel>();
 
         services.AddSingleton<NetworkFingerprintProvider>();
         services.AddSingleton(sp =>
@@ -390,6 +398,7 @@ public partial class App : Application
             var zapret2Status = sp.GetRequiredService<IZapret2StatusService>();
             var zapret2Diagnostics = sp.GetRequiredService<IZapret2DiagnosticsService>();
             var zapret2Recovery = sp.GetRequiredService<IZapret2RecoveryService>();
+            var modsViewModel = sp.GetRequiredService<ModsViewModel>();
 
             return new MainViewModel(
                 settingsService,
@@ -404,6 +413,7 @@ public partial class App : Application
                 evolver,
                 materializer,
                 httpClientFactory,
+                modsViewModel,
                 taskScheduler,
                 trayIcon,
                 networkTrafficMonitor,

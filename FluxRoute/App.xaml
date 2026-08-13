@@ -17,6 +17,8 @@
             <!-- Глобальные конвертеры, доступные во всех UserControl и Window -->
             <BooleanToVisibilityConverter x:Key="BoolToVis" />
             <conv:InverseBooleanConverter x:Key="InvBool" />
+            <conv:InverseBoolToVisibilityConverter x:Key="InvBoolToVis" />
+            <conv:FirstCharConverter x:Key="FirstCharConverter" />
             <conv:BoolToInstalledConverter x:Key="BoolToInstalled" />
             <conv:NavIndicatorYConverter x:Key="NavIndicatorY" />
         </ResourceDictionary>

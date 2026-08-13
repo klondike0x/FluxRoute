@@ -112,6 +112,8 @@ public partial class MainWindow : Window
             UpdateSidebarExpansion();
         };
 
+        // Моды — отдельный ViewModel, устанавливаем DataContext программно
+        // (XAML-привязка {Binding ModsViewModel} ненадёжна: свойство nullable)
         // Tray icon
         _trayIcon.SetVisible(true);
         _trayIcon.ShowRequested += OnTrayShowRequested;

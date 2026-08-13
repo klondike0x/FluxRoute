@@ -680,6 +680,7 @@ public partial class MainViewModel : ObservableObject
     public UpdatesViewModel Updates { get; private set; } = null!;
     public ServiceViewModel Service { get; private set; } = null!;
     public DiagnosticsViewModel Diagnostics { get; private set; } = null!;
+    public ModsViewModel? ModsViewModel { get; private set; }
     // ═══ v1.7.0: UI-Redesign ═══
     public HostlistsViewModel Hostlists { get; private set; } = null!;
 
@@ -1043,7 +1044,8 @@ public partial class MainViewModel : ObservableObject
         StrategyEvolver aiEvolver,
         BatMaterializer aiMaterializer,
         IHttpClientFactory httpClientFactory,
-        ITaskSchedulerService? taskScheduler = null,
+        ModsViewModel? modsViewModel = null,
+                ITaskSchedulerService? taskScheduler = null,
         TrayIconService? trayIcon = null,
         INetworkTrafficMonitor? networkTrafficMonitor = null,
         // ═══ v1.7.0: НОВОЕ ═══
@@ -1063,7 +1065,8 @@ public partial class MainViewModel : ObservableObject
         _taskScheduler = taskScheduler ?? new TaskSchedulerService();
         _trayIcon = trayIcon;
         _evolver = aiEvolver;
-        _networkTrafficMonitor = networkTrafficMonitor;
+        ModsViewModel = modsViewModel;
+                _networkTrafficMonitor = networkTrafficMonitor;
         _antivirusExclusion = antivirusExclusionService;
         _zapret2StatusService = zapret2StatusService;
         _zapret2DiagnosticsService = zapret2DiagnosticsService;

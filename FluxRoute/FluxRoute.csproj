@@ -17,6 +17,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Include="mods\**\*">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
 		<EmbeddedResource Include="Resources\FluxRoute.ico" LogicalName="FluxRoute.ico" />
 		<Resource Include="Resources\FluxRoute.png" />
 	</ItemGroup>
