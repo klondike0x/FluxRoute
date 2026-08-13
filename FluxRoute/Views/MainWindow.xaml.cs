@@ -517,6 +517,11 @@ public partial class MainWindow : Window
     private void TitleBar_MinimizeRequested(object sender, System.Windows.RoutedEventArgs e)
         => WindowState = WindowState.Minimized;
 
+    private void TitleBar_MaximizeRequested(object sender, System.Windows.RoutedEventArgs e)
+        => WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+
     private void TitleBar_CloseRequested(object sender, System.Windows.RoutedEventArgs e)
         => Close();
 
