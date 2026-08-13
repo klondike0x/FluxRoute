@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Navigation;
 using FluxRoute.AI.Services;
 using FluxRoute.Core.Services;
@@ -22,16 +23,26 @@ public partial class MainWindow : Window
     private readonly TrayIconService _trayIcon;
     private readonly ILogger<MainWindow>? _logger;
     private bool _isClosingConfirmed;
+    private bool _lastVisualEngineRunning;
 
     // Таймер для троттлинга (защита от дёрганий таблетки при частом ресайзе окна)
     private readonly System.Windows.Threading.DispatcherTimer _navIndicatorResizeTimer;
+    private readonly System.Windows.Threading.DispatcherTimer _sidebarAnimationTimer;
+    private readonly Stopwatch _sidebarAnimationClock = new();
+    private double _sidebarAnimationFrom;
+    private double _sidebarAnimationTarget = double.NaN;
+    private const double SidebarAnimationDurationMs = 180;
+    private HomeLayoutMode? _appliedHomeLayoutMode;
 
     // Parameterless constructor is intentionally kept for the WPF designer
     // and as a safe fallback if the window is ever instantiated outside DI.
     public MainWindow()
-        : this(CreateDesignTimeViewModel(), new TrayIconService(), null)
+        : this(CreateDesignTimeViewModel(), CreateDesignTimeTrayIconService(), null)
     {
     }
+
+    private static TrayIconService CreateDesignTimeTrayIconService() =>
+        new(new TrayPopupService());
 
     /// <summary>
     /// ⚠️ WARNING: This method duplicates DI registration from App.xaml.cs.
@@ -65,8 +76,6 @@ public partial class MainWindow : Window
                 () => settings.Load().Ai),
             materializer,
             httpClientFactory,
-            new ModManager(Path.Combine(AppContext.BaseDirectory, "mods"),
-                Microsoft.Extensions.Logging.Abstractions.NullLogger<ModManager>.Instance),
             taskScheduler: new TaskSchedulerService(),
             trayIcon: null);
     }
@@ -78,20 +87,42 @@ public partial class MainWindow : Window
 
         InitializeComponent();
 
+        // Ограничиваем maximized-окно рабочей областью монитора,
+        // чтобы оно не перекрывало панель задач и не выходило за экран.
+        SourceInitialized += OnSourceInitialized;
+
         _vm = viewModel;
         _trayIcon = trayIcon;
         _logger = logger;
 
+        _lastVisualEngineRunning = _vm.IsAnyEngineRunning;
+
         DataContext = _vm;
+        ApplyStartupWindowSize();
+
+        // ═══ v1.7.0: Привязка DataContext для хоста HostlistsPage ═══
+        if (HostlistsTab is not null)
+            HostlistsTab.DataContext = _vm.Hostlists;
+
+        // Инициализируем подсветку и адаптивную раскладку после построения визуального дерева.
+        Loaded += (_, _) =>
+        {
+            SidebarControl?.AnimateNavIndicator(_vm.SelectedTabIndex, animate: false);
+            ApplyHomeLayout();
+            UpdateSidebarExpansion();
+        };
 
         // Моды — отдельный ViewModel, устанавливаем DataContext программно
         // (XAML-привязка {Binding ModsViewModel} ненадёжна: свойство nullable)
-        ModsTab.DataContext = viewModel.ModsViewModel;
-
         // Tray icon
         _trayIcon.SetVisible(true);
         _trayIcon.ShowRequested += OnTrayShowRequested;
         _trayIcon.ExitRequested += OnTrayExitRequested;
+        UpdateTrayMenu();
+
+        // ═══ v1.7.0: Подписка на перезапуск защиты из трея ═══
+        if (_trayIcon.TryGetPopupService() is TrayPopupService popupService)
+            popupService.RestartProtectionRequested += OnTrayRestartProtectionRequested;
 
         _vm.ProfileSwitchNotification += OnProfileSwitched;
 
@@ -103,11 +134,17 @@ public partial class MainWindow : Window
         // Unified logs tab
         _vm.UnifiedLogEntries.CollectionChanged += UnifiedLogEntries_CollectionChanged;
 
-        // Инициализация таймера для троттлинга (задержка 0 мс)
+        // Debounce тяжёлой перестройки после паузы в потоке SizeChanged.
         _navIndicatorResizeTimer = new System.Windows.Threading.DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(0)
+            Interval = TimeSpan.FromMilliseconds(AdaptiveSidebarLayout.ResizeDebounceMilliseconds)
         };
+        _sidebarAnimationTimer = new System.Windows.Threading.DispatcherTimer(
+            System.Windows.Threading.DispatcherPriority.Render)
+        {
+            Interval = TimeSpan.FromMilliseconds(16)
+        };
+        _sidebarAnimationTimer.Tick += SidebarAnimationTimer_Tick;
         _navIndicatorResizeTimer.Tick += OnNavIndicatorResizeTimerTick;
 
         // Обновление таблетки при ресайзе
@@ -126,6 +163,34 @@ public partial class MainWindow : Window
         }
 
         _logger?.LogInformation("Main window initialized.");
+    }
+
+    private void ApplyStartupWindowSize(bool centerWindow = false)
+    {
+        var workArea = SystemParameters.WorkArea;
+        var size = StartupWindowLayout.FitToWorkArea(
+            _vm.StartupWindowMode,
+            workArea.Width,
+            workArea.Height);
+
+        // Apply the selected startup profile to the already opened window.
+        var previousWidth = ActualWidth > 0 ? ActualWidth : Width;
+        var previousHeight = ActualHeight > 0 ? ActualHeight : Height;
+        var previousCenterX = double.IsNaN(Left) ? double.NaN : Left + previousWidth / 2;
+        var previousCenterY = double.IsNaN(Top) ? double.NaN : Top + previousHeight / 2;
+
+        if (centerWindow && WindowState == WindowState.Maximized)
+            WindowState = WindowState.Normal;
+
+        Width = size.Width;
+        Height = size.Height;
+
+        if (!centerWindow || double.IsNaN(previousCenterX) || double.IsNaN(previousCenterY))
+            return;
+
+        // Keep the current center so switching modes does not jump the window.
+        Left = previousCenterX - Width / 2;
+        Top = previousCenterY - Height / 2;
     }
 
     private void OnProfileSwitched(object? sender, string profileName)
@@ -156,6 +221,19 @@ public partial class MainWindow : Window
         Activate();
     }
 
+    // ═══ v1.7.0: Перезапуск защиты из трея ═══
+    private void OnTrayRestartProtectionRequested(object? sender, EventArgs e)
+    {
+        if (_vm.IsRunning)
+        {
+            _vm.StopCommand.Execute(null);
+            _ = Task.Delay(800).ContinueWith(_ =>
+            {
+                Dispatcher.Invoke(() => _vm.StartCommand.Execute(null));
+            }, TaskScheduler.Default);
+        }
+    }
+
     private void OnTrayExitRequested(object? sender, EventArgs e)
     {
         // Показываем модальное подтверждение перед закрытием
@@ -174,6 +252,12 @@ public partial class MainWindow : Window
     protected override void OnStateChanged(EventArgs e)
     {
         base.OnStateChanged(e);
+
+        // В maximized-режиме внешние углы должны быть прямыми.
+        if (RootBorder is not null)
+            RootBorder.CornerRadius = WindowState == WindowState.Maximized
+                ? new CornerRadius(0)
+                : new CornerRadius(16);
 
         // Сворачивание (—): стандартное поведение Windows — окно остаётся на панели задач.
         // Трей — только через кнопку закрытия (CloseToTray).
@@ -241,6 +325,12 @@ public partial class MainWindow : Window
         _vm.ProfileSwitchNotification -= OnProfileSwitched;
         _vm.ServiceLogs.CollectionChanged -= ServiceLogs_CollectionChanged;
         _vm.PropertyChanged -= OnViewModelPropertyChanged;
+        SizeChanged -= OnWindowSizeChanged;
+        _navIndicatorResizeTimer.Stop();
+        _navIndicatorResizeTimer.Tick -= OnNavIndicatorResizeTimerTick;
+        _sidebarAnimationTimer.Stop();
+        _sidebarAnimationTimer.Tick -= SidebarAnimationTimer_Tick;
+        _sidebarAnimationClock.Stop();
 
         _trayIcon.Dispose();
         _logger?.LogInformation("Main window cleanup completed.");
@@ -258,36 +348,42 @@ public partial class MainWindow : Window
             SidebarControl.AnimateNavIndicator(_vm.SelectedTabIndex);
         }
 
+        if (e.PropertyName == nameof(MainViewModel.StartupWindowMode))
+        {
+            ApplyStartupWindowSize(centerWindow: true);
+        }
+
         if (e.PropertyName == nameof(MainViewModel.IsSidebarExpanded))
             AnimateSidebar(_vm.IsSidebarExpanded);
 
-        if (e.PropertyName == nameof(MainViewModel.IsRunning))
+        if (e.PropertyName is nameof(MainViewModel.IsRunning) or nameof(MainViewModel.IsAnyEngineRunning))
         {
-            _trayIcon.UpdateIcon(_vm.IsRunning);
-            UpdateTrayMenu();
+            var engineRunning = _vm.IsAnyEngineRunning;
+            if (engineRunning != _lastVisualEngineRunning)
+            {
+                _lastVisualEngineRunning = engineRunning;
+                _trayIcon.UpdateIcon(engineRunning);
+                UpdateTrayMenu();
 
-            if (_vm.IsRunning)
-            {
-                // Burst: кольца расходятся наружу при включении
-                PlayWave(outward: true, strength: 0.65, duration: 1400);
-                // AFTER burst-волны — запускаем idle-пульс с задержкой
-                var startDelay = new System.Windows.Threading.DispatcherTimer
+                if (engineRunning)
                 {
-                    Interval = TimeSpan.FromMilliseconds(1500)
-                };
-                startDelay.Tick += (_, _) => { startDelay.Stop(); StartIdlePulse(); };
-                startDelay.Start();
-            }
-            else
-            {
-                // Сначала останавливаем idle
-                StopIdlePulse();
-                // Burst: кольца схлопываются внутрь при выключении
-                PlayWave(outward: false, strength: 0.65, duration: 1400);
+                    // Burst: кольца расходятся наружу при включении любого движка.
+                    PlayWave(outward: true, strength: 0.65, duration: 1400);
+                    var startDelay = new System.Windows.Threading.DispatcherTimer
+                    {
+                        Interval = TimeSpan.FromMilliseconds(1500)
+                    };
+                    startDelay.Tick += (_, _) => { startDelay.Stop(); StartIdlePulse(); };
+                    startDelay.Start();
+                }
+                else
+                {
+                    StopIdlePulse();
+                    // Burst: кольца схлопываются внутрь при выключении движка.
+                    PlayWave(outward: false, strength: 0.65, duration: 1400);
+                }
             }
         }
-
-        // ═══ v1.6.0: Обновление меню трея при изменении статусов ═══
         if (e.PropertyName is nameof(MainViewModel.SelectedProfile)
             or nameof(MainViewModel.OrchestratorEnabled)
             or nameof(MainViewModel.TgProxyRunning)
@@ -304,6 +400,7 @@ public partial class MainWindow : Window
     {
         _trayIcon.UpdateMenu(
             strategy: _vm.SelectedProfile?.DisplayName,
+            protectionRunning: _vm.IsRunning,
             orchestratorRunning: _vm.OrchestratorEnabled,
             tgProxyRunning: _vm.TgProxyRunning,
             gameFilterEnabled: _vm.GameFilterEnabled);
@@ -311,31 +408,102 @@ public partial class MainWindow : Window
 
     private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        // Сбрасываем таймер при каждом изменении размера. 
-        // Анимация сработает только когда ресайз прекратится на 80 мс.
+        // Во время системного live-resize не запускаем тяжёлый WPF layout на каждый пиксель.
+        // Один проход выполняется после короткой паузы в потоке SizeChanged.
         _navIndicatorResizeTimer.Stop();
         _navIndicatorResizeTimer.Start();
     }
 
     private void OnNavIndicatorResizeTimerTick(object? sender, EventArgs e)
-    {
-        // Останавливаем таймер, чтобы он не срабатывал повторно
-        _navIndicatorResizeTimer.Stop();
-
-        var tab = _vm.SelectedTabIndex;
-
-        // Откладываем вызов до момента, когда WPF полностью завершит 
-        // пересчёт layout (DispatcherPriority.Render).
-        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() =>
         {
-            SidebarControl?.AnimateNavIndicator(tab);
-        }));
-    }
+            // Останавливаем таймер, чтобы он не срабатывал повторно
+            _navIndicatorResizeTimer.Stop();
 
-    private void AnimateSidebar(bool expanded)
-    {
-        // No-op in v1.5.0: sidebar is fixed-width icon-only; no expand/collapse animation.
-    }
+            var tab = _vm.SelectedTabIndex;
+
+            // Откладываем вызов до момента, когда WPF полностью завершит
+            // пересчёт layout (DispatcherPriority.Render).
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() =>
+            {
+                SidebarControl?.AnimateNavIndicator(tab);
+            }));
+
+            // Авто-разворот Sidebar при ширине ≥ 1200
+            UpdateSidebarExpansion();
+            ApplyHomeLayout();
+        }
+
+        private void ApplyHomeLayout()
+        {
+            var requestedMode = AdaptiveHomeLayout.FromWindowWidth(ActualWidth);
+            if (!AdaptiveHomeLayout.ShouldApply(_appliedHomeLayoutMode, requestedMode))
+                return;
+
+            HomeTab?.ApplyLayout(requestedMode);
+            _appliedHomeLayoutMode = requestedMode;
+        }
+
+        private void UpdateSidebarExpansion()
+        {
+            var shouldExpand = AdaptiveSidebarLayout.ShouldExpand(ActualWidth);
+            var requiresVisualSync = AdaptiveSidebarLayout.RequiresVisualSync(
+                shouldExpand,
+                SidebarControl.IsExpanded,
+                SidebarColumn.Width.Value);
+
+            if (_vm.IsSidebarExpanded != shouldExpand)
+            {
+                // PropertyChanged запустит AnimateSidebar ровно один раз.
+                _vm.IsSidebarExpanded = shouldExpand;
+                return;
+            }
+
+            // При старте VM уже может содержать правильное значение, а View — ещё нет.
+            if (requiresVisualSync)
+                AnimateSidebar(shouldExpand);
+        }
+
+        private void AnimateSidebar(bool expanded)
+        {
+            if (SidebarControl is null) return;
+            SidebarControl.IsExpanded = expanded;
+            AnimateSidebarWidth(SidebarColumn.Width.Value, expanded ? 241.0 : 66.0);
+        }
+
+        private void AnimateSidebarWidth(double from, double to)
+        {
+            if (!AdaptiveSidebarLayout.ShouldStartAnimation(
+                    _sidebarAnimationTimer.IsEnabled,
+                    _sidebarAnimationTarget,
+                    to))
+            {
+                return;
+            }
+
+            _sidebarAnimationTimer.Stop();
+            _sidebarAnimationFrom = double.IsFinite(from) ? from : to;
+            _sidebarAnimationTarget = to;
+            _sidebarAnimationClock.Restart();
+            _sidebarAnimationTimer.Start();
+        }
+
+        private void SidebarAnimationTimer_Tick(object? sender, EventArgs e)
+        {
+            var progress = _sidebarAnimationClock.Elapsed.TotalMilliseconds / SidebarAnimationDurationMs;
+            if (progress >= 1)
+            {
+                SidebarColumn.Width = new GridLength(_sidebarAnimationTarget);
+                _sidebarAnimationTimer.Stop();
+                _sidebarAnimationClock.Stop();
+                return;
+            }
+
+            SidebarColumn.Width = new GridLength(
+                AdaptiveSidebarLayout.InterpolateWidth(
+                    _sidebarAnimationFrom,
+                    _sidebarAnimationTarget,
+                    progress));
+        }
 
     // ── Wave pulse (делегируем в HomePage UserControl) ──
 
@@ -350,6 +518,11 @@ public partial class MainWindow : Window
 
     private void TitleBar_MinimizeRequested(object sender, System.Windows.RoutedEventArgs e)
         => WindowState = WindowState.Minimized;
+
+    private void TitleBar_MaximizeRequested(object sender, System.Windows.RoutedEventArgs e)
+        => WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
 
     private void TitleBar_CloseRequested(object sender, System.Windows.RoutedEventArgs e)
         => Close();
@@ -412,18 +585,7 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    //  RESIZE GRIPS (для AllowsTransparency=True, WindowStyle=None)
-    //
-    //  Паттерн ReleaseCapture + PostMessage(WM_NCLBUTTONDOWN, HT*)
-    //  — стандартный Win32-способ добавить ресайз в кастомный хром.
-    //  SendMessage НЕ подходит для WindowStyle=None — он блокирует
-    //  цикл сообщений, и окно не входит в режим sizing.
-    // ═══════════════════════════════════════════════════════════════
-
     private const int WM_NCLBUTTONDOWN = 0x00A1;
-
-    // HT* (hit-test) константы — соответствуют областям окна
     private const int HTTOP = 12;
     private const int HTBOTTOM = 15;
     private const int HTLEFT = 10;
@@ -454,11 +616,108 @@ public partial class MainWindow : Window
     private void ResizeGrip_MouseDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Left) return;
-        if (sender is not FrameworkElement { Tag: string tag } || !ResizeEdges.TryGetValue(tag, out var htCode))
+        if (sender is not FrameworkElement { Tag: string tag }
+            || !ResizeEdges.TryGetValue(tag, out var htCode))
             return;
 
-        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        var hwnd = new WindowInteropHelper(this).Handle;
         ReleaseCapture();
         PostMessage(hwnd, WM_NCLBUTTONDOWN, (IntPtr)htCode, IntPtr.Zero);
+    }
+
+    private const int WmGetMinMaxInfo = 0x0024;
+    private const uint MonitorDefaultToNearest = 0x00000002;
+    private const double MinimumWindowWidth = AdaptiveHomeLayout.MinimumWindowWidth;
+    private const double MinimumWindowHeight = AdaptiveHomeLayout.MinimumWindowHeight;
+
+    private void OnSourceInitialized(object? sender, EventArgs e)
+    {
+        SourceInitialized -= OnSourceInitialized;
+        if (PresentationSource.FromVisual(this) is HwndSource source)
+            source.AddHook(WindowMessageHook);
+    }
+
+    private static IntPtr WindowMessageHook(
+        IntPtr hwnd,
+        int message,
+        IntPtr wParam,
+        IntPtr lParam,
+        ref bool handled)
+    {
+        if (message != WmGetMinMaxInfo)
+            return IntPtr.Zero;
+
+        var monitor = MonitorFromWindow(hwnd, MonitorDefaultToNearest);
+        if (monitor == IntPtr.Zero)
+            return IntPtr.Zero;
+
+        var monitorInfo = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+        if (!GetMonitorInfo(monitor, ref monitorInfo))
+            return IntPtr.Zero;
+
+        var minMaxInfo = Marshal.PtrToStructure<MinMaxInfo>(lParam);
+        var workArea = monitorInfo.WorkArea;
+        var monitorArea = monitorInfo.MonitorArea;
+
+        minMaxInfo.MaxPosition.X = workArea.Left - monitorArea.Left;
+        minMaxInfo.MaxPosition.Y = workArea.Top - monitorArea.Top;
+        minMaxInfo.MaxSize.X = workArea.Right - workArea.Left;
+        minMaxInfo.MaxSize.Y = workArea.Bottom - workArea.Top;
+
+        // Сохраняем WPF-ограничения минимального размера после перехвата сообщения.
+        var dpi = GetDpiForWindow(hwnd);
+        if (dpi == 0)
+            dpi = 96;
+        minMaxInfo.MinTrackSize.X = (int)Math.Ceiling(MinimumWindowWidth * dpi / 96d);
+        minMaxInfo.MinTrackSize.Y = (int)Math.Ceiling(MinimumWindowHeight * dpi / 96d);
+
+        Marshal.StructureToPtr(minMaxInfo, lParam, fDeleteOld: false);
+        handled = true;
+        return IntPtr.Zero;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo monitorInfo);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hwnd);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint
+    {
+        public int X;
+        public int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MinMaxInfo
+    {
+        public NativePoint Reserved;
+        public NativePoint MaxSize;
+        public NativePoint MaxPosition;
+        public NativePoint MinTrackSize;
+        public NativePoint MaxTrackSize;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    private struct MonitorInfo
+    {
+        public int Size;
+        public NativeRect MonitorArea;
+        public NativeRect WorkArea;
+        public uint Flags;
     }
 }

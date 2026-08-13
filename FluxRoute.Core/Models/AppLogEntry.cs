@@ -34,10 +34,10 @@ public sealed class AppLogEntry
     {
         AppLogCategory.App => "Приложение",
         AppLogCategory.Orchestrator => "Оркестратор",
-        AppLogCategory.ProfileScan => "Сканирование стратегий",
-        AppLogCategory.Process => "Запуск стратегии / winws.exe",
-        AppLogCategory.TgProxy => "TG WS Proxy",
-        AppLogCategory.Updater => "Обновление engine",
+        AppLogCategory.ProfileScan => "ИИ",
+        AppLogCategory.Process => "ИИ",
+        AppLogCategory.TgProxy => "TG Proxy",
+        AppLogCategory.Updater => "Обновления",
         AppLogCategory.Service => "Сервис",
         AppLogCategory.Error => "Ошибки",
         _ => Category.ToString()
