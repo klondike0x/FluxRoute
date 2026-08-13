@@ -312,8 +312,11 @@ public sealed class DohPowerShellServiceTests
 
     [Theory]
     [InlineData("auto", DohGlobalMode.Automatic)]
+    [InlineData("automatic", DohGlobalMode.Automatic)]
     [InlineData("yes", DohGlobalMode.Enabled)]
+    [InlineData("enabled", DohGlobalMode.Enabled)]
     [InlineData("no", DohGlobalMode.Disabled)]
+    [InlineData("disabled", DohGlobalMode.Disabled)]
     public async Task CaptureSystemStateAsync_NormalizedGlobalMode_ParsesKnownValue(
         string mode,
         DohGlobalMode expected)

@@ -357,7 +357,7 @@ public sealed class DohPowerShellService : IDohSystemConfigurationService
         var globalScript = "$ErrorActionPreference='Stop'; "
             + "$raw = & netsh.exe dnsclient show global 2>&1; "
             + "if ($LASTEXITCODE -ne 0) { throw ($raw -join [Environment]::NewLine) }; "
-            + "$mode = @($raw | ForEach-Object { if ($_ -match '(?i)(?:^|[=:[:space:]])(auto|yes|no)[[:space:]]*$') { $Matches[1].ToLowerInvariant() } } | Select-Object -Unique); "
+            + "$mode = @($raw | ForEach-Object { if ($_ -match '(?i)\\b(?:doh\\s+)?global\\s+(?:setting|mode)\\s*[:=]\\s*(disabled|enabled|automatic|auto|yes|no)\\b') { switch ($Matches[1].ToLowerInvariant()) { 'disabled' { 'no'; break } 'enabled' { 'yes'; break } 'automatic' { 'auto'; break } default { $Matches[1].ToLowerInvariant() } } } } | Select-Object -Unique); "
             + "if ($mode.Count -ne 1) { $mode = @('__unknown__') }; "
             + "[pscustomobject]@{Mode=$mode[0]} | ConvertTo-Json -Compress";
         var global = await RunPowerShellAsync(globalScript, ct).ConfigureAwait(false);
@@ -500,9 +500,9 @@ public sealed class DohPowerShellService : IDohSystemConfigurationService
                 ?? throw new InvalidOperationException("Windows вернула пустой глобальный режим DoH.");
             return state.Mode.ToLowerInvariant() switch
             {
-                "auto" => DohGlobalMode.Automatic,
-                "yes" => DohGlobalMode.Enabled,
-                "no" => DohGlobalMode.Disabled,
+                "auto" or "automatic" => DohGlobalMode.Automatic,
+                "yes" or "enabled" => DohGlobalMode.Enabled,
+                "no" or "disabled" => DohGlobalMode.Disabled,
                 _ => throw new InvalidOperationException(
                     $"Windows вернула неизвестный глобальный режим DoH: «{state.Mode}».")
             };
