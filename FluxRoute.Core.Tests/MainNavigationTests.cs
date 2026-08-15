@@ -11,10 +11,11 @@ public sealed class MainNavigationTests
     [InlineData(0, "ГЛАВНАЯ")]
     [InlineData(1, "КОМПОНЕНТЫ")]
     [InlineData(2, "ОРКЕСТРАТОР")]
-    [InlineData(3, "МОДИФИКАЦИИ")]
-    [InlineData(4, "ДИАГНОСТИКА")]
-    [InlineData(5, "ЛОГИ")]
-    [InlineData(6, "НАСТРОЙКИ")]
+    [InlineData(3, "ХОСТЛИСТЫ")]
+    [InlineData(4, "МОДИФИКАЦИИ")]
+    [InlineData(5, "ДИАГНОСТИКА")]
+    [InlineData(6, "ЛОГИ")]
+    [InlineData(7, "НАСТРОЙКИ")]
     public void GetName_KnownIndex_ReturnsExpectedName(int index, string expected)
         => Assert.Equal(expected, MainNavigation.GetName(index));
 
@@ -23,9 +24,9 @@ public sealed class MainNavigationTests
         => Assert.Equal(string.Empty, MainNavigation.GetName(99));
 
     [Fact]
-    public void Items_ContainsExactlySevenOrderedTabs()
+    public void Items_ContainsExactlyEightOrderedTabs()
     {
-        Assert.Equal(7, MainNavigation.Items.Count);
-        Assert.Equal(Enumerable.Range(0, 7), MainNavigation.Items.Select(item => item.Index));
+        Assert.Equal(8, MainNavigation.Items.Count);
+        Assert.Equal(Enumerable.Range(0, 8), MainNavigation.Items.Select(item => item.Index));
     }
 }

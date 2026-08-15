@@ -1,0 +1,12 @@
+{
+  "name": "Test Mod",
+  "version": "1.0.0",
+  "author": "FluxRoute Team",
+  "description": "Тестовый мод для проверки системы модов. Выводит приветствие при активации.",
+  "dependencies": [],
+  "scripts": {
+    "start": "start.bat",
+    "stop": "stop.bat"
+  },
+  "config": {}
+}

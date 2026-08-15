@@ -58,15 +58,30 @@
                     <CheckBox Content="Автопрокрутка" Foreground="#9BB0D0"
                               Margin="0,4,12,6" VerticalAlignment="Center"
                               IsChecked="{Binding LogsAutoScroll, Mode=TwoWay}" />
-                    <Button Content="&#xE8C8; Копировать" Style="{StaticResource ActionBtn}" Height="28"
+                    <Button Style="{StaticResource ActionBtn}" Height="28"
                             Padding="10,0" Margin="0,0,6,6"
-                            Command="{Binding CopyUnifiedLogsCommand}" />
-                    <Button Content="&#xE74E; Сохранить" Style="{StaticResource ActionBtn}" Height="28"
+                            Command="{Binding CopyUnifiedLogsCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" Margin="0,0,5,0" />
+                            <TextBlock Text="Копировать" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ActionBtn}" Height="28"
                             Padding="10,0" Margin="0,0,6,6"
-                            Command="{Binding SaveUnifiedLogsCommand}" />
-                    <Button Content="&#xE711; Очистить" Style="{StaticResource ActionBtn}" Height="28"
+                            Command="{Binding SaveUnifiedLogsCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" Margin="0,0,5,0" />
+                            <TextBlock Text="Сохранить" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ActionBtn}" Height="28"
                             Padding="10,0" Margin="0,0,6,6"
-                            Command="{Binding ClearUnifiedLogsCommand}" />
+                            Command="{Binding ClearUnifiedLogsCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" Margin="0,0,5,0" />
+                            <TextBlock Text="Очистить" />
+                        </StackPanel>
+                    </Button>
                 </WrapPanel>
             </StackPanel>
         </Border>

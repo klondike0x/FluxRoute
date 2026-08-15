@@ -81,10 +81,6 @@
                          VerticalScrollBarVisibility="Auto"
                          HorizontalScrollBarVisibility="Auto"
                          IsUndoEnabled="True" />
-                <TextBlock Text="Выберите файл слева для редактирования"
-                           Foreground="#4B5870" FontSize="11"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                           Visibility="{Binding IsEditing, Converter={StaticResource InvBool}, FallbackValue=Visible}" />
             </Grid>
         </Border>
 
@@ -101,17 +97,32 @@
                            FontSize="10.5" VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis" />
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <Button Content="&#xE74E; Сохранить" Style="{StaticResource ActionBtnAccent}"
+                    <Button Style="{StaticResource ActionBtnAccent}"
                             Height="30" Padding="10,0" Margin="0,0,8,0"
                             Command="{Binding SaveCommand}"
-                            IsEnabled="{Binding HasChanges}" />
-                    <Button Content="&#xE711; Отменить" Style="{StaticResource ActionBtn}"
+                            IsEnabled="{Binding HasChanges}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" Margin="0,0,5,0" />
+                            <TextBlock Text="Сохранить" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ActionBtn}"
                             Height="30" Padding="10,0" Margin="0,0,8,0"
                             Command="{Binding CancelEditCommand}"
-                            IsEnabled="{Binding HasChanges}" />
-                    <Button Content="&#xE72C; Восстановить из бэкапа" Style="{StaticResource ActionBtn}"
+                            IsEnabled="{Binding HasChanges}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" Margin="0,0,5,0" />
+                            <TextBlock Text="Отменить" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ActionBtn}"
                             Height="30" Padding="10,0"
-                            Command="{Binding RestoreFromBackupCommand}" />
+                            Command="{Binding RestoreFromBackupCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" Margin="0,0,5,0" />
+                            <TextBlock Text="Восстановить из бэкапа" />
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Grid>
         </Border>

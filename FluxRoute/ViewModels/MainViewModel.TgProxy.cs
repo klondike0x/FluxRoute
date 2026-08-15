@@ -105,6 +105,8 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(TgProxyToggleText));
         OnPropertyChanged(nameof(ActiveServicesCount));
         OnPropertyChanged(nameof(ActiveServicesSummary));
+        OnPropertyChanged(nameof(TgProxySummaryText));
+        OnPropertyChanged(nameof(TgProxySummaryBrush));
     }
 
     public void OnTgProxyTabActivated()
