@@ -53,4 +53,50 @@ public sealed class TgWsProxyProtocolTests
         Assert.Single(second);
         Assert.Equal(encrypted, second[0]);
     }
+
+    [Fact]
+    public void DecodeHandshake_PreservesSpecialDataCenter203ForRelay()
+    {
+        byte[] secret = Enumerable.Range(1, 16).Select(i => (byte)i).ToArray();
+        byte[] clientMaterial = RandomNumberGenerator.GetBytes(48);
+        byte[] plain = RandomNumberGenerator.GetBytes(64);
+        clientMaterial.CopyTo(plain, 8);
+        TgWsProxyProtocol.IntermediateTag.CopyTo(plain, 56);
+        BinaryPrimitives.WriteInt16LittleEndian(plain.AsSpan(60, 2), 203);
+
+        byte[] key = TgWsProxyProtocol.Sha256(clientMaterial.AsSpan(0, 32), secret);
+        byte[] encrypted = new byte[64];
+        using (var cipher = new AesCtr(key, clientMaterial.AsSpan(32, 16)))
+            cipher.Transform(plain, encrypted);
+        clientMaterial.CopyTo(encrypted, 8);
+
+        Assert.True(TgWsProxyProtocol.TryDecodeHandshake(encrypted, secret, out var info));
+        Assert.NotNull(info);
+        Assert.Equal(203, info!.DataCenter);
+        Assert.False(info.IsTest);
+        Assert.Equal(203, info.WireDataCenter);
+    }
+
+    [Fact]
+    public void DecodeHandshake_MapsTestDataCenterForRoutingButKeepsTestFlag()
+    {
+        byte[] secret = Enumerable.Range(1, 16).Select(i => (byte)i).ToArray();
+        byte[] clientMaterial = RandomNumberGenerator.GetBytes(48);
+        byte[] plain = RandomNumberGenerator.GetBytes(64);
+        clientMaterial.CopyTo(plain, 8);
+        TgWsProxyProtocol.IntermediateTag.CopyTo(plain, 56);
+        BinaryPrimitives.WriteInt16LittleEndian(plain.AsSpan(60, 2), 10002);
+
+        byte[] key = TgWsProxyProtocol.Sha256(clientMaterial.AsSpan(0, 32), secret);
+        byte[] encrypted = new byte[64];
+        using (var cipher = new AesCtr(key, clientMaterial.AsSpan(32, 16)))
+            cipher.Transform(plain, encrypted);
+        clientMaterial.CopyTo(encrypted, 8);
+
+        Assert.True(TgWsProxyProtocol.TryDecodeHandshake(encrypted, secret, out var info));
+        Assert.NotNull(info);
+        Assert.Equal(2, info!.DataCenter);
+        Assert.True(info.IsTest);
+        Assert.Equal(2, info.WireDataCenter);
+    }
 }

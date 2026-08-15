@@ -98,9 +98,9 @@ internal static class TgWsProxyProtocol
             return false;
 
         bool isMedia = rawDc < 0;
-        bool isTest = absoluteDc is >= 10001 and <= 10003;
-        int dataCenter = isTest ? absoluteDc - 10000 : NormalizeDataCenter(absoluteDc);
-        if (dataCenter is < 1 or > 5)
+        bool isTest = absoluteDc >= 10000;
+        int dataCenter = isTest ? absoluteDc - 10000 : absoluteDc;
+        if (dataCenter < 1 || (dataCenter > 5 && dataCenter != 203))
             return false;
 
         int wireDc = isMedia ? -dataCenter : dataCenter;
@@ -174,7 +174,7 @@ internal static class TgWsProxyProtocol
         return new CryptoBridge(clientDecrypt, clientEncrypt, upstreamEncrypt, upstreamDecrypt);
     }
 
-    internal static int NormalizeDataCenter(int dataCenter) => dataCenter == 203 ? 2 : dataCenter;
+    internal static int GetWebSocketDataCenter(int dataCenter) => dataCenter == 203 ? 2 : dataCenter;
 
     internal static byte[] Sha256(ReadOnlySpan<byte> first, ReadOnlySpan<byte> second)
     {

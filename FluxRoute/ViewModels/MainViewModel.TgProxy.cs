@@ -2,6 +2,8 @@ using CommunityToolkit.Mvvm.Input;
 using FluxRoute.Services;
 using FluxRoute.Views;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using System.Security.Cryptography;
 using System.Windows;
 using Application = System.Windows.Application;
@@ -114,6 +116,7 @@ public partial class MainViewModel
 
     public void InitializeTgProxyOnStartup()
     {
+        KillOrphanedTgProxyProcesses();
         EnsureTgProxyStateInitialized();
         if (!TgProxyAutoStartOnAppLaunch || TgProxyRunning) return;
         if (string.IsNullOrWhiteSpace(TgProxySecret))
@@ -124,6 +127,41 @@ public partial class MainViewModel
         StartTgProxy();
     }
 
+
+    // Remove only Python processes launched from FluxRoute's legacy tg-proxy folder.
+    // This keeps upgrades from leaving the old implementation holding port 1443.
+    private static void KillOrphanedTgProxyProcesses()
+    {
+        string tgProxyDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tg-proxy")
+            + Path.DirectorySeparatorChar;
+        try
+        {
+            foreach (var process in Process.GetProcessesByName("python"))
+            {
+                try
+                {
+                    string? exePath = process.MainModule?.FileName;
+                    if (string.IsNullOrWhiteSpace(exePath)
+                        || !exePath.StartsWith(tgProxyDir, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    process.Kill(entireProcessTree: true);
+                    process.WaitForExit(2000);
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    Trace.TraceInformation($"Не удалось завершить legacy TG Proxy process: {ex.Message}");
+                }
+                finally
+                {
+                    try { process.Dispose(); } catch { }
+                }
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            Trace.TraceInformation($"Legacy TG Proxy cleanup skipped: {ex.Message}");
+        }
+    }
     private void EnsureTgProxyStateInitialized()
     {
         // The proxy is part of FluxRoute now; no Python files or download are required.
@@ -202,6 +240,7 @@ public partial class MainViewModel
                 CloudflareDomain = TgProxyCfDomain.Trim(),
                 CloudflareWorkerDomains = ParseDomainList(TgProxyCfWorkerDomains),
                 BufferSize = bufferSize,
+                PreferIPv4 = TgProxyPreferIPv4,
                 Verbose = TgProxyVerbose
             });
             _tgWsProxy = server;

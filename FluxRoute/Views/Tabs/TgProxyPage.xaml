@@ -187,10 +187,6 @@
                         <CheckBox Content="Подробное логирование (verbose)" IsChecked="{Binding TgProxyVerbose}" Margin="0,0,0,10" />
                         <TextBlock Style="{StaticResource SettingsLabel}" Text="Буфер, КБ (по умолчанию 256)" />
                         <TextBox Text="{Binding TgProxyBufKb, UpdateSourceTrigger=PropertyChanged}" Height="32" Margin="0,0,0,9" />
-                        <TextBlock Style="{StaticResource SettingsLabel}" Text="Пул WebSocket-сессий (по умолчанию 4)" />
-                        <TextBox Text="{Binding TgProxyPoolSize, UpdateSourceTrigger=PropertyChanged}" Height="32" Margin="0,0,0,9" />
-                        <TextBlock Style="{StaticResource SettingsLabel}" Text="Макс. размер лога, МБ (по умолчанию 5)" />
-                        <TextBox Text="{Binding TgProxyLogMaxMb, UpdateSourceTrigger=PropertyChanged}" Height="32" Margin="0,0,0,9" />
                         <CheckBox Content="Предпочитать IPv4" IsChecked="{Binding TgProxyPreferIPv4}" Margin="0,0,0,2" />
                     </StackPanel>
                 </Border>

@@ -19,6 +19,7 @@ internal sealed class TgWsProxyOptions
     internal string CloudflareDomain { get; init; } = string.Empty;
     internal IReadOnlyList<string> CloudflareWorkerDomains { get; init; } = Array.Empty<string>();
     internal int BufferSize { get; init; } = 256 * 1024;
+    internal bool PreferIPv4 { get; init; } = true;
     internal bool Verbose { get; init; }
 }
 
@@ -32,6 +33,26 @@ internal sealed class TgWsProxyServer : IDisposable
         "149.154.175.100",
         "149.154.167.91",
         "149.154.171.5"
+    ];
+    private static readonly IReadOnlyDictionary<int, string> DefaultSpecialDataCenterHosts =
+        new Dictionary<int, string> { [203] = "91.105.192.100" };
+
+    private static readonly string[] DefaultTestDataCenterHosts =
+    [
+        "149.154.175.10",
+        "149.154.167.40",
+        "149.154.175.117"
+    ];
+
+    // Keep the upstream fallback pool available even when no custom Cloudflare
+    // domain or Worker has been configured.
+    private static readonly string[] DefaultCloudflareDomains =
+    [
+        "pclead.co.uk", "offshor.co.uk", "cakeisalie.co.uk", "noskomnadzor.co.uk",
+        "lovetrue.co.uk", "sorokdva.co.uk", "pyatdesyatdva.co.uk", "kartoshka.co.uk",
+        "sorokodin.co.uk", "pyatdesyatodin.co.uk", "notelega.co.uk", "ebally.co.uk",
+        "nebally.co.uk", "havegreatday.co.uk", "pomogite.co.uk", "fixtelega.co.uk",
+        "sadnews.co.uk", "onedaychamp.co.uk", "stopblocking.co.uk", "nothingthere.co.uk"
     ];
 
     private readonly object _gate = new();
@@ -146,7 +167,7 @@ internal sealed class TgWsProxyServer : IDisposable
                         await using var ws = await TgWsSocket.ConnectAsync(
                             candidate.Target, candidate.Host, candidate.Host,
                             info.IsTest ? "/apiws_test" : "/apiws",
-                            options.BufferSize, TimeSpan.FromSeconds(8), serverToken);
+                            options.BufferSize, options.PreferIPv4, TimeSpan.FromSeconds(8), serverToken);
                         await ws.SendBinaryAsync(relayHandshake, serverToken);
                         WriteLog($"#{id}: WebSocket {candidate.Host} подключён");
                         await BridgeWebSocketAsync(local, ws, crypto, relayHandshake,
@@ -164,7 +185,7 @@ internal sealed class TgWsProxyServer : IDisposable
                     }
                 }
 
-                string target = ResolveDataCenterTarget(info.DataCenter, options);
+                string target = ResolveDataCenterTarget(info.DataCenter, info.IsTest, options);
                 if (!string.IsNullOrWhiteSpace(target))
                 {
                     try
@@ -252,7 +273,12 @@ internal sealed class TgWsProxyServer : IDisposable
         byte[] relayHandshake, TgWsProxyProtocol.CryptoBridge crypto,
         TgWsProxyOptions options, CancellationToken serverToken)
     {
-        using var upstream = new TcpClient { NoDelay = true, ReceiveBufferSize = options.BufferSize, SendBufferSize = options.BufferSize };
+        using var upstream = options.PreferIPv4
+            ? new TcpClient(AddressFamily.InterNetwork)
+            : new TcpClient();
+        upstream.NoDelay = true;
+        upstream.ReceiveBufferSize = options.BufferSize;
+        upstream.SendBufferSize = options.BufferSize;
         await upstream.ConnectAsync(target, 443, serverToken);
         using NetworkStream remote = upstream.GetStream();
         await remote.WriteAsync(relayHandshake.ToArray(), serverToken);
@@ -305,9 +331,10 @@ internal sealed class TgWsProxyServer : IDisposable
     private static IReadOnlyList<(string Target, string Host)> BuildWebSocketCandidates(
         TgWsProxyProtocol.HandshakeInfo info, TgWsProxyOptions options)
     {
-        string target = ResolveDataCenterTarget(info.DataCenter, options);
-        string normalA = $"kws{info.DataCenter}.web.telegram.org";
-        string normalB = $"kws{info.DataCenter}-1.web.telegram.org";
+        string target = ResolveDataCenterTarget(info.DataCenter, info.IsTest, options);
+        int domainDataCenter = TgWsProxyProtocol.GetWebSocketDataCenter(info.DataCenter);
+        string normalA = $"kws{domainDataCenter}.web.telegram.org";
+        string normalB = $"kws{domainDataCenter}-1.web.telegram.org";
         var hosts = info.IsMedia ? new[] { normalB, normalA } : new[] { normalA, normalB };
         var candidates = new List<(string, string)>();
 
@@ -319,8 +346,8 @@ internal sealed class TgWsProxyServer : IDisposable
         {
             string baseDomain = options.CloudflareDomain.Trim().TrimEnd('.');
             string cfHost = baseDomain.Contains("{dc}", StringComparison.OrdinalIgnoreCase)
-                ? baseDomain.Replace("{dc}", info.DataCenter.ToString(), StringComparison.OrdinalIgnoreCase)
-                : $"kws{info.DataCenter}.{baseDomain}";
+                ? baseDomain.Replace("{dc}", domainDataCenter.ToString(), StringComparison.OrdinalIgnoreCase)
+                : $"kws{domainDataCenter}.{baseDomain}";
             // A custom front domain is resolved by its own DNS; the Telegram DC IP is
             // only the target for the direct Telegram hostname candidates above.
             if (options.CloudflarePriority)
@@ -340,15 +367,27 @@ internal sealed class TgWsProxyServer : IDisposable
                 else
                     candidates.Add((workerHost, workerHost));
             }
+
+            foreach (string domain in DefaultCloudflareDomains)
+            {
+                if (options.CloudflarePriority)
+                    candidates.Insert(0, (target, domain));
+                else
+                    candidates.Add((target, domain));
+            }
         }
         return candidates;
     }
 
-    private static string ResolveDataCenterTarget(int dataCenter, TgWsProxyOptions options)
+    private static string ResolveDataCenterTarget(int dataCenter, bool isTest, TgWsProxyOptions options)
     {
         if (options.DataCenterTargets.TryGetValue(dataCenter, out string? configured)
             && !string.IsNullOrWhiteSpace(configured))
             return configured.Trim();
+        if (!isTest && DefaultSpecialDataCenterHosts.TryGetValue(dataCenter, out string? special))
+            return special;
+        if (isTest)
+            return dataCenter is >= 1 and <= 3 ? DefaultTestDataCenterHosts[dataCenter - 1] : string.Empty;
         return dataCenter is >= 1 and <= 5 ? DefaultDataCenterHosts[dataCenter - 1] : string.Empty;
     }
 

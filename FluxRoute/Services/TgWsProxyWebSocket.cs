@@ -32,6 +32,7 @@ internal sealed class TgWsSocket : IAsyncDisposable
         string sniHost,
         string path,
         int bufferSize,
+        bool preferIPv4,
         TimeSpan timeout,
         CancellationToken cancellationToken)
     {
@@ -39,7 +40,10 @@ internal sealed class TgWsSocket : IAsyncDisposable
         timeoutCts.CancelAfter(timeout);
         var ct = timeoutCts.Token;
 
-        var tcp = new TcpClient { NoDelay = true, ReceiveBufferSize = bufferSize, SendBufferSize = bufferSize };
+        var tcp = preferIPv4 ? new TcpClient(AddressFamily.InterNetwork) : new TcpClient();
+        tcp.NoDelay = true;
+        tcp.ReceiveBufferSize = bufferSize;
+        tcp.SendBufferSize = bufferSize;
         try
         {
             await tcp.ConnectAsync(targetHost, 443, ct);
