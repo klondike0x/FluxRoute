@@ -149,7 +149,7 @@ public partial class HomePage : System.Windows.Controls.UserControl
     private void OnIdlePulseTick(object? sender, EventArgs e)
     {
         // Проверяем через DataContext, запущен ли сервис
-        if (DataContext is FluxRoute.ViewModels.MainViewModel vm && vm.IsRunning)
+        if (DataContext is FluxRoute.ViewModels.MainViewModel vm && vm.IsAnyEngineRunning)
             PlayWave(outward: true, strength: 0.38, duration: 2200);
     }
 }

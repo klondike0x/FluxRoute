@@ -10,6 +10,7 @@ namespace FluxRoute.Core.Services;
 public static class HttpClientNames
 {
     public const string Connectivity = "connectivity";
+    public const string Doh = "doh";
 }
 
 public interface IConnectivityChecker

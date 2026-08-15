@@ -106,35 +106,7 @@
 
             <!-- DNS-over-HTTPS -->
             <TabItem Header="DoH">
-                <Grid Margin="0,4,10,12">
-                    <Border Background="#111520"
-                            BorderBrush="#21262D"
-                            BorderThickness="1"
-                            CornerRadius="8"
-                            Padding="20"
-                            VerticalAlignment="Top">
-                        <StackPanel>
-                            <TextBlock Text="DNS-over-HTTPS"
-                                       Foreground="#DCE4F0"
-                                       FontSize="15"
-                                       FontWeight="SemiBold" />
-                            <TextBlock Text="Компонент DoH будет доступен после интеграции ветки feature/doh."
-                                       Foreground="#8B949E"
-                                       FontSize="12"
-                                       TextWrapping="Wrap"
-                                       Margin="0,8,0,12" />
-                            <Border Background="#1C1800"
-                                    BorderBrush="#4A3800"
-                                    BorderThickness="1"
-                                    CornerRadius="7"
-                                    Padding="10,8">
-                                <TextBlock Text="Ожидает интеграции"
-                                           Foreground="#F0B429"
-                                           FontSize="11" />
-                            </Border>
-                        </StackPanel>
-                    </Border>
-                </Grid>
+                <tabs:DohPage DataContext="{Binding Doh}" />
             </TabItem>
         </TabControl>
     </Grid>

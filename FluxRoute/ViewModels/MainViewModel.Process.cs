@@ -56,6 +56,7 @@ public partial class MainViewModel
 
     #endregion
 
+    private bool _repairProtectionInProgress;
     private bool _startedViaBatFallback;
 
     [RelayCommand]
@@ -151,10 +152,55 @@ public partial class MainViewModel
         else
             Start();
     }
+    [RelayCommand]
+    private async Task RepairProtectionAsync()
+    {
+        if (_repairProtectionInProgress)
+            return;
+
+        _repairProtectionInProgress = true;
+        try
+        {
+            Logs.Add("🛠 Восстанавливаем защиту…");
+
+            if (IsZapret2Selected)
+            {
+                await RepairZapret2Command.ExecuteAsync(null);
+                return;
+            }
+
+            if (IsRunning)
+            {
+                Stop();
+                await Task.Delay(800);
+            }
+
+            Start();
+            await Task.Delay(600);
+            RefreshDiagnostics();
+            AddToRecentLogs("🛠 Защита перезапущена из вкладки «Сервис»");
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"❌ Не удалось восстановить защиту: {ex.Message}");
+            AddToRecentLogs("❌ Ошибка восстановления защиты");
+        }
+        finally
+        {
+            _repairProtectionInProgress = false;
+        }
+    }
+
 
     [RelayCommand]
     private void Start()
     {
+        if (IsZapret2Selected)
+        {
+            _ = StartZapret2Async();
+            return;
+        }
+
         if (IsRunning)
         {
             Logs.Add("Процесс уже запущен.");
@@ -419,6 +465,12 @@ public partial class MainViewModel
     [RelayCommand]
     private void Stop()
     {
+        if (IsZapret2Selected)
+        {
+            _ = StopZapret2Async();
+            return;
+        }
+
         _hideWindowsCts?.Cancel();
 
         var pidsToKill = new HashSet<uint>(_trackedPids);

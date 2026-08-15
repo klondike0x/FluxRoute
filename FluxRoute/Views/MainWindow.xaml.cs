@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     private readonly TrayIconService _trayIcon;
     private readonly ILogger<MainWindow>? _logger;
     private bool _isClosingConfirmed;
+    private bool _lastVisualEngineRunning;
 
     // Таймер для троттлинга (защита от дёрганий таблетки при частом ресайзе окна)
     private readonly System.Windows.Threading.DispatcherTimer _navIndicatorResizeTimer;
@@ -94,6 +95,8 @@ public partial class MainWindow : Window
         _trayIcon = trayIcon;
         _logger = logger;
 
+        _lastVisualEngineRunning = _vm.IsAnyEngineRunning;
+
         DataContext = _vm;
         ApplyStartupWindowSize();
 
@@ -109,6 +112,8 @@ public partial class MainWindow : Window
             UpdateSidebarExpansion();
         };
 
+        // Моды — отдельный ViewModel, устанавливаем DataContext программно
+        // (XAML-привязка {Binding ModsViewModel} ненадёжна: свойство nullable)
         // Tray icon
         _trayIcon.SetVisible(true);
         _trayIcon.ShowRequested += OnTrayShowRequested;
@@ -351,33 +356,34 @@ public partial class MainWindow : Window
         if (e.PropertyName == nameof(MainViewModel.IsSidebarExpanded))
             AnimateSidebar(_vm.IsSidebarExpanded);
 
-        if (e.PropertyName == nameof(MainViewModel.IsRunning))
+        if (e.PropertyName is nameof(MainViewModel.IsRunning) or nameof(MainViewModel.IsAnyEngineRunning))
         {
-            _trayIcon.UpdateIcon(_vm.IsRunning);
-            UpdateTrayMenu();
+            var engineRunning = _vm.IsAnyEngineRunning;
+            if (engineRunning != _lastVisualEngineRunning)
+            {
+                _lastVisualEngineRunning = engineRunning;
+                _trayIcon.UpdateIcon(engineRunning);
+                UpdateTrayMenu();
 
-            if (_vm.IsRunning)
-            {
-                // Burst: кольца расходятся наружу при включении
-                PlayWave(outward: true, strength: 0.65, duration: 1400);
-                // AFTER burst-волны — запускаем idle-пульс с задержкой
-                var startDelay = new System.Windows.Threading.DispatcherTimer
+                if (engineRunning)
                 {
-                    Interval = TimeSpan.FromMilliseconds(1500)
-                };
-                startDelay.Tick += (_, _) => { startDelay.Stop(); StartIdlePulse(); };
-                startDelay.Start();
-            }
-            else
-            {
-                // Сначала останавливаем idle
-                StopIdlePulse();
-                // Burst: кольца схлопываются внутрь при выключении
-                PlayWave(outward: false, strength: 0.65, duration: 1400);
+                    // Burst: кольца расходятся наружу при включении любого движка.
+                    PlayWave(outward: true, strength: 0.65, duration: 1400);
+                    var startDelay = new System.Windows.Threading.DispatcherTimer
+                    {
+                        Interval = TimeSpan.FromMilliseconds(1500)
+                    };
+                    startDelay.Tick += (_, _) => { startDelay.Stop(); StartIdlePulse(); };
+                    startDelay.Start();
+                }
+                else
+                {
+                    StopIdlePulse();
+                    // Burst: кольца схлопываются внутрь при выключении движка.
+                    PlayWave(outward: false, strength: 0.65, duration: 1400);
+                }
             }
         }
-
-        // ═══ v1.6.0: Обновление меню трея при изменении статусов ═══
         if (e.PropertyName is nameof(MainViewModel.SelectedProfile)
             or nameof(MainViewModel.OrchestratorEnabled)
             or nameof(MainViewModel.TgProxyRunning)
@@ -512,6 +518,11 @@ public partial class MainWindow : Window
 
     private void TitleBar_MinimizeRequested(object sender, System.Windows.RoutedEventArgs e)
         => WindowState = WindowState.Minimized;
+
+    private void TitleBar_MaximizeRequested(object sender, System.Windows.RoutedEventArgs e)
+        => WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
 
     private void TitleBar_CloseRequested(object sender, System.Windows.RoutedEventArgs e)
         => Close();

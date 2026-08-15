@@ -5,8 +5,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" d:DesignHeight="460" d:DesignWidth="760">
     <Grid>
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="16,12">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16,12">
                 <!-- ── БЫСТРЫЕ ПРЕСЕТЫ ── -->
                 <TextBlock Style="{StaticResource SecH}" Text="БЫСТРЫЕ ПРЕСЕТЫ" Margin="0,0,0,4" />
                 <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
@@ -308,27 +308,19 @@
                 </Button>
                 <Rectangle Style="{StaticResource Sep}" />
 
-                <!-- ── СЛУЖБА ZAPRET ── -->
-                <TextBlock Style="{StaticResource SecH}" Text="СЛУЖБА ZAPRET" />
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Style="{StaticResource Lbl}" Text="Статус: " Margin="0,0,4,0" />
-                    <TextBlock Style="{StaticResource Val}" Text="{Binding ZapretServiceStatus}" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <Button Content="Установить" Style="{StaticResource ActionBtnGreen}"
-                            Margin="0,0,10,0" Command="{Binding InstallZapretServiceCommand}" />
-                    <Button Content="Остановить" Style="{StaticResource ActionBtnRed}"
-                            Margin="0,0,10,0" Command="{Binding ForceStopZapretServiceCommand}" />
-                    <Button Content="↻" Style="{StaticResource ActionBtn}"
-                            Command="{Binding RefreshServiceInfoCommand}" />
-                </StackPanel>
-                <Border Background="#1C1800" BorderBrush="#4A3800" BorderThickness="1"
-                        CornerRadius="8" Padding="10,8" Margin="0,12,0,0">
-                    <TextBlock TextWrapping="Wrap" FontFamily="Segoe UI" FontSize="11"
-                               Foreground="#F0B429"
-                               Text="Установка службы запускает service.bat с правами администратора." />
+                <Border Background="#101823" BorderBrush="#1E4A75" BorderThickness="1"
+                        CornerRadius="8" Padding="12,10" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SecH}" Text="ВОССТАНОВЛЕНИЕ ЗАЩИТЫ" />
+                        <TextBlock FontFamily="Segoe UI" FontSize="11" Foreground="#8B949E"
+                                   TextWrapping="Wrap" Margin="0,2,0,8"
+                                   Text="Перезапускает текущую стратегию и повторно проверяет состояние защиты." />
+                        <Button Content="🛠 Восстановить защиту" Style="{StaticResource ActionBtnAccent}"
+                                Command="{Binding RepairProtectionCommand}"
+                                HorizontalAlignment="Left" Padding="12,6" />
+                    </StackPanel>
                 </Border>
-
+                <Rectangle Style="{StaticResource Sep}" Margin="0,0,0,10" />
                 <Border Style="{StaticResource LogArea}" x:Name="ServiceLogContainer" Visibility="Collapsed">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" x:Name="ServiceLogScroll">
                         <ItemsControl ItemsSource="{Binding ServiceLogs}">
@@ -341,7 +333,7 @@
                         </ItemsControl>
                     </ScrollViewer>
                 </Border>
-            </StackPanel>
-        </ScrollViewer>
-    </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
 </UserControl>

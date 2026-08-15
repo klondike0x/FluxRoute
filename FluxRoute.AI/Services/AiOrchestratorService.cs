@@ -553,11 +553,22 @@ public sealed class AiOrchestratorService : IDisposable
         var threshold = _aiSettings().AutoDeleteBelowScore;
         if (g.Origin == StrategyOrigin.Evolved && result.Score < threshold)
         {
-            Notify($"🗑 ИИ: стратегия «{g.DisplayName}» ({result.Score}%) ниже порога {threshold}% — удалена автоматически.", result: result);
-            TryDeleteGenomeBatFile(g);
-            _registry.Remove(g.Id);
-            _registry.Save();
-            return true;
+            // Проверяем, есть ли на этой сети хотя бы одна встроенная стратегия с Score >= threshold.
+            // Если нет — сеть слишком агрессивна, удалять эволюцию несправедливо (исправление #62).
+            var builtinOk = _history.LoadForNetwork(fp.Hash)
+                .Where(o => _registry.GetById(o.GenomeId)?.Origin == StrategyOrigin.Builtin && o.Score >= threshold)
+                .ToList();
+
+            if (builtinOk.Count > 0)
+            {
+                Notify($"🗑 ИИ: стратегия «{g.DisplayName}» ({result.Score}%) ниже порога {threshold}% — удалена автоматически.", result: result);
+                TryDeleteGenomeBatFile(g);
+                _registry.Remove(g.Id);
+                _registry.Save();
+                return true;
+            }
+
+            Notify($"🧬 ИИ: стратегия «{g.DisplayName}» ({result.Score}%) ниже порога {threshold}%, но оставлена — встроенные тоже не проходят (сеть агрессивна).", result: result);
         }
         return false;
     }
