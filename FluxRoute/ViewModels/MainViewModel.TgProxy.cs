@@ -72,7 +72,7 @@ public partial class MainViewModel
     partial void OnTgProxyCfEnabledChanged(bool value) => SaveSettings();
 
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
-    private bool tgProxyCfPriority = true;
+    private bool tgProxyCfPriority = false;
     partial void OnTgProxyCfPriorityChanged(bool value) => SaveSettings();
 
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
@@ -92,7 +92,7 @@ public partial class MainViewModel
     partial void OnTgProxyBufKbChanged(string value) => SaveSettings();
 
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
-    private string tgProxyPoolSize = "4";
+    private string tgProxyPoolSize = "16";
     partial void OnTgProxyPoolSizeChanged(string value) => SaveSettings();
 
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
@@ -228,7 +228,7 @@ public partial class MainViewModel
             : 256 * 1024;
         int maxConcurrentSessions = int.TryParse(TgProxyPoolSize, out int poolSize)
             ? Math.Clamp(poolSize, 1, 64)
-            : 4;
+            : 16;
 
         var server = new TgWsProxyServer();
         server.Log += AppendTgLog;

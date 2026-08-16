@@ -85,6 +85,7 @@ public partial class App : Application
                 Log.Information("Онбординг восстановлен как завершённый для существующей установки.");
             }
 
+            var onboardingCompletedNow = false;
             if (!settings.FirstRunComplete)
             {
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -110,14 +111,15 @@ public partial class App : Application
                         settings.LastProfileFileName = onboardingVm.SelectedStrategyFileName;
                         settings.FirstRunComplete = true;
                         settingsService.Save(settings);
+                        onboardingCompletedNow = true;
                         Log.Information("Онбординг завершён. Компонент: {Component}, стратегия: {Strategy}",
                             onboardingVm.SelectedComponent, onboardingVm.SelectedStrategyFileName);
                     }
                     else
                     {
-                        // Пользователь закрыл окно — отмечаем что онбординг был
-                        settings.FirstRunComplete = true;
-                        settingsService.Save(settings);
+                        // Пользователь закрыл окно — оставляем FirstRunComplete=false,
+                        // чтобы первичная настройка снова открылась при следующем запуске.
+                        Log.Information("Онбординг закрыт без завершения настройки.");
                     }
                 }
             }
@@ -128,6 +130,9 @@ public partial class App : Application
             var mainWindow = _host.Services.GetRequiredService<MainWindow>();
             MainWindow = mainWindow;
             mainWindow.Show();
+
+            if (onboardingCompletedNow && mainWindow.DataContext is MainViewModel mainViewModel)
+                _ = mainViewModel.RunInitialProfileCheckAsync();
 
             if (TrayPopupService.IsPreviewRequested())
             {

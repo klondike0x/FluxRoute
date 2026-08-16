@@ -170,6 +170,69 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>
+    /// Первичная проверка выбранной стратегии после завершения онбординга.
+    /// Запускает выбранный BAT, проверяет YouTube и Discord и оставляет стратегию активной.
+    /// </summary>
+    public async Task RunInitialProfileCheckAsync()
+    {
+        var profile = SelectedProfile;
+        if (profile is null)
+        {
+            Logs.Add("[Онбординг] Стратегия не выбрана — проверка пропущена.");
+            return;
+        }
+
+        if (string.Equals(_selectedComponent, "none", StringComparison.OrdinalIgnoreCase))
+        {
+            Logs.Add("[Онбординг] Основной компонент отключён — проверка стратегии пропущена.");
+            return;
+        }
+
+        var targets = new List<TargetEntry>();
+        foreach (var site in new[] { "YouTube", "Discord" })
+        {
+            if (ConnectivityChecker.BuiltinSites.TryGetValue(site, out var siteTargets))
+                targets.AddRange(siteTargets);
+        }
+
+        if (targets.Count == 0)
+        {
+            Logs.Add("[Онбординг] Нет целей для первичной проверки.");
+            return;
+        }
+
+        Logs.Add($"[Онбординг] Запускаю стратегию «{profile.DisplayName}» и проверяю YouTube и Discord…");
+        AddToRecentLogs($"🔍 Первичная проверка: {profile.DisplayName}");
+
+        try
+        {
+            var probeService = new ProfileProbeService(_connectivity, async selected =>
+            {
+                if (selected is not null)
+                    await SwitchProfileAsync(selected).ConfigureAwait(false);
+            });
+
+            var result = await probeService.ProbeAsync(profile, targets, new ProfileProbeOptions
+            {
+                StartupWait = TimeSpan.FromSeconds(4),
+                StableWait = TimeSpan.FromMilliseconds(1500),
+                ProcessWaitTimeout = TimeSpan.FromSeconds(10),
+                StopAfterProbe = false,
+                RequireWinwsProcess = true,
+                ProcessName = IsZapret2Selected ? "winws2" : "winws"
+            });
+
+            Logs.Add($"[Онбординг] Проверка завершена: {result.Score}% — {result.Summary}");
+            AddToRecentLogs($"✅ Первичная проверка: {result.Score}%");
+            await UpdateProfileScoreAsync(profile.FileName, result.Score);
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"[Онбординг] Ошибка первичной проверки: {ex.Message}");
+            AddToRecentLogs("❌ Первичная проверка завершилась с ошибкой");
+        }
+    }
     private async Task SwitchProfileAsync(ProfileItem? profile)
     {
         var dispatcher = Application.Current?.Dispatcher;
