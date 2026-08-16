@@ -152,14 +152,14 @@ public sealed class TgProxySettings
 
     // Cloudflare Proxy
     public bool CfProxyEnabled { get; set; } = true;
-    public bool CfProxyPriority { get; set; } = true;
+    public bool CfProxyPriority { get; set; } = false;
     public bool CfDomainEnabled { get; set; } = false;
     public string CfDomain { get; set; } = "";
     public string CfWorkerDomains { get; set; } = "";
 
     // Производительность
     public int BufKb { get; set; } = 256;
-    public int PoolSize { get; set; } = 4;
+    public int PoolSize { get; set; } = 16;
     public double LogMaxMb { get; set; } = 5.0;
 }
 

@@ -14,12 +14,12 @@ internal sealed class TgWsProxyOptions
     internal IReadOnlyDictionary<int, string> DataCenterTargets { get; init; } =
         new Dictionary<int, string>();
     internal bool CloudflareEnabled { get; init; } = true;
-    internal bool CloudflarePriority { get; init; } = true;
+    internal bool CloudflarePriority { get; init; } = false;
     internal bool CloudflareDomainEnabled { get; init; }
     internal string CloudflareDomain { get; init; } = string.Empty;
     internal IReadOnlyList<string> CloudflareWorkerDomains { get; init; } = Array.Empty<string>();
     internal int BufferSize { get; init; } = 256 * 1024;
-    internal int MaxConcurrentSessions { get; init; } = 4;
+    internal int MaxConcurrentSessions { get; init; } = 16;
     internal bool PreferIPv4 { get; init; } = true;
     internal bool Verbose { get; init; }
 }
@@ -131,12 +131,15 @@ internal sealed class TgWsProxyServer : IDisposable
                 var listenerOptions = _options;
                 client.ReceiveBufferSize = listenerOptions?.BufferSize ?? 256 * 1024;
                 client.SendBufferSize = listenerOptions?.BufferSize ?? 256 * 1024;
-                if (!sessionPool.Wait(0))
+                try
+                {
+                    // Queue incoming clients instead of dropping them when the active-session limit is reached.
+                    await sessionPool.WaitAsync(ct);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {
                     client.Dispose();
-                    if (listenerOptions?.Verbose == true)
-                        WriteLog("⚠ Пул TG Proxy заполнен: новое подключение отклонено");
-                    continue;
+                    break;
                 }
 
                 int id = Interlocked.Increment(ref _sessionId);
@@ -194,6 +197,7 @@ internal sealed class TgWsProxyServer : IDisposable
                         continue;
                     }
 
+                    bool bridgeStarted = false;
                     try
                     {
                         await using var ws = await TgWsSocket.ConnectAsync(
@@ -202,6 +206,7 @@ internal sealed class TgWsProxyServer : IDisposable
                             options.BufferSize, options.PreferIPv4, TimeSpan.FromSeconds(8), serverToken);
                         await ws.SendBinaryAsync(relayHandshake, serverToken);
                         WriteLog($"#{id}: WebSocket {candidate.Host} подключён через {candidateTarget}");
+                        bridgeStarted = true;
                         await BridgeWebSocketAsync(local, ws, crypto, relayHandshake,
                             info.TransportWord, options, serverToken);
                         MarkRouteSuccess(info.DataCenter, candidate.RouteKey);
@@ -216,6 +221,12 @@ internal sealed class TgWsProxyServer : IDisposable
                         MarkRouteFailure(info.DataCenter, candidate.RouteKey, candidate.IsFront);
                         if (options.Verbose || ex is UpstreamDidNotRelayException)
                             WriteLog($"#{id}: WS {candidate.Host} недоступен — {ex.Message}");
+
+                        // Once the bridge has read client bytes, the stream cannot be replayed
+                        // through another upstream. Close this session so Telegram retries with
+                        // the next route instead of receiving a truncated handshake.
+                        if (bridgeStarted)
+                            return;
                     }
                 }
 
@@ -254,6 +265,15 @@ internal sealed class TgWsProxyServer : IDisposable
         int upstreamResponded = 0;
         var noRelay = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
+        async Task SendPacketsAsync(IReadOnlyList<byte[]> packets)
+        {
+            if (packets.Count == 0) return;
+            if (packets.Count == 1)
+                await ws.SendBinaryAsync(packets[0], ct);
+            else
+                await ws.SendBatchAsync(packets, ct);
+        }
+
         async Task ClientToUpstream()
         {
             byte[] buffer = ArrayPool<byte>.Shared.Rent(Math.Max(16 * 1024, options.BufferSize));
@@ -264,16 +284,14 @@ internal sealed class TgWsProxyServer : IDisposable
                     int read = await local.ReadAsync(buffer.AsMemory(0, buffer.Length), ct);
                     if (read == 0)
                     {
-                        foreach (var tail in splitter.Flush())
-                            await ws.SendBinaryAsync(tail, ct);
+                        await SendPacketsAsync(splitter.Flush());
                         break;
                     }
 
                     Interlocked.CompareExchange(ref firstClientByteAt, Environment.TickCount64, 0);
                     byte[] plain = crypto.ClientDecrypt.Transform(buffer.AsSpan(0, read));
                     byte[] encrypted = crypto.UpstreamEncrypt.Transform(plain);
-                    foreach (var packet in splitter.Push(encrypted))
-                        await ws.SendBinaryAsync(packet, ct);
+                    await SendPacketsAsync(splitter.Push(encrypted));
                 }
             }
             catch (OperationCanceledException) { }
@@ -296,7 +314,6 @@ internal sealed class TgWsProxyServer : IDisposable
                     byte[] plain = crypto.UpstreamDecrypt.Transform(packet);
                     byte[] encrypted = crypto.ClientEncrypt.Transform(plain);
                     await local.WriteAsync(encrypted, ct);
-                    await local.FlushAsync(ct);
                 }
             }
             catch (OperationCanceledException) { }
@@ -325,24 +342,30 @@ internal sealed class TgWsProxyServer : IDisposable
 
         Task clientTask = ClientToUpstream();
         Task upstreamTask = UpstreamToClient();
-        _ = MonitorFirstResponse();
+        Task monitorTask = MonitorFirstResponse();
         Task first = await Task.WhenAny(clientTask, upstreamTask, noRelay.Task);
-        if (first == noRelay.Task)
+        bool noRelayTriggered = first == noRelay.Task;
+
+        // Both bridge loops share the CryptoBridge lifetime. Do not return until
+        // both loops have observed cancellation; otherwise the caller can dispose
+        // AES transforms while the other direction is still in Transform().
+        linked.Cancel();
+        Exception? bridgeException = null;
+        try { await Task.WhenAll(clientTask, upstreamTask, monitorTask); }
+        catch (Exception ex) { bridgeException = ex; }
+
+        if (noRelayTriggered)
             throw new UpstreamDidNotRelayException("Telegram не ответил через этот WebSocket-маршрут за 10 секунд");
 
-        linked.Cancel();
         if (first == upstreamTask && Volatile.Read(ref upstreamResponded) == 0
             && Volatile.Read(ref firstClientByteAt) != 0)
         {
             if (serverToken.IsCancellationRequested) return;
-            try { await upstreamTask; }
-            catch (Exception ex) { throw new UpstreamDidNotRelayException(ex.Message); }
+            if (bridgeException is not null)
+                throw new UpstreamDidNotRelayException(bridgeException.Message);
             throw new UpstreamDidNotRelayException("WebSocket закрылся до первого ответа Telegram");
         }
-
-        try { await first; } catch { }
     }
-
     private static async Task BridgeTcpAsync(NetworkStream local, string target,
         byte[] relayHandshake, TgWsProxyProtocol.CryptoBridge crypto,
         TgWsProxyOptions options, CancellationToken serverToken)
@@ -372,7 +395,6 @@ internal sealed class TgWsProxyServer : IDisposable
                     if (read == 0) break;
                     byte[] plain = crypto.ClientDecrypt.Transform(buffer.AsSpan(0, read));
                     await remote.WriteAsync(crypto.UpstreamEncrypt.Transform(plain), ct);
-                    await remote.FlushAsync(ct);
                 }
             }
             catch (OperationCanceledException) { }
@@ -390,18 +412,20 @@ internal sealed class TgWsProxyServer : IDisposable
                     if (read == 0) break;
                     byte[] plain = crypto.UpstreamDecrypt.Transform(buffer.AsSpan(0, read));
                     await local.WriteAsync(crypto.ClientEncrypt.Transform(plain), ct);
-                    await local.FlushAsync(ct);
                 }
             }
             catch (OperationCanceledException) { }
             finally { ArrayPool<byte>.Shared.Return(buffer); linked.Cancel(); }
         }
 
-        Task first = await Task.WhenAny(ForwardUp(), ForwardDown());
+        Task upstreamTask = ForwardUp();
+        Task clientTask = ForwardDown();
+        await Task.WhenAny(upstreamTask, clientTask);
         linked.Cancel();
-        try { await first; } catch { }
-    }
 
+        // Wait for both directions before disposing the upstream socket and crypto.
+        try { await Task.WhenAll(upstreamTask, clientTask); } catch { }
+    }
     private IReadOnlyList<WebSocketCandidate> OrderWebSocketCandidates(
         TgWsProxyProtocol.HandshakeInfo info, TgWsProxyOptions options)
     {
@@ -464,7 +488,7 @@ internal sealed class TgWsProxyServer : IDisposable
             }
         }
 
-        if (options.CloudflarePriority)
+        if (options.CloudflarePriority && !info.IsMedia)
             candidates.InsertRange(0, frontCandidates);
         else
             candidates.AddRange(frontCandidates);

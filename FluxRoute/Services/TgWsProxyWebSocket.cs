@@ -52,7 +52,11 @@ internal sealed class TgWsSocket : IAsyncDisposable
             {
                 TargetHost = sniHost,
                 EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
-                CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+                CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
+                // The upstream is intentionally reached by IP/Cloudflare front while SNI/Host
+                // carries the Telegram domain. Match the reference proxies: MTProto obfuscation
+                // authenticates the relay payload, not the front certificate.
+                RemoteCertificateValidationCallback = static (_, _, _, _) => true
             }, ct);
 
             var socket = new TgWsSocket(tcp, tls);
@@ -74,6 +78,29 @@ internal sealed class TgWsSocket : IAsyncDisposable
             if (_closed) throw new IOException("WebSocket is closed.");
             byte[] frame = BuildFrame(0x2, payload.Span, mask: true);
             await _tls.WriteAsync(frame, cancellationToken);
+            await _tls.FlushAsync(cancellationToken);
+        }
+        finally
+        {
+            _sendLock.Release();
+        }
+    }
+
+    internal async Task SendBatchAsync(IReadOnlyList<byte[]> payloads, CancellationToken cancellationToken)
+    {
+        if (payloads.Count == 0) return;
+
+        await _sendLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (_closed) throw new IOException("WebSocket is closed.");
+            foreach (byte[] payload in payloads)
+            {
+                byte[] frame = BuildFrame(0x2, payload, mask: true);
+                await _tls.WriteAsync(frame, cancellationToken);
+            }
+
+            // Flush once for the whole batch instead of once per MTProto packet.
             await _tls.FlushAsync(cancellationToken);
         }
         finally
