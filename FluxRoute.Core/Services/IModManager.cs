@@ -54,6 +54,18 @@ public interface IModManager
 
     /// <summary>Возвращает путь к папке модов.</summary>
     string ModsPath { get; }
+
+    /// <summary>Обновляет метаданные мода, сохраняя его скрипты и конфигурацию.</summary>
+    Task<bool> UpdateModMetadataAsync(
+        string folderName,
+        string name,
+        string version,
+        string author,
+        string description,
+        CancellationToken ct = default);
+
+    /// <summary>Экспортирует папку мода в ZIP-архив.</summary>
+    Task ExportModAsync(string folderName, string destinationPath, CancellationToken ct = default);
 }
 
 /// <summary>

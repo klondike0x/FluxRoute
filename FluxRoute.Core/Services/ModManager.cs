@@ -198,6 +198,73 @@ public sealed class ModManager : IModManager, IDisposable
     public string ModsPath => _modsPath;
 
     /// <inheritdoc />
+    public async Task<bool> UpdateModMetadataAsync(
+        string folderName,
+        string name,
+        string version,
+        string author,
+        string description,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(folderName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        var modDir = GetSafeModDirectory(folderName);
+        var manifestPath = Path.Combine(modDir, "manifest.json");
+        if (!File.Exists(manifestPath))
+            return false;
+
+        var manifest = JsonSerializer.Deserialize<ModManifest>(
+            await File.ReadAllTextAsync(manifestPath, ct).ConfigureAwait(false));
+        if (manifest == null)
+            return false;
+
+        manifest.Name = name.Trim();
+        manifest.Version = version?.Trim() ?? string.Empty;
+        manifest.Author = author?.Trim() ?? string.Empty;
+        manifest.Description = description?.Trim() ?? string.Empty;
+
+        var json = JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(manifestPath, json, ct).ConfigureAwait(false);
+        await ScanModsAsync(ct).ConfigureAwait(false);
+        _logger.LogInformation("Updated mod metadata: {Folder}", folderName);
+        return true;
+    }
+
+    /// <inheritdoc />
+    public async Task ExportModAsync(string folderName, string destinationPath, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(folderName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+
+        var sourceDir = GetSafeModDirectory(folderName);
+        if (!Directory.Exists(sourceDir))
+            throw new DirectoryNotFoundException($"Папка мода не найдена: {folderName}");
+
+        var sourceFullPath = Path.GetFullPath(sourceDir)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + Path.DirectorySeparatorChar;
+        var destinationFullPath = Path.GetFullPath(destinationPath);
+        if (destinationFullPath.StartsWith(sourceFullPath, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Архив нельзя сохранить внутри папки самого мода.");
+
+        var destinationDirectory = Path.GetDirectoryName(destinationFullPath);
+        if (!string.IsNullOrWhiteSpace(destinationDirectory))
+            Directory.CreateDirectory(destinationDirectory);
+
+        if (File.Exists(destinationFullPath))
+            File.Delete(destinationFullPath);
+
+        await Task.Run(() => System.IO.Compression.ZipFile.CreateFromDirectory(
+            sourceDir,
+            destinationFullPath,
+            System.IO.Compression.CompressionLevel.Fastest,
+            includeBaseDirectory: true), ct).ConfigureAwait(false);
+
+        _logger.LogInformation("Exported mod {Folder} to {Destination}", folderName, destinationFullPath);
+    }
+
+    /// <inheritdoc />
     public async Task<ModInfo> CreateModAsync(string name, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -378,6 +445,19 @@ public sealed class ModManager : IModManager, IDisposable
         {
             _logger.LogError(ex, "Ошибка удаления .bat из engine/");
         }
+    }
+
+    private string GetSafeModDirectory(string folderName)
+    {
+        if (string.IsNullOrWhiteSpace(folderName)
+            || folderName != Path.GetFileName(folderName)
+            || folderName.Contains("..", StringComparison.Ordinal)
+            || folderName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            throw new ArgumentException("Некорректное имя папки мода.", nameof(folderName));
+        }
+
+        return Path.Combine(_modsPath, folderName);
     }
 
     /// <summary>

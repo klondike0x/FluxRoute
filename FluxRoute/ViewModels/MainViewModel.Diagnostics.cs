@@ -226,7 +226,7 @@ public partial class MainViewModel
         }
 
         foreach (var kv in batMap.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
-            Profiles.Add(new ProfileItem { FileName = kv.Key, DisplayName = Path.GetFileNameWithoutExtension(kv.Key), FullPath = kv.Value });
+            Profiles.Add(new ProfileItem { FileName = kv.Key, DisplayName = Path.GetFileNameWithoutExtension(kv.Key), FullPath = kv.Value, IsUserCopy = IsUserCopyFileName(kv.Key) });
 
                 try
         {
@@ -238,6 +238,17 @@ public partial class MainViewModel
         finally { _suppressProfileWarning = false; }
         Logs.Add($"Стратегии загружены: {Profiles.Count} (.bat)");
         RebuildAiStrategyRows();
+    }
+
+    private static bool IsUserCopyFileName(string fileName)
+    {
+        var stem = Path.GetFileNameWithoutExtension(fileName);
+        var marker = stem.LastIndexOf("_copy", StringComparison.OrdinalIgnoreCase);
+        if (marker < 0)
+            return false;
+
+        var suffix = stem[(marker + "_copy".Length)..];
+        return suffix.Length == 0 || int.TryParse(suffix, out _);
     }
 
     private void InitializeProfileWatcher()

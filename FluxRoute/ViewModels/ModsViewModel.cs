@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -6,6 +8,8 @@ using CommunityToolkit.Mvvm.Input;
 using FluxRoute.Core.Models;
 using FluxRoute.Core.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
+using WpfSaveFileDialog = Microsoft.Win32.SaveFileDialog;
 using Application = System.Windows.Application;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
@@ -18,6 +22,8 @@ public sealed partial class ModsViewModel : ObservableObject
 {
     private readonly IModManager _modManager;
     private readonly ILogger<ModsViewModel>? _logger;
+    private string ModOrderPath => Path.Combine(_modManager.ModsPath, ".fluxroute-order.json");
+
 
     /// <summary>
     /// Вызывается после изменения статуса мода (вкл/выкл) для обновления главного списка профилей.
@@ -64,7 +70,7 @@ public sealed partial class ModsViewModel : ObservableObject
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 Mods.Clear();
-                foreach (var mod in mods)
+                foreach (var mod in ApplySavedOrder(mods))
                     Mods.Add(mod);
                 HasMods = Mods.Count > 0;
             });
@@ -203,20 +209,69 @@ public sealed partial class ModsViewModel : ObservableObject
 
     /// <summary>Редактировать мод.</summary>
     [RelayCommand]
-    private void EditMod(ModInfo? mod)
+    private async Task EditModAsync(ModInfo? mod)
     {
         if (mod == null) return;
-        // TODO: диалог редактирования
-        StatusMessage = $"Редактирование {mod.Name}";
+
+        var values = FluxRoute.Views.ModEditDialog.ShowEditDialog(mod);
+        if (values == null) return;
+
+        try
+        {
+            StatusMessage = $"Сохранение мода «{mod.Name}»...";
+            var saved = await _modManager.UpdateModMetadataAsync(
+                mod.FolderName,
+                values.Name,
+                values.Version,
+                values.Author,
+                values.Description).ConfigureAwait(true);
+
+            if (!saved)
+            {
+                StatusMessage = "Не удалось найти manifest.json мода";
+                return;
+            }
+
+            await LoadModsAsync();
+            StatusMessage = $"Мод «{values.Name}» изменён";
+            _logger?.LogInformation("Изменён мод: {Folder}", mod.FolderName);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Ошибка редактирования мода {Folder}", mod.FolderName);
+            StatusMessage = $"Ошибка редактирования: {ex.Message}";
+        }
     }
 
     /// <summary>Экспортировать мод.</summary>
     [RelayCommand]
-    private void ExportMod(ModInfo? mod)
+    private async Task ExportModAsync(ModInfo? mod)
     {
         if (mod == null) return;
-        // TODO: экспорт в ZIP
-        StatusMessage = $"Экспорт {mod.Name}";
+
+        var dialog = new WpfSaveFileDialog
+        {
+            Title = $"Экспорт мода «{mod.Name}»",
+            Filter = "ZIP-архив (*.zip)|*.zip",
+            DefaultExt = ".zip",
+            AddExtension = true,
+            FileName = $"{mod.FolderName}.zip",
+            OverwritePrompt = true
+        };
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            StatusMessage = $"Экспорт мода «{mod.Name}»...";
+            await _modManager.ExportModAsync(mod.FolderName, dialog.FileName).ConfigureAwait(true);
+            StatusMessage = $"Мод «{mod.Name}» экспортирован";
+            _logger?.LogInformation("Экспортирован мод: {Folder} -> {Path}", mod.FolderName, dialog.FileName);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Ошибка экспорта мода {Folder}", mod.FolderName);
+            StatusMessage = $"Ошибка экспорта: {ex.Message}";
+        }
     }
 
     /// <summary>Удалить мод.</summary>
@@ -225,13 +280,14 @@ public sealed partial class ModsViewModel : ObservableObject
     {
         if (mod == null) return;
 
-        var result = System.Windows.MessageBox.Show(
-            $"Удалить мод «{mod.Name}»?\nПапка mods/{mod.FolderName} будет удалена безвозвратно.",
+        var confirmed = FluxRoute.Views.CustomDialog.Show(
             "Удаление мода",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+            $"Удалить мод «{mod.Name}»?\nПапка mods/{mod.FolderName} будет удалена безвозвратно.",
+            "Удалить",
+            "Отмена",
+            isDanger: true);
 
-        if (result != MessageBoxResult.Yes) return;
+        if (!confirmed) return;
 
         try
         {
@@ -241,6 +297,7 @@ public sealed partial class ModsViewModel : ObservableObject
 
             await Application.Current.Dispatcher.InvokeAsync(() => Mods.Remove(mod));
             HasMods = Mods.Count > 0;
+            SaveModOrder();
             OnModStatusChanged?.Invoke();
             StatusMessage = $"{mod.Name} удалён";
         }
@@ -293,6 +350,69 @@ public sealed partial class ModsViewModel : ObservableObject
         {
             _logger?.LogError(ex, "Ошибка синхронизации модов из GitHub");
             StatusMessage = $"Ошибка синхронизации: {ex.Message}";
+        }
+    }
+
+    /// <summary>Перемещает мод в списке и сохраняет пользовательский порядок.</summary>
+    public void MoveMod(ModInfo? source, ModInfo? target)
+    {
+        if (source == null || target == null || ReferenceEquals(source, target))
+            return;
+
+        var sourceIndex = Mods.IndexOf(source);
+        var targetIndex = Mods.IndexOf(target);
+        if (sourceIndex < 0 || targetIndex < 0 || sourceIndex == targetIndex)
+            return;
+
+        Mods.Move(sourceIndex, targetIndex);
+        SaveModOrder();
+        StatusMessage = "Порядок модов сохранён";
+    }
+
+    private List<ModInfo> ApplySavedOrder(List<ModInfo> mods)
+    {
+        try
+        {
+            if (!File.Exists(ModOrderPath))
+                return mods;
+
+            var order = JsonSerializer.Deserialize<List<string>>(File.ReadAllText(ModOrderPath));
+            if (order == null || order.Count == 0)
+                return mods;
+
+            var byFolder = mods.ToDictionary(mod => mod.FolderName, StringComparer.OrdinalIgnoreCase);
+            var result = new List<ModInfo>(mods.Count);
+            foreach (var folder in order)
+            {
+                if (byFolder.Remove(folder, out var mod))
+                    result.Add(mod);
+            }
+
+            result.AddRange(byFolder.Values);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Не удалось загрузить порядок пользовательских модов");
+            return mods;
+        }
+    }
+
+    private void SaveModOrder()
+    {
+        try
+        {
+            var directory = Path.GetDirectoryName(ModOrderPath);
+            if (!string.IsNullOrWhiteSpace(directory))
+                Directory.CreateDirectory(directory);
+
+            File.WriteAllText(ModOrderPath,
+                JsonSerializer.Serialize(Mods.Select(mod => mod.FolderName).ToList(),
+                    new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Не удалось сохранить порядок пользовательских модов");
         }
     }
 
