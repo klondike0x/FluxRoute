@@ -1,3 +1,4 @@
+using FluxRoute.Services;
 using FluxRoute.ViewModels;
 using WpfUserControl = System.Windows.Controls.UserControl;
 
@@ -22,4 +23,8 @@ public partial class HostlistsPage : WpfUserControl
         if (DataContext is HostlistsViewModel vm)
             vm.LoadHostlistFiles();
     }
-}
+
+    private void TabHelpButton_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        TabHelp.Show((sender as System.Windows.Controls.Button)?.Tag as string);
+    }}

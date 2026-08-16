@@ -1,3 +1,4 @@
+using FluxRoute.Services;
 using System.Windows.Controls;
 using FluxRoute.ViewModels;
 using UserControl = System.Windows.Controls.UserControl;
@@ -31,4 +32,8 @@ public partial class LogsPage : UserControl
         if (DataContext is LogsViewModel vm && vm.LogsAutoScroll)
             ScrollToEnd();
     }
-}
+
+    private void TabHelpButton_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        TabHelp.Show((sender as System.Windows.Controls.Button)?.Tag as string);
+    }}

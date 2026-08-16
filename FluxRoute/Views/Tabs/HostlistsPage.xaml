@@ -15,12 +15,21 @@
 
         <!-- Заголовок -->
         <StackPanel Grid.Row="0" Grid.ColumnSpan="3" Margin="0,0,0,12">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="16"
-                           Foreground="#4D6BFE" VerticalAlignment="Center" Margin="0,0,8,0" />
-                <TextBlock Text="Хостлисты" Foreground="#DCE4F0" FontSize="13"
-                           FontWeight="SemiBold" VerticalAlignment="Center" />
-            </StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                               Foreground="#4D6BFE" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock Text="Хостлисты" Foreground="#DCE4F0" FontSize="13"
+                               FontWeight="SemiBold" VerticalAlignment="Center" />
+                </StackPanel>
+                <Button Grid.Column="1" Content="?" Style="{StaticResource ActionBtnAccent}" Width="24" Height="24" Padding="0" FontSize="12"
+                        Tag="Hostlists" Click="TabHelpButton_Click" ToolTip="Что такое хостлисты?"
+                        AutomationProperties.Name="Справка по хостлистам" />
+            </Grid>
             <TextBlock Text="Редактирование списков доменов для стратегий защиты"
                        Foreground="#66758E" FontSize="10" Margin="0,4,0,0" />
         </StackPanel>

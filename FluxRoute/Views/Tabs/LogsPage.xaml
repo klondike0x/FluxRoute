@@ -18,8 +18,12 @@
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                     <TextBlock Text="&#xE9F9;" FontFamily="Segoe MDL2 Assets" FontSize="16"
                                Foreground="#4D6BFE" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <TextBlock Text="Консоль FluxRoute" Foreground="#DCE4F0" FontSize="13"
+                                        <TextBlock Text="Консоль FluxRoute" Foreground="#DCE4F0" FontSize="13"
                                FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <Button Content="?" Style="{StaticResource ActionBtnAccent}" Width="22" Height="22" Padding="0" FontSize="11"
+                            Tag="Logs" Click="TabHelpButton_Click" Margin="8,0,0,0"
+                            ToolTip="Как пользоваться логами?"
+                            AutomationProperties.Name="Справка по логам" />
                 </StackPanel>
                 <TextBlock Text="События приложения, оркестратора, ИИ, TG Proxy, обновлений и сервиса."
                            Foreground="#5D6B82" FontSize="10" TextWrapping="Wrap"

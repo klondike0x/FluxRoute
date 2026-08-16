@@ -6,7 +6,13 @@
              mc:Ignorable="d" d:DesignHeight="460" d:DesignWidth="760">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="16,12">
-            <TextBlock Style="{StaticResource SecH}" Text="УПРАВЛЕНИЕ" Margin="0,0,0,8" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <TextBlock Style="{StaticResource SecH}" Text="УПРАВЛЕНИЕ" Margin="0" VerticalAlignment="Center" />
+                <Button Content="?" Style="{StaticResource ActionBtnAccent}" Width="24" Height="24" Padding="0" FontSize="12"
+                        Tag="Orchestrator" Click="TabHelpButton_Click" Margin="8,0,0,0" VerticalAlignment="Center"
+                        ToolTip="Как работает оркестратор?"
+                        AutomationProperties.Name="Справка по оркестратору" />
+            </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                 <Button Margin="0,0,10,0" Command="{Binding ToggleOrchestratorCommand}">
                     <Button.Style>

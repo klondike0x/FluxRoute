@@ -1,3 +1,4 @@
+using FluxRoute.Services;
 using UserControl = System.Windows.Controls.UserControl;
 
 namespace FluxRoute.Views.Tabs;
@@ -11,4 +12,8 @@ public partial class ModsPage : UserControl
     {
         InitializeComponent();
     }
-}
+
+    private void TabHelpButton_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        TabHelp.Show((sender as System.Windows.Controls.Button)?.Tag as string);
+    }}

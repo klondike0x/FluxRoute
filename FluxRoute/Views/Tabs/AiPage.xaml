@@ -6,7 +6,13 @@
              mc:Ignorable="d" d:DesignHeight="460" d:DesignWidth="760">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="16,12">
-            <TextBlock Style="{StaticResource SecH}" Text="РЕЖИМ ИИ" Margin="0,0,0,8" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <TextBlock Style="{StaticResource SecH}" Text="РЕЖИМ ИИ" Margin="0" VerticalAlignment="Center" />
+                <Button Content="?" Style="{StaticResource ActionBtnAccent}" Width="24" Height="24" Padding="0" FontSize="12"
+                        Tag="AiOrchestrator" Click="TabHelpButton_Click" Margin="8,0,0,0" VerticalAlignment="Center"
+                        ToolTip="Как работает ИИ-оркестратор?"
+                        AutomationProperties.Name="Справка об ИИ-оркестраторе" />
+            </StackPanel>
             <CheckBox Content="Включить самообучаемый подбор стратегий (оркестратор использует ИИ)"
                 IsChecked="{Binding AiEnabled}" Margin="0,0,0,10" />
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">

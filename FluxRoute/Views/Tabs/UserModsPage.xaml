@@ -39,6 +39,11 @@
                     <Button Content="Импорт" Style="{StaticResource ActionBtn}"
                             Height="28" FontSize="11" Padding="10,4"
                             Command="{Binding ImportModCommand}" />
+                        <Button Content="?" Style="{StaticResource ActionBtnAccent}"
+                                Height="28" Width="28" Padding="0" FontSize="12" FontWeight="SemiBold"
+                                Margin="8,0,0,0" Tag="UserMods" Click="TabHelpButton_Click"
+                                ToolTip="Как работают пользовательские модификации?"
+                                AutomationProperties.Name="Справка по пользовательским модификациям" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -82,7 +87,9 @@
                             <Border Background="#161B22"
                                     BorderBrush="#21262D" BorderThickness="1"
                                     CornerRadius="12" Padding="12"
-                                    Margin="0,0,0,8">
+                                    Margin="0,0,0,8"
+                                    AllowDrop="True"
+                                    DragOver="ModCard_DragOver" Drop="ModCard_Drop">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
@@ -96,7 +103,10 @@
                                                Foreground="#484F58"
                                                VerticalAlignment="Top"
                                                Margin="0,2,6,0"
-                                               Cursor="Hand" />
+                                               Cursor="SizeAll"
+                                               ToolTip="Перетащите, чтобы изменить порядок"
+                                               PreviewMouseLeftButtonDown="DragHandle_MouseLeftButtonDown"
+                                               PreviewMouseMove="DragHandle_MouseMove" />
 
                                     <Border Grid.Column="1"
                                             Width="44" Height="44"

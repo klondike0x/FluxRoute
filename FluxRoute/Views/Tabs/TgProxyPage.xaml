@@ -96,7 +96,12 @@
 
                 <Border Style="{StaticResource SettingsCard}">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SecH}" Text="ПОДКЛЮЧЕНИЕ MTPROTO" Margin="0,0,0,9" />
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,9">
+                            <TextBlock Style="{StaticResource SecH}" Text="ПОДКЛЮЧЕНИЕ MTPROTO" Margin="0" VerticalAlignment="Center" />
+                            <Button Content="?" Style="{StaticResource ActionBtnAccent}" Width="22" Height="22" Padding="0" FontSize="11"
+                                    Margin="8,0,0,0" ToolTip="Укажите адрес Telegram MTProto-сервера, порт и secret. Эти данные используются для подключения прокси."
+                                    Tag="MtProto" Click="HelpButton_Click" AutomationProperties.Name="Справка по подключению MTProto" />
+                        </StackPanel>
                         <Grid Margin="0,0,0,9">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -128,7 +133,12 @@
 
                 <Border Style="{StaticResource SettingsCard}">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SecH}" Text="ДАТАЦЕНТРЫ TELEGRAM (DC → IP)" Margin="0,0,0,4" />
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <TextBlock Style="{StaticResource SecH}" Text="ДАТАЦЕНТРЫ TELEGRAM (DC → IP)" Margin="0" VerticalAlignment="Center" />
+                            <Button Content="?" Style="{StaticResource ActionBtnAccent}" Width="22" Height="22" Padding="0" FontSize="11"
+                                    Margin="8,0,0,0" ToolTip="Необязательная таблица соответствий: номер датацентра Telegram и его IP-адрес. Одна запись на строку, например 2:149.154.167.50."
+                                    Tag="DataCenters" Click="HelpButton_Click" AutomationProperties.Name="Справка по датацентрам Telegram" />
+                        </StackPanel>
                         <TextBlock Style="{StaticResource SettingsHint}" Text="По одному правилу на строку, формат: номер:IP" Margin="0,0,0,8" />
                         <TextBox Text="{Binding TgProxyDcIps, UpdateSourceTrigger=PropertyChanged}"
                                  AcceptsReturn="True" MinHeight="76" MaxHeight="120"
@@ -139,7 +149,12 @@
 
                 <Border Style="{StaticResource SettingsCard}">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SecH}" Text="CLOUDFLARE PROXY" Margin="0,0,0,9" />
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,9">
+                            <TextBlock Style="{StaticResource SecH}" Text="CLOUDFLARE PROXY" Margin="0" VerticalAlignment="Center" />
+                            <Button Content="?" Style="{StaticResource ActionBtnAccent}" Width="22" Height="22" Padding="0" FontSize="11"
+                                    Margin="8,0,0,0" ToolTip="Дополнительный маршрут через Cloudflare. Включайте его, если прямое подключение к Telegram нестабильно."
+                                    Tag="CloudflareProxy" Click="HelpButton_Click" AutomationProperties.Name="Справка по Cloudflare Proxy" />
+                        </StackPanel>
                         <WrapPanel Margin="0,0,0,6">
                             <CheckBox Content="Включить CF-прокси" IsChecked="{Binding TgProxyCfEnabled}" Margin="0,0,18,5" />
                             <CheckBox Content="Приоритет" IsChecked="{Binding TgProxyCfPriority}"
@@ -176,18 +191,28 @@
                                      Height="32" ToolTip="worker.example.workers.dev, worker2.example.com" />
                             <Button Grid.Column="1" Content="?" Width="34" Height="32" Margin="8,0,0,0"
                                     Style="{StaticResource ActionBtnAccent}"
-                                    ToolTip="Worker-домены проверяются перед прямым подключением." />
+                                    Tag="CloudflareWorker" Click="HelpButton_Click" ToolTip="Worker-домены проверяются перед прямым подключением." />
                         </Grid>
                     </StackPanel>
                 </Border>
 
                 <Border Style="{StaticResource SettingsCard}">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SecH}" Text="ЛОГИ И ПРОИЗВОДИТЕЛЬНОСТЬ" Margin="0,0,0,9" />
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,9">
+                            <TextBlock Style="{StaticResource SecH}" Text="ЛОГИ И ПРОИЗВОДИТЕЛЬНОСТЬ" Margin="0" VerticalAlignment="Center" />
+                            <Button Content="?" Style="{StaticResource ActionBtnAccent}" Width="22" Height="22" Padding="0" FontSize="11"
+                                    Margin="8,0,0,0" ToolTip="Verbose включает подробные логи. Буфер влияет на размер сетевого буфера, пул — на число WebSocket-сессий. Изменения применяются после перезапуска прокси."
+                                    Tag="Performance" Click="HelpButton_Click" AutomationProperties.Name="Справка по логам и производительности" />
+                        </StackPanel>
                         <CheckBox Content="Подробное логирование (verbose)" IsChecked="{Binding TgProxyVerbose}" Margin="0,0,0,10" />
                         <TextBlock Style="{StaticResource SettingsLabel}" Text="Буфер, КБ (по умолчанию 256)" />
                         <TextBox Text="{Binding TgProxyBufKb, UpdateSourceTrigger=PropertyChanged}" Height="32" Margin="0,0,0,9" />
-                        <TextBlock Style="{StaticResource SettingsLabel}" Text="Пул WebSocket-сессий (по умолчанию 4)" />
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                            <TextBlock Style="{StaticResource SettingsLabel}" Text="Пул WebSocket-сессий (по умолчанию 4)" Margin="0" />
+                            <Button Content="?" Style="{StaticResource ActionBtnAccent}" Width="20" Height="20" Padding="0" FontSize="10"
+                                    Margin="8,0,0,0" ToolTip="Количество параллельных WebSocket-сессий. Обычно оставляйте 4; слишком большое значение увеличивает нагрузку."
+                                    Tag="Pool" Click="HelpButton_Click" AutomationProperties.Name="Справка по пулу WebSocket-сессий" />
+                        </StackPanel>
                         <TextBox Text="{Binding TgProxyPoolSize, UpdateSourceTrigger=PropertyChanged}" Height="32" Margin="0,0,0,9" />
                         <TextBlock Style="{StaticResource SettingsLabel}" Text="Макс. размер лога, МБ (по умолчанию 5)" />
                         <TextBox Text="{Binding TgProxyLogMaxMb, UpdateSourceTrigger=PropertyChanged}" Height="32" Margin="0,0,0,2" />
