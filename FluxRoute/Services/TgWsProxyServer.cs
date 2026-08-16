@@ -19,6 +19,7 @@ internal sealed class TgWsProxyOptions
     internal string CloudflareDomain { get; init; } = string.Empty;
     internal IReadOnlyList<string> CloudflareWorkerDomains { get; init; } = Array.Empty<string>();
     internal int BufferSize { get; init; } = 256 * 1024;
+    internal int MaxConcurrentSessions { get; init; } = 4;
     internal bool PreferIPv4 { get; init; } = true;
     internal bool Verbose { get; init; }
 }
@@ -61,6 +62,14 @@ internal sealed class TgWsProxyServer : IDisposable
     private TcpListener? _listener;
     private TgWsProxyOptions? _options;
     private int _sessionId;
+    private readonly TgWsProxyDnsResolver _dnsResolver = new();
+    private readonly ConcurrentDictionary<string, long> _routeCooldowns = new();
+    private readonly ConcurrentDictionary<int, string> _preferredRoutes = new();
+
+    private readonly record struct WebSocketCandidate(
+        string Target, string Host, string RouteKey, bool ResolveTarget, bool IsFront);
+
+    private sealed class UpstreamDidNotRelayException(string message) : IOException(message);
 
     internal bool IsRunning { get; private set; }
     internal event Action<string>? Log;
@@ -85,7 +94,10 @@ internal sealed class TgWsProxyServer : IDisposable
         }
 
         WriteLog($"▶ TG WS Proxy (C#) слушает {options.ListenHost}:{options.ListenPort}");
-        _ = AcceptLoopAsync(_listener, _stopCts.Token);
+        var sessionPool = new SemaphoreSlim(
+            Math.Clamp(options.MaxConcurrentSessions, 1, 64),
+            Math.Clamp(options.MaxConcurrentSessions, 1, 64));
+        _ = AcceptLoopAsync(_listener, _stopCts.Token, sessionPool);
     }
 
     internal void Stop()
@@ -108,7 +120,7 @@ internal sealed class TgWsProxyServer : IDisposable
         WriteLog("⏹ TG WS Proxy остановлен");
     }
 
-    private async Task AcceptLoopAsync(TcpListener listener, CancellationToken ct)
+    private async Task AcceptLoopAsync(TcpListener listener, CancellationToken ct, SemaphoreSlim sessionPool)
     {
         try
         {
@@ -119,12 +131,21 @@ internal sealed class TgWsProxyServer : IDisposable
                 var listenerOptions = _options;
                 client.ReceiveBufferSize = listenerOptions?.BufferSize ?? 256 * 1024;
                 client.SendBufferSize = listenerOptions?.BufferSize ?? 256 * 1024;
+                if (!sessionPool.Wait(0))
+                {
+                    client.Dispose();
+                    if (listenerOptions?.Verbose == true)
+                        WriteLog("⚠ Пул TG Proxy заполнен: новое подключение отклонено");
+                    continue;
+                }
+
                 int id = Interlocked.Increment(ref _sessionId);
                 var task = HandleClientAsync(id, client, ct);
                 _sessions[id] = task;
                 _ = task.ContinueWith(_ =>
                 {
                     _sessions.TryRemove(id, out Task? removedTask);
+                    try { sessionPool.Release(); } catch (ObjectDisposedException) { }
                 },
                     CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
             }
@@ -160,18 +181,30 @@ internal sealed class TgWsProxyServer : IDisposable
                 using var crypto = TgWsProxyProtocol.CreateCrypto(info.ClientKeyMaterial, options.Secret, relayHandshake);
                 WriteLog($"#{id}: DC{info.DataCenter}{(info.IsMedia ? " media" : string.Empty)} подключение");
 
-                foreach (var candidate in BuildWebSocketCandidates(info, options))
+                foreach (var candidate in OrderWebSocketCandidates(info, options))
                 {
+                    string? candidateTarget = candidate.ResolveTarget
+                        ? await _dnsResolver.ResolveIpv4Async(candidate.Target, serverToken)
+                        : candidate.Target;
+                    if (string.IsNullOrWhiteSpace(candidateTarget))
+                    {
+                        MarkRouteFailure(info.DataCenter, candidate.RouteKey, candidate.IsFront);
+                        if (options.Verbose)
+                            WriteLog($"#{id}: DNS не разрешил {candidate.Host}");
+                        continue;
+                    }
+
                     try
                     {
                         await using var ws = await TgWsSocket.ConnectAsync(
-                            candidate.Target, candidate.Host, candidate.Host,
+                            candidateTarget, candidate.Host, candidate.Host,
                             info.IsTest ? "/apiws_test" : "/apiws",
                             options.BufferSize, options.PreferIPv4, TimeSpan.FromSeconds(8), serverToken);
                         await ws.SendBinaryAsync(relayHandshake, serverToken);
-                        WriteLog($"#{id}: WebSocket {candidate.Host} подключён");
+                        WriteLog($"#{id}: WebSocket {candidate.Host} подключён через {candidateTarget}");
                         await BridgeWebSocketAsync(local, ws, crypto, relayHandshake,
                             info.TransportWord, options, serverToken);
+                        MarkRouteSuccess(info.DataCenter, candidate.RouteKey);
                         return;
                     }
                     catch (OperationCanceledException) when (serverToken.IsCancellationRequested)
@@ -180,7 +213,8 @@ internal sealed class TgWsProxyServer : IDisposable
                     }
                     catch (Exception ex)
                     {
-                        if (options.Verbose)
+                        MarkRouteFailure(info.DataCenter, candidate.RouteKey, candidate.IsFront);
+                        if (options.Verbose || ex is UpstreamDidNotRelayException)
                             WriteLog($"#{id}: WS {candidate.Host} недоступен — {ex.Message}");
                     }
                 }
@@ -216,6 +250,9 @@ internal sealed class TgWsProxyServer : IDisposable
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(serverToken);
         var ct = linked.Token;
         var splitter = new TgPacketSplitter(relayHandshake, transport);
+        long firstClientByteAt = 0;
+        int upstreamResponded = 0;
+        var noRelay = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         async Task ClientToUpstream()
         {
@@ -232,6 +269,7 @@ internal sealed class TgWsProxyServer : IDisposable
                         break;
                     }
 
+                    Interlocked.CompareExchange(ref firstClientByteAt, Environment.TickCount64, 0);
                     byte[] plain = crypto.ClientDecrypt.Transform(buffer.AsSpan(0, read));
                     byte[] encrypted = crypto.UpstreamEncrypt.Transform(plain);
                     foreach (var packet in splitter.Push(encrypted))
@@ -254,6 +292,7 @@ internal sealed class TgWsProxyServer : IDisposable
                 {
                     byte[]? packet = await ws.ReceiveDataAsync(ct);
                     if (packet is null) break;
+                    Interlocked.Exchange(ref upstreamResponded, 1);
                     byte[] plain = crypto.UpstreamDecrypt.Transform(packet);
                     byte[] encrypted = crypto.ClientEncrypt.Transform(plain);
                     await local.WriteAsync(encrypted, ct);
@@ -264,8 +303,43 @@ internal sealed class TgWsProxyServer : IDisposable
             finally { linked.Cancel(); }
         }
 
-        Task first = await Task.WhenAny(ClientToUpstream(), UpstreamToClient());
+        async Task MonitorFirstResponse()
+        {
+            try
+            {
+                while (!ct.IsCancellationRequested)
+                {
+                    await Task.Delay(500, ct);
+                    long firstByte = Volatile.Read(ref firstClientByteAt);
+                    if (firstByte != 0 && Volatile.Read(ref upstreamResponded) == 0
+                        && Environment.TickCount64 - firstByte >= 10_000)
+                    {
+                        noRelay.TrySetResult(true);
+                        linked.Cancel();
+                        return;
+                    }
+                }
+            }
+            catch (OperationCanceledException) { }
+        }
+
+        Task clientTask = ClientToUpstream();
+        Task upstreamTask = UpstreamToClient();
+        _ = MonitorFirstResponse();
+        Task first = await Task.WhenAny(clientTask, upstreamTask, noRelay.Task);
+        if (first == noRelay.Task)
+            throw new UpstreamDidNotRelayException("Telegram не ответил через этот WebSocket-маршрут за 10 секунд");
+
         linked.Cancel();
+        if (first == upstreamTask && Volatile.Read(ref upstreamResponded) == 0
+            && Volatile.Read(ref firstClientByteAt) != 0)
+        {
+            if (serverToken.IsCancellationRequested) return;
+            try { await upstreamTask; }
+            catch (Exception ex) { throw new UpstreamDidNotRelayException(ex.Message); }
+            throw new UpstreamDidNotRelayException("WebSocket закрылся до первого ответа Telegram");
+        }
+
         try { await first; } catch { }
     }
 
@@ -328,19 +402,40 @@ internal sealed class TgWsProxyServer : IDisposable
         try { await first; } catch { }
     }
 
-    private static IReadOnlyList<(string Target, string Host)> BuildWebSocketCandidates(
+    private IReadOnlyList<WebSocketCandidate> OrderWebSocketCandidates(
         TgWsProxyProtocol.HandshakeInfo info, TgWsProxyOptions options)
     {
-        string target = ResolveDataCenterTarget(info.DataCenter, info.IsTest, options);
+        int dc = TgWsProxyProtocol.GetWebSocketDataCenter(info.DataCenter);
+        var candidates = BuildWebSocketCandidates(info, options).ToList();
+        var fresh = candidates.Where(candidate => !IsRouteCooling(dc, candidate.RouteKey)).ToList();
+        if (fresh.Count == 0) fresh = candidates;
+
+        if (_preferredRoutes.TryGetValue(dc, out string? preferred))
+        {
+            var preferredCandidates = fresh.Where(candidate => candidate.RouteKey == preferred).ToList();
+            fresh = preferredCandidates.Concat(fresh.Where(candidate => candidate.RouteKey != preferred)).ToList();
+        }
+
+        return fresh;
+    }
+
+    private IReadOnlyList<WebSocketCandidate> BuildWebSocketCandidates(
+        TgWsProxyProtocol.HandshakeInfo info, TgWsProxyOptions options)
+    {
+        string directTarget = ResolveDataCenterTarget(info.DataCenter, info.IsTest, options);
         int domainDataCenter = TgWsProxyProtocol.GetWebSocketDataCenter(info.DataCenter);
         string normalA = $"kws{domainDataCenter}.web.telegram.org";
         string normalB = $"kws{domainDataCenter}-1.web.telegram.org";
         var hosts = info.IsMedia ? new[] { normalB, normalA } : new[] { normalA, normalB };
-        var candidates = new List<(string, string)>();
+        var candidates = new List<WebSocketCandidate>();
 
         foreach (string host in hosts)
-            candidates.Add((string.IsNullOrWhiteSpace(target) ? host : target, host));
+        {
+            string target = string.IsNullOrWhiteSpace(directTarget) ? host : directTarget;
+            candidates.Add(new WebSocketCandidate(target, host, $"direct:{domainDataCenter}", false, false));
+        }
 
+        var frontCandidates = new List<WebSocketCandidate>();
         if (options.CloudflareEnabled && options.CloudflareDomainEnabled
             && !string.IsNullOrWhiteSpace(options.CloudflareDomain))
         {
@@ -348,12 +443,7 @@ internal sealed class TgWsProxyServer : IDisposable
             string cfHost = baseDomain.Contains("{dc}", StringComparison.OrdinalIgnoreCase)
                 ? baseDomain.Replace("{dc}", domainDataCenter.ToString(), StringComparison.OrdinalIgnoreCase)
                 : $"kws{domainDataCenter}.{baseDomain}";
-            // A custom front domain is resolved by its own DNS; the Telegram DC IP is
-            // only the target for the direct Telegram hostname candidates above.
-            if (options.CloudflarePriority)
-                candidates.Insert(0, (cfHost, cfHost));
-            else
-                candidates.Add((cfHost, cfHost));
+            frontCandidates.Add(new WebSocketCandidate(cfHost, cfHost, $"front:{cfHost}", true, true));
         }
 
         if (options.CloudflareEnabled)
@@ -362,21 +452,46 @@ internal sealed class TgWsProxyServer : IDisposable
             {
                 string workerHost = workerDomain.Trim().TrimEnd('.');
                 if (string.IsNullOrWhiteSpace(workerHost)) continue;
-                if (options.CloudflarePriority)
-                    candidates.Insert(0, (workerHost, workerHost));
-                else
-                    candidates.Add((workerHost, workerHost));
+                frontCandidates.Add(new WebSocketCandidate(workerHost, workerHost,
+                    $"front:{workerHost}", true, true));
             }
 
-            foreach (string domain in DefaultCloudflareDomains)
+            foreach (string baseDomain in DefaultCloudflareDomains)
             {
-                if (options.CloudflarePriority)
-                    candidates.Insert(0, (target, domain));
-                else
-                    candidates.Add((target, domain));
+                string frontHost = $"kws{domainDataCenter}.{baseDomain}";
+                frontCandidates.Add(new WebSocketCandidate(frontHost, frontHost,
+                    $"front:{frontHost}", true, true));
             }
         }
+
+        if (options.CloudflarePriority)
+            candidates.InsertRange(0, frontCandidates);
+        else
+            candidates.AddRange(frontCandidates);
         return candidates;
+    }
+
+    private bool IsRouteCooling(int dc, string routeKey)
+    {
+        string key = $"{dc}|{routeKey}";
+        if (!_routeCooldowns.TryGetValue(key, out long expires)) return false;
+        if (expires > Environment.TickCount64) return true;
+        _routeCooldowns.TryRemove(key, out _);
+        return false;
+    }
+
+    private void MarkRouteFailure(int dataCenter, string routeKey, bool isFront)
+    {
+        int dc = TgWsProxyProtocol.GetWebSocketDataCenter(dataCenter);
+        _routeCooldowns[$"{dc}|{routeKey}"] = Environment.TickCount64
+            + (isFront ? 30_000 : 60_000);
+    }
+
+    private void MarkRouteSuccess(int dataCenter, string routeKey)
+    {
+        int dc = TgWsProxyProtocol.GetWebSocketDataCenter(dataCenter);
+        _routeCooldowns.TryRemove($"{dc}|{routeKey}", out _);
+        _preferredRoutes[dc] = routeKey;
     }
 
     private static string ResolveDataCenterTarget(int dataCenter, bool isTest, TgWsProxyOptions options)
@@ -420,5 +535,5 @@ internal sealed class TgWsProxyServer : IDisposable
         try { Log?.Invoke(text); } catch { }
     }
 
-    public void Dispose() => Stop();
+    public void Dispose() { Stop(); _dnsResolver.Dispose(); }
 }

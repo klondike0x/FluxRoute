@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
+using System.Text;
 using System.Windows;
 using Application = System.Windows.Application;
 
@@ -225,6 +226,9 @@ public partial class MainViewModel
         int bufferSize = int.TryParse(TgProxyBufKb, out int kb) && kb > 0
             ? Math.Clamp(kb, 32, 4096) * 1024
             : 256 * 1024;
+        int maxConcurrentSessions = int.TryParse(TgProxyPoolSize, out int poolSize)
+            ? Math.Clamp(poolSize, 1, 64)
+            : 4;
 
         var server = new TgWsProxyServer();
         server.Log += AppendTgLog;
@@ -242,6 +246,7 @@ public partial class MainViewModel
                 CloudflareDomain = TgProxyCfDomain.Trim(),
                 CloudflareWorkerDomains = ParseDomainList(TgProxyCfWorkerDomains),
                 BufferSize = bufferSize,
+                MaxConcurrentSessions = maxConcurrentSessions,
                 PreferIPv4 = TgProxyPreferIPv4,
                 Verbose = TgProxyVerbose
             });
@@ -289,6 +294,28 @@ public partial class MainViewModel
         TgProxyLogs.Add(message);
         while (TgProxyLogs.Count > 500)
             TgProxyLogs.RemoveAt(0);
+
+        long maxBytes = GetTgProxyLogMaxBytes();
+        long totalBytes = 0;
+        foreach (string entry in TgProxyLogs)
+            totalBytes += Encoding.UTF8.GetByteCount(entry);
+
+        while (TgProxyLogs.Count > 0 && totalBytes > maxBytes)
+        {
+            totalBytes -= Encoding.UTF8.GetByteCount(TgProxyLogs[0]);
+            TgProxyLogs.RemoveAt(0);
+        }
+    }
+
+    private long GetTgProxyLogMaxBytes()
+    {
+        double megabytes;
+        if (!double.TryParse(TgProxyLogMaxMb, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out megabytes)
+            && !double.TryParse(TgProxyLogMaxMb, out megabytes))
+            megabytes = 5.0;
+
+        return (long)(Math.Clamp(megabytes, 0.5, 100.0) * 1024 * 1024);
     }
 
     private void AppendTgLog(string message) => AddTgProxyLog(message);
