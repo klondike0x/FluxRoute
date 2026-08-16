@@ -34,10 +34,10 @@
             </Border>
 
             <Border Background="#1A1E2B" BorderBrush="#252A38" BorderThickness="1" CornerRadius="8"
-                    Height="44" Margin="0,0,0,8" Cursor="Hand" MouseLeftButtonDown="Sbp_Click">
+                    Height="44" Margin="0,0,0,8" Cursor="Hand" MouseLeftButtonDown="Bitcoin_Click">
                 <Grid Margin="14,0">
-                    <TextBlock Text="Донат через СБП (Т-Банк)" FontFamily="Segoe UI" FontSize="13"
-                               Foreground="#F0883E" VerticalAlignment="Center"/>
+                    <TextBlock Text="Донат через Bitcoin" FontFamily="Segoe UI" FontSize="13"
+                               Foreground="#F2A900" VerticalAlignment="Center"/>
                 </Grid>
             </Border>
 
@@ -51,7 +51,7 @@
 
             <TextBlock Text="Спасибо, что ты с проектом!" FontFamily="Segoe UI"
                        FontSize="11" Foreground="#484F5E" TextAlignment="Center" Margin="0,16,0,8"/>
-            <Button Content="Закрыть" Width="80" Height="30" HorizontalAlignment="Right" Click="Close_Click"/>
+            <Button Content="Закрыть" Style="{StaticResource ActionBtn}" Width="88" Height="32" HorizontalAlignment="Right" Click="Close_Click"/>
         </StackPanel>
     </Border>
 </Window>

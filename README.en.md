@@ -14,6 +14,9 @@
 
 ⭐️ **Star this repository — it's the best free way to support the project!**
 
+<!-- GitHub badge -->
+[![Support FluxRoute](https://img.shields.io/badge/Donate-donatr.ee-6C5CE7?style=for-the-badge)](https://donatr.ee/klondike0x)
+
 **Author:** [klondike0x](https://github.com/klondike0x) · [📥 Releases](https://github.com/klondike0x/FluxRoute/releases) · [🐛 Issues](https://github.com/klondike0x/FluxRoute/issues) · [💬 Discussions](https://github.com/klondike0x/FluxRoute/discussions)
 
 <p align="center">
@@ -58,6 +61,25 @@
 Launch, update, and switch profiles from a single window — no manual BAT-file editing required.
 
 > 🌍 **Note:** FluxRoute is part of the **zapret ecosystem** — a set of tools for DPI (Deep Packet Inspection) bypass, primarily used in CIS countries to access blocked services like YouTube, Discord, Instagram, and Telegram. The main community is Russian-speaking, but the tool itself works anywhere DPI-based filtering is used.
+
+## 📚 Contents
+
+- [Features](#-features)
+- [How FluxRoute Compares to Other GUIs](#-how-fluxroute-compares-to-other-guis)
+- [Quick Start](#-quick-start)
+- [Orchestrator](#-orchestrator)
+- [AI Orchestrator](#-ai-orchestrator)
+- [Auto-Tune](#-auto-tune)
+- [Interface](#-interface)
+- [Troubleshooting](#-troubleshooting)
+- [WinDivert and Antivirus](#-windivert-and-antivirus)
+- [Security](#-security)
+- [For Developers](#-for-developers)
+- [Copyright and Terms of Use](#-copyright-and-terms-of-use)
+- [Ecosystem](#-ecosystem)
+- [Mods](#-mods)
+- [Acknowledgments](#-acknowledgments)
+- [License](#-license)
 
 ---
 
@@ -154,6 +176,8 @@ FluxRoute is the **only** GUI with a full-featured AI subsystem:
 - **Windows 10/11 x64**
 - **Administrator privileges** (for `winws.exe` and WinDivert)
 
+> **Fast path for most users:** download the latest release, extract it, run FluxRoute.exe as Administrator, update engine/, select a profile, and click Start.
+
 ### Installation
 
 1. Download the latest release: [**Releases**](https://github.com/klondike0x/FluxRoute/releases)
@@ -168,6 +192,48 @@ FluxRoute is the **only** GUI with a full-featured AI subsystem:
 2. Enable **AI mode** on the **AI** tab
 3. Launch the **orchestrator** on the **Orchestrator** tab
 4. Done — AI will automatically pick the best strategy for your network
+
+## 🎛️ Orchestrator
+
+The classic orchestrator automatically selects the best profile from the strategies already available in FluxRoute. It works deterministically: it does not learn or create new strategies. Instead, it tests the available profiles, builds a ranking, and monitors the active connection.
+
+### How it works
+
+1. **Scan** — starts each profile in turn and checks winws.exe health and the availability of selected targets.
+2. **Rank** — assigns every strategy a score from 0 to 100%.
+3. **Start** — after scanning, starts the profile with the highest positive score.
+4. **Monitor** — checks the active profile again at a configured interval (20 minutes by default).
+5. **Fallback** — if the profile scores below 50% in two consecutive checks, the orchestrator tests the next profiles by rank and switches to the first working one.
+
+### How the score is calculated
+
+Maximum: 100 points:
+
+- **20 points** — winws.exe is running.
+- **15 points** — the process remains stable after startup.
+- **Up to 55 points** — share of successful target checks.
+- **Up to 10 points** — bonus for low average latency.
+- If all checks fail or the process is unstable, additional limits and penalties apply.
+
+Targets include built-in sites (YouTube, Discord, Google, Twitch, Instagram, and Telegram), plus custom targets added in settings. Profiles with a 0% score are excluded from normal selection.
+
+### Workflow
+
+```mermaid
+flowchart LR
+    A["Existing profiles"] --> B["Check winws.exe and targets"]
+    B --> C["Score 0-100%"]
+    C --> D["Start the best profile"]
+    D --> E["Check every 20 minutes"]
+    E --> F{"Below 50% twice in a row?"}
+    F -->|no| E
+    F -->|yes| G["Check the next profile"]
+    G --> H{"Working?"}
+    H -->|yes| E
+    H -->|no| G
+```
+
+> The classic orchestrator uses only profiles already present in engine. For self-learning selection, Wilson score, and strategy evolution, use the separate [AI Orchestrator](#-ai-orchestrator).
 
 ---
 
@@ -222,6 +288,26 @@ flowchart LR
 6. 🧬 **Evolution** — periodically crossover the best strategies
 7. 📁 **`ai-evolved/`** — new BAT files are saved automatically
 
+## ⚙️ Auto-Tune
+
+**Auto-Tune** automatically finds the best IPSet × GameFilter combination for your network.
+
+### How it works
+
+1. The program tests 12 combinations of IPSet modes (loaded, none, any) and GameFilter (TCP and UDP, TCP, UDP, Off).
+2. Each combination is applied for 4 seconds while target availability is checked (YouTube, Discord, Google, and more) using HTTP and ping.
+3. Each combination receives a **composite score** based on:
+   - **60%** — successful checks rate
+   - **30%** — average latency (lower is better, up to 2000 ms)
+   - **10%** — stability (difference between minimum and maximum latency)
+4. The combination with the highest composite score is suggested as the best option.
+
+> Formula: AutoTuneResult.CalculateCompositeScore() in FluxRoute.Core/Models/AutoTuneResult.cs.
+
+### Where to find it
+
+Auto-Tune is available on the **Service** tab → **Find optimal settings**. Results are shown in an overlay with progress, probe logs, and an option to apply the best combination.
+
 ---
 
 ## 📸 Interface
@@ -251,17 +337,18 @@ flowchart LR
 
 ### ❌ TG WS Proxy fails to install (SSL error)
 
-Starting with **v1.5.2**, TG WS Proxy installation automatically falls back to working PyPI mirrors (Tsinghua, Aliyun, USTC) when `pypi.org` is blocked. In most cases, manual intervention is not needed.
+TG WS Proxy installation automatically falls back to working PyPI mirrors (Tsinghua, Aliyun, USTC) when pypi.org is unavailable. In most cases, no manual intervention is needed.
 
-If the automatic fallback fails (rare situation), download Python manually using **Firefox**:
+If the automatic fallback fails:
 
-1. Download: `https://www.python.org/ftp/python/3.14.5/python-3.14.5-embed-amd64.zip`
+1. Download a compatible Windows embeddable Python package from the [official downloads page](https://www.python.org/downloads/windows/).
+
 2. Extract to `tg-proxy\python\`
 3. In FluxRoute: go to the **TG Proxy** tab → **Install TG WS Proxy**
 
 ### ❌ `ModuleNotFoundError: No module named 'proxy.pool'`
 
-This error occurred in very old versions (prior to v1.5.1). **Update to v1.5.2** – the installer now downloads the entire repository as a ZIP archive, and the issue has been fixed.
+This usually means that TG WS Proxy was installed incompletely. Reinstall it from the TG Proxy tab. If the issue persists, remove the tg-proxy folder and retry the installation.
 
 ### ❌ Profile does not work (0% score)
 
@@ -429,6 +516,20 @@ FluxRoute leverages the following project ecosystem:
 - **[bol-van/zapret-win-bundle](https://github.com/bol-van/zapret-win-bundle)** — Windows bundle with `winws.exe`
 - **[Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube)** — the `engine/` base used in FluxRoute
 - **[Flowseal/tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy)** — Telegram WebSocket proxy
+
+---
+
+## 📦 Mods
+
+FluxRoute supports mods — external scripts and configuration files that can be enabled or disabled from the interface. Each mod is a folder in mods/ with a manifest.json file.
+
+See [MODS.md](MODS.md) for the complete guide to creating and managing mods.
+
+Quick start:
+
+1. Create a mods/my-mod/ folder.
+2. Add manifest.json and start.bat.
+3. Open FluxRoute → the **Mods** tab → **Enable**.
 
 ---
 

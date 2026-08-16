@@ -25,9 +25,9 @@ public partial class DonateWindow : Window
         Close();
     }
 
-    private void Sbp_Click(object sender, MouseButtonEventArgs e)
+    private void Bitcoin_Click(object sender, MouseButtonEventArgs e)
     {
-        Process.Start(new ProcessStartInfo("https://github.com/klondike0x/FluxRoute") { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo("https://t.me/fluxroute") { UseShellExecute = true });
         Close();
     }
 

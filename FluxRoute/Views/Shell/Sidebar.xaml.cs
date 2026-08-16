@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -148,7 +149,9 @@ public partial class Sidebar : System.Windows.Controls.UserControl
 
     private void DonateBtn_Click(object sender, RoutedEventArgs e)
     {
-        var win = new DonateWindow { Owner = Window.GetWindow(this) };
-        win.ShowDialog();
+        Process.Start(new ProcessStartInfo("https://donatr.ee/klondike0x/")
+        {
+            UseShellExecute = true
+        });
     }
 }
