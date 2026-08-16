@@ -86,10 +86,7 @@
             MinWidth="390"
             MaxWidth="480"
             MouseLeftButtonDown="Root_MouseLeftButtonDown">
-        <Border.Effect>
-            <DropShadowEffect Color="#000000" BlurRadius="28" ShadowDepth="8" Opacity="0.55" />
-        </Border.Effect>
-        <Grid Margin="22,18">
+<Grid Margin="22,18">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
