@@ -618,6 +618,14 @@ public sealed partial class ServiceViewModel : ObservableObject
     public Action? RequestShowAutoTuneWindow { get; set; }
     public Action? RequestHideAutoTuneWindow { get; set; }
 
+    private void HideAutoTuneWindow()
+    {
+        if (RequestHideAutoTuneWindow is not null)
+            RequestHideAutoTuneWindow();
+        else
+            RequestHideOverlay?.Invoke();
+    }
+
     private CancellationTokenSource? _autoTuneCts;
 
     private volatile bool _isAutoTuneTaskRunning;
@@ -650,7 +658,7 @@ public sealed partial class ServiceViewModel : ObservableObject
         Log.Information("Auto-Tune: CancelAutoTune вызван");
         _autoTuneCts?.Cancel();
         AddLog("⚠️ Auto-Tune отменён пользователем");
-        RequestHideAutoTuneWindow?.Invoke();
+        HideAutoTuneWindow();
     }
 
     [RelayCommand]
@@ -658,7 +666,7 @@ public sealed partial class ServiceViewModel : ObservableObject
     {
         Log.Information("Auto-Tune: CloseAutoTune вызван");
         _autoTuneCts?.Cancel();
-        RequestHideAutoTuneWindow?.Invoke();
+        HideAutoTuneWindow();
     }
 
     [RelayCommand]
@@ -667,7 +675,7 @@ public sealed partial class ServiceViewModel : ObservableObject
         ApplyPresetState(!string.IsNullOrEmpty(BestProtocol) && BestProtocol != "Выкл",
             BestProtocol == "Выкл" ? "TCP и UDP" : BestProtocol,
             BestIpSet);
-        RequestHideAutoTuneWindow?.Invoke();
+        HideAutoTuneWindow();
         AddLog($"✅ Лучшая конфигурация применена: IPSet={BestIpSet}, GameFilter={BestProtocol}");
         Log.Information("Auto-Tune: лучшая конфигурация применена: IPSet={IpSet}, GameFilter={Protocol}", BestIpSet, BestProtocol);
     }
@@ -1025,7 +1033,7 @@ public sealed partial class ServiceViewModel : ObservableObject
             _isAutoTuneTaskRunning = false;
             // Не закрываем оверлей, если есть результаты для показа
             if (!hadResults)
-                RequestHideAutoTuneWindow?.Invoke();
+                HideAutoTuneWindow();
         }
     }
 
