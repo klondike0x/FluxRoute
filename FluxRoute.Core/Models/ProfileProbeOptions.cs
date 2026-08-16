@@ -23,5 +23,8 @@ public sealed class ProfileProbeOptions
     /// <summary>Сколько целей проверять параллельно. Не ставь слишком много: каждый HTTP-тест запускает curl.exe.</summary>
     public int MaxParallelChecks { get; init; } = 6;
 
+    /// <summary>Получает результат каждой цели сразу после её завершения.</summary>
+    public IProgress<CheckResult>? CheckProgress { get; init; }
+
     public string ProcessName { get; init; } = "winws";
 }

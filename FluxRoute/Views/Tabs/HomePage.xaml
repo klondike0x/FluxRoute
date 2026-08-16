@@ -529,7 +529,7 @@
 <!-- Всплывающее управление режимом -->
         <Popup x:Name="ProtectionModePopup"
                PlacementTarget="{Binding ElementName=ModeToggleButton}"
-               Placement="Right" HorizontalOffset="10" VerticalOffset="-132"
+               Placement="Bottom" HorizontalOffset="-64" VerticalOffset="8"
                AllowsTransparency="True" StaysOpen="False" PopupAnimation="Fade">
             <Border x:Name="ProtectionModeCard"
                     Style="{StaticResource DashboardCard}"

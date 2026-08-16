@@ -106,7 +106,8 @@ public sealed class ProfileProbeService
             targetList,
             options.UseCurlForHttp,
             options.MaxParallelChecks,
-            ct).ConfigureAwait(false);
+            ct,
+            options.CheckProgress).ConfigureAwait(false);
         var score = ProfileScoringService.Calculate(processStarted, processStable, checks, options.RequireWinwsProcess);
 
         sw.Stop();

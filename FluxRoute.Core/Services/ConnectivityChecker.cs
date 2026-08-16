@@ -28,7 +28,8 @@ public interface IConnectivityChecker
         IEnumerable<TargetEntry> targets,
         bool useCurlForHttp,
         int maxParallelChecks,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        IProgress<CheckResult>? progress = null);
 }
 
 public sealed class ConnectivityChecker : IConnectivityChecker
@@ -127,7 +128,8 @@ public sealed class ConnectivityChecker : IConnectivityChecker
         IEnumerable<TargetEntry> targets,
         bool useCurlForHttp,
         int maxParallelChecks,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        IProgress<CheckResult>? progress = null)
     {
         var targetList = targets
             .Where(x => !string.IsNullOrWhiteSpace(x.Value))
@@ -146,7 +148,9 @@ public sealed class ConnectivityChecker : IConnectivityChecker
             await throttler.WaitAsync(ct).ConfigureAwait(false);
             try
             {
-                return await CheckAsync(target, useCurlForHttp, ct).ConfigureAwait(false);
+                var result = await CheckAsync(target, useCurlForHttp, ct).ConfigureAwait(false);
+                progress?.Report(result);
+                return result;
             }
             finally
             {
