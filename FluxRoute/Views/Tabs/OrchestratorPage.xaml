@@ -88,80 +88,17 @@
                         </Style>
                     </Button.Style>
                 </Button>
+                <Button Content="Посмотреть результат" Style="{StaticResource ActionBtn}"
+                        Margin="0,0,8,0"
+                        IsEnabled="{Binding CanViewScanResult}"
+                        Command="{Binding ViewScanResultCommand}"
+                        ToolTip="Открыть последнее сохранённое сканирование" />
                 <!-- ═══ v1.6.0: Feature #53 — Кнопка сброса рейтинга ═══ -->
                 <Button Content="🔄 Сбросить рейтинг" Style="{StaticResource RedBtn}"
                         Padding="12,5" FontSize="12"
                         Command="{Binding ResetProfileRatingsCommand}"
                         ToolTip="Очистить историю оценок оркестратора и ИИ" />
             </StackPanel>
-
-            <!-- Прогресс-бар сканирования (без Storyboard — анимация сбивалась при быстрых переключениях IsScanning) -->
-            <Border Margin="0,0,0,8" CornerRadius="6" Padding="10,8"
-                    Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}"
-                    Background="#0E1120" BorderBrush="#1E2235" BorderThickness="1">
-                <StackPanel>
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding ScanProgressText}" FontFamily="Segoe UI"
-                                   Foreground="#4A90E2" FontSize="12" FontWeight="SemiBold"
-                                   VerticalAlignment="Center" />
-                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <TextBlock Text="{Binding ScanProgressValue, StringFormat={}{0:0}%}"
-                                       FontFamily="Segoe UI" Foreground="#8B949E" FontSize="11"
-                                       VerticalAlignment="Center" Margin="0,0,8,0" />
-                            <Button Content="⏹ Остановить" Height="26" Padding="10,0"
-                                    Style="{StaticResource RedBtn}" FontSize="11"
-                                    Command="{Binding CancelScanCommand}" />
-                        </StackPanel>
-                    </Grid>
-                    <ProgressBar Value="{Binding ScanProgressValue}" Minimum="0" Maximum="100"
-                                 Height="6" Background="#21262D" Foreground="#58A6FF"
-                                 BorderThickness="0">
-                        <ProgressBar.Template>
-                            <ControlTemplate TargetType="ProgressBar">
-                                <Border Background="{TemplateBinding Background}" CornerRadius="3">
-                                    <Grid>
-                                        <Border x:Name="PART_Track" />
-                                        <Border x:Name="PART_Indicator" CornerRadius="3"
-                                                HorizontalAlignment="Left">
-                                            <Border.Background>
-                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                    <GradientStop Color="#58A6FF" Offset="0" />
-                                                    <GradientStop Color="#9966FF" Offset="1" />
-                                                </LinearGradientBrush>
-                                            </Border.Background>
-                                        </Border>
-                                    </Grid>
-                                </Border>
-                            </ControlTemplate>
-                        </ProgressBar.Template>
-                    </ProgressBar>
-                </StackPanel>
-            </Border>
-
-            <ItemsControl ItemsSource="{Binding ProfileScores}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Background="#111520" CornerRadius="6" Padding="10,6" Margin="0,2">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding DisplayName}"
-                                           FontFamily="Segoe UI" Foreground="#C8D4EC" FontSize="12"
-                                           VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" Text="{Binding ScoreText}"
-                                           FontFamily="Segoe UI" Foreground="#4A90E2" FontSize="12"
-                                           FontWeight="Bold" VerticalAlignment="Center" />
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </StackPanel>
+</StackPanel>
     </ScrollViewer>
 </UserControl>

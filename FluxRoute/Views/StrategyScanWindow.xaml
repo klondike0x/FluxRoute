@@ -1,0 +1,70 @@
+<Window x:Class="FluxRoute.Views.StrategyScanWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:FluxRoute.Controls"
+        Title="Подбор стратегии"
+        Width="920" Height="660"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Loaded="Window_Loaded"
+        Closing="Window_Closing"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+    <Border Background="#0C0F17" CornerRadius="14"
+            BorderBrush="#263858" BorderThickness="1">
+        <Grid Margin="18,14">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,12">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets"
+                                   FontSize="17" Foreground="#4D6BFE"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBlock Text="Подбор стратегии" Foreground="#DCE4F0"
+                                   FontSize="15" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Text="Проверяем доступность целей и выбираем наиболее стабильный вариант."
+                               Foreground="#66758E" FontSize="10" Margin="25,3,30,0"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+
+            </Grid>
+
+            <Border Grid.Row="1" Background="#080B12"
+                    BorderBrush="#1E2235" BorderThickness="1"
+                    CornerRadius="10" Padding="14,12">
+                <controls:ScanProgressView />
+            </Border>
+
+            <Grid Grid.Row="2" Margin="0,10,0,0">
+                <TextBlock Text="Можно закрыть окно — текущая проверка будет остановлена."
+                           Foreground="#55647D" FontSize="10"
+                           VerticalAlignment="Center" />
+                <Button
+                        Height="30" Padding="12,0"
+                        HorizontalAlignment="Right"
+                        Click="CloseButton_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ActionBtnRed}">
+                            <Setter Property="Content" Value="Остановить и закрыть" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsScanning}" Value="False">
+                                    <Setter Property="Content" Value="Закрыть результат" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

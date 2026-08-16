@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -85,10 +86,106 @@ public sealed partial class AiStrategyRowVm : ObservableObject
     }
 }
 
+public sealed partial class ScanTargetCheckVm : ObservableObject
+{
+    public string Identity { get; }
+    public string DisplayName { get; }
+    public string TypeText { get; }
+
+    [ObservableProperty] private string statusGlyph = "·";
+    [ObservableProperty] private string resultText = "ожидание";
+    [ObservableProperty] private string resultColor = "#66758E";
+    [ObservableProperty] private string detailText = "Ожидает проверки";
+    [ObservableProperty] private string elapsedText = "—";
+
+    public ScanTargetCheckVm(TargetEntry target)
+    {
+        Identity = $"{target.Key}|{target.Value}";
+        DisplayName = GetDisplayName(target);
+        TypeText = target.Kind == TargetKind.Ping ? "PING" : "САЙТ";
+    }
+
+    public void Reset()
+    {
+        StatusGlyph = "·";
+        ResultText = "ожидание";
+        ResultColor = "#66758E";
+        DetailText = "Ожидает проверки";
+        ElapsedText = "—";
+    }
+
+    public void SetResult(CheckResult result)
+    {
+        var ok = result.Ok;
+        StatusGlyph = ok ? "✓" : "×";
+        ResultText = ok ? "OK" : "сбой";
+        ResultColor = ok ? "#38D9A9" : "#FF6B6B";
+        DetailText = string.IsNullOrWhiteSpace(result.Detail)
+            ? (ok ? "Цель доступна" : "Цель недоступна")
+            : result.Detail;
+        ElapsedText = result.ElapsedMs is { } elapsed ? $"{elapsed} мс" : "—";
+    }
+
+    private static string GetDisplayName(TargetEntry target)
+    {
+        if (target.Kind == TargetKind.Ping)
+            return target.Value;
+
+        if (Uri.TryCreate(target.Value, UriKind.Absolute, out var uri))
+            return uri.Host;
+
+        return string.IsNullOrWhiteSpace(target.Key) ? target.Value : target.Key;
+    }
+}
 public partial class MainViewModel
 {
     private const int MaxLogEntries = 50;
+    public ObservableCollection<ScanTargetCheckVm> ScanTargetChecks { get; } = new();
+    public ObservableCollection<ProfileScore> ScanPassedProfiles { get; } = new();
+    [ObservableProperty] private string scanPassedSummary = "Пока ни одна стратегия не прошла проверку.";
 
+
+    private void ResetScanTargetChecks(IEnumerable<TargetEntry> targets)
+    {
+        ScanTargetChecks.Clear();
+        foreach (var target in targets)
+            ScanTargetChecks.Add(new ScanTargetCheckVm(target));
+    }
+
+    private void ResetCurrentScanTargetChecks()
+    {
+        foreach (var target in ScanTargetChecks)
+            target.Reset();
+    }
+
+    private void UpdateScanTargetCheck(CheckResult result)
+    {
+        var identity = $"{result.Key}|{result.Value}";
+        var target = ScanTargetChecks.FirstOrDefault(x =>
+            string.Equals(x.Identity, identity, StringComparison.OrdinalIgnoreCase) ||
+            (string.Equals(x.DisplayName, result.Value, StringComparison.OrdinalIgnoreCase) &&
+             string.Equals(x.TypeText, result.Kind == TargetKind.Ping ? "PING" : "САЙТ", StringComparison.OrdinalIgnoreCase)));
+        target?.SetResult(result);
+    }
+
+    private void UpdateScanBestStrategyText()
+    {
+        var top = ProfileScores.Where(s => s.Score > 0).OrderByDescending(s => s.Score).FirstOrDefault();
+        ScanBestStrategyText = top is null
+            ? "Рабочая стратегия не найдена"
+            : $"{top.DisplayName} · {top.ScoreText}";
+    }
+
+    private void RebuildPassedScanProfiles()
+    {
+        ScanPassedProfiles.Clear();
+        foreach (var score in ProfileScores.Where(x => x.Score > 0))
+            ScanPassedProfiles.Add(score);
+
+        ScanPassedSummary = ScanPassedProfiles.Count == 0
+            ? "Пока ни одна стратегия не прошла проверку."
+            : $"Прошли проверку: {ScanPassedProfiles.Count}";
+    }
     private void AddOrchestratorLog(string message)
     {
         OrchestratorLogs.Add(message);
@@ -110,6 +207,18 @@ public partial class MainViewModel
             {
                 AddOrchestratorLog(e.Message);
                 OrchestratorStatus = e.Message;
+
+                if (e.ProbeResult is not null && IsScanning && e.ProbeResult.Profile is not null)
+                {
+                    var liveScore = ProfileScores.FirstOrDefault(s =>
+                        s.FileName == e.ProbeResult.Profile.FileName);
+                    liveScore?.SetProbeResult(e.ProbeResult);
+                    foreach (var check in e.ProbeResult.Checks)
+                        UpdateScanTargetCheck(check);
+                    RebuildPassedScanProfiles();
+                    ScanCurrentStrategy = e.ProbeResult.ProfileName;
+                    ScanCurrentResultText = $"{e.ProbeResult.Score}% · {e.ProbeResult.Summary}";
+                }
 
                 if (e.Message.Contains("Сканирование завершено", StringComparison.OrdinalIgnoreCase))
                 {
@@ -499,6 +608,7 @@ public partial class MainViewModel
 
     // ── CancellationTokenSource для отмены сканирования ──
     private CancellationTokenSource? _scanCts;
+    private StrategyScanWindow? _scanWindow;
     private int _scanGeneration;
 
     // ── Статус сканирования (для ScanProgressView) ──
@@ -510,9 +620,57 @@ public partial class MainViewModel
     private int _scanCurrentCount;
     private System.Windows.Threading.DispatcherTimer? _scanEtaTimer;
 
+    [ObservableProperty] private string scanTargetsText = "Подготовка целей...";
+    [ObservableProperty] private string scanCurrentStrategy = "Подготовка...";
+    [ObservableProperty] private string scanCurrentResultText = "Ожидаю первый результат...";
+    [ObservableProperty] private string scanBestStrategyText = "Пока нет результата";
+    [ObservableProperty] private bool hasScanResult;
+
+    public bool CanViewScanResult => HasScanResult && !IsScanning;
+
+    partial void OnIsScanningChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanViewScanResult));
+    }
+
+    partial void OnHasScanResultChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanViewScanResult));
+    }
+
     /// <summary>Признак, что сканирование можно отменить (показываем кнопку "Остановить").</summary>
     public bool CanCancelScan => IsScanning;
 
+    private StrategyScanWindow CreateScanWindow()
+    {
+        var window = new StrategyScanWindow { DataContext = this };
+        if (Application.Current.MainWindow is { IsLoaded: true } owner)
+            window.Owner = owner;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_scanWindow, window))
+                _scanWindow = null;
+        };
+        return window;
+    }
+
+    [RelayCommand]
+    private void ViewScanResult()
+    {
+        if (!HasScanResult)
+            return;
+
+        if (_scanWindow is { IsVisible: true } visibleWindow)
+        {
+            if (visibleWindow.WindowState == System.Windows.WindowState.Minimized)
+                visibleWindow.WindowState = System.Windows.WindowState.Normal;
+            visibleWindow.Activate();
+            return;
+        }
+
+        _scanWindow = CreateScanWindow();
+        _scanWindow.Show();
+    }
     [RelayCommand]
     private void CancelScan()
     {
@@ -526,8 +684,14 @@ public partial class MainViewModel
         IsScanning = false;
         GlobalOverlayVisible = false;
         OnPropertyChanged(nameof(CanCancelScan));
-        ScanProgressText = "";
-        ScanProgressValue = 0;
+        RebuildPassedScanProfiles();
+        UpdateScanBestStrategyText();
+        HasScanResult = true;
+        ScanStatusText = "⏹ Сканирование остановлено";
+        ScanProgressText = _scanTotalCount > 0
+            ? $"Остановлено на {_scanCurrentCount}/{_scanTotalCount}"
+            : "Сканирование остановлено";
+        ScanTimeRemaining = "⏹ Остановлено";
         AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⏹ Сканирование остановлено пользователем.");
     }
 
@@ -551,9 +715,22 @@ public partial class MainViewModel
         }
     }
 
+    private string BuildScanTargetsText()
+    {
+        var sites = _orchestrator.EnabledSites
+            .OrderBy(site => site, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var customCount = _orchestrator.UserSiteTargets.Count;
+        var targetText = sites.Count == 0 ? "цели не выбраны" : string.Join(" · ", sites);
+        return customCount > 0 ? $"{targetText} · своих доменов: {customCount}" : targetText;
+    }
+
     [RelayCommand]
     private async Task ScanProfiles()
     {
+        if (IsScanning)
+            return;
         // Счётчик поколений: только последний вызов сбрасывает IsScanning в finally
         var gen = ++_scanGeneration;
 
@@ -565,17 +742,26 @@ public partial class MainViewModel
 
         _orchestrator.ClearRankedProfiles();
         RebuildProfileScores();
+        ResetScanTargetChecks(_orchestrator.GetScanTargets());
+        ScanPassedProfiles.Clear();
+        ScanPassedSummary = "Пока ни одна стратегия не прошла проверку.";
+        HasScanResult = false;
         IsScanning = true;
-        GlobalOverlayTitle = "Сканирование стратегий";
-        GlobalOverlayContent = new ScanProgressView { DataContext = this };
-        GlobalOverlayCloseCommand = CancelScanCommand;
-        GlobalOverlayVisible = true;
+        GlobalOverlayVisible = false;
+        if (_scanWindow is { IsVisible: true } oldWindow)
+            oldWindow.Close();
+        _scanWindow = CreateScanWindow();
+        _scanWindow.Show();
         OnPropertyChanged(nameof(CanCancelScan));
         ScanStatusText = "Подготовка...";
         ScanProgressText = "Сканирование...";
         ScanProgressValue = 0;
         ScanTimeRemaining = "";
         ScanElapsed = "";
+        ScanTargetsText = "Подготовка целей...";
+        ScanCurrentStrategy = "Подготовка...";
+        ScanCurrentResultText = "Ожидаю первый результат...";
+        ScanBestStrategyText = "Пока нет результата";
         _scanStartTime = DateTime.Now;
         _scanTotalCount = 0;
         _scanCurrentCount = 0;
@@ -589,10 +775,13 @@ public partial class MainViewModel
         _scanEtaTimer.Start();
 
         UpdateOrchestratorEnabledSites();
+        ScanTargetsText = BuildScanTargetsText();
         var wasRunning = IsTrackedProcessRunning();
 
         // Определяем общее количество стратегий для ETA
         _scanTotalCount = Profiles.Count;
+
+        var checkProgress = new Progress<CheckResult>(UpdateScanTargetCheck);
 
         var progress = new Progress<(int current, int total)>(report =>
         {
@@ -604,14 +793,22 @@ public partial class MainViewModel
             ScanProgressValue = percent;
             ScanStatusText = $"[{report.current}/{report.total}] Тестирую стратегии...";
             ScanProgressText = $"Сканирование... {report.current}/{report.total}";
+            ResetCurrentScanTargetChecks();
+            ScanCurrentStrategy = report.current > 0 && report.current <= Profiles.Count
+                ? Profiles[report.current - 1].DisplayName
+                : "Проверка следующей стратегии...";
+            ScanCurrentResultText = "Проверяю стабильность winws и доступность целей...";
             UpdateScanEta();
         });
 
         try
         {
             _suppressOrchestratorStop = true;
-            await _orchestrator.ScanAllProfilesAsync(scanCt, progress);
+            await _orchestrator.ScanAllProfilesAsync(scanCt, progress, checkProgress);
             SortProfileScores();
+            RebuildPassedScanProfiles();
+            UpdateScanBestStrategyText();
+            HasScanResult = true;
             ScanStatusText = "Сканирование завершено";
             ScanProgressText = "Сканирование завершено";
             ScanProgressValue = 100;
@@ -619,6 +816,9 @@ public partial class MainViewModel
             SaveSettings();
 
             var top = ProfileScores.FirstOrDefault(s => s.Score > 0);
+            ScanBestStrategyText = top is null
+                ? "Рабочая стратегия не найдена"
+                : $"{top.DisplayName} · {top.ScoreText}";
             if (top is not null)
             {
                 var profile = Profiles.FirstOrDefault(p => p.FileName == top.FileName);
@@ -648,6 +848,9 @@ public partial class MainViewModel
         {
             if (gen == _scanGeneration)
             {
+                RebuildPassedScanProfiles();
+                UpdateScanBestStrategyText();
+                HasScanResult = true;
                 ScanStatusText = $"❌ Ошибка: {ex.Message}";
                 ScanProgressText = "Ошибка сканирования";
                 ScanProgressValue = 0;
