@@ -11,6 +11,34 @@ public class AntivirusExclusionService : IAntivirusExclusionService
 
     public AntivirusExclusionService(ILogger<AntivirusExclusionService> logger) => _logger = logger;
 
+    public async Task<bool> IsAvailableAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = "-NoProfile -NonInteractive -Command \"if (Get-Command Add-MpPreference -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }\"",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+            using var p = Process.Start(psi);
+            if (p is null) return false;
+            await p.WaitForExitAsync(ct);
+            return p.ExitCode == 0;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public async Task<AntivirusExclusionResult> AddExclusionAsync(string folderPath, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(folderPath))
@@ -19,6 +47,9 @@ public class AntivirusExclusionService : IAntivirusExclusionService
         folderPath = folderPath.TrimEnd('\\', '/');
         if (!Directory.Exists(folderPath))
             return new() { Path = folderPath, Success = false, Message = $"Папка не найдена: {folderPath}" };
+
+        if (!await IsAvailableAsync(ct))
+            return new() { Path = folderPath, Success = false, Message = "Microsoft Defender не найден в системе. Добавление исключения недоступно." };
 
         if (!IsAdmin())
         {

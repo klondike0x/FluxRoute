@@ -11,6 +11,7 @@ public class AntivirusExclusionResult
 
 public interface IAntivirusExclusionService
 {
+    Task<bool> IsAvailableAsync(CancellationToken ct = default);
     Task<AntivirusExclusionResult> AddExclusionAsync(string folderPath, CancellationToken ct = default);
     Task<bool> IsExcludedAsync(string folderPath, CancellationToken ct = default);
 }

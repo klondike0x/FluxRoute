@@ -212,7 +212,7 @@
                                 <Button Grid.Column="1"
                                         Content="Добавить"
                                         Command="{Binding AddAntivirusExclusionCommand}"
-                                        IsEnabled="{Binding AntivirusExclusionInProgress, Converter={StaticResource InvBool}}"
+                                        IsEnabled="{Binding CanAddAntivirusExclusion}"
                                         Width="120" Height="34"
                                         VerticalAlignment="Center">
                                     <Button.Style>

@@ -1075,6 +1075,9 @@ public partial class MainViewModel : ObservableObject
         _zapret2DiagnosticsService = zapret2DiagnosticsService;
         _zapret2RecoveryService = zapret2RecoveryService;
 
+        if (_antivirusExclusion is not null)
+            _ = InitializeAntivirusExclusionAsync();
+
         if (_networkTrafficMonitor is not null)
         {
             _networkTrafficTimer = new DispatcherTimer(DispatcherPriority.Background)
@@ -1643,6 +1646,29 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _antivirusExclusionInProgress;
 
+    [ObservableProperty]
+    private bool _antivirusExclusionAvailable;
+
+    public bool CanAddAntivirusExclusion => AntivirusExclusionAvailable && !AntivirusExclusionInProgress;
+
+    partial void OnAntivirusExclusionAvailableChanged(bool value) => OnPropertyChanged(nameof(CanAddAntivirusExclusion));
+    partial void OnAntivirusExclusionInProgressChanged(bool value) => OnPropertyChanged(nameof(CanAddAntivirusExclusion));
+
+    private async Task InitializeAntivirusExclusionAsync()
+    {
+        try
+        {
+            AntivirusExclusionAvailable = await _antivirusExclusion!.IsAvailableAsync();
+            if (!AntivirusExclusionAvailable)
+                AntivirusExclusionStatus = "Microsoft Defender не найден. Добавление исключения недоступно.";
+        }
+        catch (Exception ex)
+        {
+            AntivirusExclusionAvailable = false;
+            AntivirusExclusionStatus = $"Проверка Microsoft Defender не выполнена: {ex.Message}";
+        }
+    }
+
     /// <summary>
     /// Добавляет папку программы в исключения Защитника Windows.
     /// </summary>
@@ -1650,7 +1676,7 @@ public partial class MainViewModel : ObservableObject
     private async Task AddAntivirusExclusion()
     {
         if (_antivirusExclusion is null) return;
-        if (AntivirusExclusionInProgress) return;
+        if (!CanAddAntivirusExclusion) return;
 
         AntivirusExclusionInProgress = true;
         AntivirusExclusionStatus = "Добавление папки в исключения...";
