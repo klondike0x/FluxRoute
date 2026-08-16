@@ -1116,6 +1116,8 @@ public partial class MainViewModel : ObservableObject
             GlobalOverlayVisible = true;
         };
         Service.RequestHideOverlay = () => GlobalOverlayVisible = false;
+        Service.RequestShowAutoTuneWindow = ShowAutoTuneWindow;
+        Service.RequestHideAutoTuneWindow = HideAutoTuneWindow;
 
         Service.GetAutoTuneTargets = () =>
         {
@@ -1520,6 +1522,48 @@ public partial class MainViewModel : ObservableObject
 
         var editorWindow = new StrategyEditorWindow { DataContext = editorVm, Owner = Application.Current.MainWindow };
         editorWindow.ShowDialog();
+    }
+
+    [RelayCommand]
+    private void DeleteStrategy(ProfileItem? profile)
+    {
+        if (profile is null)
+            return;
+
+        if (!profile.IsUserCopy)
+        {
+            AddToRecentLogs($"⛔ Встроенную стратегию нельзя удалить: {profile.DisplayName}");
+            return;
+        }
+
+        if (!CustomDialog.Show(
+                "Удалить копию стратегии",
+                $"Удалить «{profile.DisplayName}»?\nФайл будет удалён из engine.",
+                "Удалить",
+                "Отмена",
+                isDanger: true))
+            return;
+
+        try
+        {
+            var wasSelected = SelectedProfile == profile;
+            if (wasSelected && IsRunning)
+                Stop();
+
+            if (File.Exists(profile.FullPath))
+                File.Delete(profile.FullPath);
+
+            var backupPath = profile.FullPath + ".bak";
+            if (File.Exists(backupPath))
+                File.Delete(backupPath);
+
+            LoadProfiles();
+            AddToRecentLogs($"🗑 Копия стратегии удалена: {profile.DisplayName}");
+        }
+        catch (Exception ex)
+        {
+            AddToRecentLogs($"❌ Не удалось удалить копию стратегии: {ex.Message}");
+        }
     }
     // ═════════════════════════════════════════════════════════
 
