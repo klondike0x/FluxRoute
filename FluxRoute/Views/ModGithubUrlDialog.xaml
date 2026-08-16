@@ -29,7 +29,8 @@
                      Foreground="#E6EDF3" Background="#11141E"
                      BorderBrush="#30363D" BorderThickness="1"
                      Padding="10,7" Margin="0,0,0,16"
-                     Text="https://github.com/peachoff/Zapret-Mods"
+                     Text=""
+                     ToolTip="Например: https://github.com/owner/repository"
                      KeyDown="UrlBox_KeyDown" />
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Отмена" Click="Cancel_Click"
