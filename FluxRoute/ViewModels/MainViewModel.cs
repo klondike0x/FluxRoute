@@ -890,7 +890,7 @@ public partial class MainViewModel : ObservableObject
         AutoStartService.SetEnabled(value);
         SaveSettings();
     }
-    [ObservableProperty] private bool minimizeToTray = true;
+    [ObservableProperty] private bool minimizeToTray = false;
     partial void OnMinimizeToTrayChanged(bool value) => SaveSettings();
 
     [ObservableProperty] private StartupWindowMode startupWindowMode = StartupWindowMode.Minimal;

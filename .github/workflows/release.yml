@@ -60,6 +60,34 @@ jobs:
       - name: Publish win-x64
         run: dotnet publish .\FluxRoute\FluxRoute.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o .\publish
 
+      - name: Bundle official Flowseal engine
+        shell: pwsh
+        run: .\installer\prepare-flowseal.ps1 -PublishDir .\publish
+
+      - name: Build Installer
+        shell: pwsh
+        run: |
+          $programFilesX86 = (Get-Item Env:'ProgramFiles(x86)').Value
+          $isccCandidates = @(
+            (Join-Path $programFilesX86 'Inno Setup 6\ISCC.exe'),
+            (Join-Path $env:ProgramFiles 'Inno Setup 6\ISCC.exe')
+          )
+          $iscc = $isccCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+
+          if (-not $iscc) {
+            choco install innosetup --no-progress --yes
+            $iscc = $isccCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+          }
+
+          if (-not $iscc) {
+            throw 'Inno Setup compiler (ISCC.exe) was not found.'
+          }
+
+          & $iscc "/DAppVersion=${{ steps.version.outputs.VERSION }}" .\installer\FluxRoute.iss
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed with exit code $LASTEXITCODE."
+          }
+
       - name: Create ZIP
         shell: pwsh
         run: |
@@ -73,16 +101,17 @@ jobs:
         run: |
           $tag = "${{ steps.version.outputs.TAG }}"
           $zip = ".\FluxRoute-$tag-portable.zip"
+          $installer = ".\installer-output\FluxRoute-v${{ steps.version.outputs.VERSION }}-installer.exe"
+
+          if (-not (Test-Path -LiteralPath $installer)) {
+            throw "Installer artifact was not found: $installer"
+          }
 
           gh release view $tag --repo "$env:GITHUB_REPOSITORY" *> $null
 
           if ($LASTEXITCODE -eq 0) {
-            gh release upload $tag $zip --clobber --repo "$env:GITHUB_REPOSITORY"
+            gh release upload $tag $zip $installer --clobber --repo "$env:GITHUB_REPOSITORY"
           }
           else {
-            gh release create $tag $zip `
-              --title "$tag" `
-              --generate-notes `
-              --target "${{ github.ref_name }}" `
-              --repo "$env:GITHUB_REPOSITORY"
+            gh release create $tag $zip $installer --title "$tag" --generate-notes --target "${{ github.ref_name }}" --repo "$env:GITHUB_REPOSITORY"
           }

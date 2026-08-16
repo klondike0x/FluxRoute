@@ -21,6 +21,7 @@ public partial class OnboardingViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanComplete))]
     [NotifyPropertyChangedFor(nameof(IsStep3Visible))]
+    [NotifyCanExecuteChangedFor(nameof(CompleteCommand))]
     private string? selectedStrategyFileName;
 
     public List<string> ComponentOptions { get; } = ["Zapret", "Zapret 2", "Без основного"];
@@ -61,6 +62,8 @@ public partial class OnboardingViewModel : ObservableObject
             foreach (var bat in Directory.GetFiles(engineDir, "*.bat"))
             {
                 var fileName = System.IO.Path.GetFileName(bat);
+                if (string.Equals(fileName, "service.bat", StringComparison.OrdinalIgnoreCase))
+                    continue;
                 var displayName = System.IO.Path.GetFileNameWithoutExtension(bat)
                     .Replace("_", " ")
                     .Replace("-", " ");
