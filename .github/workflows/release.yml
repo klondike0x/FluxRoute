@@ -166,7 +166,6 @@ jobs:
 
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag $zip $installer --clobber --repo "$env:GITHUB_REPOSITORY"
-            gh release edit $tag --title "$tag" --notes "$notes" --repo "$env:GITHUB_REPOSITORY"
           }
           else {
             gh release create $tag $zip $installer --title "$tag" --notes "$notes" --target "${{ github.ref_name }}" --repo "$env:GITHUB_REPOSITORY"
