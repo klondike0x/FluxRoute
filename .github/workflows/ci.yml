@@ -3,7 +3,9 @@ name: CI Build
 on:
   push:
     branches:
-      - '**'
+      - main
+      - master
+      - nightly
   pull_request:
   workflow_dispatch:
 
@@ -74,4 +76,3 @@ jobs:
           name: FluxRoute-win-x64
           path: .\publish\win-x64\**
           if-no-files-found: error
-
