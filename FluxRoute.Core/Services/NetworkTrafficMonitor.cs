@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.NetworkInformation;
 
 namespace FluxRoute.Core.Services;
@@ -106,15 +107,20 @@ public sealed class NetworkTrafficMonitor : INetworkTrafficMonitor
 
 public static class TrafficSpeedFormatter
 {
+    private static readonly CultureInfo DisplayCulture = CultureInfo.GetCultureInfo("ru-RU");
+
     public static string Format(double bytesPerSecond)
     {
         var safeValue = double.IsFinite(bytesPerSecond) ? Math.Max(0, bytesPerSecond) : 0;
         return safeValue switch
         {
-            >= 1024 * 1024 * 1024 => $"{safeValue / (1024 * 1024 * 1024):0.#} ГБ/с",
-            >= 1024 * 1024 => $"{safeValue / (1024 * 1024):0.#} МБ/с",
-            >= 1024 => $"{safeValue / 1024:0.#} КБ/с",
-            _ => $"{safeValue:0} Б/с"
+            >= 1024 * 1024 * 1024 => FormatValue(safeValue / (1024 * 1024 * 1024), "ГБ/с"),
+            >= 1024 * 1024 => FormatValue(safeValue / (1024 * 1024), "МБ/с"),
+            >= 1024 => FormatValue(safeValue / 1024, "КБ/с"),
+            _ => $"{safeValue.ToString("0", DisplayCulture)} Б/с"
         };
     }
+
+    private static string FormatValue(double value, string unit)
+        => $"{value.ToString("0.#", DisplayCulture)} {unit}";
 }
