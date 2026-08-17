@@ -3,10 +3,7 @@ name: CI Build
 on:
   push:
     branches:
-      - main
-      - master
-      - nightly
-      - "codex/**"
+      - '**'
   pull_request:
   workflow_dispatch:
 
