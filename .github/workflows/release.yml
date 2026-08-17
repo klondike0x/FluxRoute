@@ -15,7 +15,9 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v5
@@ -26,8 +28,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: nuget-
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
 
       - name: Read version from csproj
         id: version
@@ -94,6 +97,38 @@ jobs:
           $tag = "${{ steps.version.outputs.TAG }}"
           Compress-Archive -Path .\publish\* -DestinationPath ".\FluxRoute-$tag-portable.zip" -Force
 
+      - name: Calculate SHA-256 hashes
+        id: hashes
+        shell: pwsh
+        run: |
+          $zip = ".\FluxRoute-${{ steps.version.outputs.TAG }}-portable.zip"
+          $installer = ".\installer-output\FluxRoute-v${{ steps.version.outputs.VERSION }}-installer.exe"
+
+          if (-not (Test-Path -LiteralPath $zip)) {
+            throw "Portable archive was not found: $zip"
+          }
+          if (-not (Test-Path -LiteralPath $installer)) {
+            throw "Installer artifact was not found: $installer"
+          }
+
+          $zipSha = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          $installerSha = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+
+          "ZIP_SHA256=$zipSha" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "INSTALLER_SHA256=$installerSha" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "Portable SHA-256: $zipSha"
+          Write-Host "Installer SHA-256: $installerSha"
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: FluxRoute-${{ steps.version.outputs.TAG }}
+          path: |
+            .\FluxRoute-${{ steps.version.outputs.TAG }}-portable.zip
+            .\installer-output\FluxRoute-v${{ steps.version.outputs.VERSION }}-installer.exe
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Create or update GitHub Release
         shell: pwsh
         env:
@@ -102,16 +137,37 @@ jobs:
           $tag = "${{ steps.version.outputs.TAG }}"
           $zip = ".\FluxRoute-$tag-portable.zip"
           $installer = ".\installer-output\FluxRoute-v${{ steps.version.outputs.VERSION }}-installer.exe"
+          $zipSha = "${{ steps.hashes.outputs.ZIP_SHA256 }}"
+          $installerSha = "${{ steps.hashes.outputs.INSTALLER_SHA256 }}"
+          $notes = @"
+          ## FluxRoute $tag
 
-          if (-not (Test-Path -LiteralPath $installer)) {
-            throw "Installer artifact was not found: $installer"
-          }
+          ### Файлы
+          - `$([System.IO.Path]::GetFileName($zip))` — portable-версия.
+          - `$([System.IO.Path]::GetFileName($installer))` — установщик.
+
+          ### Установка
+          - Portable: распакуйте архив и запустите `FluxRoute.exe` от имени администратора.
+          - Installer: запустите установщик и следуйте инструкциям.
+          - Требования: Windows 10/11 x64 и права администратора.
+
+          ### SHA-256
+          - Portable: `$zipSha`
+          - Installer: `$installerSha`
+
+          Хеш можно проверить командой:
+          ````powershell
+          Get-FileHash -Path <файл> -Algorithm SHA256
+          ````
+          "@
+          $notes = ($notes -replace '(?m)^          ', '').Trim()
 
           gh release view $tag --repo "$env:GITHUB_REPOSITORY" *> $null
 
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag $zip $installer --clobber --repo "$env:GITHUB_REPOSITORY"
+            gh release edit $tag --title "$tag" --notes "$notes" --repo "$env:GITHUB_REPOSITORY"
           }
           else {
-            gh release create $tag $zip $installer --title "$tag" --generate-notes --target "${{ github.ref_name }}" --repo "$env:GITHUB_REPOSITORY"
+            gh release create $tag $zip $installer --title "$tag" --notes "$notes" --target "${{ github.ref_name }}" --repo "$env:GITHUB_REPOSITORY"
           }
