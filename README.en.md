@@ -100,7 +100,7 @@ Launch, update, and switch profiles from a single window — no manual BAT-file 
 
 | Feature | Description |
 |---------|-------------|
-| 📡 **TG WS Proxy** | Built-in Telegram proxy installer with automatic fallback to working PyPI mirrors (Tsinghua, Aliyun, USTC) when `pypi.org` is blocked |
+| 📡 **TG WS Proxy** | Built-in C# Telegram WebSocket proxy; no Python or separate installation required |
 | 🔄 **Auto-update engine/** | Checks new Flowseal releases via GitHub Releases Atom feed (no API limits) |
 | 🆙 **App auto-update** | Downloads and atomically installs new FluxRoute versions with SHA-256 verification |
 | 🌍 **Domain Manager** | Add custom sites and exclusions for orchestrator checks via UI |
@@ -113,7 +113,7 @@ Launch, update, and switch profiles from a single window — no manual BAT-file 
 | 🖥 **Tray support** | Minimize to tray with balloon notifications |
 | 🛡 **Hidden launch** | BAT files and `winws.exe` run in the background without console windows |
 | 🚀 **Windows startup** | Registry autorun (`HKCU\...\Run`) with `--autostart` flag |
-| ⚡ **Profile auto-launch** *(planned)* | Automatically starts the last used profile on system boot |
+| ⚡ **Profile auto-launch** | Automatically starts the last used profile when FluxRoute launches |
 
 ### 🛡️ Security
 
@@ -152,15 +152,15 @@ FluxRoute is the **only** GUI with a full-featured AI subsystem:
 |---|:---:|:---:|:---:|:---:|:---:|
 | 🧠 AI Orchestrator (Thompson Sampling) | ✅ | ❌ | ❌ | ❌ | ❌ |
 | 🧬 Genetic Strategy Evolution | ✅ | ❌ | ❌ | ❌ | ❌ |
-| 🔄 Orchestrator (auto-scanning) | ✅ | ❌ | ❌ | ✅ | ❌ |
-| 🎮 Process-triggers (auto by .exe) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| 🔄 Orchestrator (auto-scanning) | ✅ | ✅ | ❌ | ✅ | ❌ |
+| 🎮 Process-triggers (auto by .exe) | ✅ | ✅ | ❌ | ❌ | ❌ |
 | ⚙️ Auto-Tune (IPSet × GameFilter) | ✅ | ✅ | ❌ | ❌ | ❌ |
 | 📡 Built-in TG WS Proxy | ✅ | ✅ | ✅ | ❌ | ❌ |
-| 🤖 AI DNS (ChatGPT, Claude, Gemini) | ❌ | ❌ | ✅ | ✅ | ❌ |
+| 🤖 AI DNS / DoH providers (Xbox, COMSS, dns.malw.link) | ✅ | ✅ | ✅ | ✅ | ❌ |
 | 💬 Telegram Desktop Unlock | ✅ | ✅ | ✅ | ✅ | ❌ |
 | 📚 80+ Strategies Out of the Box | ❌ | ❌ | ❌ | ✅ | ❌ |
 | 🎨 Themes (5+) and Multilingual Support | ❌ | ✅ | ✅ | ❌ | ❌ |
-| 📦 Portable + Installer | ⚠️ | ✅ | ⚠️ | ⚠️ | ⚠️ |
+| 📦 Portable + Installer | ✅ | ✅ | ⚠️ | ⚠️ | ⚠️ |
 | 🔒 GitHub Actions (transparent build) | ✅ | ✅ | ❌ | ✅ | ✅ |
 | 🔄 Atomic Engine Updates | ✅ | ⚠️ | ✅ | ❌ | ❌ |
 
@@ -176,15 +176,16 @@ FluxRoute is the **only** GUI with a full-featured AI subsystem:
 - **Windows 10/11 x64**
 - **Administrator privileges** (for `winws.exe` and WinDivert)
 
-> **Fast path for most users:** download the latest release, extract it, run FluxRoute.exe as Administrator, update engine/, select a profile, and click Start.
+> **Fast path for most users:** download the latest release, install or extract it, run FluxRoute.exe as Administrator, and complete OnBoard. Choose the services to check and click “Configure and continue” — FluxRoute will scan strategies and start the best one.
 
 ### Installation
 
 1. Download the latest release: [**Releases**](https://github.com/klondike0x/FluxRoute/releases)
-2. Extract the ZIP to any folder (e.g., `C:\FluxRoute\`)
-3. Run `FluxRoute.exe` **as Administrator**
-4. Wait for automatic `engine/` download from Flowseal
-5. Select a profile and click **▶ Start**
+2. For the portable version, extract the ZIP to any folder (e.g., `C:\FluxRoute\`) or run the installer.
+3. Run `FluxRoute.exe` **as Administrator**.
+4. If `engine/` is missing, wait for the automatic Flowseal download and restart FluxRoute.
+5. In OnBoard, choose what to check: YouTube, Discord, or both services.
+6. Click **“Configure and continue”** to scan strategies, or **“Continue without checking”** to open the app without the initial scan.
 
 ### First Launch with AI
 
@@ -314,12 +315,16 @@ Auto-Tune is available on the **Service** tab → **Find optimal settings**. Res
 
 <table>
 <tr>
-<td><img src="https://github.com/user-attachments/assets/70dda58d-cbf3-43f8-b8ae-72b7fad3d88e" alt="Main Window" width="860"/></td>
-<td><img src="https://github.com/user-attachments/assets/a51c1477-a560-450f-b6ac-ef05ccbec4d2" alt="Update" width="860"/></td>
+<td><img src="./assets/screenshots/onboarding.png" alt="OnBoard first launch" width="860"/></td>
+<td><img src="./assets/screenshots/home.png" alt="Main window" width="860"/></td>
 </tr>
 <tr>
-<td><img src="https://github.com/user-attachments/assets/bf33cffb-6d56-4055-8f8e-8c807f57d9a7" alt="Orchestrator" width="860"/></td>
-<td><img src="https://github.com/user-attachments/assets/4bdf02a2-83dc-4e39-847a-5c133bfbe6a9" alt="Service" width="860"/></td>
+<td><img src="./assets/screenshots/orchestrator.png" alt="Orchestrator" width="860"/></td>
+<td><img src="./assets/screenshots/ai.png" alt="AI orchestrator" width="860"/></td>
+</tr>
+<tr>
+<td><img src="./assets/screenshots/doh.png" alt="DNS-over-HTTPS" width="860"/></td>
+<td><img src="./assets/screenshots/tg-proxy.png" alt="TG WS Proxy" width="860"/></td>
 </tr>
 </table>
 
@@ -335,21 +340,6 @@ Auto-Tune is available on the **Service** tab → **Find optimal settings**. Res
 > 3. Run **Scan all profiles** on the **Orchestrator** tab
 > 4. Enable **Auto-Tune** on the **Service** tab
 
-### ❌ TG WS Proxy fails to install (SSL error)
-
-TG WS Proxy installation automatically falls back to working PyPI mirrors (Tsinghua, Aliyun, USTC) when pypi.org is unavailable. In most cases, no manual intervention is needed.
-
-If the automatic fallback fails:
-
-1. Download a compatible Windows embeddable Python package from the [official downloads page](https://www.python.org/downloads/windows/).
-
-2. Extract to `tg-proxy\python\`
-3. In FluxRoute: go to the **TG Proxy** tab → **Install TG WS Proxy**
-
-### ❌ `ModuleNotFoundError: No module named 'proxy.pool'`
-
-This usually means that TG WS Proxy was installed incompletely. Reinstall it from the TG Proxy tab. If the issue persists, remove the tg-proxy folder and retry the installation.
-
 ### ❌ Profile does not work (0% score)
 
 1. Make sure **GameFilter** = `TCP and UDP`
@@ -358,7 +348,7 @@ This usually means that TG WS Proxy was installed incompletely. Reinstall it fro
 4. Check that the strategy is not disabled in AI mode (checkbox in the strategy list on the **AI** tab)
 5. Run extended diagnostics (**Diagnostics** tab → **Run Diagnostics**)
 
-### ❌ Port 1443 is busy (TG Proxy)
+### ❌ TG WS Proxy port is busy
 
 ```cmd
 netstat -ano | findstr :1443
