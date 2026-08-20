@@ -315,16 +315,16 @@ Auto-Tune is available on the **Service** tab → **Find optimal settings**. Res
 
 <table>
 <tr>
-<td><img src="./assets/screenshots/onboarding.png" alt="OnBoard first launch" width="860"/></td>
-<td><img src="./assets/screenshots/home.png" alt="Main window" width="860"/></td>
+<td><img src="./assets/screenshots/onboarding.png" alt="OnBoard first launch" width="860"/><br/><sub><b>OnBoard first launch</b> — choose services and start the initial scan</sub></td>
+<td><img src="./assets/screenshots/home.png" alt="Main window" width="860"/><br/><sub><b>Main window</b> — protection and active profile controls</sub></td>
 </tr>
 <tr>
-<td><img src="./assets/screenshots/orchestrator.png" alt="Orchestrator" width="860"/></td>
-<td><img src="./assets/screenshots/ai.png" alt="AI orchestrator" width="860"/></td>
+<td><img src="./assets/screenshots/orchestrator.png" alt="Orchestrator" width="860"/><br/><sub><b>Orchestrator</b> — strategy checks and ranking</sub></td>
+<td><img src="./assets/screenshots/ai.png" alt="AI orchestrator" width="860"/><br/><sub><b>AI orchestrator</b> — strategy learning and evolution</sub></td>
 </tr>
 <tr>
-<td><img src="./assets/screenshots/doh.png" alt="DNS-over-HTTPS" width="860"/></td>
-<td><img src="./assets/screenshots/tg-proxy.png" alt="TG WS Proxy" width="860"/></td>
+<td><img src="./assets/screenshots/doh.png" alt="DNS-over-HTTPS" width="860"/><br/><sub><b>DNS-over-HTTPS</b> — choose and apply a DNS provider</sub></td>
+<td><img src="./assets/screenshots/tg-proxy.png" alt="TG WS Proxy" width="860"/><br/><sub><b>TG WS Proxy</b> — built-in Telegram proxy settings</sub></td>
 </tr>
 </table>
 

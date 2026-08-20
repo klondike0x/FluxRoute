@@ -318,16 +318,16 @@ Auto-Tune доступен на вкладке **«Сервис»** → кноп
 
 <table>
 <tr>
-<td><img src="./assets/screenshots/onboarding.png" alt="OnBoard первого запуска" width="860"/></td>
-<td><img src="./assets/screenshots/home.png" alt="Главное окно" width="860"/></td>
+<td><img src="./assets/screenshots/onboarding.png" alt="OnBoard первого запуска" width="860"/><br/><sub><b>OnBoard первого запуска</b> — выбор сервисов и запуск первичной проверки</sub></td>
+<td><img src="./assets/screenshots/home.png" alt="Главное окно" width="860"/><br/><sub><b>Главное окно</b> — управление защитой и текущим профилем</sub></td>
 </tr>
 <tr>
-<td><img src="./assets/screenshots/orchestrator.png" alt="Оркестратор" width="860"/></td>
-<td><img src="./assets/screenshots/ai.png" alt="ИИ-оркестратор" width="860"/></td>
+<td><img src="./assets/screenshots/orchestrator.png" alt="Оркестратор" width="860"/><br/><sub><b>Оркестратор</b> — проверка и рейтинг стратегий</sub></td>
+<td><img src="./assets/screenshots/ai.png" alt="ИИ-оркестратор" width="860"/><br/><sub><b>ИИ-оркестратор</b> — самообучение и эволюция стратегий</sub></td>
 </tr>
 <tr>
-<td><img src="./assets/screenshots/doh.png" alt="DNS-over-HTTPS" width="860"/></td>
-<td><img src="./assets/screenshots/tg-proxy.png" alt="TG WS Proxy" width="860"/></td>
+<td><img src="./assets/screenshots/doh.png" alt="DNS-over-HTTPS" width="860"/><br/><sub><b>DNS-over-HTTPS</b> — выбор и применение DNS-провайдера</sub></td>
+<td><img src="./assets/screenshots/tg-proxy.png" alt="TG WS Proxy" width="860"/><br/><sub><b>TG WS Proxy</b> — настройки встроенного Telegram-прокси</sub></td>
 </tr>
 </table>
 
