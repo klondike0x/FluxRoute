@@ -35,25 +35,25 @@
 
 > [!IMPORTANT]
 > **This is the original FluxRoute Desktop repository.**
-> 
+>
 > All derivative projects (forks) are based on this code. GitHub automatically marks them with `forked from klondike0x/FluxRoute`.
 
 > [!CAUTION]
 > ### ⚠️ Beware: Unauthorized Copies
-> 
+>
 > **The only official source of FluxRoute is [this repository](https://github.com/klondike0x/FluxRoute).**
-> 
+>
 > If you downloaded the program from elsewhere, be cautious. Unauthorized copies may contain:
 > - ❌ Outdated code (missing security fixes)
 > - ❌ Malicious modifications or hidden telemetry
 > - ❌ GPL-3.0 license violations (removed attribution)
 > - ❌ Unstable or untested versions
-> 
+>
 > **How to protect yourself:**
 > - ✅ Always check the source: `github.com/klondike0x/FluxRoute`
 > - ✅ Only download from official releases with the green `Verified` badge
 > - ✅ If you encounter a fork without clear attribution — report it via [GitHub DMCA](https://github.com/contact/report-abuse)
-> 
+>
 > The original FluxRoute **collects no telemetry** and **contains no malicious code**.
 
 **FluxRoute Desktop** is a modern GUI wrapper for managing [`Flowseal/zapret-discord-youtube`](https://github.com/Flowseal/zapret-discord-youtube) profiles with a unique **AI orchestrator** powered by Thompson Sampling and genetic strategy evolution.
@@ -121,6 +121,9 @@ Launch, update, and switch profiles from a single window — no manual BAT-file 
 |---------|-------------|
 | 🔒 **GitHub Actions** | Transparent CI/CD builds — every release compiled automatically from source |
 | ✅ **SHA-256 verification** | Release hashes logged for integrity checks |
+| ✍️ **GPG-signed releases** | The SHA-256 manifest is signed with a dedicated release key |
+| 🔐 **Immutable Releases** | Published assets and the Git tag cannot be changed or replaced |
+| 🧾 **Build provenance** | GitHub attestation links artifacts to the workflow and commit |
 | 🔄 **Atomic updates** | Staging → backup → rollback on errors (no broken installations) |
 | 👮 **Admin rights check** | UAC elevation prompt on launch + clear error messages |
 
@@ -259,21 +262,21 @@ The unique `FluxRoute.AI` subsystem, not found in other GUIs:
 ```mermaid
 flowchart LR
     A["🌐 Network Fingerprint<br/>(DNS, gateway, interfaces)"] --> B{AI Mode}
-    
+
     B -->|on| C["🎰 Bandit Selector<br/>(Thompson Sampling)"]
     C --> D["⚡ Apply BAT / winws"]
     D --> E["🔍 Site Probes<br/>(YouTube, Discord, ...)"]
     E --> F["📊 History + Wilson<br/>(lower bound)"]
-    
+
     F --> G{Time to evolve?}
     G -->|yes| H["🧬 Strategy Evolver<br/>(crossover + mutations)"]
     H --> I["📁 ai-evolved/*.bat"]
     I --> C
-    
+
     F -->|no| C
-    
+
     B -->|off| J["📋 Classic<br/>orchestrator<br/>(simple rating)"]
-    
+
     style A fill:#1a2e66,stroke:#55aaff,color:#fff
     style C fill:#1a4a2e,stroke:#00d68f,color:#fff
     style H fill:#4a1a66,stroke:#9933dd,color:#fff
@@ -373,7 +376,7 @@ taskkill /PID <number> /F
 
 > [!WARNING]
 > The project uses **WinDivert** — a legitimate traffic interception tool required for zapret to work.
-> 
+>
 > It is **not a virus** by itself, but antiviruses may classify it as `Not-a-virus:RiskTool.Multi.WinDivert` or `HackTool`.
 
 **What to do:**
@@ -388,6 +391,8 @@ taskkill /PID <number> /F
 
 - ✅ **GitHub Actions** — all releases are built automatically and transparently
 - ✅ **SHA-256 hashes** — every download is verified in the logs
+- ✅ **GPG signatures and immutable releases** — published files cannot be silently replaced
+- ✅ **Build provenance** — artifacts are linked to a specific workflow and commit
 - ✅ **Open source** — anyone can audit what the app does
 - ✅ **No telemetry** — FluxRoute does not collect user data
 - ✅ **Portable** — no installation required, runs from a folder
@@ -477,8 +482,8 @@ At the **top of the README** you must include the following block:
 
 ```markdown
 > **Original project:** [klondike0x/FluxRoute](https://github.com/klondike0x/FluxRoute)
->  
-> This fork is based on FluxRoute Desktop and extends its functionality.  
+>
+> This fork is based on FluxRoute Desktop and extends its functionality.
 > Changes made by [author] in [year].
 ```
 

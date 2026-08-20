@@ -1,29 +1,28 @@
 name: Build and Release FluxRoute
 
 on:
-  workflow_dispatch:
   push:
     tags:
       - 'v*'
 
-permissions:
-  contents: write
-
 jobs:
-  release:
+  build:
+    name: Build Windows artifacts
     runs-on: windows-latest
-
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+      tag: ${{ steps.version.outputs.TAG }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
-
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:
@@ -31,7 +30,6 @@ jobs:
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
           restore-keys: |
             nuget-${{ runner.os }}-
-
       - name: Read version from csproj
         id: version
         shell: pwsh
@@ -40,33 +38,21 @@ jobs:
           $ver = $csproj.Project.PropertyGroup.Version
           "VERSION=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "TAG=v$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          Write-Host "Version: $ver, Tag: v$ver"
-
       - name: Verify tag matches version
-        if: github.ref_type == 'tag'
         shell: pwsh
         run: |
           $expectedTag = "v${{ steps.version.outputs.VERSION }}"
           $actualTag = "${{ github.ref_name }}"
-          if ($actualTag -ne $expectedTag) {
-            Write-Error "Tag mismatch: pushed tag '$actualTag' does not match version in .csproj '$expectedTag'. Please update the version in FluxRoute.csproj before pushing the tag."
-            exit 1
-          }
-          Write-Host "Tag '$actualTag' matches version in .csproj. OK."
-
+          if ($actualTag -ne $expectedTag) { throw "Tag mismatch: $actualTag != $expectedTag" }
       - name: Restore solution
         run: dotnet restore .\FluxRoute.slnx
-
       - name: Run tests
         run: dotnet test .\FluxRoute.slnx --configuration Release --no-restore
-
       - name: Publish win-x64
         run: dotnet publish .\FluxRoute\FluxRoute.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o .\publish
-
       - name: Bundle official Flowseal engine
         shell: pwsh
         run: .\installer\prepare-flowseal.ps1 -PublishDir .\publish
-
       - name: Build Installer
         shell: pwsh
         run: |
@@ -76,97 +62,118 @@ jobs:
             (Join-Path $env:ProgramFiles 'Inno Setup 6\ISCC.exe')
           )
           $iscc = $isccCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
-
-          if (-not $iscc) {
-            choco install innosetup --no-progress --yes
-            $iscc = $isccCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
-          }
-
-          if (-not $iscc) {
-            throw 'Inno Setup compiler (ISCC.exe) was not found.'
-          }
-
+          if (-not $iscc) { choco install innosetup --no-progress --yes; $iscc = $isccCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1 }
+          if (-not $iscc) { throw 'Inno Setup compiler was not found.' }
           & $iscc "/DAppVersion=${{ steps.version.outputs.VERSION }}" .\installer\FluxRoute.iss
-          if ($LASTEXITCODE -ne 0) {
-            throw "Inno Setup failed with exit code $LASTEXITCODE."
-          }
-
-      - name: Create ZIP
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE." }
+      - name: Create Portable ZIP
         shell: pwsh
         run: |
-          $tag = "${{ steps.version.outputs.TAG }}"
-          Compress-Archive -Path .\publish\* -DestinationPath ".\FluxRoute-$tag-portable.zip" -Force
-
-      - name: Calculate SHA-256 hashes
-        id: hashes
+          Compress-Archive -Path .\publish\* -DestinationPath ".\FluxRoute-${{ steps.version.outputs.TAG }}-portable.zip" -Force
+      - name: Prepare unsigned release bundle
         shell: pwsh
         run: |
-          $zip = ".\FluxRoute-${{ steps.version.outputs.TAG }}-portable.zip"
-          $installer = ".\installer-output\FluxRoute-v${{ steps.version.outputs.VERSION }}-installer.exe"
-
-          if (-not (Test-Path -LiteralPath $zip)) {
-            throw "Portable archive was not found: $zip"
-          }
-          if (-not (Test-Path -LiteralPath $installer)) {
-            throw "Installer artifact was not found: $installer"
-          }
-
-          $zipSha = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
-          $installerSha = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
-
-          "ZIP_SHA256=$zipSha" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          "INSTALLER_SHA256=$installerSha" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          Write-Host "Portable SHA-256: $zipSha"
-          Write-Host "Installer SHA-256: $installerSha"
-
-      - name: Upload release artifacts
+          $bundle = '.\release-assets'
+          New-Item -ItemType Directory -Path $bundle -Force | Out-Null
+          Copy-Item ".\FluxRoute-${{ steps.version.outputs.TAG }}-portable.zip" $bundle
+          Copy-Item ".\installer-output\FluxRoute-v${{ steps.version.outputs.VERSION }}-installer.exe" $bundle
+      - name: Upload unsigned release bundle
         uses: actions/upload-artifact@v6
         with:
-          name: FluxRoute-${{ steps.version.outputs.TAG }}
-          path: |
-            .\FluxRoute-${{ steps.version.outputs.TAG }}-portable.zip
-            .\installer-output\FluxRoute-v${{ steps.version.outputs.VERSION }}-installer.exe
+          name: FluxRoute-${{ steps.version.outputs.TAG }}-unsigned
+          path: .\release-assets\*
           if-no-files-found: error
           retention-days: 30
 
-      - name: Create or update GitHub Release
-        shell: pwsh
+  release:
+    name: Sign and publish immutable release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Download unsigned release bundle
+        uses: actions/download-artifact@v7
+        with:
+          name: FluxRoute-${{ needs.build.outputs.tag }}-unsigned
+          path: release-assets
+      - name: Verify signed release tag
+        env:
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gpg --batch --import GPG-by-klondike0x.asc
+          git fetch --tags --force
+          git tag -v "$RELEASE_TAG"
+      - name: Generate SHA-256 manifest
+        run: |
+          set -euo pipefail
+          cd release-assets
+          sha256sum *.zip *.exe | sort > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Import GPG signing key and sign manifest
+        env:
+          RELEASE_GPG_PRIVATE_KEY: ${{ secrets.RELEASE_GPG_PRIVATE_KEY }}
+          RELEASE_GPG_PASSPHRASE: ${{ secrets.RELEASE_GPG_PASSPHRASE }}
+          EXPECTED_GPG_FINGERPRINT: '40015491B3A63D777855FEC08DA82B54BDED31AE'
+        run: |
+          set -euo pipefail
+          test -n "$RELEASE_GPG_PRIVATE_KEY" || { echo 'RELEASE_GPG_PRIVATE_KEY is not configured.'; exit 1; }
+          printf '%s\n' "$RELEASE_GPG_PRIVATE_KEY" | gpg --batch --import
+          public_fingerprint="$(gpg --show-keys --with-colons GPG-by-klondike0x.asc | awk -F: '$1 == "fpr" { print $10; exit }')"
+          secret_fingerprint="$(gpg --list-secret-keys --with-colons | awk -F: '$1 == "fpr" { print $10; exit }')"
+          test "$public_fingerprint" = "$EXPECTED_GPG_FINGERPRINT"
+          test "$secret_fingerprint" = "$EXPECTED_GPG_FINGERPRINT"
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$RELEASE_GPG_PASSPHRASE" --local-user "$EXPECTED_GPG_FINGERPRINT" --armor --detach-sign --output release-assets/SHA256SUMS.txt.asc release-assets/SHA256SUMS.txt
+          gpg --batch --verify release-assets/SHA256SUMS.txt.asc release-assets/SHA256SUMS.txt
+          cp GPG-by-klondike0x.asc release-assets/GPG-by-klondike0x.asc
+      - name: Attest release artifacts
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            release-assets/*.zip
+            release-assets/*.exe
+      - name: Prepare release notes
+        env:
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## FluxRoute $RELEASE_TAG"
+            echo
+            echo "Официальный релиз FluxRoute $RELEASE_VERSION. Артефакты собраны из подписанного Git-тега и опубликованы как immutable release."
+            echo
+            echo "Файлы: FluxRoute-$RELEASE_TAG-portable.zip, FluxRoute-v$RELEASE_VERSION-installer.exe, SHA256SUMS.txt, SHA256SUMS.txt.asc, GPG-by-klondike0x.asc"
+            echo
+            echo "Проверка: gpg --verify SHA256SUMS.txt.asc SHA256SUMS.txt; sha256sum -c SHA256SUMS.txt; gh release verify $RELEASE_TAG"
+            echo
+            echo "GPG fingerprint: 4001 5491 B3A6 3D77 7855 FEC0 8DA8 2B54 BDED 31AE."
+            echo "GitHub Actions provenance attestation опубликована для Installer и Portable."
+          } > RELEASE_NOTES.md
+      - name: Refuse to modify an existing release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
         run: |
-          $tag = "${{ steps.version.outputs.TAG }}"
-          $zip = ".\FluxRoute-$tag-portable.zip"
-          $installer = ".\installer-output\FluxRoute-v${{ steps.version.outputs.VERSION }}-installer.exe"
-          $zipSha = "${{ steps.hashes.outputs.ZIP_SHA256 }}"
-          $installerSha = "${{ steps.hashes.outputs.INSTALLER_SHA256 }}"
-          $notes = @"
-          ## FluxRoute $tag
-
-          ### Файлы
-          - `$([System.IO.Path]::GetFileName($zip))` — portable-версия.
-          - `$([System.IO.Path]::GetFileName($installer))` — установщик.
-
-          ### Установка
-          - Portable: распакуйте архив и запустите `FluxRoute.exe` от имени администратора.
-          - Installer: запустите установщик и следуйте инструкциям.
-          - Требования: Windows 10/11 x64 и права администратора.
-
-          ### SHA-256
-          - Portable: `$zipSha`
-          - Installer: `$installerSha`
-
-          Хеш можно проверить командой:
-          ````powershell
-          Get-FileHash -Path <файл> -Algorithm SHA256
-          ````
-          "@
-          $notes = ($notes -replace '(?m)^          ', '').Trim()
-
-          gh release view $tag --repo "$env:GITHUB_REPOSITORY" *> $null
-
-          if ($LASTEXITCODE -eq 0) {
-            gh release upload $tag $zip $installer --clobber --repo "$env:GITHUB_REPOSITORY"
-          }
-          else {
-            gh release create $tag $zip $installer --title "$tag" --notes "$notes" --target "${{ github.ref_name }}" --repo "$env:GITHUB_REPOSITORY"
-          }
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists. Refusing to modify it."
+            exit 1
+          fi
+      - name: Create draft release with all assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          gh release create "$RELEASE_TAG" release-assets/* --repo "$GITHUB_REPOSITORY" --title "FluxRoute $RELEASE_TAG" --notes-file RELEASE_NOTES.md --draft --verify-tag
+      - name: Publish immutable release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+        run: gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false

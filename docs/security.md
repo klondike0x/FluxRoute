@@ -32,3 +32,32 @@ FluxRoute не собирает телеметрию и не отправляе�
 ## Открытый исходный код
 
 Исходный код доступен на [GitHub](https://github.com/klondike0x/FluxRoute) и распространяется под GPL-3.0.
+
+## Проверка официального релиза
+
+Официальные релизы FluxRoute публикуются как immutable releases: после публикации GitHub не позволяет изменить или заменить их файлы и тег. Перед публикацией релиз проходит сборку из подписанного Git-тега, SHA-256-проверку, GPG-подпись манифеста и GitHub Actions provenance attestation.
+
+Публичный ключ релизов: GPG-by-klondike0x.asc (в корне репозитория).
+
+Отпечаток ключа:
+
+    4001 5491 B3A6 3D77 7855 FEC0 8DA8 2B54 BDED 31AE
+
+Проверка скачанного релиза:
+
+    gpg --import GPG-by-klondike0x.asc
+    gpg --verify SHA256SUMS.txt.asc SHA256SUMS.txt
+    sha256sum -c SHA256SUMS.txt
+    gh release verify vX.Y.Z
+
+Windows-пользователь может проверить отдельный файл командой Get-FileHash <файл> -Algorithm SHA256 и сравнить результат с SHA256SUMS.txt.
+## Настройка immutable-релизов для владельца
+
+До первого production-релиза необходимо:
+
+1. В GitHub открыть **Settings → General → Releases** и включить **Enable release immutability**.
+2. В **Settings → Secrets and variables → Actions** добавить RELEASE_GPG_PRIVATE_KEY — ASCII-armored приватный ключ с отпечатком, указанным выше.
+3. Добавить RELEASE_GPG_PASSPHRASE — пароль ключа.
+4. Никогда не добавлять приватный ключ в репозиторий, workflow или публичную документацию.
+
+Workflow FluxRoute проверяет подписанный тег, сверяет отпечаток публичного и приватного ключей и прекращает работу, если релиз с таким тегом уже существует.
