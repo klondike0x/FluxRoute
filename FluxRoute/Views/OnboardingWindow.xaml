@@ -9,7 +9,7 @@
         Background="Transparent"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
-        ShowInTaskbar="False"
+        ShowInTaskbar="True"
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
     <Window.Resources>
         <!-- ═══ v1.8.1: Кастомный тёмный ComboBox ═══ -->
@@ -175,32 +175,24 @@
                             <ComboBox ItemsSource="{Binding ComponentOptions}"
                                       SelectedIndex="{Binding SelectedComponentIndex, Mode=TwoWay}" />
                             <TextBlock Foreground="#55647D" FontSize="9.5" Margin="0,4,0,0"
-                                       Text="Zapret классический (WinDivert) или Zapret 2 (Flowseal)" />
+                                       Text="Zapret классический (WinDivert)" />
                         </StackPanel>
                     </Border>
 
-                    <!-- 2. Выбор стратегии -->
+                    <!-- 2. Выбор целей проверки -->
                     <Border Background="#0A0E18" BorderBrush="#1C2940" BorderThickness="1"
                             CornerRadius="10" Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
-                            <TextBlock Text="2. Выберите стратегию" Foreground="#DCE4F0"
+                            <TextBlock Text="2. Что пробивать" Foreground="#DCE4F0"
                                        FontSize="12" FontWeight="SemiBold" Margin="0,0,0,8" />
-                            <ComboBox ItemsSource="{Binding AvailableStrategies}"
-                                      SelectedValue="{Binding SelectedStrategyFileName, Mode=TwoWay}"
-                                      SelectedValuePath="FileName">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding DisplayName}" Foreground="#C8D4EC"
-                                                   FontSize="12" VerticalAlignment="Center" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
+                            <ComboBox ItemsSource="{Binding ProbeTargetOptions}"
+                                      SelectedIndex="{Binding SelectedProbeTargetIndex, Mode=TwoWay}" />
                             <TextBlock Foreground="#55647D" FontSize="9.5" Margin="0,4,0,0"
-                                       Text="Стратегия, с которой начнётся проверка доступности сайтов" />
+                                       Text="Выберите сервисы, доступность которых нужно проверить при настройке" />
                         </StackPanel>
                     </Border>
 
-                    <!-- 3. Автопроверка доступа (после выбора стратегии) -->
+                    <!-- 3. Автопроверка доступа -->
                     <Border Background="#0A0E18" BorderBrush="#1C2940" BorderThickness="1"
                             CornerRadius="10" Padding="14,12"
                             Visibility="{Binding IsStep3Visible, Converter={StaticResource BoolToVis}}">
@@ -208,37 +200,60 @@
                             <TextBlock Text="3. Автопроверка доступа" Foreground="#DCE4F0"
                                        FontSize="12" FontWeight="SemiBold" Margin="0,0,0,8" />
                             <TextBlock Foreground="#55647D" FontSize="10" TextWrapping="Wrap">
-                                После завершения настройки FluxRoute автоматически проверит доступность YouTube и Discord через выбранную стратегию.
+                                После завершения настройки FluxRoute автоматически проверит выбранные сервисы.
                             </TextBlock>
                         </StackPanel>
                     </Border>
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- Кнопка завершения -->
-            <Button Grid.Row="2" Height="42" Margin="0,14,0,0"
-                    Command="{Binding CompleteCommand}"
-                    CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
-                    Cursor="Hand">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bg" Background="#4D6BFE" CornerRadius="10">
-                            <TextBlock Text="Настроить и продолжить" Foreground="White"
-                                       FontSize="13" FontWeight="SemiBold"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="#3D5BEE" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Bg" Property="Background" Value="#2A3050" />
-                                <Setter Property="Foreground" Value="#66758E" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+            <!-- Кнопки завершения -->
+            <StackPanel Grid.Row="2" Margin="0,14,0,0">
+                <Button Height="42"
+                        Command="{Binding CompleteCommand}"
+                        CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
+                        Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bg" Background="#4D6BFE" CornerRadius="10">
+                                <TextBlock Text="Настроить и продолжить" Foreground="White"
+                                           FontSize="13" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bg" Property="Background" Value="#3D5BEE" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Bg" Property="Background" Value="#2A3050" />
+                                    <Setter Property="Foreground" Value="#66758E" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+                <Button Height="42" Margin="0,6,0,0"
+                        Command="{Binding CompleteWithoutCheckCommand}"
+                        CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
+                        Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="SkipBg" Background="Transparent" CornerRadius="8"
+                                    BorderBrush="#253553" BorderThickness="1">
+                                <TextBlock Text="Продолжить без проверки" Foreground="#8B9AB5"
+                                           FontSize="10.5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="SkipBg" Property="Background" Value="#111A2B" />
+                                    <Setter TargetName="SkipBg" Property="BorderBrush" Value="#405785" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </StackPanel>
         </Grid>
     </Border>
 </Window>

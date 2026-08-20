@@ -820,7 +820,7 @@ public partial class MainViewModel : ObservableObject
     private string _selectedComponent = "zapret";
 
     public IReadOnlyList<string> ComponentOptions { get; } =
-    ["Zapret", "Zapret 2", "Без основного"];
+    ["Zapret"];
 
     public string SelectedComponentDisplayName
     {

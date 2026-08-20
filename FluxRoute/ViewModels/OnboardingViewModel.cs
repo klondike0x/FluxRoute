@@ -16,30 +16,53 @@ public partial class OnboardingViewModel : ObservableObject
     [ObservableProperty] private int selectedComponentIndex;
 
     /// <summary>
-    /// Имя файла выбранной стратегии.
+    /// Имя файла стратегии, выбранной автоматически для первой проверки.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanComplete))]
     [NotifyPropertyChangedFor(nameof(IsStep3Visible))]
     [NotifyCanExecuteChangedFor(nameof(CompleteCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CompleteWithoutCheckCommand))]
     private string? selectedStrategyFileName;
 
-    public List<string> ComponentOptions { get; } = ["Zapret", "Zapret 2", "Без основного"];
+    public List<string> ComponentOptions { get; } = ["Zapret"];
 
     /// <summary>
-    /// Список стратегий из engine/*.bat (ProfileItem как в MainViewModel).
+    /// Стратегии из engine/*.bat. Пользователь их не выбирает — для первой проверки используется первый доступный профиль.
     /// </summary>
     public ObservableCollection<ProfileItem> AvailableStrategies { get; } = new();
 
     /// <summary>
-    /// Шаг 3 видим только после выбора стратегии.
+    /// Шаг 3 видим после загрузки профиля для первичной проверки.
     /// </summary>
     public bool IsStep3Visible => !string.IsNullOrEmpty(SelectedStrategyFileName);
 
     /// <summary>
-    /// Кнопка «Настроить и продолжить» активна когда выбрана стратегия.
+    /// Варианты целей для первичной проверки.
+    /// </summary>
+    public List<string> ProbeTargetOptions { get; } = ["YouTube", "Discord", "YouTube + Discord"];
+
+    [ObservableProperty]
+    private int selectedProbeTargetIndex = 2;
+
+    public bool ProbeYouTubeEnabled => SelectedProbeTargetIndex is 0 or 2;
+    public bool ProbeDiscordEnabled => SelectedProbeTargetIndex is 1 or 2;
+
+    partial void OnSelectedProbeTargetIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(ProbeYouTubeEnabled));
+        OnPropertyChanged(nameof(ProbeDiscordEnabled));
+    }
+
+    /// <summary>
+    /// Кнопка «Настроить и продолжить» активна, когда найден профиль для проверки.
     /// </summary>
     public bool CanComplete => !string.IsNullOrEmpty(SelectedStrategyFileName);
+
+    /// <summary>
+    /// Определяет, запускать ли первичное сканирование стратегий после onboarding.
+    /// </summary>
+    public bool ShouldRunInitialCheck { get; private set; } = true;
 
     public OnboardingViewModel()
     {
@@ -102,6 +125,19 @@ public partial class OnboardingViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanComplete))]
     private void Complete(Window? window)
     {
+        ShouldRunInitialCheck = true;
+        if (window is null) return;
+        window.DialogResult = true;
+        window.Close();
+    }
+
+    /// <summary>
+    /// Завершить onboarding без запуска первичной проверки стратегий.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanComplete))]
+    private void CompleteWithoutCheck(Window? window)
+    {
+        ShouldRunInitialCheck = false;
         if (window is null) return;
         window.DialogResult = true;
         window.Close();

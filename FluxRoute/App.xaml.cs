@@ -109,9 +109,11 @@ public partial class App : Application
                     {
                         settings.SelectedComponent = onboardingVm.SelectedComponent;
                         settings.LastProfileFileName = onboardingVm.SelectedStrategyFileName;
+                        settings.SiteYouTube = onboardingVm.ProbeYouTubeEnabled;
+                        settings.SiteDiscord = onboardingVm.ProbeDiscordEnabled;
                         settings.FirstRunComplete = true;
                         settingsService.Save(settings);
-                        onboardingCompletedNow = true;
+                        onboardingCompletedNow = onboardingVm.ShouldRunInitialCheck;
                         Log.Information("Онбординг завершён. Компонент: {Component}, стратегия: {Strategy}",
                             onboardingVm.SelectedComponent, onboardingVm.SelectedStrategyFileName);
                     }

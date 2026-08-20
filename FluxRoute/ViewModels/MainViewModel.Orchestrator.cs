@@ -280,66 +280,45 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// Первичная проверка выбранной стратегии после завершения онбординга.
-    /// Запускает выбранный BAT, проверяет YouTube и Discord и оставляет стратегию активной.
+    /// Запускает полное сканирование стратегий после завершения онбординга.
+    /// Проверяются только цели, выбранные пользователем на втором шаге.
     /// </summary>
     public async Task RunInitialProfileCheckAsync()
     {
-        var profile = SelectedProfile;
-        if (profile is null)
-        {
-            Logs.Add("[Онбординг] Стратегия не выбрана — проверка пропущена.");
-            return;
-        }
-
         if (string.Equals(_selectedComponent, "none", StringComparison.OrdinalIgnoreCase))
         {
-            Logs.Add("[Онбординг] Основной компонент отключён — проверка стратегии пропущена.");
+            Logs.Add("[Онбординг] Основной компонент отключён — проверка стратегий пропущена.");
             return;
         }
 
-        var targets = new List<TargetEntry>();
-        foreach (var site in new[] { "YouTube", "Discord" })
-        {
-            if (ConnectivityChecker.BuiltinSites.TryGetValue(site, out var siteTargets))
-                targets.AddRange(siteTargets);
-        }
+        var targetSites = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (SiteYouTube) targetSites.Add("YouTube");
+        if (SiteDiscord) targetSites.Add("Discord");
 
-        if (targets.Count == 0)
+        if (targetSites.Count == 0)
         {
             Logs.Add("[Онбординг] Нет целей для первичной проверки.");
             return;
         }
 
-        Logs.Add($"[Онбординг] Запускаю стратегию «{profile.DisplayName}» и проверяю YouTube и Discord…");
-        AddToRecentLogs($"🔍 Первичная проверка: {profile.DisplayName}");
+        var targetNames = string.Join(" и ", targetSites.OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
+        Logs.Add($"[Онбординг] Запускаю сканирование стратегий для целей: {targetNames}…");
+        AddToRecentLogs($"🔍 Сканирование стратегий: {targetNames}");
 
         try
         {
-            var probeService = new ProfileProbeService(_connectivity, async selected =>
-            {
-                if (selected is not null)
-                    await SwitchProfileAsync(selected).ConfigureAwait(false);
-            });
-
-            var result = await probeService.ProbeAsync(profile, targets, new ProfileProbeOptions
-            {
-                StartupWait = TimeSpan.FromSeconds(4),
-                StableWait = TimeSpan.FromMilliseconds(1500),
-                ProcessWaitTimeout = TimeSpan.FromSeconds(10),
-                StopAfterProbe = false,
-                RequireWinwsProcess = true,
-                ProcessName = IsZapret2Selected ? "winws2" : "winws"
-            });
-
-            Logs.Add($"[Онбординг] Проверка завершена: {result.Score}% — {result.Summary}");
-            AddToRecentLogs($"✅ Первичная проверка: {result.Score}%");
-            await UpdateProfileScoreAsync(profile.FileName, result.Score);
+            await ScanProfilesAsync(targetSites);
+            AddToRecentLogs("✅ Сканирование стратегий завершено");
         }
         catch (Exception ex)
         {
-            Logs.Add($"[Онбординг] Ошибка первичной проверки: {ex.Message}");
-            AddToRecentLogs("❌ Первичная проверка завершилась с ошибкой");
+            Logs.Add($"[Онбординг] Ошибка сканирования стратегий: {ex.Message}");
+            AddToRecentLogs("❌ Сканирование стратегий завершилось с ошибкой");
+        }
+        finally
+        {
+            // Возвращаем обычный набор целей оркестратора после первичной проверки.
+            UpdateOrchestratorEnabledSites();
         }
     }
     private async Task SwitchProfileAsync(ProfileItem? profile)
@@ -553,17 +532,22 @@ public partial class MainViewModel
         UpdateOrchestratorEnabledSites();
     }
 
-    private void UpdateOrchestratorEnabledSites()
+    private void UpdateOrchestratorEnabledSites(IReadOnlySet<string>? siteOverride = null)
     {
-        var sites = new HashSet<string>();
-        if (SiteYouTube) sites.Add("YouTube");
-        if (SiteDiscord) sites.Add("Discord");
-        if (SiteGoogle) sites.Add("Google");
-        if (SiteTwitch) sites.Add("Twitch");
-        if (SiteInstagram) sites.Add("Instagram");
-        if (SiteTelegram) sites.Add("Telegram");
-        if (SiteTikTok) sites.Add("TikTok");
+        var sites = siteOverride is null
+            ? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(siteOverride, StringComparer.OrdinalIgnoreCase);
 
+        if (siteOverride is null)
+        {
+            if (SiteYouTube) sites.Add("YouTube");
+            if (SiteDiscord) sites.Add("Discord");
+            if (SiteGoogle) sites.Add("Google");
+            if (SiteTwitch) sites.Add("Twitch");
+            if (SiteInstagram) sites.Add("Instagram");
+            if (SiteTelegram) sites.Add("Telegram");
+            if (SiteTikTok) sites.Add("TikTok");
+        }
         _orchestrator.EnabledSites = sites;
         _aiOrchestrator.EnabledSites = sites;
 
@@ -727,7 +711,9 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private async Task ScanProfiles()
+    private Task ScanProfiles() => ScanProfilesAsync(null);
+
+    private async Task ScanProfilesAsync(IReadOnlySet<string>? targetOverride)
     {
         if (IsScanning)
             return;
@@ -742,6 +728,7 @@ public partial class MainViewModel
 
         _orchestrator.ClearRankedProfiles();
         RebuildProfileScores();
+        UpdateOrchestratorEnabledSites(targetOverride);
         ResetScanTargetChecks(_orchestrator.GetScanTargets());
         ScanPassedProfiles.Clear();
         ScanPassedSummary = "Пока ни одна стратегия не прошла проверку.";
@@ -774,7 +761,6 @@ public partial class MainViewModel
         _scanEtaTimer.Tick += (_, _) => UpdateScanEta();
         _scanEtaTimer.Start();
 
-        UpdateOrchestratorEnabledSites();
         ScanTargetsText = BuildScanTargetsText();
         var wasRunning = IsTrackedProcessRunning();
 
