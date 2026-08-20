@@ -375,6 +375,7 @@ public partial class MainViewModel
                 entry.SetPending();
             else
                 entry.SetScore(score / 100.0);
+            OnPropertyChanged(nameof(NeedsInitialProfileScan));
         }
 
         if (dispatcher.CheckAccess())
@@ -391,6 +392,7 @@ public partial class MainViewModel
         ProfileScores.Clear();
         foreach (var p in Profiles)
             ProfileScores.Add(new ProfileScore { DisplayName = p.DisplayName, FileName = p.FileName });
+        OnPropertyChanged(nameof(NeedsInitialProfileScan));
     }
 
     private void SortProfileScores()
@@ -610,11 +612,18 @@ public partial class MainViewModel
     [ObservableProperty] private string scanBestStrategyText = "Пока нет результата";
     [ObservableProperty] private bool hasScanResult;
 
+    /// <summary>
+    /// Показывает, что для работы оркестратора ещё не построен рейтинг стратегий.
+    /// </summary>
+    public bool NeedsInitialProfileScan =>
+        Profiles.Count > 0 && !IsScanning && !ProfileScores.Any(score => score.Score > 0);
+
     public bool CanViewScanResult => HasScanResult && !IsScanning;
 
     partial void OnIsScanningChanged(bool value)
     {
         OnPropertyChanged(nameof(CanViewScanResult));
+        OnPropertyChanged(nameof(NeedsInitialProfileScan));
     }
 
     partial void OnHasScanResultChanged(bool value)
@@ -866,40 +875,75 @@ public partial class MainViewModel
     }
 
     // ── Запуск сервисов оркестратора (вызывается только когда Zapret уже работает) ──
-    private void StartOrchestratorServices()
+    private bool _orchestratorStartInProgress;
+
+    private async Task StartOrchestratorServicesAsync()
     {
-        if (_orchestrator.IsRunning || _aiOrchestrator.IsRunning)
+        if (_orchestrator.IsRunning || _aiOrchestrator.IsRunning || _orchestratorStartInProgress)
             return;
 
-        if (int.TryParse(OrchestratorInterval, out var mins) && mins >= 1)
+        _orchestratorStartInProgress = true;
+        try
         {
-            var interval = TimeSpan.FromMinutes(mins);
-            _orchestrator.CheckInterval = interval;
-            _aiOrchestrator.CheckInterval = interval;
+            if (int.TryParse(OrchestratorInterval, out var mins) && mins >= 1)
+            {
+                var interval = TimeSpan.FromMinutes(mins);
+                _orchestrator.CheckInterval = interval;
+                _aiOrchestrator.CheckInterval = interval;
+            }
+
+            UpdateOrchestratorEnabledSites();
+
+            if (ProfileScores.Count == 0 || ProfileScores.All(s => s.Score == 0))
+                RebuildProfileScores();
+
+            if (NeedsInitialProfileScan)
+            {
+                AddOrchestratorLog("ℹ️ Первый запуск оркестратора: открываю проверку всех стратегий...");
+                Logs.Add("[Оркестратор] Первичная проверка стратегий — сначала проверяю все стратегии.");
+                await ScanProfilesAsync(null);
+
+                if (!HasScanResult)
+                {
+                    _orchestrator.ClearRankedProfiles();
+                    Logs.Add("[Оркестратор] Проверка была отменена — повторю её автоматически в фоне.");
+                }
+            }
+            else if (IsScanning)
+            {
+                AddOrchestratorLog("ℹ️ Ожидаю завершения текущей проверки стратегий перед запуском оркестратора...");
+                while (IsScanning && OrchestratorEnabled)
+                    await Task.Delay(100);
+            }
+
+            if (!OrchestratorEnabled || !IsRunning)
+                return;
+
+            if (AiEnabled)
+            {
+                _aiOrchestrator.Start();
+            }
+            else
+            {
+                _orchestrator.Start();
+            }
+
+            OrchestratorRunning = true;
+            StartProcessMonitor();
+            Logs.Add("[Оркестратор] Запущен в автоматическом режиме.");
         }
-
-        UpdateOrchestratorEnabledSites();
-
-        if (ProfileScores.Count == 0 || ProfileScores.All(s => s.Score == 0))
-            RebuildProfileScores();
-
-        if (AiEnabled)
+        finally
         {
-            _aiOrchestrator.Start();
+            _orchestratorStartInProgress = false;
         }
-        else
-        {
-            _orchestrator.Start();
-        }
-
-        OrchestratorRunning = true;
-        StartProcessMonitor();
-        Logs.Add("[Оркестратор] Запущен в автоматическом режиме.");
     }
 
     // ── Остановка сервисов оркестратора без изменения флага OrchestratorEnabled ──
     private void StopOrchestratorServices()
     {
+        if (_orchestratorStartInProgress && IsScanning)
+            CancelScan();
+
         if (!_orchestrator.IsRunning && !_aiOrchestrator.IsRunning)
             return;
         _orchestrator.Stop();
@@ -917,7 +961,7 @@ public partial class MainViewModel
         {
             // "Вооружён": если Zapret уже работает — сразу запускаем сервисы.
             if (IsRunning)
-                StartOrchestratorServices();
+                _ = StartOrchestratorServicesAsync();
             else
                 Logs.Add("[Оркестратор] Режим авто: ожидаю запуск Zapret...");
         }
@@ -951,7 +995,7 @@ public partial class MainViewModel
     private void TryStartOrchestratorIfEnabled()
     {
         if (OrchestratorEnabled)
-            StartOrchestratorServices();
+            _ = StartOrchestratorServicesAsync();
     }
 
     [RelayCommand]

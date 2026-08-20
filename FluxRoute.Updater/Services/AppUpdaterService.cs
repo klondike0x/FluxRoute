@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using Microsoft.Win32;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
@@ -45,6 +46,11 @@ public class AppUpdaterService : IAppUpdaterService
     // Прямой URL скачивания (не API, CDN GitHub — лимитов нет)
     private const string DownloadUrlTemplate =
         "https://github.com/klondike0x/FluxRoute/releases/download/{0}/FluxRoute-{0}-portable.zip";
+
+    private const string InstallerDownloadUrlTemplate =
+        "https://github.com/klondike0x/FluxRoute/releases/download/{0}/FluxRoute-{0}-installer.exe";
+
+    private const string InstallerRegistryKey = @"Software\FluxRoute";
 
     // Не делать HTTP-запрос чаще одного раза в час
     private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(1);
@@ -308,6 +314,80 @@ public class AppUpdaterService : IAppUpdaterService
         return idContent[(lastSlash + 1)..].Trim();
     }
 
+    /// <summary>
+    /// Определяет, запущено ли приложение из установки Inno Setup.
+    /// Новые установщики оставляют маркер в HKLM, а fallback по unins*.exe
+    /// поддерживает версии, установленные до появления маркера.
+    /// </summary>
+    public virtual bool IsInstallerInstallation()
+    {
+        var exePath = Process.GetCurrentProcess().MainModule?.FileName;
+        var exeDirectory = string.IsNullOrWhiteSpace(exePath)
+            ? null
+            : Path.GetDirectoryName(exePath);
+
+        if (string.IsNullOrWhiteSpace(exeDirectory))
+            return false;
+
+        var normalizedDirectory = NormalizeDirectoryPath(exeDirectory);
+
+        if (OperatingSystem.IsWindows())
+        {
+            foreach (var view in new[] { RegistryView.Registry64, RegistryView.Registry32 })
+            {
+                try
+                {
+                    using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view);
+                    using var installKey = baseKey.OpenSubKey(InstallerRegistryKey);
+                    var installLocation = installKey?.GetValue("InstallLocation") as string;
+
+                    if (!string.IsNullOrWhiteSpace(installLocation) &&
+                        string.Equals(
+                            normalizedDirectory,
+                            NormalizeDirectoryPath(installLocation),
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Trace.TraceInformation($"AppUpdater: не удалось проверить маркер installer: {ex.Message}");
+                }
+            }
+        }
+
+        try
+        {
+            return Directory.EnumerateFiles(exeDirectory, "unins*.exe", SearchOption.TopDirectoryOnly).Any();
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceInformation($"AppUpdater: не удалось проверить uninstaller: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>Возвращает пакет обновления в зависимости от типа текущей установки.</summary>
+    public virtual string GetPreferredDownloadUrl(AppUpdateInfo update)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+
+        if (!IsInstallerInstallation())
+            return update.DownloadUrl;
+
+        var tagName = string.IsNullOrWhiteSpace(update.TagName)
+            ? $"v{update.Version}"
+            : update.TagName;
+
+        return string.Format(InstallerDownloadUrlTemplate, tagName);
+    }
+
+    private static string NormalizeDirectoryPath(string path)
+    {
+        return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+    }
+
     public async Task<(bool success, string? error)> DownloadAndApplyAsync(
         AppUpdateInfo update,
         Action<string> onProgress,
@@ -327,36 +407,80 @@ public class AppUpdaterService : IAppUpdaterService
             return (false, $"Нет доступа к исполняемому файлу: {ex.Message}");
         }
 
-        var exeDir   = Path.GetDirectoryName(exePath)!;
-        var tempZip  = Path.Combine(Path.GetTempPath(), $"FluxRoute_{update.Version}.zip");
-        var tempDir  = Path.Combine(Path.GetTempPath(), $"FluxRoute_{update.Version}_extracted");
-        var batPath  = Path.Combine(Path.GetTempPath(), "_FluxRoute_updater.bat");
+        var exeDir = Path.GetDirectoryName(exePath)!;
+        var installerInstallation = IsInstallerInstallation();
+        var downloadUrl = GetPreferredDownloadUrl(update);
+        var tempZip = Path.Combine(Path.GetTempPath(), $"FluxRoute_{update.Version}.zip");
+        var tempInstaller = Path.Combine(Path.GetTempPath(), $"FluxRoute_{update.Version}_installer.exe");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"FluxRoute_{update.Version}_extracted");
+        var batPath = Path.Combine(Path.GetTempPath(), "_FluxRoute_updater.bat");
+        var tempArtifact = installerInstallation ? tempInstaller : tempZip;
 
         try
         {
             // ── 1. Скачиваем zip ──────────────────────────────────────────
-            onProgress($"⬇️ Скачиваем FluxRoute v{update.Version}...");
+            var packageName = installerInstallation ? "installer" : "portable-архив";
+            onProgress($"⬇️ Скачиваем FluxRoute v{update.Version} ({packageName})...");
 
             using var http = _httpClientFactory.CreateClient(HttpClientNames.AppUpdater);
 
-            using var response = await http.GetAsync(update.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+            using var response = await http.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!response.IsSuccessStatusCode)
                 return (false, $"Ошибка скачивания: {(int)response.StatusCode} {response.ReasonPhrase}");
 
             await using (var stream = await response.Content.ReadAsStreamAsync(ct))
-            await using (var file   = File.Create(tempZip))
+            await using (var file = File.Create(tempArtifact))
                 await stream.CopyToAsync(file, ct);
 
-            // Проверяем что ZIP не пустой
-            var zipInfo = new FileInfo(tempZip);
-            if (!zipInfo.Exists || zipInfo.Length < 1024)
-                return (false, $"Скачанный файл повреждён или пуст (размер: {zipInfo.Length} байт)");
+            // Проверяем что скачанный пакет не пустой
+            var artifactInfo = new FileInfo(tempArtifact);
+            if (!artifactInfo.Exists || artifactInfo.Length < 1024)
+                return (false, $"Скачанный файл повреждён или пуст (размер: {artifactInfo.Length} байт)");
 
-            var hash = Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(tempZip, ct)));
+            var hash = Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(tempArtifact, ct)));
             onProgress($"🔒 SHA-256: {hash}");
             onProgress("✅ Загрузка завершена");
 
-            // ── 2. Распаковываем zip ──────────────────────────────────────
+            if (installerInstallation)
+            {
+                // Installer сам запросит UAC, обновит существующую установку по AppId
+                // и не затронет пользовательские файлы, которых нет в publish/.
+                var installerPid = Process.GetCurrentProcess().Id;
+                var installerExePath = Path.Combine(exeDir, Path.GetFileName(exePath));
+                var installerBat = $"""
+                    @echo off
+                    chcp 65001 > nul
+                    echo [FluxRoute Updater] Ожидаем завершения процесса PID {installerPid}...
+                    :waitloop
+                    tasklist /FI "PID eq {installerPid}" 2>NUL | find /I "{installerPid}" > NUL
+                    if not errorlevel 1 (
+                        timeout /t 1 /nobreak > nul
+                        goto waitloop
+                    )
+                    echo [FluxRoute Updater] Устанавливаем v{update.Version} через installer...
+                    start "" /wait "{tempInstaller}" /SILENT /NORESTART /CLOSEAPPLICATIONS
+                    if errorlevel 1 exit /b 1
+                    del /F /Q "{tempInstaller}" > nul 2>&1
+                    echo [FluxRoute Updater] Запускаем FluxRoute v{update.Version}...
+                    start "" "{installerExePath}"
+                    del "%~f0"
+                    """;
+
+                await File.WriteAllTextAsync(batPath, installerBat, System.Text.Encoding.UTF8, ct);
+                onProgress("🚀 Запускаем installer с правами администратора...");
+
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = batPath,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    UseShellExecute = true,
+                    Verb = "runas"
+                });
+
+                return (true, null);
+            }
+
+            // ── 2. Распаковываем portable zip ─────────────────────────────
             onProgress("📦 Распаковываем архив...");
             if (Directory.Exists(tempDir))
                 Directory.Delete(tempDir, recursive: true);

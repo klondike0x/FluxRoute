@@ -78,6 +78,7 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
+                    <TextBlock Text="{Binding ActiveProviderText}" Foreground="#58A6FF" FontSize="10" Margin="0,5,0,0" />
                     <TextBlock Text="РЕЖИМ ШИФРОВАНИЯ" Style="{StaticResource SecH}" Margin="0,14,0,8" />
                     <StackPanel IsEnabled="{Binding IsDohEnabled}">
                         <RadioButton Content="Без шифрования"

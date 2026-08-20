@@ -79,6 +79,16 @@
 
             <Rectangle Style="{StaticResource Sep}" />
             <TextBlock Style="{StaticResource SecH}" Text="РЕЙТИНГ СТРАТЕГИЙ" />
+            <Border Background="#211B05" BorderBrush="#6B541A" BorderThickness="1" CornerRadius="8"
+                    Padding="10,8" Margin="0,0,0,10"
+                    Visibility="{Binding NeedsInitialProfileScan, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Text="⚠️ Первичная проверка стратегий ещё не выполнена"
+                               Foreground="#F0B429" FontSize="11" FontWeight="SemiBold" />
+                    <TextBlock Text="При первом запуске оркестратора FluxRoute автоматически проверит все стратегии. После этого повторная проверка при запуске не потребуется."
+                               Foreground="#B9A66A" FontSize="10" TextWrapping="Wrap" Margin="0,4,0,0" />
+                </StackPanel>
+            </Border>
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                 <Button Margin="0,0,10,0"
                         Command="{Binding ScanProfilesCommand}">

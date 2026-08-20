@@ -9,6 +9,26 @@ namespace FluxRoute.Core.Tests;
 public sealed class DohViewModelTests
 {
     [Fact]
+    public void SelectingProviderWhileDisabled_PersistsSelection()
+    {
+        var harness = new Harness(enabled: false);
+        var vm = harness.Create();
+
+        vm.SelectedProvider = harness.Providers[1];
+
+        Assert.Equal("new", harness.Current.Doh.SelectedProviderId);
+        Assert.False(harness.Current.Doh.Enabled);
+    }
+
+    [Fact]
+    public void Startup_DetectsActiveProviderFromAdapterDns()
+    {
+        var harness = new Harness(enabled: true);
+        var vm = harness.Create(["8.8.8.8"]);
+
+        Assert.Equal("Активный DNS: New", vm.ActiveProviderText);
+    }
+    [Fact]
     public async Task AutomaticOperations_AreSerialized_MaxConcurrencyIsOne()
     {
         var harness = new Harness(enabled: true);
@@ -234,7 +254,7 @@ public sealed class DohViewModelTests
                 .ReturnsAsync(new DohApplyResult(true, "applied"));
         }
 
-        public DohViewModel Create()
+        public DohViewModel Create(IReadOnlyList<string>? activeDns = null)
         {
             var providerService = new Mock<IDohProviderService>();
             providerService.SetupGet(x => x.Providers).Returns(Providers);
@@ -244,7 +264,7 @@ public sealed class DohViewModelTests
                 .ReturnsAsync(new DnsAdapterSnapshot("Ethernet", ["192.0.2.53"], false));
             return new DohViewModel(providerService.Object, selection.Object, Configuration.Object,
                 Switch.Object, dns.Object, Settings.Object, Logger.Object,
-                ["Ethernet"], _ => _settings.Doh.AppliedDnsAddresses);
+                ["Ethernet"], _ => activeDns ?? _settings.Doh.AppliedDnsAddresses);
         }
     }
 }

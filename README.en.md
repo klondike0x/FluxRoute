@@ -70,14 +70,14 @@ Launch, update, and switch profiles from a single window — no manual BAT-file 
 - [Orchestrator](#-orchestrator)
 - [AI Orchestrator](#-ai-orchestrator)
 - [Auto-Tune](#-auto-tune)
+- [Mods](#-mods)
 - [Interface](#-interface)
 - [Troubleshooting](#-troubleshooting)
 - [WinDivert and Antivirus](#-windivert-and-antivirus)
 - [Security](#-security)
+- [Ecosystem](#-ecosystem)
 - [For Developers](#-for-developers)
 - [Copyright and Terms of Use](#-copyright-and-terms-of-use)
-- [Ecosystem](#-ecosystem)
-- [Mods](#-mods)
 - [Acknowledgments](#-acknowledgments)
 - [License](#-license)
 
@@ -311,6 +311,135 @@ Auto-Tune is available on the **Service** tab → **Find optimal settings**. Res
 
 ---
 
+## 📦 Mods
+
+FluxRoute supports mods — external scripts and configuration files that can be enabled or disabled from the interface. Each mod is a separate folder in `mods/` next to `FluxRoute.exe`, containing a `manifest.json` file.
+
+### Mod structure
+
+```text
+mods/
+├── example-mod/
+│   ├── manifest.json
+│   ├── start.bat
+│   └── stop.bat
+└── status.json         ← created automatically and stores statuses
+```
+
+### `manifest.json`
+
+```json
+{
+  "name": "Example Mod",
+  "version": "1.0.0",
+  "author": "klondike0x",
+  "description": "Mod description",
+  "dependencies": [],
+  "scripts": {
+    "start": "start.bat",
+    "stop": "stop.bat"
+  },
+  "config": {}
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | string | Mod name |
+| `version` | string | Version in SemVer format |
+| `author` | string | Author |
+| `description` | string | Description |
+| `dependencies` | string[] | Folder names of mods that must be active before this mod starts |
+| `scripts.start` | string | Start command, for example `script.bat --verbose` |
+| `scripts.stop` | string | Stop command |
+| `config` | object | Arbitrary mod configuration |
+
+### Scripts
+
+Supported script types are `.bat`, `.exe`, `.ps1`, and `.py` (if Python is installed). A script is started through `Process.Start` with the mod folder as its working directory.
+
+- **start** — runs when the mod is activated and should return exit code `0` on success.
+- **stop** — runs when the mod is deactivated. If it is missing, the mod is simply marked as inactive.
+- Scripts may receive arguments, for example: `"start": "script.bat --verbose"`.
+
+### Dependencies
+
+If a mod has dependencies, they must be active before this mod starts. Dependencies are checked automatically during activation.
+
+```json
+{
+  "dependencies": ["core-mod", "network-mod"]
+}
+```
+
+### Statuses
+
+- 🟢 **Active** — the mod is running and the `start` script completed successfully
+- ⚫ **Inactive** — the mod was found but is not running
+- 🔴 **Error** — an error occurred while starting or stopping
+- ⬜ **NotLoaded** — the mod has not been scanned yet
+
+Statuses are saved in `mods/status.json` and restored after restart.
+
+### Creating a mod: example
+
+1. Create the `mods/my-mod/` folder.
+2. Create `manifest.json`:
+
+```json
+{
+  "name": "My Mod",
+  "version": "1.0.0",
+  "author": "YourName",
+  "description": "My first mod",
+  "dependencies": [],
+  "scripts": {
+    "start": "start.bat",
+    "stop": "start.bat --stop"
+  },
+  "config": {}
+}
+```
+
+3. Create `start.bat`:
+
+```batch
+@echo off
+echo Hello from My Mod!
+exit /b 0
+```
+
+4. Open FluxRoute → the **Mods** tab → click **Enable**.
+
+### Logging and technical details
+
+- Mod actions are written to `logs/fluxroute-*.log`.
+- Mod manager: `ModManager` (singleton, DI).
+- Interface: `ModsPage.xaml` and `ModsViewModel`.
+- Statuses: `mods/status.json`.
+- Tests: `ModManagerTests.cs`.
+
+### API for developers
+
+```csharp
+// Scan mods
+var mods = await modManager.ScanModsAsync();
+
+// Activate
+bool ok = await modManager.ActivateModAsync("my-mod");
+
+// Deactivate
+bool ok = await modManager.DeactivateModAsync("my-mod");
+
+// Check dependencies
+bool depsOk = await modManager.CheckDependenciesAsync("my-mod");
+
+// Status
+ModStatus status = modManager.GetModStatus("my-mod");
+```
+
+---
+
 ## 📸 Interface
 
 <table>
@@ -385,6 +514,20 @@ taskkill /PID <number> /F
 
 > [!TIP]
 > App updates always come only from the official `klondike0x/FluxRoute` repository — the URL is hardcoded in `AppUpdaterService`. This ensures that even fork users eventually receive the original version.
+>
+> The update package is selected automatically: installer installations receive the new installer, while Portable installations are updated through the portable ZIP. User settings are preserved.
+
+---
+
+## 🌳 Ecosystem
+
+FluxRoute leverages the following project ecosystem:
+
+- **[WinDivert](https://github.com/basil00/WinDivert)** — low-level Windows foundation
+- **[bol-van/zapret](https://github.com/bol-van/zapret)** — original project
+- **[bol-van/zapret-win-bundle](https://github.com/bol-van/zapret-win-bundle)** — Windows bundle with `winws.exe`
+- **[Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube)** — the `engine/` base used in FluxRoute
+- **[Flowseal/tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy)** — Telegram WebSocket proxy
 
 ---
 
@@ -494,32 +637,6 @@ Pull Requests are welcome!
 For third‑party attributions, see the [NOTICE](NOTICE) file.
 
 **Disclaimer:** The software is provided “as is”. The author is not liable for any consequences arising from its use. By using FluxRoute, you confirm that you do so at your own risk.
-
----
-
-## 🌳 Ecosystem
-
-FluxRoute leverages the following project ecosystem:
-
-- **[WinDivert](https://github.com/basil00/WinDivert)** — low-level Windows foundation
-- **[bol-van/zapret](https://github.com/bol-van/zapret)** — original project
-- **[bol-van/zapret-win-bundle](https://github.com/bol-van/zapret-win-bundle)** — Windows bundle with `winws.exe`
-- **[Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube)** — the `engine/` base used in FluxRoute
-- **[Flowseal/tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy)** — Telegram WebSocket proxy
-
----
-
-## 📦 Mods
-
-FluxRoute supports mods — external scripts and configuration files that can be enabled or disabled from the interface. Each mod is a folder in mods/ with a manifest.json file.
-
-See [MODS.md](MODS.md) for the complete guide to creating and managing mods.
-
-Quick start:
-
-1. Create a mods/my-mod/ folder.
-2. Add manifest.json and start.bat.
-3. Open FluxRoute → the **Mods** tab → **Enable**.
 
 ---
 

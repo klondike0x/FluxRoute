@@ -370,6 +370,7 @@ public partial class MainViewModel : ObservableObject
             return;
 
         ProfileScores.Clear();
+        OnPropertyChanged(nameof(NeedsInitialProfileScan));
         SaveSettings();
         _aiRegistry.ResetAll();
         AddToRecentLogs("🔄 Рейтинг стратегий и история ИИ сброшены.");
@@ -561,7 +562,7 @@ public partial class MainViewModel : ObservableObject
     public string PingSummary => "Нет данных";
     public string CompactNetworkSummary =>
         $"Пинг: {PingSummary}\n↓ {DownloadSpeed}   ↑ {UploadSpeed}";
-    public string TrafficSpeedSummary => $"↓ {DownloadSpeed}  ↑ {UploadSpeed}";
+    public string TrafficSpeedSummary => $"↑ {UploadSpeed}\n↓ {DownloadSpeed}";
     public string MainStatusText => IsZapret2Selected
         ? Zapret2StatusText
         : _selectedComponent == "none"
@@ -1442,6 +1443,7 @@ public partial class MainViewModel : ObservableObject
                 DisplayName = s.DisplayName,
                 Score = s.Score
             }).ToList(),
+            Doh = _settingsService.Load().Doh,
             TgProxy = new FluxRoute.Core.Services.TgProxySettings
             {
                 Host = TgProxyHost,

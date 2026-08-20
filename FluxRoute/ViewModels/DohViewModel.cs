@@ -25,6 +25,7 @@ public partial class DohViewModel : ObservableObject
     private bool _isInitialized;
     private bool _suppressDohToggle;
     private DohProvider? _appliedProvider;
+    private DohProvider? _activeProvider;
     private DohEncryptionMode _appliedMode;
     private readonly Func<string, IReadOnlyList<string>> _getDnsAddresses;
 
@@ -58,11 +59,21 @@ public partial class DohViewModel : ObservableObject
             ?? NetworkInterfaces.FirstOrDefault();
         SelectedProvider = Providers.FirstOrDefault(x => x.Id == settings.SelectedProviderId)
             ?? Providers.FirstOrDefault();
-        _appliedProvider = settings.Enabled
+        var savedAppliedProvider = settings.Enabled
             ? Providers.FirstOrDefault(x => x.Id == settings.AppliedProviderId)
             : null;
+        _activeProvider = DetectActiveProvider();
+        _appliedProvider = settings.Enabled
+            ? _activeProvider ?? savedAppliedProvider
+            : null;
         _appliedMode = settings.AppliedEncryptionMode;
-        Status = settings.Enabled ? "DoH был включён в последней конфигурации" : "DoH не настроен";
+        Status = settings.Enabled
+            ? _activeProvider is not null
+                ? $"Активный DNS: {_activeProvider.Name}"
+                : savedAppliedProvider is not null
+                    ? $"Сохранён провайдер: {savedAppliedProvider.Name}; активный DNS не определён"
+                    : "DoH был включён в последней конфигурации"
+            : "DoH не настроен";
         IsDohEnabled = settings.Enabled;
         _isInitialized = true;
     }
@@ -71,13 +82,21 @@ public partial class DohViewModel : ObservableObject
     public ObservableCollection<DohProviderTestResult> Results { get; } = new();
     public ObservableCollection<string> NetworkInterfaces { get; }
 
+    public string ActiveProviderText => _activeProvider is null
+        ? "Активный DNS: не определён"
+        : $"Активный DNS: {_activeProvider.Name}";
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
     private DohProvider? selectedProvider;
 
     partial void OnSelectedProviderChanged(DohProvider? oldValue, DohProvider? newValue)
     {
-        if (!_isInitialized || !IsDohEnabled
+        if (!_isInitialized)
+            return;
+
+        SaveDohPreferences();
+        if (!IsDohEnabled
             || oldValue is null || newValue is null || oldValue.Id == newValue.Id
             || string.IsNullOrWhiteSpace(SelectedInterface))
         {
@@ -92,14 +111,19 @@ public partial class DohViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(DisableCommand))]
     private string? selectedInterface;
 
+    partial void OnSelectedInterfaceChanged(string? value)
+    {
+        if (!_isInitialized) return;
+        SaveDohPreferences();
+        RefreshActiveProvider();
+    }
+
     [ObservableProperty] private bool automaticSelection = true;
 
     partial void OnAutomaticSelectionChanged(bool value)
     {
         if (!_isInitialized) return;
-        var settings = _settingsService.Load();
-        settings.Doh.AutomaticSelection = value;
-        _settingsService.Save(settings);
+        SaveDohPreferences();
     }
     [ObservableProperty] private DohEncryptionMode encryptionMode = DohEncryptionMode.EncryptedOnly;
     [ObservableProperty] private bool isDohEnabled;
@@ -149,7 +173,11 @@ public partial class DohViewModel : ObservableObject
         OnPropertyChanged(nameof(IsEncryptedOnly));
         OnPropertyChanged(nameof(WindowsEncryptionLabel));
 
-        if (!_isInitialized || !IsDohEnabled
+        if (!_isInitialized)
+            return;
+
+        SaveDohPreferences();
+        if (!IsDohEnabled
             || SelectedProvider is null || string.IsNullOrWhiteSpace(SelectedInterface))
         {
             return;
@@ -177,6 +205,7 @@ public partial class DohViewModel : ObservableObject
 
         SelectedInterface = NetworkInterfaces.FirstOrDefault(x => x == selected)
             ?? NetworkInterfaces.FirstOrDefault();
+        RefreshActiveProvider();
     }
 
     [RelayCommand]
@@ -261,6 +290,7 @@ public partial class DohViewModel : ObservableObject
             {
                 _appliedProvider = newProvider;
                 _appliedMode = EncryptionMode;
+                SetActiveProvider(newProvider);
                 SetDohToggleSilently(true);
                 var settings = _settingsService.Load();
                 settings.Doh.Enabled = true;
@@ -278,6 +308,7 @@ public partial class DohViewModel : ObservableObject
                 SelectedProvider = actuallyAppliedProvider;
                 _isInitialized = true;
                 _appliedProvider = actuallyAppliedProvider;
+                SetActiveProvider(actuallyAppliedProvider);
                 _isInitialized = false;
                 EncryptionMode = actuallyAppliedMode;
                 _isInitialized = true;
@@ -341,6 +372,7 @@ public partial class DohViewModel : ObservableObject
             Status = result.Message;
             if (result.IsSuccess)
             {
+                SetActiveProvider(null);
                 SaveSettings(enabled: false, [], [], previousDnsWasDhcp: false);
             }
             else
@@ -377,6 +409,7 @@ public partial class DohViewModel : ObservableObject
     private void SetUnsafeStateDisabled()
     {
         _appliedProvider = null;
+        SetActiveProvider(null);
         SetDohToggleSilently(false);
         var settings = _settingsService.Load();
         settings.Doh.Enabled = false;
@@ -456,6 +489,7 @@ public partial class DohViewModel : ObservableObject
             {
                 _appliedProvider = SelectedProvider;
                 _appliedMode = EncryptionMode;
+                SetActiveProvider(SelectedProvider);
                 SetDohToggleSilently(true);
                 SaveSettings(
                     enabled: true,
@@ -521,6 +555,7 @@ public partial class DohViewModel : ObservableObject
             Status = result.Message;
             if (result.IsSuccess)
             {
+                SetActiveProvider(null);
                 SaveSettings(enabled: false, [], [], previousDnsWasDhcp: false);
             }
         }
@@ -548,6 +583,47 @@ public partial class DohViewModel : ObservableObject
             && !current.ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(saved.AppliedDnsAddresses)
             ? "DNS изменён внешним приложением; автоматический откат остановлен."
             : null;
+    }
+
+    private void SaveDohPreferences()
+    {
+        var settings = _settingsService.Load();
+        settings.Doh.AutomaticSelection = AutomaticSelection;
+        settings.Doh.EncryptionMode = EncryptionMode;
+        settings.Doh.SelectedProviderId = SelectedProvider?.Id;
+        settings.Doh.InterfaceName = SelectedInterface;
+        _settingsService.Save(settings);
+    }
+
+    private void SetActiveProvider(DohProvider? provider)
+    {
+        _activeProvider = provider;
+        OnPropertyChanged(nameof(ActiveProviderText));
+    }
+
+    private void RefreshActiveProvider()
+    {
+        SetActiveProvider(DetectActiveProvider());
+    }
+
+    private DohProvider? DetectActiveProvider()
+    {
+        if (string.IsNullOrWhiteSpace(SelectedInterface))
+            return null;
+
+        IReadOnlyList<string> addresses;
+        try
+        {
+            addresses = _getDnsAddresses(SelectedInterface);
+        }
+        catch
+        {
+            return null;
+        }
+
+        var current = addresses.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return Providers.FirstOrDefault(provider =>
+            provider.DnsAddresses.Any(current.Contains));
     }
 
     private void SaveSettings(
