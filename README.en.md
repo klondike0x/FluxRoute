@@ -17,7 +17,7 @@
 <!-- GitHub badge -->
 [![Support FluxRoute](https://img.shields.io/badge/Donate-donatr.ee-6C5CE7?style=for-the-badge)](https://donatr.ee/klondike0x)
 
-**Author:** [klondike0x](https://github.com/klondike0x) · [📥 Releases](https://github.com/klondike0x/FluxRoute/releases) · [🐛 Issues](https://github.com/klondike0x/FluxRoute/issues) · [💬 Discussions](https://github.com/klondike0x/FluxRoute/discussions)
+**Author:** [klondike0x](https://github.com/klondike0x) · [📚 Documentation](docs/index.md) · [📥 Releases](https://github.com/klondike0x/FluxRoute/releases) · [🐛 Issues](https://github.com/klondike0x/FluxRoute/issues) · [💬 Discussions](https://github.com/klondike0x/FluxRoute/discussions)
 
 <p align="center">
     <a href="https://github.com/klondike0x/FluxRoute"><img src="https://img.shields.io/badge/Original_Project-✅_klondike0x-00D68F?logo=github&logoColor=white&style=for-the-badge" alt="Original Project" /></a>
@@ -173,6 +173,8 @@ FluxRoute is the **only** GUI with a full-featured AI subsystem:
 ## 🚀 Quick Start
 
 ### Requirements
+
+Full documentation: [📚 open documentation](docs/index.md).
 - **Windows 10/11 x64**
 - **Administrator privileges** (for `winws.exe` and WinDivert)
 
@@ -313,130 +315,9 @@ Auto-Tune is available on the **Service** tab → **Find optimal settings**. Res
 
 ## 📦 Mods
 
-FluxRoute supports mods — external scripts and configuration files that can be enabled or disabled from the interface. Each mod is a separate folder in `mods/` next to `FluxRoute.exe`, containing a `manifest.json` file.
+FluxRoute supports user mods — external scripts and configuration files that can be enabled or disabled from the **Mods** tab.
 
-### Mod structure
-
-```text
-mods/
-├── example-mod/
-│   ├── manifest.json
-│   ├── start.bat
-│   └── stop.bat
-└── status.json         ← created automatically and stores statuses
-```
-
-### `manifest.json`
-
-```json
-{
-  "name": "Example Mod",
-  "version": "1.0.0",
-  "author": "klondike0x",
-  "description": "Mod description",
-  "dependencies": [],
-  "scripts": {
-    "start": "start.bat",
-    "stop": "stop.bat"
-  },
-  "config": {}
-}
-```
-
-| Field | Type | Description |
-|---|---|---|
-| `name` | string | Mod name |
-| `version` | string | Version in SemVer format |
-| `author` | string | Author |
-| `description` | string | Description |
-| `dependencies` | string[] | Folder names of mods that must be active before this mod starts |
-| `scripts.start` | string | Start command, for example `script.bat --verbose` |
-| `scripts.stop` | string | Stop command |
-| `config` | object | Arbitrary mod configuration |
-
-### Scripts
-
-Supported script types are `.bat`, `.exe`, `.ps1`, and `.py` (if Python is installed). A script is started through `Process.Start` with the mod folder as its working directory.
-
-- **start** — runs when the mod is activated and should return exit code `0` on success.
-- **stop** — runs when the mod is deactivated. If it is missing, the mod is simply marked as inactive.
-- Scripts may receive arguments, for example: `"start": "script.bat --verbose"`.
-
-### Dependencies
-
-If a mod has dependencies, they must be active before this mod starts. Dependencies are checked automatically during activation.
-
-```json
-{
-  "dependencies": ["core-mod", "network-mod"]
-}
-```
-
-### Statuses
-
-- 🟢 **Active** — the mod is running and the `start` script completed successfully
-- ⚫ **Inactive** — the mod was found but is not running
-- 🔴 **Error** — an error occurred while starting or stopping
-- ⬜ **NotLoaded** — the mod has not been scanned yet
-
-Statuses are saved in `mods/status.json` and restored after restart.
-
-### Creating a mod: example
-
-1. Create the `mods/my-mod/` folder.
-2. Create `manifest.json`:
-
-```json
-{
-  "name": "My Mod",
-  "version": "1.0.0",
-  "author": "YourName",
-  "description": "My first mod",
-  "dependencies": [],
-  "scripts": {
-    "start": "start.bat",
-    "stop": "start.bat --stop"
-  },
-  "config": {}
-}
-```
-
-3. Create `start.bat`:
-
-```batch
-@echo off
-echo Hello from My Mod!
-exit /b 0
-```
-
-4. Open FluxRoute → the **Mods** tab → click **Enable**.
-
-### Logging and technical details
-
-- Mod actions are written to `logs/fluxroute-*.log`.
-- Mod manager: `ModManager` (singleton, DI).
-- Interface: `ModsPage.xaml` and `ModsViewModel`.
-- Statuses: `mods/status.json`.
-- Tests: `ModManagerTests.cs`.
-
-### API for developers
-
-```csharp
-// Scan mods
-var mods = await modManager.ScanModsAsync();
-
-// Activate
-bool ok = await modManager.ActivateModAsync("my-mod");
-
-// Deactivate
-bool ok = await modManager.DeactivateModAsync("my-mod");
-
-// Check dependencies
-bool depsOk = await modManager.CheckDependenciesAsync("my-mod");
-
-// Status
-ModStatus status = modManager.GetModStatus("my-mod");
-```
+See [docs/mods.en.md](docs/mods.en.md) for the complete guide to `manifest.json`, scripts, dependencies, and the developer API.
 
 ---
 
