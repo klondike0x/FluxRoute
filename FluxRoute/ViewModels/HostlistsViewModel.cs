@@ -60,7 +60,8 @@ public partial class HostlistsViewModel : ObservableObject
         switch (UnsavedChangesPrompt?.Invoke() ?? HostlistUnsavedChangesDecision.Stay)
         {
             case HostlistUnsavedChangesDecision.Save:
-                Save();
+                if (!TrySave())
+                    _restoreSelection = true;
                 break;
             case HostlistUnsavedChangesDecision.Discard:
                 CancelEdit();
@@ -73,6 +74,12 @@ public partial class HostlistsViewModel : ObservableObject
 
     partial void OnSelectedFileChanged(HostlistFileItem? value)
     {
+        if (_isRestoringSelection)
+        {
+            _isRestoringSelection = false;
+            return;
+        }
+
         if (_restoreSelection)
         {
             _restoreSelection = false;
@@ -212,8 +219,13 @@ public partial class HostlistsViewModel : ObservableObject
     [RelayCommand]
     private void Save()
     {
+        TrySave();
+    }
+
+    private bool TrySave()
+    {
         var file = SelectedFile ?? _activeFile;
-        if (file is null) return;
+        if (file is null) return false;
         try
         {
             var dir = Path.GetDirectoryName(file.FullPath);
@@ -232,10 +244,12 @@ public partial class HostlistsViewModel : ObservableObject
             file.Exists = true;
             StatusText = $"Сохранено: {file.FileName}";
             _addLog($"[Хостлисты] Сохранён файл: {file.FileName}");
+            return true;
         }
         catch (Exception ex)
         {
             StatusText = $"Ошибка сохранения: {ex.Message}";
+            return false;
         }
     }
 
