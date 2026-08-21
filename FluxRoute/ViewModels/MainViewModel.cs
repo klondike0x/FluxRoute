@@ -1625,6 +1625,12 @@ public partial class MainViewModel : ObservableObject
         foreach (var domain in ParseHostlistContent(content))
             target.Add(domain);
 
+        // Убираем устаревшие значения legacy-поля, иначе они снова попадут
+        // в hostlist при следующей синхронизации или перезапуске приложения.
+        UserCustomSitesText = string.Join(
+            "\n",
+            CustomTargetDomains.Concat(CustomExcludeDomains.Select(domain => $"!{domain}")));
+
         SaveSettings();
     }
 
