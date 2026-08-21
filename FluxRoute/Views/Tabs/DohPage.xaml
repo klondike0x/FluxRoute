@@ -1,0 +1,151 @@
+<UserControl x:Class="FluxRoute.Views.Tabs.DohPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignHeight="460" d:DesignWidth="760">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="20,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="DNS-over-HTTPS" FontSize="22" FontWeight="SemiBold" Foreground="#DCE4F0" />
+                <Button Grid.Column="1" Content="?" Style="{StaticResource ActionBtnAccent}" Width="24" Height="24" Padding="0" FontSize="12"
+                        Tag="DoH" Click="TabHelpButton_Click" ToolTip="Что такое DNS-over-HTTPS?"
+                        AutomationProperties.Name="Справка по DNS-over-HTTPS" />
+            </Grid>
+            <TextBlock Margin="0,6,0,16" Foreground="#8B949E" TextWrapping="Wrap"
+                       Text="Проверка публичных DoH-провайдеров, автоматический выбор по стабильности и задержке и применение к сетевому адаптеру Windows." />
+
+            <Border Background="#111520" BorderBrush="#21262D" BorderThickness="1" CornerRadius="8" Padding="14">
+                <StackPanel>
+                    <TextBlock Text="СЕТЕВОЙ АДАПТЕР" Style="{StaticResource SecH}" Margin="0,0,0,8" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox ItemsSource="{Binding NetworkInterfaces}" SelectedItem="{Binding SelectedInterface}"
+                                  MinHeight="30" Background="#0D1117" Foreground="#DCE4F0" />
+                        <Button Grid.Column="1" Margin="8,0,0,0" Width="38" Height="30" Padding="0"
+                                Style="{StaticResource ActionBtn}" Command="{Binding RefreshInterfacesCommand}"
+                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                ToolTip="Обновить список сетевых адаптеров">
+                            <Viewbox Width="17" Height="17" Stretch="Uniform">
+                                <Canvas Width="24" Height="24">
+                                    <Path Data="M 20,11 A 8,8 0 1 0 18.36,16.86"
+                                          Stroke="#DCE4F0" StrokeThickness="2"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" Fill="Transparent" />
+                                    <Path Data="M 20,4 L 20,11 L 13,11"
+                                          Stroke="#DCE4F0" StrokeThickness="2"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" Fill="Transparent" />
+                                </Canvas>
+                            </Viewbox>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Margin="0,12,0,0" Background="#111520" BorderBrush="#21262D" BorderThickness="1" CornerRadius="8" Padding="14">
+                <StackPanel>
+                    <TextBlock Text="ПРОВАЙДЕР" Style="{StaticResource SecH}" Margin="0,0,0,8" />
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Использовать DNS-over-HTTPS" Foreground="#DCE4F0"
+                                       FontSize="12" FontWeight="SemiBold" />
+                            <TextBlock Text="При выключении DNS адаптера возвращается к DHCP."
+                                       Foreground="#717A91" FontSize="11" />
+                        </StackPanel>
+                        <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}"
+                                  IsChecked="{Binding IsDohEnabled, Mode=TwoWay}"
+                                  VerticalAlignment="Center" />
+                    </Grid>
+                    <CheckBox Content="Автоматически выбирать лучший провайдер"
+                              IsChecked="{Binding AutomaticSelection}" Foreground="#DCE4F0" Margin="0,0,0,10" />
+                    <ComboBox ItemsSource="{Binding Providers}" SelectedItem="{Binding SelectedProvider}"
+                              MinHeight="30" Background="#0D1117" Foreground="#DCE4F0">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}" Foreground="#DCE4F0" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <TextBlock Text="{Binding ActiveProviderText}" Foreground="#58A6FF" FontSize="10" Margin="0,5,0,0" />
+                    <TextBlock Text="РЕЖИМ ШИФРОВАНИЯ" Style="{StaticResource SecH}" Margin="0,14,0,8" />
+                    <StackPanel IsEnabled="{Binding IsDohEnabled}">
+                        <RadioButton Content="Без шифрования"
+                                     IsChecked="{Binding IsUnencrypted, Mode=TwoWay}"
+                                     Foreground="#DCE4F0" GroupName="DohEncryptionMode" />
+                        <TextBlock Margin="24,0,0,6" Foreground="#717A91" FontSize="11"
+                                   Text="Обычный DNS по UDP/TCP. Максимальная совместимость, без защиты запросов." />
+                        <RadioButton Content="DoH с возвратом к обычному DNS"
+                                     IsChecked="{Binding IsEncryptedWithFallback, Mode=TwoWay}"
+                                     Foreground="#DCE4F0" GroupName="DohEncryptionMode" />
+                        <TextBlock Margin="24,0,0,6" Foreground="#717A91" FontSize="11"
+                                   Text="Windows предпочитает HTTPS, но при сбое разрешает незашифрованный fallback." />
+                        <RadioButton Content="Только зашифрованный DoH"
+                                     IsChecked="{Binding IsEncryptedOnly, Mode=TwoWay}"
+                                     Foreground="#DCE4F0" GroupName="DohEncryptionMode" />
+                        <TextBlock Margin="24,0,0,0" Foreground="#717A91" FontSize="11"
+                                   Text="Fallback запрещён. Если DoH недоступен, DNS-разрешение завершится ошибкой." />
+                        <Border Margin="0,10,0,0" Padding="10,7" CornerRadius="6"
+                                Background="#0D1117" BorderBrush="#21262D" BorderThickness="1">
+                            <TextBlock Text="{Binding WindowsEncryptionLabel}"
+                                       Foreground="#58A6FF" FontSize="11" FontWeight="SemiBold" />
+                        </Border>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Content="Проверить провайдеров" Style="{StaticResource ActionBtnAccent}"
+                                Command="{Binding ScanCommand}" Padding="12,6" />
+                        <Button Content="Применить сейчас" Margin="8,0,0,0" Style="{StaticResource ActionBtnGreen}"
+                                Command="{Binding ApplyCommand}" Padding="12,6"
+                                IsEnabled="{Binding IsDohEnabled}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Margin="0,12,0,0" Background="#0D1117" BorderBrush="#21262D" BorderThickness="1" CornerRadius="8" Padding="12">
+                <TextBlock Text="{Binding Status}" Foreground="#DCE4F0" TextWrapping="Wrap" />
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding Results}" Margin="0,12,0,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="#111520" BorderBrush="#21262D" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,6">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Provider.Name}" Foreground="#DCE4F0" FontWeight="SemiBold" />
+                                <TextBlock Grid.Column="1" Margin="12,0" Foreground="#8B949E">
+                                    <TextBlock.Text>
+                                        <MultiBinding StringFormat="{}{0:F0} мс · {1:P0}">
+                                            <Binding Path="AverageLatencyMs" />
+                                            <Binding Path="SuccessRate" />
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
+                                <TextBlock Grid.Column="2" Text="{Binding Score, StringFormat={}{0:F3}}" Foreground="#58A6FF" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Border Background="#1C1800" BorderBrush="#4A3800" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,6,0,0">
+                <TextBlock Foreground="#F0B429" TextWrapping="Wrap"
+                           Text="Изменение DNS требует прав администратора. Если версия Windows не поддерживает netsh dnsclient encryption, FluxRoute покажет ошибку и не изменит DNS адаптера." />
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

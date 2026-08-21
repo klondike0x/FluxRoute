@@ -1,0 +1,118 @@
+<Window x:Class="FluxRoute.Views.AutoTuneWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:FluxRoute.Controls"
+        Title="Подобрать настройки"
+        Width="640" Height="500"
+        MinWidth="560" MinHeight="420"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Loaded="Window_Loaded"
+        Closing="Window_Closing"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+    <Border Background="#0C0F17" CornerRadius="14"
+            BorderBrush="#263858" BorderThickness="1">
+        <Grid Margin="18,14">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,12">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets"
+                                   FontSize="17" Foreground="#4D6BFE"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBlock Text="Подобрать настройки" Foreground="#DCE4F0"
+                                   FontSize="15" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Text="Проверяем комбинации IPSet и Game Filter для вашей сети."
+                               Foreground="#66758E" FontSize="10" Margin="25,3,30,0"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+
+            <Border Grid.Row="1" Background="#080B12"
+                    BorderBrush="#1E2235" BorderThickness="1"
+                    CornerRadius="10" Padding="14,12">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <controls:AutoTuneProgressView />
+                </ScrollViewer>
+            </Border>
+
+            <Grid Grid.Row="2" Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Foreground="#55647D" FontSize="10"
+                           VerticalAlignment="Center" Margin="0,0,12,0">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Text" Value="Можно закрыть окно — текущая проверка будет отменена." />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding AutoTuneResultVisible}" Value="True">
+                                    <Setter Property="Text" Value="Выберите действие для найденной конфигурации." />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding AutoTuneResultVisible}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <Button Content="Остановить и закрыть" Height="30" Padding="12,0"
+                                Click="CloseButton_Click">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource ActionBtnRed}" />
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding AutoTuneResultVisible}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <Button Content="Закрыть" Height="30" Padding="12,0"
+                                Margin="0,0,10,0" Click="CloseResultButton_Click">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource ActionBtn}" />
+                            </Button.Style>
+                        </Button>
+                        <Button Content="Применить лучшие настройки" Height="30" Padding="12,0"
+                                Click="ApplyBestButton_Click">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource ActionBtnGreen}" />
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

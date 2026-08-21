@@ -1,0 +1,11 @@
+# _config.yml — настройки GitHub Pages для документации FluxRoute
+
+title: FluxRoute Documentation
+description: Документация FluxRoute — Windows GUI для обхода DPI-блокировок с ИИ-оркестратором
+theme: jekyll-theme-cayman
+lang: ru-RU
+
+# Навигация
+show_downloads: true
+github:
+  repository_url: https://github.com/klondike0x/FluxRoute

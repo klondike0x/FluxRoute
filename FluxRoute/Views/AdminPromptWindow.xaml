@@ -19,8 +19,8 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
             <!-- Header -->
@@ -37,8 +37,10 @@
                        Foreground="#7E89A8" FontSize="12" VerticalAlignment="Center"
                        Text="Вы можете продолжить без прав, но функциональность будет ограничена."/>
 
+
             <!-- Buttons -->
-            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom" Margin="0,16,0,0">
                 <Button Content="Продолжить без прав" Click="ContinueButton_Click"
                         FontFamily="Segoe UI" Foreground="#8B949E" Background="Transparent"
                         BorderThickness="1" BorderBrush="#30363D"

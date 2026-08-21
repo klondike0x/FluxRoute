@@ -33,7 +33,7 @@ public partial class MainViewModel
     public ICollectionView FilteredLogEntries => LogPanel.FilteredLogEntries;
 
     [ObservableProperty]
-    private string selectedLogCategory = "Все логи";
+    private string selectedLogCategory = "Все";
 
     partial void OnSelectedLogCategoryChanged(string value)
     {

@@ -15,70 +15,94 @@
         <Border Grid.Row="0" Background="#111520" BorderBrush="#1E2235"
                 BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,10">
             <StackPanel>
-                <TextBlock Text="Логи" Foreground="#4A90E2" FontSize="14"
-                           FontWeight="Bold" Margin="0,0,0,4" />
-                <TextBlock Text="События приложения, оркестратора, winws.exe, TG WS Proxy, обновлений и сервиса."
-                           Foreground="#4A5170" FontSize="11" TextWrapping="Wrap"
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock Text="&#xE9F9;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                               Foreground="#4D6BFE" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                        <TextBlock Text="Консоль FluxRoute" Foreground="#DCE4F0" FontSize="13"
+                               FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <Button Content="?" Style="{StaticResource ActionBtnAccent}" Width="22" Height="22" Padding="0" FontSize="11"
+                            Tag="Logs" Click="TabHelpButton_Click" Margin="8,0,0,0"
+                            ToolTip="Как пользоваться логами?"
+                            AutomationProperties.Name="Справка по логам" />
+                </StackPanel>
+                <TextBlock Text="События приложения, оркестратора, ИИ, TG Proxy, обновлений и сервиса."
+                           Foreground="#5D6B82" FontSize="10" TextWrapping="Wrap"
                            Margin="0,0,0,10" />
                 <WrapPanel VerticalAlignment="Center">
-                    <TextBlock Text="Тип:" Foreground="#4A5170"
-                               VerticalAlignment="Center" Margin="0,0,6,0" />
-                    <ComboBox Width="200" Height="28" Margin="0,0,10,6"
+                    <TextBlock Text="Компонент:" Foreground="#66758E"
+                               VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11" />
+                    <ComboBox Width="150" Height="28" Margin="0,0,12,6"
                               ItemsSource="{Binding LogCategoryFilters}"
-                              SelectedItem="{Binding SelectedLogCategory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    <TextBlock Text="Поиск:" Foreground="#4A5170"
-                               VerticalAlignment="Center" Margin="0,0,6,0" />
-                    <TextBox Width="200" Height="28" Margin="0,0,10,6"
+                              SelectedItem="{Binding SelectedLogCategory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                        <ComboBox.Style>
+                            <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                                <Setter Property="Background" Value="#0D1422" />
+                                <Setter Property="Foreground" Value="#C8D4EC" />
+                                <Setter Property="BorderBrush" Value="#253553" />
+                            </Style>
+                        </ComboBox.Style>
+                    </ComboBox>
+                    <TextBlock Text="Поиск:" Foreground="#66758E"
+                               VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11" />
+                    <TextBox Width="180" Height="28" Margin="0,0,12,6"
                              VerticalContentAlignment="Center"
-                             Text="{Binding LogSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                             Text="{Binding LogSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                <Setter Property="Background" Value="#0D1422" />
+                                <Setter Property="Foreground" Value="#C8D4EC" />
+                                <Setter Property="BorderBrush" Value="#253553" />
+                                <Setter Property="CaretBrush" Value="#4D6BFE" />
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
                     <CheckBox Content="Только ошибки" Foreground="#9BB0D0"
                               Margin="0,4,12,6" VerticalAlignment="Center"
                               IsChecked="{Binding LogsErrorsOnly, Mode=TwoWay}" />
                     <CheckBox Content="Автопрокрутка" Foreground="#9BB0D0"
                               Margin="0,4,12,6" VerticalAlignment="Center"
                               IsChecked="{Binding LogsAutoScroll, Mode=TwoWay}" />
-                    <Button Content="Очистить" Style="{StaticResource ActionBtn}" Height="28"
+                    <Button Style="{StaticResource ActionBtn}" Height="28"
                             Padding="10,0" Margin="0,0,6,6"
-                            Command="{Binding ClearUnifiedLogsCommand}" />
-                    <Button Content="Скопировать" Style="{StaticResource ActionBtn}" Height="28"
+                            Command="{Binding CopyUnifiedLogsCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" Margin="0,0,5,0" />
+                            <TextBlock Text="Копировать" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ActionBtn}" Height="28"
                             Padding="10,0" Margin="0,0,6,6"
-                            Command="{Binding CopyUnifiedLogsCommand}" />
-                    <Button Content="Сохранить" Style="{StaticResource ActionBtn}" Height="28"
+                            Command="{Binding SaveUnifiedLogsCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" Margin="0,0,5,0" />
+                            <TextBlock Text="Сохранить" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ActionBtn}" Height="28"
                             Padding="10,0" Margin="0,0,6,6"
-                            Command="{Binding SaveUnifiedLogsCommand}" />
+                            Command="{Binding ClearUnifiedLogsCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" Margin="0,0,5,0" />
+                            <TextBlock Text="Очистить" />
+                        </StackPanel>
+                    </Button>
                 </WrapPanel>
             </StackPanel>
         </Border>
 
-        <!-- Нижний блок текста логов -->
+        <!-- Блок текста логов с автоскроллом -->
         <Border Grid.Row="1" Background="#080B12" BorderBrush="#1E2235"
                 BorderThickness="1" CornerRadius="8">
             <TextBox x:Name="UnifiedLogsTextBox"
-        Background="Transparent" Foreground="#9BB0D0"
-        BorderThickness="0"
-        FontFamily="Consolas" FontSize="12" Padding="10,8"
-        IsReadOnly="True" IsUndoEnabled="False"
-        AcceptsReturn="True" TextWrapping="Wrap"
-        VerticalScrollBarVisibility="Auto"
-        HorizontalScrollBarVisibility="Disabled"
-        Text="{Binding UnifiedLogsText, Mode=OneWay}">
-                <TextBox.Resources>
-                    <Style TargetType="TextBox">
-                        <Setter Property="Background" Value="Transparent" />
-                        <Setter Property="Foreground" Value="#9BB0D0" />
-                        <Setter Property="BorderThickness" Value="0" />
-                        <Setter Property="FontFamily" Value="Consolas" />
-                        <Setter Property="FontSize" Value="12" />
-                        <Setter Property="Padding" Value="10,8" />
-                        <Setter Property="IsReadOnly" Value="True" />
-                        <Setter Property="IsUndoEnabled" Value="False" />
-                        <Setter Property="AcceptsReturn" Value="True" />
-                        <Setter Property="TextWrapping" Value="Wrap" />
-                        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
-                        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
-                    </Style>
-                </TextBox.Resources>
-            </TextBox>
+                     Background="Transparent" Foreground="#9BB0D0"
+                     BorderThickness="0"
+                     FontFamily="Consolas" FontSize="12" Padding="10,8"
+                     IsReadOnly="True" IsUndoEnabled="False"
+                     AcceptsReturn="True" TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Disabled"
+                     Text="{Binding UnifiedLogsText, Mode=OneWay}"
+                     TextChanged="UnifiedLogsTextBox_TextChanged" />
         </Border>
     </Grid>
 </UserControl>

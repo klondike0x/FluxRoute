@@ -56,6 +56,7 @@ public partial class MainViewModel
 
     #endregion
 
+    private bool _repairProtectionInProgress;
     private bool _startedViaBatFallback;
 
     [RelayCommand]
@@ -151,10 +152,208 @@ public partial class MainViewModel
         else
             Start();
     }
+    [RelayCommand]
+    private async Task RepairProtectionAsync()
+    {
+        if (_repairProtectionInProgress)
+            return;
+
+        _repairProtectionInProgress = true;
+        try
+        {
+            Logs.Add("🛠 Восстанавливаем защиту…");
+
+            if (IsZapret2Selected)
+            {
+                await RepairZapret2Command.ExecuteAsync(null);
+                return;
+            }
+
+            if (IsRunning)
+            {
+                Stop();
+                await Task.Delay(800);
+            }
+
+            Start();
+            await Task.Delay(600);
+            RefreshDiagnostics();
+            AddToRecentLogs("🛠 Защита перезапущена из вкладки «Сервис»");
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"❌ Не удалось восстановить защиту: {ex.Message}");
+            AddToRecentLogs("❌ Ошибка восстановления защиты");
+        }
+        finally
+        {
+            _repairProtectionInProgress = false;
+        }
+    }
+
+    /// <summary>
+    /// Полностью очищает зависшее состояние Zapret1 и запускает выбранную стратегию заново.
+    /// WinDivert намеренно не удаляется: для замены драйвера есть отдельная команда.
+    /// </summary>
+    [RelayCommand]
+    private async Task FullRecoveryAsync()
+    {
+        if (_repairProtectionInProgress)
+            return;
+
+        if (!CustomDialog.Show(
+                "Полное восстановление",
+                "FluxRoute остановит текущую защиту, остановит и удалит службу zapret, "
+                + "после чего заново запустит выбранную стратегию.\n\n"
+                + "WinDivert удаляться не будет. Активные соединения через Zapret будут прерваны.",
+                "Восстановить",
+                "Отмена",
+                isDanger: true))
+            return;
+
+        _repairProtectionInProgress = true;
+        try
+        {
+            Logs.Add("🧰 Запускаем полное восстановление Zapret…");
+
+            if (IsZapret2Selected)
+            {
+                await RepairZapret2Command.ExecuteAsync(null).ConfigureAwait(true);
+                return;
+            }
+
+            if (IsRunning)
+                Stop();
+
+            await Task.Delay(800).ConfigureAwait(true);
+
+            using var cleanup = Process.Start(new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = "/c net stop zapret >nul 2>&1 & sc.exe delete zapret >nul 2>&1",
+                UseShellExecute = true,
+                Verb = "runas",
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            });
+
+            if (cleanup is null)
+            {
+                Logs.Add("❌ Не удалось запустить полную очистку службы zapret.");
+                AddToRecentLogs("❌ Ошибка полного восстановления");
+                return;
+            }
+
+            try
+            {
+                await cleanup.WaitForExitAsync()
+                    .WaitAsync(TimeSpan.FromSeconds(12))
+                    .ConfigureAwait(true);
+            }
+            catch (TimeoutException)
+            {
+                Logs.Add("⚠️ Очистка службы zapret выполняется дольше ожидаемого времени.");
+            }
+
+            await Task.Delay(500).ConfigureAwait(true);
+            Start();
+            await Task.Delay(900).ConfigureAwait(true);
+            RefreshDiagnostics();
+
+            if (IsRunning)
+            {
+                Logs.Add("✅ Полное восстановление Zapret завершено.");
+                AddToRecentLogs("✅ Zapret полностью восстановлен");
+            }
+            else
+            {
+                Logs.Add("❌ После полного восстановления winws.exe не запустился.");
+                AddToRecentLogs("❌ Zapret не запустился после восстановления");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"❌ Ошибка полного восстановления: {ex.Message}");
+            AddToRecentLogs("❌ Ошибка полного восстановления");
+        }
+        finally
+        {
+            _repairProtectionInProgress = false;
+        }
+    }
+
+    /// <summary>
+    /// Принудительно освобождает WinDivert перед заменой/удалением его драйвера.
+    /// Регистрация службы удаляется только после явного подтверждения пользователя.
+    /// </summary>
+    [RelayCommand]
+    private async Task ReleaseWinDivertAsync()
+    {
+        if (!CustomDialog.Show(
+                "Освободить WinDivert",
+                "Будет остановлена защита, запущенная FluxRoute, и удалена регистрация службы WinDivert.\n\n"
+                + "Это нужно перед заменой WinDivert64.sys. При следующем запуске драйвер будет создан заново.",
+                "Освободить",
+                "Отмена",
+                isDanger: true))
+            return;
+
+        try
+        {
+            Logs.Add("🧹 Останавливаем защиту перед очисткой WinDivert…");
+            if (IsZapret2Selected)
+                await StopZapret2Async().ConfigureAwait(true);
+            else if (IsRunning)
+                Stop();
+
+            await Task.Delay(500).ConfigureAwait(true);
+
+            using var cleanup = Process.Start(new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = "/c sc.exe stop WinDivert & sc.exe delete WinDivert",
+                UseShellExecute = true,
+                Verb = "runas",
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            });
+
+            if (cleanup is null)
+            {
+                Logs.Add("❌ Не удалось запустить очистку WinDivert.");
+                return;
+            }
+
+            try
+            {
+                await cleanup.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+            }
+            catch (TimeoutException)
+            {
+                Logs.Add("⚠️ Команды WinDivert выполняются дольше ожидаемого времени.");
+            }
+
+            RefreshDiagnostics();
+            Logs.Add("✅ Команды sc.exe для WinDivert выполнены.");
+            AddToRecentLogs("🧹 WinDivert освобождён для замены драйвера");
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"❌ Не удалось освободить WinDivert: {ex.Message}");
+            AddToRecentLogs("❌ Ошибка очистки WinDivert");
+        }
+    }
+
 
     [RelayCommand]
     private void Start()
     {
+        if (IsZapret2Selected)
+        {
+            _ = StartZapret2Async();
+            return;
+        }
+
         if (IsRunning)
         {
             Logs.Add("Процесс уже запущен.");
@@ -419,6 +618,12 @@ public partial class MainViewModel
     [RelayCommand]
     private void Stop()
     {
+        if (IsZapret2Selected)
+        {
+            _ = StopZapret2Async();
+            return;
+        }
+
         _hideWindowsCts?.Cancel();
 
         var pidsToKill = new HashSet<uint>(_trackedPids);

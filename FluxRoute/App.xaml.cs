@@ -47,6 +47,8 @@ public partial class App : Application
 
             await _host.StartAsync();
 
+            await _host.Services.GetRequiredService<IDohStartupRecovery>().RecoverAsync();
+
             Log.Information("FluxRoute application host started. Arguments: {Arguments}", e.Args);
 
             if (!IsRunningAsAdmin())
@@ -59,6 +61,7 @@ public partial class App : Application
                 var prompt = new AdminPromptWindow();
                 prompt.ShowDialog();
 
+                // Разрешение работать без прав действует только до закрытия приложения.
                 if (!prompt.ContinueWithoutAdmin)
                 {
                     Log.Information("User declined to continue without administrator privileges.");
@@ -69,9 +72,77 @@ public partial class App : Application
 
             ShutdownMode = ShutdownMode.OnMainWindowClose;
 
+            // ═══ v1.7.0: Онбординг при первом запуске ═══
+            var settingsService = _host.Services.GetRequiredService<ISettingsService>();
+            var settings = settingsService.Load();
+
+            // Миграция старых установок: профиль уже был выбран, но ранняя версия
+            // не сохраняла FirstRunComplete при последующих изменениях настроек.
+            if (!settings.FirstRunComplete && !string.IsNullOrWhiteSpace(settings.LastProfileFileName))
+            {
+                settings.FirstRunComplete = true;
+                settingsService.Save(settings);
+                Log.Information("Онбординг восстановлен как завершённый для существующей установки.");
+            }
+
+            var onboardingCompletedNow = false;
+            if (!settings.FirstRunComplete)
+            {
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+                var onboardingVm = new ViewModels.OnboardingViewModel();
+                var engineDir = Path.Combine(AppContext.BaseDirectory, "engine");
+                onboardingVm.LoadProfiles(engineDir);
+
+                if (onboardingVm.AvailableStrategies.Count == 0)
+                {
+                    // Нет стратегий — engine ещё не скачан. Пропускаем онбординг,
+                    // FirstRunComplete НЕ ставим, чтобы окно показалось в следующий раз.
+                    Log.Warning("Онбординг пропущен: engine/ не содержит .bat файлов.");
+                }
+                else
+                {
+                    var onboardingWindow = new Views.OnboardingWindow { DataContext = onboardingVm };
+                    var dialogResult = onboardingWindow.ShowDialog();
+
+                    if (dialogResult == true)
+                    {
+                        settings.SelectedComponent = onboardingVm.SelectedComponent;
+                        settings.LastProfileFileName = onboardingVm.SelectedStrategyFileName;
+                        settings.SiteYouTube = onboardingVm.ProbeYouTubeEnabled;
+                        settings.SiteDiscord = onboardingVm.ProbeDiscordEnabled;
+                        settings.FirstRunComplete = true;
+                        settingsService.Save(settings);
+                        onboardingCompletedNow = onboardingVm.ShouldRunInitialCheck;
+                        Log.Information("Онбординг завершён. Компонент: {Component}, стратегия: {Strategy}",
+                            onboardingVm.SelectedComponent, onboardingVm.SelectedStrategyFileName);
+                    }
+                    else
+                    {
+                        // Пользователь закрыл окно — оставляем FirstRunComplete=false,
+                        // чтобы первичная настройка снова открылась при следующем запуске.
+                        Log.Information("Онбординг закрыт без завершения настройки.");
+                    }
+                }
+            }
+
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
+            // ════════════════════════════════════
+
             var mainWindow = _host.Services.GetRequiredService<MainWindow>();
             MainWindow = mainWindow;
             mainWindow.Show();
+
+            if (onboardingCompletedNow && mainWindow.DataContext is MainViewModel mainViewModel)
+                _ = mainViewModel.RunInitialProfileCheckAsync();
+
+            if (TrayPopupService.IsPreviewRequested())
+            {
+                mainWindow.Hide();
+                mainWindow.ShowInTaskbar = false;
+                if (_host.Services.GetRequiredService<ITrayPopupService>() is TrayPopupService popup)
+                    popup.ShowPreview();
+            }
         }
         catch (Exception ex)
         {
@@ -187,7 +258,23 @@ public partial class App : Application
         .AddStandardResilienceHandler();
 
         // ═══ НОВЫЙ: Named HttpClient для ServiceViewModel (IPSet, Hosts) ═══
-        services.AddHttpClient("Service", client =>
+
+        // Client for DNS-over-HTTPS wire-format requests.
+        services.AddHttpClient(FluxRoute.Core.Services.HttpClientNames.Doh, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(8);
+            client.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-DoH/1.7");
+        })
+        .AddStandardResilienceHandler(options =>
+        {
+            options.Retry.MaxRetryAttempts = 2;
+            options.Retry.Delay = TimeSpan.FromMilliseconds(250);
+            options.Retry.BackoffType = DelayBackoffType.Exponential;
+            options.Retry.UseJitter = true;
+            options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(4);
+            options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(8);
+            options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(10);
+        });        services.AddHttpClient("Service", client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
             client.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-Service");
@@ -196,19 +283,6 @@ public partial class App : Application
         .AddStandardResilienceHandler();
         // ════════════════════════════════════════════════════════════════════
 
-        // Named HttpClient для скачивания TG WS Proxy
-        services.AddHttpClient("TgProxyDownloader", client =>
-        {
-            client.Timeout = TimeSpan.FromMinutes(5);
-            client.DefaultRequestHeaders.Add("User-Agent", "FluxRoute-Desktop/1.0");
-        })
-        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-        {
-            AllowAutoRedirect = true,
-            AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
-            SslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13,
-        })
-        .AddStandardResilienceHandler();
         // ════════════════════════════════════════════════════════════════
 
         services.AddSingleton<ISettingsService, SettingsService>();
@@ -236,7 +310,24 @@ public partial class App : Application
         });
         services.AddSingleton<IAppUpdaterService, AppUpdaterService>();
         services.AddSingleton<IConnectivityChecker, ConnectivityChecker>();
+        services.AddSingleton<IProcessRunner, ProcessRunner>();
+        services.AddSingleton<IDnsAdapterService, DnsAdapterService>();
+        services.AddSingleton<IDohSystemConfigurationService, DohPowerShellService>();
+        services.AddSingleton<IDohProviderService, DohProviderService>();
+        services.AddSingleton<IDohSelectionService, DohSelectionService>();
+        services.AddSingleton<IWindowsDohConfigurationService, WindowsDohConfigurationService>();
+        services.AddSingleton<IDohStartupRecovery, DohStartupRecovery>();
+        services.AddSingleton<IDohProviderSwitchService, DohProviderSwitchService>();
+        services.AddSingleton<DohViewModel>();
         services.AddSingleton<ITaskSchedulerService, TaskSchedulerService>();
+        services.AddSingleton<IModManager>(sp =>
+        {
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ModManager>>();
+            var modsPath = Path.Combine(AppContext.BaseDirectory, "mods");
+            var enginePath = Path.Combine(AppContext.BaseDirectory, "engine");
+            return new ModManager(modsPath, logger, enginePath);
+        });
+        services.AddSingleton<ModsViewModel>();
 
         services.AddSingleton<NetworkFingerprintProvider>();
         services.AddSingleton(sp =>
@@ -267,6 +358,16 @@ public partial class App : Application
 
         services.AddSingleton(sp =>
             new NetworkChangeWatcher(sp.GetRequiredService<NetworkFingerprintProvider>()));
+        services.AddSingleton<INetworkTrafficCounterSource, NetworkInterfaceTrafficCounterSource>();
+        services.AddSingleton<INetworkTrafficMonitor, NetworkTrafficMonitor>();
+
+        services.AddSingleton<IZapret2ProcessHost, Zapret2ProcessHost>();
+        services.AddSingleton<IZapret2DiagnosticsService, Zapret2DiagnosticsService>();
+        services.AddSingleton<IZapret2StatusService, Zapret2StatusService>();
+        services.AddSingleton<IZapret2RecoveryService, Zapret2RecoveryService>();
+
+        // ═══ v1.7.0: НОВОЕ — сервис исключений антивируса ═══
+        services.AddSingleton<IAntivirusExclusionService, AntivirusExclusionService>();
 
         services.AddSingleton<MainViewModel>(sp =>
         {
@@ -284,6 +385,13 @@ public partial class App : Application
             var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
             var taskScheduler = sp.GetRequiredService<ITaskSchedulerService>();
             var trayIcon = sp.GetRequiredService<TrayIconService>();
+            var networkTrafficMonitor = sp.GetRequiredService<INetworkTrafficMonitor>();
+            var antivirusExclusion = sp.GetRequiredService<IAntivirusExclusionService>();
+            var zapret2Status = sp.GetRequiredService<IZapret2StatusService>();
+            var zapret2Diagnostics = sp.GetRequiredService<IZapret2DiagnosticsService>();
+            var zapret2Recovery = sp.GetRequiredService<IZapret2RecoveryService>();
+            var modsViewModel = sp.GetRequiredService<ModsViewModel>();
+            var doh = sp.GetRequiredService<DohViewModel>();
 
             return new MainViewModel(
                 settingsService,
@@ -298,9 +406,17 @@ public partial class App : Application
                 evolver,
                 materializer,
                 httpClientFactory,
+                modsViewModel,
                 taskScheduler,
-                trayIcon);
+                trayIcon,
+                doh,
+                networkTrafficMonitor,
+                antivirusExclusion,
+                zapret2Status,
+                zapret2Diagnostics,
+                zapret2Recovery);
         });
+        services.AddSingleton<ITrayPopupService, TrayPopupService>();
         services.AddSingleton<TrayIconService>();
         services.AddSingleton<MainWindow>();
     }

@@ -1,0 +1,259 @@
+<Window x:Class="FluxRoute.Views.OnboardingWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Добро пожаловать в FluxRoute"
+        Width="520" Height="560"
+        MinHeight="480"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        ShowInTaskbar="True"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+    <Window.Resources>
+        <!-- ═══ v1.8.1: Кастомный тёмный ComboBox ═══ -->
+        <Style TargetType="ComboBox">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Background" Value="#0D1422" />
+            <Setter Property="Foreground" Value="#DCE4F0" />
+            <Setter Property="BorderBrush" Value="#253553" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton"
+                                          Focusable="False"
+                                          ClickMode="Press"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="Surface"
+                                                Background="#0D1422"
+                                                BorderBrush="#253553"
+                                                BorderThickness="1"
+                                                CornerRadius="8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="1" Width="30" CornerRadius="0,8,8,0" Background="Transparent">
+                                                    <Path x:Name="ArrowPath"
+                                                          Data="M 0,0 L 4,4 L 8,0"
+                                                          Stroke="#66758E"
+                                                          StrokeThickness="1.6"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center" />
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Surface" Property="Background" Value="#111A2B" />
+                                                <Setter TargetName="Surface" Property="BorderBrush" Value="#405785" />
+                                            </Trigger>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="Surface" Property="Background" Value="#111A2B" />
+                                                <Setter TargetName="Surface" Property="BorderBrush" Value="#4D6BFE" />
+                                                <Setter TargetName="ArrowPath" Property="Stroke" Value="#4D6BFE" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <!-- ContentPresenter на уровне шаблона ComboBox: TemplateBinding работает,
+                                 SelectionBoxItemTemplate из ItemTemplate применяется корректно -->
+                            <ContentPresenter Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                              Margin="10,0,34,0"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Stretch"
+                                              IsHitTestVisible="False" />
+                            <Popup x:Name="PART_Popup"
+                                   AllowsTransparency="True"
+                                   Placement="Bottom"
+                                   IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                   PopupAnimation="Fade"
+                                   StaysOpen="False">
+                                <Border x:Name="DropDownBorder"
+                                        Background="#0D1422"
+                                        BorderBrush="#33466D"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Margin="0,4,0,0"
+                                        MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="#000000" BlurRadius="18" ShadowDepth="3" Opacity="0.5" />
+                                    </Border.Effect>
+                                    <ScrollViewer Margin="4" VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <!-- Стиль элементов выпадающего списка -->
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Padding" Value="10,8" />
+                        <Setter Property="Margin" Value="2" />
+                        <Setter Property="Foreground" Value="#C8D4EC" />
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="Cursor" Value="Hand" />
+                        <Setter Property="HorizontalContentAlignment" Value="Left" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ComboBoxItem">
+                                    <Border x:Name="ItemSurface"
+                                            Background="{TemplateBinding Background}"
+                                            CornerRadius="6"
+                                            Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter Content="{TemplateBinding Content}"
+                                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="ItemSurface" Property="Background" Value="#1A2333" />
+                                            <Setter Property="Foreground" Value="#F3F6FF" />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="ItemSurface" Property="Background" Value="#26355F" />
+                                            <Setter Property="Foreground" Value="#F3F6FF" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border Background="#0C0F17" CornerRadius="14" BorderBrush="#1E2840" BorderThickness="1">
+        <Grid Margin="32,24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Заголовок -->
+            <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,8">
+                <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="36"
+                           Foreground="#4D6BFE" HorizontalAlignment="Center" />
+                <TextBlock Text="Добро пожаловать в FluxRoute" Foreground="#DCE4F0"
+                           FontSize="17" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0" />
+                <TextBlock Text="Настроим всё для оптимальной работы" Foreground="#66758E"
+                           FontSize="11" HorizontalAlignment="Center" Margin="0,3,0,0" />
+            </StackPanel>
+
+            <!-- Шаги со скроллом -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+                <StackPanel>
+                    <!-- 1. Выбор компонента -->
+                    <Border Background="#0A0E18" BorderBrush="#1C2940" BorderThickness="1"
+                            CornerRadius="10" Padding="14,12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="1. Выберите компонент" Foreground="#DCE4F0"
+                                       FontSize="12" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <ComboBox ItemsSource="{Binding ComponentOptions}"
+                                      SelectedIndex="{Binding SelectedComponentIndex, Mode=TwoWay}" />
+                            <TextBlock Foreground="#55647D" FontSize="9.5" Margin="0,4,0,0"
+                                       Text="Zapret классический (WinDivert)" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 2. Выбор целей проверки -->
+                    <Border Background="#0A0E18" BorderBrush="#1C2940" BorderThickness="1"
+                            CornerRadius="10" Padding="14,12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="2. Что пробивать" Foreground="#DCE4F0"
+                                       FontSize="12" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <ComboBox ItemsSource="{Binding ProbeTargetOptions}"
+                                      SelectedIndex="{Binding SelectedProbeTargetIndex, Mode=TwoWay}" />
+                            <TextBlock Foreground="#55647D" FontSize="9.5" Margin="0,4,0,0"
+                                       Text="Выберите сервисы, доступность которых нужно проверить при настройке" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 3. Автопроверка доступа -->
+                    <Border Background="#0A0E18" BorderBrush="#1C2940" BorderThickness="1"
+                            CornerRadius="10" Padding="14,12"
+                            Visibility="{Binding IsStep3Visible, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Text="3. Автопроверка доступа" Foreground="#DCE4F0"
+                                       FontSize="12" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <TextBlock Foreground="#55647D" FontSize="10" TextWrapping="Wrap">
+                                После завершения настройки FluxRoute автоматически проверит выбранные сервисы.
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Кнопки завершения -->
+            <StackPanel Grid.Row="2" Margin="0,14,0,0">
+                <Button Height="42"
+                        Command="{Binding CompleteCommand}"
+                        CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
+                        Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bg" Background="#4D6BFE" CornerRadius="10">
+                                <TextBlock Text="Настроить и продолжить" Foreground="White"
+                                           FontSize="13" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bg" Property="Background" Value="#3D5BEE" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Bg" Property="Background" Value="#2A3050" />
+                                    <Setter Property="Foreground" Value="#66758E" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+                <Button Height="42" Margin="0,6,0,0"
+                        Command="{Binding CompleteWithoutCheckCommand}"
+                        CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
+                        Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="SkipBg" Background="Transparent" CornerRadius="8"
+                                    BorderBrush="#253553" BorderThickness="1">
+                                <TextBlock Text="Продолжить без проверки" Foreground="#8B9AB5"
+                                           FontSize="10.5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="SkipBg" Property="Background" Value="#111A2B" />
+                                    <Setter TargetName="SkipBg" Property="BorderBrush" Value="#405785" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

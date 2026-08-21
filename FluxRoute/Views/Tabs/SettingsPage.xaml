@@ -1,0 +1,273 @@
+<UserControl x:Class="FluxRoute.Views.Tabs.SettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:tabs="clr-namespace:FluxRoute.Views.Tabs">
+    <UserControl.Resources>
+        <!-- Внутренняя вкладка в стиле браузера / Goshkow -->
+        <Style x:Key="SettingsTabItem" TargetType="TabItem">
+            <Setter Property="Foreground" Value="#71717A" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="14,10,14,9" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Grid Background="Transparent">
+                            <Border x:Name="HoverBackground"
+                                    Background="Transparent"
+                                    CornerRadius="6,6,0,0">
+                                <ContentPresenter ContentSource="Header"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center" />
+                            </Border>
+                            <Border x:Name="ActiveLine"
+                                    Height="2"
+                                    Background="#DCE4F0"
+                                    VerticalAlignment="Bottom"
+                                    Margin="10,0"
+                                    Visibility="Collapsed" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="HoverBackground" Property="Background" Value="#0DFFFFFF" />
+                                <Setter Property="Foreground" Value="#B7C3D8" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Foreground" Value="#DCE4F0" />
+                                <Setter TargetName="ActiveLine" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SettingsTabControl" TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0"
+                                    BorderBrush="#1E2235"
+                                    BorderThickness="0,0,0,1">
+                                <DockPanel LastChildFill="True">
+                                    <TextBlock Text="Настройки"
+                                               Foreground="#DCE4F0"
+                                               FontFamily="Segoe UI"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,16,0" />
+                                    <Border Width="1" Height="18"
+                                            Background="#30363D"
+                                            Margin="0,0,8,0"
+                                            VerticalAlignment="Center" />
+                                    <TabPanel IsItemsHost="True"
+                                              KeyboardNavigation.TabIndex="1"
+                                              Background="Transparent" />
+                                </DockPanel>
+                            </Border>
+
+                            <Border Grid.Row="1" Background="Transparent" Padding="0,12,0,0">
+                                <ContentPresenter x:Name="PART_SelectedContentHost"
+                                                  ContentSource="SelectedContent" />
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="16,12">
+        <TabControl Style="{StaticResource SettingsTabControl}"
+                    ItemContainerStyle="{StaticResource SettingsTabItem}"
+                    SelectedIndex="0">
+            <!-- Приложение -->
+            <TabItem Header="Приложение">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="0,4,10,12">
+                        <TextBlock Text="ИНТЕРФЕЙС И ЗАПУСК"
+                                   Style="{StaticResource SecH}"
+                                   Margin="0,0,0,10" />
+
+                        <Border Background="#111520"
+                                BorderBrush="#21262D"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="14">
+                            <StackPanel>
+                                <CheckBox Content="Запускать FluxRoute в трей"
+                                          IsChecked="{Binding MinimizeToTray}"
+                                          Margin="0,4" />
+                                <CheckBox Content="Использовать планировщик для автозапуска"
+                                          IsChecked="{Binding TaskSchedulerAutoStart}"
+                                          Margin="0,4" />
+                                <CheckBox Content="Высокий приоритет автозагрузки"
+                                          IsChecked="{Binding HighPriorityStartupEnabled}"
+                                          Margin="0,4" />
+                                <StackPanel Orientation="Horizontal" Margin="0,6">
+                                    <TextBlock Text="Задержка автозапуска (сек):"
+                                               Style="{StaticResource Lbl}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,8,0" />
+                                    <TextBox Text="{Binding DelayedAutoStartSeconds, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="60" Height="26"
+                                             VerticalContentAlignment="Center" />
+                                </StackPanel>
+                                <CheckBox Content="Автоматически запускать последний профиль"
+                                          IsChecked="{Binding AutoLaunchProfile}"
+                                          Margin="0,4" />
+                                <CheckBox Content="Показывать предупреждение при смене стратегии"
+                                          IsChecked="{Binding ShowProfileSwitchWarning}"
+                                          Margin="0,4" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="#111520"
+                                BorderBrush="#21262D"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="12"
+                                Margin="0,10,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,20,0">
+                                    <TextBlock Text="Окно при запуске"
+                                               Foreground="#DCE4F0"
+                                               FontSize="12"
+                                               FontWeight="SemiBold" />
+                                    <TextBlock Text="Современное — 1440×826, минималистическое — 860×520. Изменение применяется сразу." Foreground="#8B949E" FontSize="10.5" Margin="0,4,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1"
+                                          Width="190"
+                                          Height="32"
+                                          ItemsSource="{Binding StartupWindowModes}"
+                                          SelectedItem="{Binding StartupWindowMode, Mode=TwoWay}"
+                                          VerticalAlignment="Center">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Foreground="#DCE4F0">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="Минималистическое · 860×520" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding}" Value="Modern">
+                                                                <Setter Property="Text" Value="Современное · 1440×826" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </Grid>
+                        </Border>
+
+                        <!-- ═══ v1.7.0: НОВОЕ — кнопка исключений антивируса ═══ -->
+                        <Border Background="#111520"
+                                BorderBrush="#21262D"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="12"
+                                Margin="0,10,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,20,0">
+                                    <TextBlock Text="Добавить в исключения антивируса"
+                                               Foreground="#DCE4F0"
+                                               FontSize="12"
+                                               FontWeight="SemiBold" />
+                                    <TextBlock Text="Добавляет папку программы в исключения Защитника Windows. Требуются права администратора."
+                                               Foreground="#8B949E"
+                                               FontSize="10.5"
+                                               Margin="0,4,0,0"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding AntivirusExclusionStatus}"
+                                               Foreground="#4d6bfe"
+                                               FontSize="10.5"
+                                               Margin="0,3,0,0"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                                <Button Grid.Column="1"
+                                        Content="Добавить"
+                                        Command="{Binding AddAntivirusExclusionCommand}"
+                                        IsEnabled="{Binding CanAddAntivirusExclusion}"
+                                        Width="120" Height="34"
+                                        VerticalAlignment="Center">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                            <Setter Property="Background" Value="#1C3A5E" />
+                                            <Setter Property="Foreground" Value="#DCE4F0" />
+                                            <Setter Property="BorderBrush" Value="#2D4A7A" />
+                                            <Setter Property="BorderThickness" Value="1" />
+                                            <Setter Property="Cursor" Value="Hand" />
+                                            <Setter Property="FontSize" Value="12" />
+                                            <Setter Property="FontWeight" Value="SemiBold" />
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="border"
+                                                                Background="{TemplateBinding Background}"
+                                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                                CornerRadius="6"
+                                                                Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="border" Property="Background" Value="#264A7A" />
+                                                            </Trigger>
+                                                            <Trigger Property="IsPressed" Value="True">
+                                                                <Setter TargetName="border" Property="Background" Value="#1A3358" />
+                                                            </Trigger>
+                                                            <Trigger Property="IsEnabled" Value="False">
+                                                                <Setter Property="Foreground" Value="#556688" />
+                                                                <Setter TargetName="border" Property="Background" Value="#141A24" />
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- Обновления -->
+            <TabItem Header="Обновления">
+                <tabs:UpdatesPage />
+            </TabItem>
+
+            <!-- О программе -->
+            <TabItem Header="О программе">
+                <tabs:AboutPage />
+            </TabItem>
+        </TabControl>
+    </Grid>
+</UserControl>

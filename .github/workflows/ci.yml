@@ -1,0 +1,77 @@
+name: CI Build
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows-x64:
+    name: Build and test (Windows x64)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore solution
+        run: dotnet restore .\FluxRoute.slnx
+
+      - name: Build solution
+        run: dotnet build .\FluxRoute.slnx --configuration Release --no-restore
+
+      - name: Run tests
+        run: >-
+          dotnet test .\FluxRoute.slnx
+          --configuration Release
+          --no-build
+          --no-restore
+          --logger "trx;LogFileName=test-results.trx"
+          --results-directory .\TestResults
+
+      - name: Publish win-x64
+        run: >-
+          dotnet publish .\FluxRoute\FluxRoute.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          --output .\publish\win-x64
+
+      - name: Upload test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-results-windows-x64
+          path: .\TestResults\**
+          if-no-files-found: ignore
+
+      - name: Upload publish artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: FluxRoute-win-x64
+          path: .\publish\win-x64\**
+          if-no-files-found: error

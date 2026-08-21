@@ -29,9 +29,13 @@ public sealed class BanditSelector
 
         if (_rng.NextDouble() * 1000 < explorationPermil)
         {
+            // Сортируем по количеству проб; при равенстве — случайный тай-брейк
             usable.Sort((a, b) =>
-                _registry.SumPullsForGenomeOnNetwork(a.Id, networkHash)
-                    .CompareTo(_registry.SumPullsForGenomeOnNetwork(b.Id, networkHash)));
+            {
+                var cmp = _registry.SumPullsForGenomeOnNetwork(a.Id, networkHash)
+                    .CompareTo(_registry.SumPullsForGenomeOnNetwork(b.Id, networkHash));
+                return cmp != 0 ? cmp : (_rng.Next(2) == 0 ? -1 : 1);
+            });
             return usable[0];
         }
 
@@ -55,9 +59,9 @@ public sealed class BanditSelector
                 var apulls = agg.Alpha + agg.Beta - 2;
                 if (apulls < 0.5)
                 {
-                    var mean = 0.5;
-                    var n = 1.0;
-                    sampleOrUcb = mean + Math.Sqrt(2 * Math.Log(totalT + 1) / n);
+                    // Холодный старт: Beta(1,1) = Uniform(0,1) — каждая стратегия получает случайную оценку,
+                    // а не детерминированно одинаковый UCB (исправление #62).
+                    sampleOrUcb = _rng.NextDouble();
                 }
                 else
                 {

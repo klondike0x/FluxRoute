@@ -4,29 +4,20 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" d:DesignHeight="460" d:DesignWidth="760">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="16,12">
-            <TextBlock Style="{StaticResource SecH}" Text="СИСТЕМНЫЕ НАСТРОЙКИ" Margin="0,0,0,8" />
-            <CheckBox Content="Запускать FluxRoute в трей"
-                IsChecked="{Binding MinimizeToTray}" Margin="0,4,0,4" />
-            <CheckBox Content="Использовать планировщик для автозапуска (вместо реестра)"
-                IsChecked="{Binding TaskSchedulerAutoStart}" Margin="0,4,0,4" />
-            <CheckBox Content="Высокий приоритет автозагрузки (ускоренный старт)"
-                IsChecked="{Binding HighPriorityStartupEnabled}" Margin="0,4,0,4" />
-            <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
-                <TextBlock Style="{StaticResource Lbl}" Text="Задержка автозапуска (сек): "
-                           VerticalAlignment="Center" Margin="0,0,6,0" />
-                <TextBox Text="{Binding DelayedAutoStartSeconds, UpdateSourceTrigger=PropertyChanged}"
-                         Width="60" Height="24" VerticalContentAlignment="Center"
-                         ToolTip="Задержка перед запуском после входа в систему (0–300 сек)" />
+    <Grid Margin="16,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0">
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,8">
+                <TextBlock Style="{StaticResource SecH}" Text="СОСТОЯНИЕ КОМПОНЕНТОВ" Margin="0" VerticalAlignment="Center" />
+                <Button Content="?" Style="{StaticResource ActionBtnAccent}" Width="24" Height="24" Padding="0" FontSize="12"
+                        Tag="Diagnostics" Click="TabHelpButton_Click" Margin="8,0,0,0" VerticalAlignment="Center"
+                        ToolTip="Что проверяет диагностика?"
+                        AutomationProperties.Name="Справка по диагностике" />
             </StackPanel>
-            <CheckBox Content="Автоматически запускать последний профиль при старте"
-                IsChecked="{Binding AutoLaunchProfile}" Margin="0,4,0,4" />
-            <CheckBox Content="Показывать предупреждение при смене стратегии"
-                IsChecked="{Binding ShowProfileSwitchWarning}" Margin="0,4,0,12" />
-            <Rectangle Style="{StaticResource Sep}" />
-
-            <TextBlock Style="{StaticResource SecH}" Text="КОМПОНЕНТЫ" />
             <Grid Margin="0,0,0,12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="180" />
@@ -53,7 +44,8 @@
                 <TextBlock Grid.Row="5" Grid.Column="0" Style="{StaticResource Lbl}" Text="Версия приложения:" />
                 <TextBlock Grid.Row="5" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AppVersion}" />
             </Grid>
-            <WrapPanel>
+            </StackPanel>
+            <WrapPanel Grid.Row="1">
                 <Button Content="🔍 Запустить диагностику" Style="{StaticResource ActionBtnAccent}"
                     Margin="0,0,8,8" Command="{Binding RunExtendedDiagnosticsCommand}"
                     IsEnabled="{Binding IsExtendedDiagnosticsRunning, Converter={StaticResource InvBool}}"
@@ -64,13 +56,13 @@
                     Command="{Binding CopyDiagnosticsCommand}" />
                 <Button Content="Экспорт логов" Style="{StaticResource ActionBtn}" Margin="0,0,8,8"
                     Command="{Binding ExportLogsCommand}" />
-                <Button Content="Diagnostic Bundle" Style="{StaticResource ActionBtn}" Margin="0,0,8,8"
+                <Button Content="Диагностический пакет" Style="{StaticResource ActionBtn}" Margin="0,0,8,8"
                     Command="{Binding ExportDiagnosticBundleCommand}"
                     ToolTip="Сохранить ZIP-архив с логами, диагностикой и настройками" />
             </WrapPanel>
 
             <!-- Результаты расширенной диагностики -->
-            <Border Background="#0D1117" BorderBrush="#30363D" BorderThickness="1"
+            <Border Grid.Row="2" Background="#0D1117" BorderBrush="#30363D" BorderThickness="1"
                 CornerRadius="6" Padding="12" Margin="0,12,0,0"
                 Visibility="{Binding ExtendedDiagnosticsVisible, Converter={StaticResource BoolToVis}}">
                 <Grid>
@@ -103,7 +95,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <ScrollViewer Grid.Row="1" MaxHeight="340" VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding ExtendedDiagnosticsResults}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -116,6 +108,5 @@
                     </ScrollViewer>
                 </Grid>
             </Border>
-        </StackPanel>
-    </ScrollViewer>
+        </Grid>
 </UserControl>

@@ -12,6 +12,10 @@ public sealed class AppSettings
     // Стратегия
     public string? LastProfileFileName { get; set; }
 
+    // ═══ v1.7.0: UI-Redesign — выбранный компонент при онбординге ═══
+    /// <summary>"zapret", "zapret2" или "none"</summary>
+    public string SelectedComponent { get; set; } = "zapret";
+
     // ═══ v1.6.0: Дефолтный профиль для триггеров ═══
     /// <summary>
     /// Имя файла профиля, который используется по умолчанию при возврате из триггера.
@@ -58,9 +62,20 @@ public sealed class AppSettings
     // Обновления
     public bool AutoUpdateEnabled { get; set; } = false;
 
+    // ═══ v1.7.0: UI-Redesign — простой/расширенный режим ═══
+    public bool SimpleMode { get; set; } = false;
+
+    // ═══ v1.7.0: UI-Redesign — онбординг ═══
+    public bool FirstRunComplete { get; set; } = false;
+
+    // ═══ v1.7.0: UI-Redesign — запоминание выбора прав админа ═══
+    public bool RememberAdminChoice { get; set; } = false;
+    public bool AdminChoiceContinueWithout { get; set; } = true;
+
     // Системные
     public bool AutoStartEnabled { get; set; } = false;
-    public bool MinimizeToTray { get; set; } = true;
+    public bool MinimizeToTray { get; set; } = false;
+    public StartupWindowMode StartupWindowMode { get; set; } = StartupWindowMode.Minimal;
 
     // Предупреждение при смене стратегии
     public bool ShowProfileSwitchWarning { get; set; } = true;
@@ -101,7 +116,25 @@ public sealed class AppSettings
     // TG WS Proxy
     public TgProxySettings TgProxy { get; set; } = new();
 
+    // DNS-over-HTTPS
+    public DohSettings Doh { get; set; } = new();
+
     public AiSettings Ai { get; set; } = new();
+}
+
+public sealed class DohSettings
+{
+    public bool Enabled { get; set; }
+    public bool AutomaticSelection { get; set; } = true;
+    public DohEncryptionMode EncryptionMode { get; set; } = DohEncryptionMode.EncryptedOnly;
+    public string? SelectedProviderId { get; set; }
+    public string? AppliedProviderId { get; set; }
+    public DohEncryptionMode AppliedEncryptionMode { get; set; } = DohEncryptionMode.EncryptedOnly;
+    public string? InterfaceName { get; set; }
+    public bool PreviousDnsWasDhcp { get; set; }
+    public List<string> PreviousDnsAddresses { get; set; } = new();
+    public List<string> AppliedDnsAddresses { get; set; } = new();
+    public DohOperationJournal? OperationJournal { get; set; }
 }
 
 public sealed class TgProxySettings
@@ -119,13 +152,14 @@ public sealed class TgProxySettings
 
     // Cloudflare Proxy
     public bool CfProxyEnabled { get; set; } = true;
-    public bool CfProxyPriority { get; set; } = true;
+    public bool CfProxyPriority { get; set; } = false;
     public bool CfDomainEnabled { get; set; } = false;
     public string CfDomain { get; set; } = "";
+    public string CfWorkerDomains { get; set; } = "";
 
     // Производительность
     public int BufKb { get; set; } = 256;
-    public int PoolSize { get; set; } = 4;
+    public int PoolSize { get; set; } = 16;
     public double LogMaxMb { get; set; } = 5.0;
 }
 
@@ -247,6 +281,7 @@ public sealed class SettingsService : ISettingsService
         {
             Trace.TraceError($"FluxRoute settings save failed. Path='{SettingsPath}'. Error='{ex}'");
             TryDeleteTempFile(tempPath);
+            throw new IOException($"Не удалось сохранить настройки FluxRoute: {SettingsPath}", ex);
         }
     }
 
@@ -333,6 +368,9 @@ public sealed class SettingsService : ISettingsService
     {
         settings.ProfileRatings ??= new List<ProfileRatingEntry>();
         settings.TgProxy ??= new TgProxySettings();
+        settings.Doh ??= new DohSettings();
+        settings.Doh.PreviousDnsAddresses ??= new List<string>();
+        settings.Doh.AppliedDnsAddresses ??= new List<string>();
         settings.Ai ??= new AiSettings();
         settings.UserSites ??= new List<string>();
         settings.CustomTargetDomains ??= new List<string>();

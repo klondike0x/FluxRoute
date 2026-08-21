@@ -181,6 +181,47 @@ public sealed class AppUpdaterServiceTests
         Assert.NotNull(error);
     }
 
+    [Fact]
+    public void GetPreferredDownloadUrl_InstallerInstallation_UsesInstallerArtifact()
+    {
+        var factory = CreateFactory(_ => Task.FromResult(MakeJsonResponse(HttpStatusCode.OK, "{}")));
+        var svc = new TestableAppUpdaterService(factory, CurrentVersion)
+        {
+            InstallerInstallation = true
+        };
+        var update = new AppUpdateInfo
+        {
+            Version = "1.7.1",
+            TagName = "v1.7.1",
+            DownloadUrl = "https://example.test/portable.zip"
+        };
+
+        var url = svc.GetPreferredDownloadUrl(update);
+
+        Assert.Equal(
+            "https://github.com/klondike0x/FluxRoute/releases/download/v1.7.1/FluxRoute-v1.7.1-installer.exe",
+            url);
+    }
+
+    [Fact]
+    public void GetPreferredDownloadUrl_PortableInstallation_UsesPortableArtifact()
+    {
+        var factory = CreateFactory(_ => Task.FromResult(MakeJsonResponse(HttpStatusCode.OK, "{}")));
+        var svc = new TestableAppUpdaterService(factory, CurrentVersion)
+        {
+            InstallerInstallation = false
+        };
+        var update = new AppUpdateInfo
+        {
+            Version = "1.7.1",
+            TagName = "v1.7.1",
+            DownloadUrl = "https://example.test/portable.zip"
+        };
+
+        var url = svc.GetPreferredDownloadUrl(update);
+
+        Assert.Equal("https://example.test/portable.zip", url);
+    }
     // ── Helper methods ──
 
     private static HttpResponseMessage MakeJsonResponse(HttpStatusCode status, string json)
@@ -224,6 +265,10 @@ public sealed class AppUpdaterServiceTests
             _fakeVersion = fakeVersion;
         }
 
+        public bool InstallerInstallation { get; set; }
+
         public override string GetCurrentVersion() => _fakeVersion;
+
+        public override bool IsInstallerInstallation() => InstallerInstallation;
     }
 }

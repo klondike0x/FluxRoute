@@ -77,9 +77,10 @@ public sealed class OrchestratorService : IDisposable
 
     public async Task ScanAllProfilesAsync(
         CancellationToken ct = default,
-        IProgress<(int current, int total)>? progress = null)
+        IProgress<(int current, int total)>? progress = null,
+        IProgress<CheckResult>? checkProgress = null)
     {
-        await ScanAndRankAsync(ct, progress).ConfigureAwait(false);
+        await ScanAndRankAsync(ct, progress, checkProgress).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -138,7 +139,8 @@ public sealed class OrchestratorService : IDisposable
 
     private async Task ScanAndRankAsync(
         CancellationToken ct,
-        IProgress<(int current, int total)>? progress = null)
+        IProgress<(int current, int total)>? progress = null,
+        IProgress<CheckResult>? checkProgress = null)
     {
         if (IsScanning)
         {
@@ -175,7 +177,11 @@ public sealed class OrchestratorService : IDisposable
                 var result = await _probeService.ProbeAsync(
                     profile,
                     targets,
-                    new ProfileProbeOptions { StopAfterProbe = true },
+                    new ProfileProbeOptions
+                    {
+                        StopAfterProbe = true,
+                        CheckProgress = checkProgress
+                    },
                     ct).ConfigureAwait(false);
 
                 scores.Add((profile, result.Score, result));
@@ -304,6 +310,8 @@ public sealed class OrchestratorService : IDisposable
         await _switchProfile(null).ConfigureAwait(false);
         Notify("❌ Ни одна стратегия не прошёла проверку.");
     }
+
+    public IReadOnlyList<TargetEntry> GetScanTargets() => BuildTargets();
 
     private List<TargetEntry> BuildTargets()
     {

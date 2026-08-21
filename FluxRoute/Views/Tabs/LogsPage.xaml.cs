@@ -1,4 +1,6 @@
+using FluxRoute.Services;
 using System.Windows.Controls;
+using FluxRoute.ViewModels;
 using UserControl = System.Windows.Controls.UserControl;
 using TextBox = System.Windows.Controls.TextBox;
 
@@ -20,4 +22,18 @@ public partial class LogsPage : UserControl
             tb.ScrollToEnd();
         }
     }
-}
+
+    /// <summary>
+    /// Автопрокрутка при изменении текста, если включён чекбокс.
+    /// v1.7.0: UI-Redesign
+    /// </summary>
+    private void UnifiedLogsTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (DataContext is LogsViewModel vm && vm.LogsAutoScroll)
+            ScrollToEnd();
+    }
+
+    private void TabHelpButton_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        TabHelp.Show((sender as System.Windows.Controls.Button)?.Tag as string);
+    }}

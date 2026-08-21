@@ -564,12 +564,67 @@ public sealed partial class ServiceViewModel : ObservableObject
 
     private double _bestTimeMs;
     public double BestTimeMs { get => _bestTimeMs; set => SetProperty(ref _bestTimeMs, value); }
+    private double _bestLatencyMs;
+    public double BestLatencyMs { get => _bestLatencyMs; set => SetProperty(ref _bestLatencyMs, value); }
 
+    private double _autoTuneElapsedSeconds;
+    public double AutoTuneElapsedSeconds
+    {
+        get => _autoTuneElapsedSeconds;
+        set => SetProperty(ref _autoTuneElapsedSeconds, value);
+    }
+    public ObservableCollection<AutoTuneStepViewModel> AutoTuneSteps { get; } = new();
+
+    private int _autoTuneCompletedCount;
+    public int AutoTuneCompletedCount
+    {
+        get => _autoTuneCompletedCount;
+        set => SetProperty(ref _autoTuneCompletedCount, value);
+    }
+
+    private int _autoTuneTotalCount;
+    public int AutoTuneTotalCount
+    {
+        get => _autoTuneTotalCount;
+        set => SetProperty(ref _autoTuneTotalCount, value);
+    }
+
+    private string _autoTuneCurrentCombination = "Подготовка проверки";
+    public string AutoTuneCurrentCombination
+    {
+        get => _autoTuneCurrentCombination;
+        set => SetProperty(ref _autoTuneCurrentCombination, value);
+    }
+
+
+    private string _autoTuneBestSummary = "Ожидаем первые результаты...";
+    public string AutoTuneBestSummary
+    {
+        get => _autoTuneBestSummary;
+        set => SetProperty(ref _autoTuneBestSummary, value);
+    }
+
+    private string _autoTuneWorstSummary = "Ожидаем первые результаты...";
+    public string AutoTuneWorstSummary
+    {
+        get => _autoTuneWorstSummary;
+        set => SetProperty(ref _autoTuneWorstSummary, value);
+    }
     public Func<IEnumerable<FluxRoute.Core.Models.TargetEntry>>? GetAutoTuneTargets { get; set; }
 
     // Колбэки для управления глобальным оверлеем (устанавливаются MainViewModel)
     public Action<string, object, ICommand?>? RequestShowOverlay { get; set; }
     public Action? RequestHideOverlay { get; set; }
+    public Action? RequestShowAutoTuneWindow { get; set; }
+    public Action? RequestHideAutoTuneWindow { get; set; }
+
+    private void HideAutoTuneWindow()
+    {
+        if (RequestHideAutoTuneWindow is not null)
+            RequestHideAutoTuneWindow();
+        else
+            RequestHideOverlay?.Invoke();
+    }
 
     private CancellationTokenSource? _autoTuneCts;
 
@@ -590,8 +645,7 @@ public sealed partial class ServiceViewModel : ObservableObject
         AutoTuneStatusText = "Подготовка...";
 
         // Показываем глобальный оверлей
-        var content = new Controls.AutoTuneProgressView { DataContext = this };
-        RequestShowOverlay?.Invoke("Подобрать настройки", content, CloseAutoTuneCommand);
+        RequestShowAutoTuneWindow?.Invoke();
 
         _autoTuneCts = new CancellationTokenSource();
         Log.Information("Auto-Tune: _autoTuneCts создан, запуск RunAutoTuneAsync");
@@ -604,7 +658,7 @@ public sealed partial class ServiceViewModel : ObservableObject
         Log.Information("Auto-Tune: CancelAutoTune вызван");
         _autoTuneCts?.Cancel();
         AddLog("⚠️ Auto-Tune отменён пользователем");
-        RequestHideOverlay?.Invoke();
+        HideAutoTuneWindow();
     }
 
     [RelayCommand]
@@ -612,7 +666,7 @@ public sealed partial class ServiceViewModel : ObservableObject
     {
         Log.Information("Auto-Tune: CloseAutoTune вызван");
         _autoTuneCts?.Cancel();
-        RequestHideOverlay?.Invoke();
+        HideAutoTuneWindow();
     }
 
     [RelayCommand]
@@ -621,11 +675,36 @@ public sealed partial class ServiceViewModel : ObservableObject
         ApplyPresetState(!string.IsNullOrEmpty(BestProtocol) && BestProtocol != "Выкл",
             BestProtocol == "Выкл" ? "TCP и UDP" : BestProtocol,
             BestIpSet);
-        RequestHideOverlay?.Invoke();
+        HideAutoTuneWindow();
         AddLog($"✅ Лучшая конфигурация применена: IPSet={BestIpSet}, GameFilter={BestProtocol}");
         Log.Information("Auto-Tune: лучшая конфигурация применена: IPSet={IpSet}, GameFilter={Protocol}", BestIpSet, BestProtocol);
     }
 
+    private void UpdateAutoTuneRankings(IEnumerable<AutoTuneResult> source)
+    {
+        var completed = source.ToList();
+        if (completed.Count == 0)
+        {
+            AutoTuneBestSummary = "Ожидаем первые результаты...";
+            AutoTuneWorstSummary = "Ожидаем первые результаты...";
+            return;
+        }
+
+        var best = completed
+            .OrderByDescending(r => r.SuccessCount)
+            .ThenByDescending(r => r.SuccessRate)
+            .ThenBy(r => r.AvgLatencyMs <= 0 ? double.MaxValue : r.AvgLatencyMs)
+            .Take(3);
+        var worst = completed
+            .OrderBy(r => r.SuccessCount)
+            .ThenByDescending(r => r.TotalCount == 0 ? double.MaxValue : r.AvgLatencyMs)
+            .Take(3);
+
+        AutoTuneBestSummary = string.Join(Environment.NewLine, best.Select((r, index) =>
+            $"{index + 1}. {r.IpSetMode} / {(r.GameFilterProtocol == "Выкл" ? "без фильтра" : r.GameFilterProtocol)}  {r.SuccessCount}/{r.TotalCount}  •  {r.AvgLatencyMs:0} мс"));
+        AutoTuneWorstSummary = string.Join(Environment.NewLine, worst.Select((r, index) =>
+            $"{index + 1}. {r.IpSetMode} / {(r.GameFilterProtocol == "Выкл" ? "без фильтра" : r.GameFilterProtocol)}  {r.SuccessCount}/{r.TotalCount}  •  {r.AvgLatencyMs:0} мс"));
+    }
     /// <summary>
     /// Основной цикл Auto-Tune с надёжной обработкой ошибок и таймаутов.
     /// </summary>
@@ -645,8 +724,16 @@ public sealed partial class ServiceViewModel : ObservableObject
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 AutoTuneResultVisible = false;
+                AutoTuneCompletedCount = 0;
+                AutoTuneTotalCount = 0;
+                AutoTuneCurrentCombination = "Подготовка проверки";
+                AutoTuneBestSummary = "Ожидаем первые результаты...";
+                AutoTuneWorstSummary = "Ожидаем первые результаты...";
+                AutoTuneSteps.Clear();
                 AutoTuneProgress = 0;
                 AutoTuneStatusText = "Подготовка...";
+                BestLatencyMs = 0;
+                AutoTuneElapsedSeconds = 0;
                 _autoTuneResults.Clear();
             });
 
@@ -672,6 +759,7 @@ public sealed partial class ServiceViewModel : ObservableObject
             int total = combos.Length;
             Log.Information("Auto-Tune: всего комбинаций={Total}", total);
 
+            var totalStopwatch = Stopwatch.StartNew();
             // Шаг 3: Сохраняем исходные настройки
             Log.Information("Auto-Tune: сохранение исходных настроек");
             string origIpSet = "";
@@ -695,11 +783,18 @@ public sealed partial class ServiceViewModel : ObservableObject
             foreach (var t in targets)
                 Log.Debug("Auto-Tune: цель {Key} ({Kind}) = {Value}", t.Key, t.Kind, t.Value);
 
-            bool foundPerfect = false;
-
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                AutoTuneTotalCount = total;
+                AutoTuneCompletedCount = 0;
+                for (int i = 0; i < combos.Length; i++)
+                    AutoTuneSteps.Add(new AutoTuneStepViewModel(i + 1, combos[i].Item1, combos[i].Item2));
+            });
             try
             {
-                for (int i = 0; i < combos.Length && !foundPerfect; i++)
+                // Проверяем все комбинации, чтобы выбрать действительно лучший вариант,
+                // а не первый, который дал успешный результат.
+                for (int i = 0; i < combos.Length; i++)
                 {
                     // Шаг 5: Проверка отмены перед каждой комбинацией
                     if (ct.IsCancellationRequested)
@@ -716,7 +811,11 @@ public sealed partial class ServiceViewModel : ObservableObject
                     // Шаг 6: Обновление UI — статус проверки
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        AutoTuneStatusText = $"Проверка комбинации {i + 1} из {total}: IPSet={ip}, GameFilter={pr}...";
+                        AutoTuneCurrentCombination = comboName;
+                        AutoTuneCompletedCount = i;
+                        AutoTuneElapsedSeconds = totalStopwatch.Elapsed.TotalSeconds;
+                        AutoTuneSteps[i].MarkRunning();
+                        AutoTuneStatusText = $"Проверяем доступность {targets.Count} целей...";
                         AutoTuneProgress = (double)(i + 1) / total * 100;
                     });
 
@@ -759,7 +858,7 @@ public sealed partial class ServiceViewModel : ObservableObject
 
                     // Показываем промежуточный статус — что проверка идёт
                     await Application.Current.Dispatcher.InvokeAsync(() =>
-                        AutoTuneStatusText = $"Проверка комбинации {i + 1} из {total}: IPSet={ip}, GameFilter={pr} (идет тест {targets.Count} целей, до 5 сек)...");
+                        AutoTuneStatusText = $"Проверяем {targets.Count} целей (таймаут 5 сек.)...");
 
                     checkCts.CancelAfter(TimeSpan.FromSeconds(5));
 
@@ -838,16 +937,14 @@ public sealed partial class ServiceViewModel : ObservableObject
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         _autoTuneResults.Add(result);
+                        UpdateAutoTuneRankings(_autoTuneResults);
+                        AutoTuneSteps[i].MarkResult(successCount, checkResults.Count, result.AvgLatencyMs);
+                        AutoTuneCompletedCount = i + 1;
+                        AutoTuneElapsedSeconds = totalStopwatch.Elapsed.TotalSeconds;
                         AutoTuneStatusText = $"Результат: {successCount}/{checkResults.Count} ({result.SuccessRate:0.#}%), средняя задержка {result.AvgLatencyMs:0} мс";
                     });
 
-                    if (result.IsPerfect && result.AvgLatencyMs < 1000)
-                    {
-                        foundPerfect = true;
-                        Log.Information("Auto-Tune: найдена идеальная комбинация: {Combo}", comboName);
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
-                            AutoTuneStatusText = $"🎯 Найдена идеальная комбинация: {comboName}");
-                    }
+                    Log.Debug("Auto-Tune: комбинация полностью проверена: {Combo}", comboName);
                 }
             }
             catch (OperationCanceledException)
@@ -895,18 +992,30 @@ public sealed partial class ServiceViewModel : ObservableObject
             // Шаг 11: Показ результатов
             if (!wasCancelled && !ct.IsCancellationRequested && hadResults)
             {
-                var best = results.OrderByDescending(r => r.CompositeScore).First();
+                totalStopwatch.Stop();
+                var best = results
+                    .OrderByDescending(r => r.SuccessCount)
+                    .ThenByDescending(r => r.SuccessRate)
+                    .ThenBy(r => r.AvgLatencyMs <= 0 ? double.MaxValue : r.AvgLatencyMs)
+                    .ThenBy(r => r.TestDuration)
+                    .First();
                 Log.Information("Auto-Tune: лучшая комбинация: IPSet={IpSet}, GF={Proto}, Score={Score}",
                     best.IpSetMode, best.GameFilterProtocol, best.CompositeScore);
 
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     AutoTuneResults.Clear();
-                    foreach (var r in results.OrderByDescending(r => r.CompositeScore))
+                    foreach (var r in results
+                        .OrderByDescending(r => r.SuccessCount)
+                        .ThenByDescending(r => r.SuccessRate)
+                        .ThenBy(r => r.AvgLatencyMs <= 0 ? double.MaxValue : r.AvgLatencyMs)
+                        .ThenBy(r => r.TestDuration))
                         AutoTuneResults.Add(r);
 
                     BestIpSet = best.IpSetMode;
                     BestProtocol = best.GameFilterProtocol;
+                    BestLatencyMs = best.AvgLatencyMs;
+                    AutoTuneElapsedSeconds = totalStopwatch.Elapsed.TotalSeconds;
                     BestSuccessCount = best.SuccessCount;
                     BestTotalCount = best.TotalCount;
                     BestTimeMs = best.AvgLatencyMs;
@@ -924,7 +1033,7 @@ public sealed partial class ServiceViewModel : ObservableObject
             _isAutoTuneTaskRunning = false;
             // Не закрываем оверлей, если есть результаты для показа
             if (!hadResults)
-                RequestHideOverlay?.Invoke();
+                HideAutoTuneWindow();
         }
     }
 

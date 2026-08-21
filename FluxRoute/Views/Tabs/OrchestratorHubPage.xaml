@@ -1,0 +1,106 @@
+<UserControl x:Class="FluxRoute.Views.Tabs.OrchestratorHubPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:tabs="clr-namespace:FluxRoute.Views.Tabs">
+    <UserControl.Resources>
+        <!-- Внутренние вкладки оркестратора в стиле SettingsPage -->
+        <Style x:Key="OrchestratorTabItem" TargetType="TabItem">
+            <Setter Property="Foreground" Value="#71717A" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="14,10,14,9" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Grid Background="Transparent">
+                            <Border x:Name="HoverBackground"
+                                    Background="Transparent"
+                                    CornerRadius="6,6,0,0">
+                                <ContentPresenter ContentSource="Header"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center" />
+                            </Border>
+                            <Border x:Name="ActiveLine"
+                                    Height="2"
+                                    Background="#DCE4F0"
+                                    VerticalAlignment="Bottom"
+                                    Margin="10,0"
+                                    Visibility="Collapsed" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="HoverBackground" Property="Background" Value="#0DFFFFFF" />
+                                <Setter Property="Foreground" Value="#B7C3D8" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Foreground" Value="#DCE4F0" />
+                                <Setter TargetName="ActiveLine" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="OrchestratorTabControl" TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0"
+                                    BorderBrush="#1E2235"
+                                    BorderThickness="0,0,0,1">
+                                <DockPanel LastChildFill="True">
+                                    <TextBlock Text="Оркестратор"
+                                               Foreground="#DCE4F0"
+                                               FontFamily="Segoe UI"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,16,0" />
+                                    <Border Width="1" Height="18"
+                                            Background="#30363D"
+                                            Margin="0,0,8,0"
+                                            VerticalAlignment="Center" />
+                                    <TabPanel IsItemsHost="True"
+                                              KeyboardNavigation.TabIndex="1"
+                                              Background="Transparent" />
+                                </DockPanel>
+                            </Border>
+
+                            <Border Grid.Row="1" Background="Transparent" Padding="0,12,0,0">
+                                <ContentPresenter x:Name="PART_SelectedContentHost"
+                                                  ContentSource="SelectedContent" />
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="16,12">
+        <TabControl Style="{StaticResource OrchestratorTabControl}"
+                    ItemContainerStyle="{StaticResource OrchestratorTabItem}"
+                    SelectedIndex="0">
+            <TabItem Header="Оркестратор">
+                <tabs:OrchestratorPage />
+            </TabItem>
+            <TabItem Header="ИИ-оркестратор">
+                <tabs:AiPage />
+            </TabItem>
+        </TabControl>
+    </Grid>
+</UserControl>

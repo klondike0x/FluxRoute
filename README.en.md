@@ -14,7 +14,10 @@
 
 ⭐️ **Star this repository — it's the best free way to support the project!**
 
-**Author:** [klondike0x](https://github.com/klondike0x) · [📥 Releases](https://github.com/klondike0x/FluxRoute/releases) · [🐛 Issues](https://github.com/klondike0x/FluxRoute/issues) · [💬 Discussions](https://github.com/klondike0x/FluxRoute/discussions)
+<!-- GitHub badge -->
+[![Support FluxRoute](https://img.shields.io/badge/Donate-donatr.ee-6C5CE7?style=for-the-badge)](https://donatr.ee/klondike0x)
+
+**Author:** [klondike0x](https://github.com/klondike0x) · [📚 Documentation](docs/index.md) · [📥 Releases](https://github.com/klondike0x/FluxRoute/releases) · [🐛 Issues](https://github.com/klondike0x/FluxRoute/issues) · [💬 Discussions](https://github.com/klondike0x/FluxRoute/discussions)
 
 <p align="center">
     <a href="https://github.com/klondike0x/FluxRoute"><img src="https://img.shields.io/badge/Original_Project-✅_klondike0x-00D68F?logo=github&logoColor=white&style=for-the-badge" alt="Original Project" /></a>
@@ -32,25 +35,25 @@
 
 > [!IMPORTANT]
 > **This is the original FluxRoute Desktop repository.**
-> 
+>
 > All derivative projects (forks) are based on this code. GitHub automatically marks them with `forked from klondike0x/FluxRoute`.
 
 > [!CAUTION]
 > ### ⚠️ Beware: Unauthorized Copies
-> 
+>
 > **The only official source of FluxRoute is [this repository](https://github.com/klondike0x/FluxRoute).**
-> 
+>
 > If you downloaded the program from elsewhere, be cautious. Unauthorized copies may contain:
 > - ❌ Outdated code (missing security fixes)
 > - ❌ Malicious modifications or hidden telemetry
 > - ❌ GPL-3.0 license violations (removed attribution)
 > - ❌ Unstable or untested versions
-> 
+>
 > **How to protect yourself:**
 > - ✅ Always check the source: `github.com/klondike0x/FluxRoute`
 > - ✅ Only download from official releases with the green `Verified` badge
 > - ✅ If you encounter a fork without clear attribution — report it via [GitHub DMCA](https://github.com/contact/report-abuse)
-> 
+>
 > The original FluxRoute **collects no telemetry** and **contains no malicious code**.
 
 **FluxRoute Desktop** is a modern GUI wrapper for managing [`Flowseal/zapret-discord-youtube`](https://github.com/Flowseal/zapret-discord-youtube) profiles with a unique **AI orchestrator** powered by Thompson Sampling and genetic strategy evolution.
@@ -58,6 +61,25 @@
 Launch, update, and switch profiles from a single window — no manual BAT-file editing required.
 
 > 🌍 **Note:** FluxRoute is part of the **zapret ecosystem** — a set of tools for DPI (Deep Packet Inspection) bypass, primarily used in CIS countries to access blocked services like YouTube, Discord, Instagram, and Telegram. The main community is Russian-speaking, but the tool itself works anywhere DPI-based filtering is used.
+
+## 📚 Contents
+
+- [Features](#-features)
+- [How FluxRoute Compares to Other GUIs](#-how-fluxroute-compares-to-other-guis)
+- [Quick Start](#-quick-start)
+- [Orchestrator](#-orchestrator)
+- [AI Orchestrator](#-ai-orchestrator)
+- [Auto-Tune](#-auto-tune)
+- [Mods](#-mods)
+- [Interface](#-interface)
+- [Troubleshooting](#-troubleshooting)
+- [WinDivert and Antivirus](#-windivert-and-antivirus)
+- [Security](#-security)
+- [Ecosystem](#-ecosystem)
+- [For Developers](#-for-developers)
+- [Copyright and Terms of Use](#-copyright-and-terms-of-use)
+- [Acknowledgments](#-acknowledgments)
+- [License](#-license)
 
 ---
 
@@ -78,7 +100,7 @@ Launch, update, and switch profiles from a single window — no manual BAT-file 
 
 | Feature | Description |
 |---------|-------------|
-| 📡 **TG WS Proxy** | Built-in Telegram proxy installer with automatic fallback to working PyPI mirrors (Tsinghua, Aliyun, USTC) when `pypi.org` is blocked |
+| 📡 **TG WS Proxy** | Built-in C# Telegram WebSocket proxy; no Python or separate installation required |
 | 🔄 **Auto-update engine/** | Checks new Flowseal releases via GitHub Releases Atom feed (no API limits) |
 | 🆙 **App auto-update** | Downloads and atomically installs new FluxRoute versions with SHA-256 verification |
 | 🌍 **Domain Manager** | Add custom sites and exclusions for orchestrator checks via UI |
@@ -91,7 +113,7 @@ Launch, update, and switch profiles from a single window — no manual BAT-file 
 | 🖥 **Tray support** | Minimize to tray with balloon notifications |
 | 🛡 **Hidden launch** | BAT files and `winws.exe` run in the background without console windows |
 | 🚀 **Windows startup** | Registry autorun (`HKCU\...\Run`) with `--autostart` flag |
-| ⚡ **Profile auto-launch** *(planned)* | Automatically starts the last used profile on system boot |
+| ⚡ **Profile auto-launch** | Automatically starts the last used profile when FluxRoute launches |
 
 ### 🛡️ Security
 
@@ -99,6 +121,9 @@ Launch, update, and switch profiles from a single window — no manual BAT-file 
 |---------|-------------|
 | 🔒 **GitHub Actions** | Transparent CI/CD builds — every release compiled automatically from source |
 | ✅ **SHA-256 verification** | Release hashes logged for integrity checks |
+| ✍️ **GPG-signed releases** | The SHA-256 manifest is signed with a dedicated release key |
+| 🔐 **Immutable Releases** | Published assets and the Git tag cannot be changed or replaced |
+| 🧾 **Build provenance** | GitHub attestation links artifacts to the workflow and commit |
 | 🔄 **Atomic updates** | Staging → backup → rollback on errors (no broken installations) |
 | 👮 **Admin rights check** | UAC elevation prompt on launch + clear error messages |
 
@@ -130,15 +155,15 @@ FluxRoute is the **only** GUI with a full-featured AI subsystem:
 |---|:---:|:---:|:---:|:---:|:---:|
 | 🧠 AI Orchestrator (Thompson Sampling) | ✅ | ❌ | ❌ | ❌ | ❌ |
 | 🧬 Genetic Strategy Evolution | ✅ | ❌ | ❌ | ❌ | ❌ |
-| 🔄 Orchestrator (auto-scanning) | ✅ | ❌ | ❌ | ✅ | ❌ |
-| 🎮 Process-triggers (auto by .exe) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| 🔄 Orchestrator (auto-scanning) | ✅ | ✅ | ❌ | ✅ | ❌ |
+| 🎮 Process-triggers (auto by .exe) | ✅ | ✅ | ❌ | ❌ | ❌ |
 | ⚙️ Auto-Tune (IPSet × GameFilter) | ✅ | ✅ | ❌ | ❌ | ❌ |
 | 📡 Built-in TG WS Proxy | ✅ | ✅ | ✅ | ❌ | ❌ |
-| 🤖 AI DNS (ChatGPT, Claude, Gemini) | ❌ | ❌ | ✅ | ✅ | ❌ |
+| 🤖 AI DNS / DoH providers (Xbox, COMSS, dns.malw.link) | ✅ | ✅ | ✅ | ✅ | ❌ |
 | 💬 Telegram Desktop Unlock | ✅ | ✅ | ✅ | ✅ | ❌ |
 | 📚 80+ Strategies Out of the Box | ❌ | ❌ | ❌ | ✅ | ❌ |
 | 🎨 Themes (5+) and Multilingual Support | ❌ | ✅ | ✅ | ❌ | ❌ |
-| 📦 Portable + Installer | ⚠️ | ✅ | ⚠️ | ⚠️ | ⚠️ |
+| 📦 Portable + Installer | ✅ | ✅ | ⚠️ | ⚠️ | ⚠️ |
 | 🔒 GitHub Actions (transparent build) | ✅ | ✅ | ❌ | ✅ | ✅ |
 | 🔄 Atomic Engine Updates | ✅ | ⚠️ | ✅ | ❌ | ❌ |
 
@@ -151,16 +176,21 @@ FluxRoute is the **only** GUI with a full-featured AI subsystem:
 ## 🚀 Quick Start
 
 ### Requirements
+
+Full documentation: [📚 open documentation](docs/index.md).
 - **Windows 10/11 x64**
 - **Administrator privileges** (for `winws.exe` and WinDivert)
+
+> **Fast path for most users:** download the latest release, install or extract it, run FluxRoute.exe as Administrator, and complete OnBoard. Choose the services to check and click “Configure and continue” — FluxRoute will scan strategies and start the best one.
 
 ### Installation
 
 1. Download the latest release: [**Releases**](https://github.com/klondike0x/FluxRoute/releases)
-2. Extract the ZIP to any folder (e.g., `C:\FluxRoute\`)
-3. Run `FluxRoute.exe` **as Administrator**
-4. Wait for automatic `engine/` download from Flowseal
-5. Select a profile and click **▶ Start**
+2. For the portable version, extract the ZIP to any folder (e.g., `C:\FluxRoute\`) or run the installer.
+3. Run `FluxRoute.exe` **as Administrator**.
+4. If `engine/` is missing, wait for the automatic Flowseal download and restart FluxRoute.
+5. In OnBoard, choose what to check: YouTube, Discord, or both services.
+6. Click **“Configure and continue”** to scan strategies, or **“Continue without checking”** to open the app without the initial scan.
 
 ### First Launch with AI
 
@@ -168,6 +198,48 @@ FluxRoute is the **only** GUI with a full-featured AI subsystem:
 2. Enable **AI mode** on the **AI** tab
 3. Launch the **orchestrator** on the **Orchestrator** tab
 4. Done — AI will automatically pick the best strategy for your network
+
+## 🎛️ Orchestrator
+
+The classic orchestrator automatically selects the best profile from the strategies already available in FluxRoute. It works deterministically: it does not learn or create new strategies. Instead, it tests the available profiles, builds a ranking, and monitors the active connection.
+
+### How it works
+
+1. **Scan** — starts each profile in turn and checks winws.exe health and the availability of selected targets.
+2. **Rank** — assigns every strategy a score from 0 to 100%.
+3. **Start** — after scanning, starts the profile with the highest positive score.
+4. **Monitor** — checks the active profile again at a configured interval (20 minutes by default).
+5. **Fallback** — if the profile scores below 50% in two consecutive checks, the orchestrator tests the next profiles by rank and switches to the first working one.
+
+### How the score is calculated
+
+Maximum: 100 points:
+
+- **20 points** — winws.exe is running.
+- **15 points** — the process remains stable after startup.
+- **Up to 55 points** — share of successful target checks.
+- **Up to 10 points** — bonus for low average latency.
+- If all checks fail or the process is unstable, additional limits and penalties apply.
+
+Targets include built-in sites (YouTube, Discord, Google, Twitch, Instagram, and Telegram), plus custom targets added in settings. Profiles with a 0% score are excluded from normal selection.
+
+### Workflow
+
+```mermaid
+flowchart LR
+    A["Existing profiles"] --> B["Check winws.exe and targets"]
+    B --> C["Score 0-100%"]
+    C --> D["Start the best profile"]
+    D --> E["Check every 20 minutes"]
+    E --> F{"Below 50% twice in a row?"}
+    F -->|no| E
+    F -->|yes| G["Check the next profile"]
+    G --> H{"Working?"}
+    H -->|yes| E
+    H -->|no| G
+```
+
+> The classic orchestrator uses only profiles already present in engine. For self-learning selection, Wilson score, and strategy evolution, use the separate [AI Orchestrator](#-ai-orchestrator).
 
 ---
 
@@ -190,21 +262,21 @@ The unique `FluxRoute.AI` subsystem, not found in other GUIs:
 ```mermaid
 flowchart LR
     A["🌐 Network Fingerprint<br/>(DNS, gateway, interfaces)"] --> B{AI Mode}
-    
+
     B -->|on| C["🎰 Bandit Selector<br/>(Thompson Sampling)"]
     C --> D["⚡ Apply BAT / winws"]
     D --> E["🔍 Site Probes<br/>(YouTube, Discord, ...)"]
     E --> F["📊 History + Wilson<br/>(lower bound)"]
-    
+
     F --> G{Time to evolve?}
     G -->|yes| H["🧬 Strategy Evolver<br/>(crossover + mutations)"]
     H --> I["📁 ai-evolved/*.bat"]
     I --> C
-    
+
     F -->|no| C
-    
+
     B -->|off| J["📋 Classic<br/>orchestrator<br/>(simple rating)"]
-    
+
     style A fill:#1a2e66,stroke:#55aaff,color:#fff
     style C fill:#1a4a2e,stroke:#00d68f,color:#fff
     style H fill:#4a1a66,stroke:#9933dd,color:#fff
@@ -222,18 +294,50 @@ flowchart LR
 6. 🧬 **Evolution** — periodically crossover the best strategies
 7. 📁 **`ai-evolved/`** — new BAT files are saved automatically
 
+## ⚙️ Auto-Tune
+
+**Auto-Tune** automatically finds the best IPSet × GameFilter combination for your network.
+
+### How it works
+
+1. The program tests 12 combinations of IPSet modes (loaded, none, any) and GameFilter (TCP and UDP, TCP, UDP, Off).
+2. Each combination is applied for 4 seconds while target availability is checked (YouTube, Discord, Google, and more) using HTTP and ping.
+3. Each combination receives a **composite score** based on:
+   - **60%** — successful checks rate
+   - **30%** — average latency (lower is better, up to 2000 ms)
+   - **10%** — stability (difference between minimum and maximum latency)
+4. The combination with the highest composite score is suggested as the best option.
+
+> Formula: AutoTuneResult.CalculateCompositeScore() in FluxRoute.Core/Models/AutoTuneResult.cs.
+
+### Where to find it
+
+Auto-Tune is available on the **Service** tab → **Find optimal settings**. Results are shown in an overlay with progress, probe logs, and an option to apply the best combination.
+
+---
+
+## 📦 Mods
+
+FluxRoute supports user mods — external scripts and configuration files that can be enabled or disabled from the **Mods** tab.
+
+See [docs/mods.en.md](docs/mods.en.md) for the complete guide to `manifest.json`, scripts, dependencies, and the developer API.
+
 ---
 
 ## 📸 Interface
 
 <table>
 <tr>
-<td><img src="https://github.com/user-attachments/assets/70dda58d-cbf3-43f8-b8ae-72b7fad3d88e" alt="Main Window" width="860"/></td>
-<td><img src="https://github.com/user-attachments/assets/a51c1477-a560-450f-b6ac-ef05ccbec4d2" alt="Update" width="860"/></td>
+<td><img src="./assets/screenshots/onboarding.png" alt="OnBoard first launch" width="860"/><br/><sub><b>OnBoard first launch</b> — choose services and start the initial scan</sub></td>
+<td><img src="./assets/screenshots/home.png" alt="Main window" width="860"/><br/><sub><b>Main window</b> — protection and active profile controls</sub></td>
 </tr>
 <tr>
-<td><img src="https://github.com/user-attachments/assets/bf33cffb-6d56-4055-8f8e-8c807f57d9a7" alt="Orchestrator" width="860"/></td>
-<td><img src="https://github.com/user-attachments/assets/4bdf02a2-83dc-4e39-847a-5c133bfbe6a9" alt="Service" width="860"/></td>
+<td><img src="./assets/screenshots/orchestrator.png" alt="Orchestrator" width="860"/><br/><sub><b>Orchestrator</b> — strategy checks and ranking</sub></td>
+<td><img src="./assets/screenshots/ai.png" alt="AI orchestrator" width="860"/><br/><sub><b>AI orchestrator</b> — strategy learning and evolution</sub></td>
+</tr>
+<tr>
+<td><img src="./assets/screenshots/doh.png" alt="DNS-over-HTTPS" width="860"/><br/><sub><b>DNS-over-HTTPS</b> — choose and apply a DNS provider</sub></td>
+<td><img src="./assets/screenshots/tg-proxy.png" alt="TG WS Proxy" width="860"/><br/><sub><b>TG WS Proxy</b> — built-in Telegram proxy settings</sub></td>
 </tr>
 </table>
 
@@ -249,20 +353,6 @@ flowchart LR
 > 3. Run **Scan all profiles** on the **Orchestrator** tab
 > 4. Enable **Auto-Tune** on the **Service** tab
 
-### ❌ TG WS Proxy fails to install (SSL error)
-
-Starting with **v1.5.2**, TG WS Proxy installation automatically falls back to working PyPI mirrors (Tsinghua, Aliyun, USTC) when `pypi.org` is blocked. In most cases, manual intervention is not needed.
-
-If the automatic fallback fails (rare situation), download Python manually using **Firefox**:
-
-1. Download: `https://www.python.org/ftp/python/3.14.5/python-3.14.5-embed-amd64.zip`
-2. Extract to `tg-proxy\python\`
-3. In FluxRoute: go to the **TG Proxy** tab → **Install TG WS Proxy**
-
-### ❌ `ModuleNotFoundError: No module named 'proxy.pool'`
-
-This error occurred in very old versions (prior to v1.5.1). **Update to v1.5.2** – the installer now downloads the entire repository as a ZIP archive, and the issue has been fixed.
-
 ### ❌ Profile does not work (0% score)
 
 1. Make sure **GameFilter** = `TCP and UDP`
@@ -271,7 +361,7 @@ This error occurred in very old versions (prior to v1.5.1). **Update to v1.5.2**
 4. Check that the strategy is not disabled in AI mode (checkbox in the strategy list on the **AI** tab)
 5. Run extended diagnostics (**Diagnostics** tab → **Run Diagnostics**)
 
-### ❌ Port 1443 is busy (TG Proxy)
+### ❌ TG WS Proxy port is busy
 
 ```cmd
 netstat -ano | findstr :1443
@@ -286,7 +376,7 @@ taskkill /PID <number> /F
 
 > [!WARNING]
 > The project uses **WinDivert** — a legitimate traffic interception tool required for zapret to work.
-> 
+>
 > It is **not a virus** by itself, but antiviruses may classify it as `Not-a-virus:RiskTool.Multi.WinDivert` or `HackTool`.
 
 **What to do:**
@@ -301,6 +391,8 @@ taskkill /PID <number> /F
 
 - ✅ **GitHub Actions** — all releases are built automatically and transparently
 - ✅ **SHA-256 hashes** — every download is verified in the logs
+- ✅ **GPG signatures and immutable releases** — published files cannot be silently replaced
+- ✅ **Build provenance** — artifacts are linked to a specific workflow and commit
 - ✅ **Open source** — anyone can audit what the app does
 - ✅ **No telemetry** — FluxRoute does not collect user data
 - ✅ **Portable** — no installation required, runs from a folder
@@ -308,6 +400,20 @@ taskkill /PID <number> /F
 
 > [!TIP]
 > App updates always come only from the official `klondike0x/FluxRoute` repository — the URL is hardcoded in `AppUpdaterService`. This ensures that even fork users eventually receive the original version.
+>
+> The update package is selected automatically: installer installations receive the new installer, while Portable installations are updated through the portable ZIP. User settings are preserved.
+
+---
+
+## 🌳 Ecosystem
+
+FluxRoute leverages the following project ecosystem:
+
+- **[WinDivert](https://github.com/basil00/WinDivert)** — low-level Windows foundation
+- **[bol-van/zapret](https://github.com/bol-van/zapret)** — original project
+- **[bol-van/zapret-win-bundle](https://github.com/bol-van/zapret-win-bundle)** — Windows bundle with `winws.exe`
+- **[Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube)** — the `engine/` base used in FluxRoute
+- **[Flowseal/tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy)** — Telegram WebSocket proxy
 
 ---
 
@@ -376,8 +482,8 @@ At the **top of the README** you must include the following block:
 
 ```markdown
 > **Original project:** [klondike0x/FluxRoute](https://github.com/klondike0x/FluxRoute)
->  
-> This fork is based on FluxRoute Desktop and extends its functionality.  
+>
+> This fork is based on FluxRoute Desktop and extends its functionality.
 > Changes made by [author] in [year].
 ```
 
@@ -417,18 +523,6 @@ Pull Requests are welcome!
 For third‑party attributions, see the [NOTICE](NOTICE) file.
 
 **Disclaimer:** The software is provided “as is”. The author is not liable for any consequences arising from its use. By using FluxRoute, you confirm that you do so at your own risk.
-
----
-
-## 🌳 Ecosystem
-
-FluxRoute leverages the following project ecosystem:
-
-- **[WinDivert](https://github.com/basil00/WinDivert)** — low-level Windows foundation
-- **[bol-van/zapret](https://github.com/bol-van/zapret)** — original project
-- **[bol-van/zapret-win-bundle](https://github.com/bol-van/zapret-win-bundle)** — Windows bundle with `winws.exe`
-- **[Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube)** — the `engine/` base used in FluxRoute
-- **[Flowseal/tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy)** — Telegram WebSocket proxy
 
 ---
 
