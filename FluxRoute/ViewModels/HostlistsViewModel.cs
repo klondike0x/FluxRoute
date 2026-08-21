@@ -192,8 +192,7 @@ public partial class HostlistsViewModel : ObservableObject
             }
             else
             {
-                EditorContent = $"# {item.FileName} (файл отсутствует)
-";
+                EditorContent = $"# {item.FileName} (файл отсутствует)\n";
             }
             _originalContent = EditorContent;
             IsEditing = true;
@@ -252,16 +251,11 @@ public partial class HostlistsViewModel : ObservableObject
         return string.Join(
             Environment.NewLine,
             content
-                .Replace("
-", "
-", StringComparison.Ordinal)
-                .Replace('', '
-')
-                .Split('
-')
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Replace('\r', '\n')
+                .Split('\n')
                 .Select(NormalizeHostlistLine));
     }
-
     private static string NormalizeHostlistLine(string line)
     {
         var trimmed = line.Trim();
@@ -342,7 +336,6 @@ public sealed class HostlistFileItem
 
     public string DisplayText => $"{(Exists ? "◉" : "○")} {FileName}{(IsSystemHosts ? " 🔒" : "")}";
     public string DisplayTooltip => IsSystemHosts
-        ? $"{FullPath}
-Требуются права администратора для сохранения"
+        ? $"{FullPath}\nТребуются права администратора для сохранения"
         : FullPath;
 }
