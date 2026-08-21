@@ -293,6 +293,10 @@ public partial class HostlistsViewModel : ObservableObject
         if (separatorIndex >= 0)
             value = value[..separatorIndex];
 
+        var portSeparatorIndex = value.IndexOf(':');
+        if (portSeparatorIndex > 0)
+            value = value[..portSeparatorIndex];
+
         return marker + value;
     }
 
