@@ -1377,7 +1377,10 @@ public partial class MainViewModel : ObservableObject
         TgProxyPreferIPv4 = settings.TgProxy.PreferIPv4;
         const string defaultTgProxyDcIps = "4:149.154.167.220";
         const string legacyTgProxyDcIps = "2:149.154.167.220\n4:149.154.167.220";
-        string savedTgProxyDcIps = settings.TgProxy.DcIps?.Trim() ?? string.Empty;
+        string savedTgProxyDcIps = (settings.TgProxy.DcIps ?? string.Empty)
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Trim();
         TgProxyDcIps = string.IsNullOrWhiteSpace(savedTgProxyDcIps)
             || string.Equals(savedTgProxyDcIps, legacyTgProxyDcIps, StringComparison.OrdinalIgnoreCase)
             ? defaultTgProxyDcIps
