@@ -1,6 +1,7 @@
 using System.Windows;
 using FluxRoute.Services;
 using FluxRoute.ViewModels;
+using FluxRoute.Views;
 using WpfUserControl = System.Windows.Controls.UserControl;
 
 namespace FluxRoute.Views.Tabs;
@@ -25,16 +26,10 @@ public partial class HostlistsPage : WpfUserControl
 
     private static HostlistUnsavedChangesDecision PromptUnsavedChanges()
     {
-        var result = System.Windows.MessageBox.Show(
-            "В редакторе есть несохранённые изменения. Что сделать?",
-            "Несохранённые изменения",
-            System.Windows.MessageBoxButton.YesNoCancel,
-            System.Windows.MessageBoxImage.Warning);
-
-        return result switch
+        return CustomDialog.ShowUnsavedChanges() switch
         {
-            System.Windows.MessageBoxResult.Yes => HostlistUnsavedChangesDecision.Save,
-            System.Windows.MessageBoxResult.No => HostlistUnsavedChangesDecision.Discard,
+            CustomDialogChoice.Confirm => HostlistUnsavedChangesDecision.Save,
+            CustomDialogChoice.Alternate => HostlistUnsavedChangesDecision.Discard,
             _ => HostlistUnsavedChangesDecision.Stay
         };
     }
