@@ -29,12 +29,14 @@ public sealed class HostlistsViewModelTests : IDisposable
         viewModel.LoadHostlistFiles();
         viewModel.SelectedFile = viewModel.Files
             .Single(file => file.FileName == "list-general-user.txt");
-        viewModel.EditorContent = "# комментарий\r\nexample.com\r\nexample.org\r\n";
+        viewModel.EditorContent = "# комментарий\r\nhttps://example.com/\r\nhttp://example.org///\r\n";
 
         viewModel.SaveCommand.Execute(null);
 
+        var expectedContent = "# комментарий\r\nexample.com\r\nexample.org\r\n";
+        Assert.Equal(expectedContent, viewModel.EditorContent);
         Assert.Equal(
-            viewModel.EditorContent,
+            expectedContent,
             File.ReadAllText(Path.Combine(_tempDir, "lists", "list-general-user.txt")));
         var notification = Assert.Single(notifications);
         Assert.Equal("list-general-user.txt", notification.FileName);
@@ -53,10 +55,12 @@ public sealed class HostlistsViewModelTests : IDisposable
         viewModel.LoadHostlistFiles();
         viewModel.SelectedFile = viewModel.Files
             .Single(file => file.FileName == "list-exclude-user.txt");
-        viewModel.EditorContent = "exclude.example\r\n";
+        viewModel.EditorContent = "https://exclude.example/\r\n";
 
         viewModel.SaveCommand.Execute(null);
 
+        var expectedContent = "exclude.example\r\n";
+        Assert.Equal(expectedContent, viewModel.EditorContent);
         var notification = Assert.Single(notifications);
         Assert.Equal("list-exclude-user.txt", notification.FileName);
         Assert.Equal(viewModel.EditorContent, notification.Content);
