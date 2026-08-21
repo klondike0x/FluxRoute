@@ -82,6 +82,7 @@ public partial class CustomDialog : Window
         SetOwner(dialog);
         dialog.ShowDialog();
         return dialog.DialogConfirmed;
+    }
 
     /// <summary>
     /// Shows the FluxRoute-styled three-choice dialog for unsaved editor changes.
@@ -117,6 +118,5 @@ public partial class CustomDialog : Window
             dialog.Owner = owner;
         else
             dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-    }
     }
 }
