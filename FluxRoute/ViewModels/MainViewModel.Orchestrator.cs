@@ -1078,7 +1078,6 @@ public partial class MainViewModel
 
     // ── Мониторинг процессов для автопереключения пресетов ──
     private CancellationTokenSource? _processMonitorCts;
-    private string? _presetBeforeGameTrigger; // имя пресета, который был активен до триггера
     private ProfileItem? _profileBeforeTrigger; // профиль, активный до срабатывания триггера (для возврата)
 
     private void StartProcessMonitor()
