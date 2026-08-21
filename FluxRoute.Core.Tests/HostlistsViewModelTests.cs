@@ -44,6 +44,47 @@ public sealed class HostlistsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void TryLeave_Stay_KeepsUnsavedChanges()
+    {
+        var viewModel = new HostlistsViewModel(
+            getEngineDir: () => _tempDir,
+            addLog: _ => { })
+        {
+            UnsavedChangesPrompt = () => HostlistUnsavedChangesDecision.Stay
+        };
+
+        viewModel.LoadHostlistFiles();
+        viewModel.SelectedFile = viewModel.Files
+            .Single(file => file.FileName == "list-general-user.txt");
+        viewModel.EditorContent = "unsaved.example";
+
+        Assert.False(viewModel.TryLeave());
+        Assert.True(viewModel.HasChanges);
+    }
+
+    [Fact]
+    public void TryLeave_Save_PersistsChangesAndAllowsLeaving()
+    {
+        var viewModel = new HostlistsViewModel(
+            getEngineDir: () => _tempDir,
+            addLog: _ => { })
+        {
+            UnsavedChangesPrompt = () => HostlistUnsavedChangesDecision.Save
+        };
+
+        viewModel.LoadHostlistFiles();
+        viewModel.SelectedFile = viewModel.Files
+            .Single(file => file.FileName == "list-general-user.txt");
+        viewModel.EditorContent = "https://saved.example/";
+
+        Assert.True(viewModel.TryLeave());
+        Assert.False(viewModel.HasChanges);
+        Assert.Equal(
+            "saved.example",
+            File.ReadAllText(Path.Combine(_tempDir, "lists", "list-general-user.txt")));
+    }
+
+    [Fact]
     public void SaveCommand_ExcludeList_NotifiesOwnerWithUpdatedContent()
     {
         var notifications = new List<(string FileName, string Content)>();
