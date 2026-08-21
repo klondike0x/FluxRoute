@@ -25,16 +25,16 @@ public partial class HostlistsPage : WpfUserControl
 
     private static HostlistUnsavedChangesDecision PromptUnsavedChanges()
     {
-        var result = MessageBox.Show(
+        var result = System.Windows.MessageBox.Show(
             "В редакторе есть несохранённые изменения. Что сделать?",
             "Несохранённые изменения",
-            MessageBoxButton.YesNoCancel,
-            MessageBoxImage.Warning);
+            System.Windows.MessageBoxButton.YesNoCancel,
+            System.Windows.MessageBoxImage.Warning);
 
         return result switch
         {
-            MessageBoxResult.Yes => HostlistUnsavedChangesDecision.Save,
-            MessageBoxResult.No => HostlistUnsavedChangesDecision.Discard,
+            System.Windows.MessageBoxResult.Yes => HostlistUnsavedChangesDecision.Save,
+            System.Windows.MessageBoxResult.No => HostlistUnsavedChangesDecision.Discard,
             _ => HostlistUnsavedChangesDecision.Stay
         };
     }
