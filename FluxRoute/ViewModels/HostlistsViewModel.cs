@@ -140,9 +140,14 @@ public partial class HostlistsViewModel : ObservableObject
             if (!string.IsNullOrEmpty(dir))
                 Directory.CreateDirectory(dir);
 
-            File.WriteAllText(SelectedFile.FullPath, EditorContent);
-            _onSaved?.Invoke(SelectedFile.FileName, EditorContent);
-            _originalContent = EditorContent;
+            var contentToSave = IsUserHostlist(SelectedFile.FileName)
+                ? NormalizeUserHostlistContent(EditorContent)
+                : EditorContent;
+
+            File.WriteAllText(SelectedFile.FullPath, contentToSave);
+            _onSaved?.Invoke(SelectedFile.FileName, contentToSave);
+            _originalContent = contentToSave;
+            EditorContent = contentToSave;
             HasChanges = false;
             SelectedFile.Exists = true;
             StatusText = $"Сохранено: {SelectedFile.FileName}";
@@ -152,6 +157,47 @@ public partial class HostlistsViewModel : ObservableObject
         {
             StatusText = $"Ошибка сохранения: {ex.Message}";
         }
+    }
+
+    private static bool IsUserHostlist(string fileName) =>
+        fileName.Equals("list-general-user.txt", StringComparison.OrdinalIgnoreCase)
+        || fileName.Equals("list-exclude-user.txt", StringComparison.OrdinalIgnoreCase);
+
+    private static string NormalizeUserHostlistContent(string content)
+    {
+        if (string.IsNullOrEmpty(content))
+            return content;
+
+        return string.Join(
+            Environment.NewLine,
+            content
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Replace('\r', '\n')
+                .Split('\n')
+                .Select(NormalizeHostlistLine));
+    }
+
+    private static string NormalizeHostlistLine(string line)
+    {
+        var trimmed = line.Trim();
+        if (trimmed.Length == 0
+            || trimmed.StartsWith("#", StringComparison.Ordinal)
+            || trimmed.StartsWith(";", StringComparison.Ordinal))
+            return line;
+
+        var marker = trimmed.StartsWith("!", StringComparison.Ordinal) ? "!" : string.Empty;
+        var value = marker.Length > 0 ? trimmed[1..].Trim() : trimmed;
+
+        if (value.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            value = value[8..];
+        else if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            value = value[7..];
+
+        if (value.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+            value = value[4..];
+
+        value = value.TrimEnd('/');
+        return marker + value;
     }
 
     /// <summary>
