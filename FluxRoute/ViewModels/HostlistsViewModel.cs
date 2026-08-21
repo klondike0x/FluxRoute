@@ -50,7 +50,11 @@ public partial class HostlistsViewModel : ObservableObject
 
     partial void OnSelectedFileChanging(HostlistFileItem? value)
     {
-        if (value is null || _activeFile is null || ReferenceEquals(value, _activeFile) || !HasChanges)
+        if (_isRestoringSelection
+            || value is null
+            || _activeFile is null
+            || ReferenceEquals(value, _activeFile)
+            || !HasChanges)
             return;
 
         switch (UnsavedChangesPrompt?.Invoke() ?? HostlistUnsavedChangesDecision.Stay)
@@ -166,7 +170,7 @@ public partial class HostlistsViewModel : ObservableObject
         }
 
         // ═══ v1.8.1: Системный файл hosts ═══
-        var systemHostsPath = @"C:\Windows\System32\drivers\etc\hosts";
+        var systemHostsPath = @"C:WindowsSystem32driversetchosts";
         Files.Add(new HostlistFileItem
         {
             FileName = "hosts (системный)",
@@ -188,7 +192,8 @@ public partial class HostlistsViewModel : ObservableObject
             }
             else
             {
-                EditorContent = $"# {item.FileName} (файл отсутствует)\n";
+                EditorContent = $"# {item.FileName} (файл отсутствует)
+";
             }
             _originalContent = EditorContent;
             IsEditing = true;
@@ -247,9 +252,13 @@ public partial class HostlistsViewModel : ObservableObject
         return string.Join(
             Environment.NewLine,
             content
-                .Replace("\r\n", "\n", StringComparison.Ordinal)
-                .Replace('\r', '\n')
-                .Split('\n')
+                .Replace("
+", "
+", StringComparison.Ordinal)
+                .Replace('', '
+')
+                .Split('
+')
                 .Select(NormalizeHostlistLine));
     }
 
@@ -333,6 +342,7 @@ public sealed class HostlistFileItem
 
     public string DisplayText => $"{(Exists ? "◉" : "○")} {FileName}{(IsSystemHosts ? " 🔒" : "")}";
     public string DisplayTooltip => IsSystemHosts
-        ? $"{FullPath}\nТребуются права администратора для сохранения"
+        ? $"{FullPath}
+Требуются права администратора для сохранения"
         : FullPath;
 }
