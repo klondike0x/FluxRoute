@@ -162,6 +162,10 @@ public partial class MainViewModel : ObservableObject
         if (separatorIndex >= 0)
             input = input[..separatorIndex];
 
+        var portSeparatorIndex = input.IndexOf(':');
+        if (portSeparatorIndex > 0)
+            input = input[..portSeparatorIndex];
+
         // Удаляем оставшиеся пробелы (лишние, если были)
         input = input.Trim();
 
