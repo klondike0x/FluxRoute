@@ -275,7 +275,10 @@ public partial class HostlistsViewModel : ObservableObject
         if (value.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
             value = value[4..];
 
-        value = value.TrimEnd('/');
+        var separatorIndex = value.IndexOfAny(new[] { '/', '?', '#' });
+        if (separatorIndex >= 0)
+            value = value[..separatorIndex];
+
         return marker + value;
     }
 
