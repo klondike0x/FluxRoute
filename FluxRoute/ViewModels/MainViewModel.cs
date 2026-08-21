@@ -1477,6 +1477,11 @@ public partial class MainViewModel : ObservableObject
         if (SimpleMode && selectedIndex is > 0 and not 7)
             return;
 
+        if (SelectedTabIndex == 3
+            && selectedIndex != 3
+            && !Hostlists.TryLeave())
+            return;
+
         SelectedTabIndex = selectedIndex;
     }
 
