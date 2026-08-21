@@ -157,8 +157,10 @@ public partial class MainViewModel : ObservableObject
         // Удаляем www. (регистронезависимо)
         input = System.Text.RegularExpressions.Regex.Replace(input, @"^www\.", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-        // Убираем завершающий слеш
-        input = input.TrimEnd('/');
+        // Оставляем только host-компонент, отбрасывая путь, query и fragment.
+        var separatorIndex = input.IndexOfAny(new[] { '/', '?', '#' });
+        if (separatorIndex >= 0)
+            input = input[..separatorIndex];
 
         // Удаляем оставшиеся пробелы (лишние, если были)
         input = input.Trim();
