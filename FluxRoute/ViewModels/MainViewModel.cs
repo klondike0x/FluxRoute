@@ -395,7 +395,8 @@ public partial class MainViewModel : ObservableObject
                 "Все активные службы и движки будут остановлены, обход DPI прекратит работу.",
                 "Завершить",
                 "Отмена",
-                isDanger: true))
+                isDanger: true)
+            && Hostlists.TryLeave())
         {
             Application.Current.Shutdown();
         }
