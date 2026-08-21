@@ -220,7 +220,7 @@ internal sealed class TgWsProxyServer : IDisposable
                     }
                     catch (Exception ex)
                     {
-                        MarkRouteFailure(info.DataCenter, candidate.RouteKey, candidate.IsFront);
+                        MarkRouteFailure(info.DataCenter, info.IsMedia, candidate.RouteKey, candidate.IsFront);
                         if (options.Verbose || ex is UpstreamDidNotRelayException)
                             WriteLog($"#{id}: WS {candidate.Host} недоступен — {ex.Message}");
 
