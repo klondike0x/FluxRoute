@@ -63,6 +63,30 @@ public sealed class HostlistsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void SelectingAnotherFile_Stay_PreservesCurrentEdits()
+    {
+        var viewModel = new HostlistsViewModel(
+            getEngineDir: () => _tempDir,
+            addLog: _ => { })
+        {
+            UnsavedChangesPrompt = () => HostlistUnsavedChangesDecision.Stay
+        };
+
+        viewModel.LoadHostlistFiles();
+        var currentFile = viewModel.Files
+            .Single(file => file.FileName == "list-general-user.txt");
+        viewModel.SelectedFile = currentFile;
+        viewModel.EditorContent = "unsaved.example";
+
+        viewModel.SelectedFile = viewModel.Files
+            .Single(file => file.FileName == "list-exclude-user.txt");
+
+        Assert.Same(currentFile, viewModel.SelectedFile);
+        Assert.Equal("unsaved.example", viewModel.EditorContent);
+        Assert.True(viewModel.HasChanges);
+    }
+
+    [Fact]
     public void TryLeave_Save_PersistsChangesAndAllowsLeaving()
     {
         var viewModel = new HostlistsViewModel(
