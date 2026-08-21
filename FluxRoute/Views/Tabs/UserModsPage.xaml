@@ -27,7 +27,7 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="⟳ GitHub" Style="{StaticResource ActionBtnAccent}"
+                    <Button Content="⟳ GitHub" FontFamily="Segoe UI Symbol" Style="{StaticResource ActionBtnAccent}"
                             Height="28" FontSize="11" Padding="10,4"
                             Margin="0,0,8,0"
                             ToolTip="Синхронизировать моды из GitHub-репозитория"
@@ -99,7 +99,7 @@
                                     </Grid.ColumnDefinitions>
 
                                     <TextBlock Grid.Column="0"
-                                               Text="⋮⋮" FontSize="16"
+                                               Text="⋮⋮" FontFamily="Segoe UI Symbol" FontSize="16"
                                                Foreground="#484F58"
                                                VerticalAlignment="Top"
                                                Margin="0,2,6,0"
