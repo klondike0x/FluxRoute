@@ -13,11 +13,16 @@ public partial class HostlistsViewModel : ObservableObject
 {
     private readonly Func<string> _getEngineDir;
     private readonly Action<string> _addLog;
+    private readonly Action<string, string>? _onSaved;
 
-    public HostlistsViewModel(Func<string> getEngineDir, Action<string> addLog)
+    public HostlistsViewModel(
+        Func<string> getEngineDir,
+        Action<string> addLog,
+        Action<string, string>? onSaved = null)
     {
         _getEngineDir = getEngineDir;
         _addLog = addLog;
+        _onSaved = onSaved;
     }
 
     public ObservableCollection<HostlistFileItem> Files { get; } = new();
@@ -136,6 +141,7 @@ public partial class HostlistsViewModel : ObservableObject
                 Directory.CreateDirectory(dir);
 
             File.WriteAllText(SelectedFile.FullPath, EditorContent);
+            _onSaved?.Invoke(SelectedFile.FileName, EditorContent);
             _originalContent = EditorContent;
             HasChanges = false;
             SelectedFile.Exists = true;
