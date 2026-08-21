@@ -17,6 +17,7 @@
                 <Button Margin="0,0,10,0" Command="{Binding ToggleOrchestratorCommand}">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource ActionBtn}">
+                            <Setter Property="FontFamily" Value="Segoe UI Symbol" />
                             <Setter Property="Content" Value="▶ Включить оркестратор" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding OrchestratorEnabled}" Value="True">

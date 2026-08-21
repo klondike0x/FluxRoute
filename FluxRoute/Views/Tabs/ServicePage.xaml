@@ -54,7 +54,7 @@
                                             <Run Text="{Binding TriggerProcess}" />
                                         </TextBlock>
                                     </StackPanel>
-                                    <Button Grid.Column="1" Content="▶ Применить"
+                                    <Button Grid.Column="1" Content="▶ Применить" FontFamily="Segoe UI Symbol"
                                             Style="{StaticResource ActionBtn}"
                                             Command="{Binding DataContext.ApplyPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             CommandParameter="{Binding}"
@@ -190,7 +190,7 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                    <Button Grid.Column="2" Content="✖"
+                    <Button Grid.Column="2" Content="✖" FontFamily="Segoe UI Symbol"
                             Style="{StaticResource RedBtn}" Width="28" Height="28"
                             Padding="0" FontSize="14" Margin="6,0,0,0"
                             Command="{Binding ClearDefaultProfileCommand}"
