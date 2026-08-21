@@ -267,6 +267,11 @@ public partial class MainWindow : Window
     {
         base.OnClosing(e);
 
+        // Программное закрытие при успешном обновлении не должно попадать
+        // под пользовательское подтверждение или сворачивание в трей.
+        if (Dispatcher.HasShutdownStarted)
+            _isClosingConfirmed = true;
+
         // ═══ v1.6.0: Feature #21 — Крестик сворачивает в трей ═══
         if (_vm.CloseToTray && !_isClosingConfirmed)
         {
