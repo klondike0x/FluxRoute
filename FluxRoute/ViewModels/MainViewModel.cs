@@ -1163,7 +1163,8 @@ public partial class MainViewModel : ObservableObject
         // ═══ v1.7.0: UI-Redesign — инициализация HostlistsViewModel ═══
         Hostlists = new HostlistsViewModel(
             getEngineDir: () => EngineDir,
-            addLog: msg => Logs.Add(msg));
+            addLog: msg => Logs.Add(msg),
+            onSaved: OnHostlistSaved);
         // ════════════════════════════════════════════════════════════
 
         Logs.Add("Приложение запущено.");
@@ -1608,6 +1609,43 @@ public partial class MainViewModel : ObservableObject
     }
 
     // ── Синхронизация пользовательских доменов с движком (winws.exe) ──
+    private void OnHostlistSaved(string fileName, string content)
+    {
+        var target = fileName switch
+        {
+            "list-general-user.txt" => CustomTargetDomains,
+            "list-exclude-user.txt" => CustomExcludeDomains,
+            _ => null
+        };
+
+        if (target is null)
+            return;
+
+        target.Clear();
+        foreach (var domain in ParseHostlistContent(content))
+            target.Add(domain);
+
+        SaveSettings();
+    }
+
+    private static IEnumerable<string> ParseHostlistContent(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            return Enumerable.Empty<string>();
+
+        return content
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .Where(line => !string.IsNullOrWhiteSpace(line)
+                && !line.StartsWith("#", StringComparison.Ordinal)
+                && !line.StartsWith(";", StringComparison.Ordinal))
+            .Select(line => line.StartsWith("!", StringComparison.Ordinal)
+                ? line[1..].Trim()
+                : line)
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+    }
+
     private void SyncCustomHostlist()
     {
         // v1.6.0: Пропускаем синхронизацию, если пользователь её отключил
