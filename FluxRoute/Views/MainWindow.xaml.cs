@@ -236,17 +236,20 @@ public partial class MainWindow : Window
 
     private void OnTrayExitRequested(object? sender, EventArgs e)
     {
-        // Показываем модальное подтверждение перед закрытием
-        if (CustomDialog.Show(
+        // Сначала подтверждаем выход, затем защищаем несохранённое редактирование хостлистов.
+        if (!CustomDialog.Show(
                 "Завершить работу FluxRoute?",
                 "Все активные службы (WinDivert, WinWS) будут остановлены, защита прекратит работу.",
                 "Завершить",
                 "Отмена",
                 isDanger: true))
-        {
-            _isClosingConfirmed = true;
-            Close();
-        }
+            return;
+
+        if (!_vm.Hostlists.TryLeave())
+            return;
+
+        _isClosingConfirmed = true;
+        Close();
     }
 
     protected override void OnStateChanged(EventArgs e)
@@ -287,7 +290,8 @@ public partial class MainWindow : Window
                     "Все активные службы (WinDivert, WinWS) будут остановлены, защита прекратит работу.",
                     "Завершить",
                     "Отмена",
-                    isDanger: true))
+                    isDanger: true)
+                && _vm.Hostlists.TryLeave())
             {
                 _isClosingConfirmed = true;
                 _logger?.LogInformation("User confirmed FluxRoute shutdown from main window.");
