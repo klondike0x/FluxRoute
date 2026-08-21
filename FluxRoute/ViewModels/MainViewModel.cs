@@ -1634,7 +1634,7 @@ public partial class MainViewModel : ObservableObject
         SaveSettings();
     }
 
-    private static IEnumerable<string> ParseHostlistContent(string content)
+    private IEnumerable<string> ParseHostlistContent(string content)
     {
         if (string.IsNullOrWhiteSpace(content))
             return Enumerable.Empty<string>();
@@ -1648,6 +1648,7 @@ public partial class MainViewModel : ObservableObject
             .Select(line => line.StartsWith("!", StringComparison.Ordinal)
                 ? line[1..].Trim()
                 : line)
+            .Select(NormalizeDomainInput)
             .Where(line => !string.IsNullOrWhiteSpace(line))
             .Distinct(StringComparer.OrdinalIgnoreCase);
     }
