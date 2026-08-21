@@ -29,12 +29,6 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // ═══ ГЛОБАЛЬНАЯ НАСТРОЙКА SSL/TLS ═══
-        System.Net.ServicePointManager.SecurityProtocol =
-            System.Net.SecurityProtocolType.Tls12 |
-            System.Net.SecurityProtocolType.Tls13;
-        // ════════════════════════════════════
-
         Log.Logger = ConfigureSerilog(new LoggerConfiguration()).CreateLogger();
 
         try
