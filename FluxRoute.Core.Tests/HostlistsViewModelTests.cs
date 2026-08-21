@@ -9,7 +9,7 @@ public sealed class HostlistsViewModelTests : IDisposable
     public HostlistsViewModelTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"FluxRouteHostlistsTests_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
+        Directory.CreateDirectory(Path.Combine(_tempDir, "lists"));
     }
 
     public void Dispose()
