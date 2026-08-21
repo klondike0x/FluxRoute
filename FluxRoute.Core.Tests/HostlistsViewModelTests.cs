@@ -29,7 +29,7 @@ public sealed class HostlistsViewModelTests : IDisposable
         viewModel.LoadHostlistFiles();
         viewModel.SelectedFile = viewModel.Files
             .Single(file => file.FileName == "list-general-user.txt");
-        viewModel.EditorContent = "# комментарий\r\nhttps://example.com/\r\nhttp://example.org///\r\n";
+        viewModel.EditorContent = "# комментарий\r\nhttps://example.com/login/?from=mail#top\r\nhttp://example.org///\r\n";
 
         viewModel.SaveCommand.Execute(null);
 
