@@ -170,7 +170,7 @@ public partial class HostlistsViewModel : ObservableObject
         }
 
         // ═══ v1.8.1: Системный файл hosts ═══
-        var systemHostsPath = @"C:WindowsSystem32driversetchosts";
+        var systemHostsPath = @"C:\Windows\System32\drivers\etc\hosts";
         Files.Add(new HostlistFileItem
         {
             FileName = "hosts (системный)",
