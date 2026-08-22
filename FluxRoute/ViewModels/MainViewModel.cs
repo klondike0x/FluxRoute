@@ -1375,7 +1375,16 @@ public partial class MainViewModel : ObservableObject
         TgProxyDomain = settings.TgProxy.Domain;
         TgProxyVerbose = settings.TgProxy.Verbose;
         TgProxyPreferIPv4 = settings.TgProxy.PreferIPv4;
-        TgProxyDcIps = string.IsNullOrWhiteSpace(settings.TgProxy.DcIps) ? "2:149.154.167.220\n4:149.154.167.220" : settings.TgProxy.DcIps;
+        const string defaultTgProxyDcIps = "4:149.154.167.220";
+        const string legacyTgProxyDcIps = "2:149.154.167.220\n4:149.154.167.220";
+        string savedTgProxyDcIps = (settings.TgProxy.DcIps ?? string.Empty)
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Trim();
+        TgProxyDcIps = string.IsNullOrWhiteSpace(savedTgProxyDcIps)
+            || string.Equals(savedTgProxyDcIps, legacyTgProxyDcIps, StringComparison.OrdinalIgnoreCase)
+            ? defaultTgProxyDcIps
+            : settings.TgProxy.DcIps;
         TgProxyCfEnabled = settings.TgProxy.CfProxyEnabled;
         // Migrate the previous defaults: direct Telegram routes are faster for media,
         // while Cloudflare remains available as a fallback.
