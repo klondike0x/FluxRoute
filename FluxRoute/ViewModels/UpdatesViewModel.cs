@@ -27,7 +27,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
     private readonly Action _refreshDiagnostics;
     private readonly Action<string> _addAppLog;
     private readonly Action<string> _addRecentLog;
-    private readonly Action _requestUpdateShutdown;
+    private readonly Action _requestApplicationShutdown;
 
     private UpdateInfo? _pendingUpdate;
     private AppUpdateInfo? _pendingAppUpdate;
@@ -61,7 +61,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
         Action refreshDiagnostics,
         Action<string> addAppLog,
         Action<string> addRecentLog,
-        Action requestUpdateShutdown)
+        Action requestApplicationShutdown)
     {
         _updater = updater;
         _appUpdater = appUpdater;
@@ -74,7 +74,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
         _refreshDiagnostics = refreshDiagnostics;
         _addAppLog = addAppLog;
         _addRecentLog = addRecentLog;
-        _requestUpdateShutdown = requestUpdateShutdown;
+        _requestApplicationShutdown = requestApplicationShutdown;
 
         CurrentAppVersion = _appUpdater.GetCurrentVersion();
     }
@@ -327,7 +327,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
         if (success)
         {
             AddLog($"✅ FluxRoute v{update.Version} установлен, перезапуск...");
-            _requestUpdateShutdown();
+            _requestApplicationShutdown();
             Application.Current?.Dispatcher.Invoke(() => Application.Current.Shutdown());
         }
         else
