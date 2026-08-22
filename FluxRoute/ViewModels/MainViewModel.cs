@@ -23,6 +23,10 @@ namespace FluxRoute.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
+    public bool IsApplicationShutdownRequested { get; private set; }
+
+    public void RequestApplicationShutdown() => IsApplicationShutdownRequested = true;
+
     // ── Коллекции ──
     public ObservableCollection<string> Logs { get; } = new();
     public ObservableCollection<ProfileItem> Profiles { get; } = new();
@@ -398,6 +402,7 @@ public partial class MainViewModel : ObservableObject
                 isDanger: true)
             && Hostlists.TryLeave())
         {
+            RequestApplicationShutdown();
             Application.Current.Shutdown();
         }
     }
@@ -406,7 +411,11 @@ public partial class MainViewModel : ObservableObject
     /// Внешний метод для MainWindow — устанавливает флаг подтверждённого закрытия.
     /// Вызывается из OnTrayExitRequested.
     /// </summary>
-    public void ConfirmClose() => Application.Current.Shutdown();
+    public void ConfirmClose()
+    {
+        RequestApplicationShutdown();
+        Application.Current.Shutdown();
+    }
 
     // ── События ──
     public event EventHandler? OpenSettingsRequested;
@@ -1153,7 +1162,8 @@ public partial class MainViewModel : ObservableObject
             loadProfiles: LoadProfiles,
             refreshDiagnostics: RefreshDiagnostics,
             addAppLog: msg => Logs.Add(msg),
-            addRecentLog: AddToRecentLogs);
+            addRecentLog: AddToRecentLogs,
+            requestApplicationShutdown: RequestApplicationShutdown);
 
         Diagnostics.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
         Service.PropertyChanged += (_, e) =>
