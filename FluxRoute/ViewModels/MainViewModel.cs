@@ -23,6 +23,10 @@ namespace FluxRoute.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
+    public bool IsUpdateShutdownRequested { get; private set; }
+
+    public void RequestUpdateShutdown() => IsUpdateShutdownRequested = true;
+
     // ── Коллекции ──
     public ObservableCollection<string> Logs { get; } = new();
     public ObservableCollection<ProfileItem> Profiles { get; } = new();
@@ -1146,7 +1150,8 @@ public partial class MainViewModel : ObservableObject
             loadProfiles: LoadProfiles,
             refreshDiagnostics: RefreshDiagnostics,
             addAppLog: msg => Logs.Add(msg),
-            addRecentLog: AddToRecentLogs);
+            addRecentLog: AddToRecentLogs,
+            requestUpdateShutdown: RequestUpdateShutdown);
 
         Diagnostics.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
         Service.PropertyChanged += (_, e) =>
