@@ -436,6 +436,18 @@ npm run dev
 
 Для Windows также доступны скрипты `scripts/start-backend.bat` и
 `scripts/start-frontend.bat`.
+### Запуск через Visual Studio
+
+Для запуска привычной кнопкой F5 откройте `FluxRoute.V2.slnx`.
+Проект `FluxRoute.V2.pyproj` запускает `backend/dev.py`, который автоматически
+поднимает FastAPI и Vite.
+
+Перед первым запуском:
+
+1. Установите workloads **Python development** и **Node.js development**.
+2. Выполните установку зависимостей из разделов выше.
+3. В Visual Studio выберите Python interpreter из `backend/venv`.
+4. Нажмите **F5**.
 
 ## 🌳 Экосистема
 
