@@ -157,8 +157,14 @@ public partial class MainViewModel : ObservableObject
         // Удаляем www. (регистронезависимо)
         input = System.Text.RegularExpressions.Regex.Replace(input, @"^www\.", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-        // Убираем завершающий слеш
-        input = input.TrimEnd('/');
+        // Оставляем только host-компонент, отбрасывая путь, query и fragment.
+        var separatorIndex = input.IndexOfAny(new[] { '/', '?', '#' });
+        if (separatorIndex >= 0)
+            input = input[..separatorIndex];
+
+        var portSeparatorIndex = input.IndexOf(':');
+        if (portSeparatorIndex > 0)
+            input = input[..portSeparatorIndex];
 
         // Удаляем оставшиеся пробелы (лишние, если были)
         input = input.Trim();
@@ -389,7 +395,8 @@ public partial class MainViewModel : ObservableObject
                 "Все активные службы и движки будут остановлены, обход DPI прекратит работу.",
                 "Завершить",
                 "Отмена",
-                isDanger: true))
+                isDanger: true)
+            && Hostlists.TryLeave())
         {
             Application.Current.Shutdown();
         }
@@ -1163,7 +1170,8 @@ public partial class MainViewModel : ObservableObject
         // ═══ v1.7.0: UI-Redesign — инициализация HostlistsViewModel ═══
         Hostlists = new HostlistsViewModel(
             getEngineDir: () => EngineDir,
-            addLog: msg => Logs.Add(msg));
+            addLog: msg => Logs.Add(msg),
+            onSaved: OnHostlistSaved);
         // ════════════════════════════════════════════════════════════
 
         Logs.Add("Приложение запущено.");
@@ -1485,6 +1493,11 @@ public partial class MainViewModel : ObservableObject
         if (SimpleMode && selectedIndex is > 0 and not 7)
             return;
 
+        if (SelectedTabIndex == 3
+            && selectedIndex != 3
+            && !Hostlists.TryLeave())
+            return;
+
         SelectedTabIndex = selectedIndex;
     }
 
@@ -1617,6 +1630,50 @@ public partial class MainViewModel : ObservableObject
     }
 
     // ── Синхронизация пользовательских доменов с движком (winws.exe) ──
+    private void OnHostlistSaved(string fileName, string content)
+    {
+        var target = fileName switch
+        {
+            "list-general-user.txt" => CustomTargetDomains,
+            "list-exclude-user.txt" => CustomExcludeDomains,
+            _ => null
+        };
+
+        if (target is null)
+            return;
+
+        target.Clear();
+        foreach (var domain in ParseHostlistContent(content))
+            target.Add(domain);
+
+        // Убираем устаревшие значения legacy-поля, иначе они снова попадут
+        // в hostlist при следующей синхронизации или перезапуске приложения.
+        UserCustomSitesText = string.Join(
+            "\n",
+            CustomTargetDomains.Concat(CustomExcludeDomains.Select(domain => $"!{domain}")));
+
+        SaveSettings();
+    }
+
+    private IEnumerable<string> ParseHostlistContent(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            return Enumerable.Empty<string>();
+
+        return content
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .Where(line => !string.IsNullOrWhiteSpace(line)
+                && !line.StartsWith("#", StringComparison.Ordinal)
+                && !line.StartsWith(";", StringComparison.Ordinal))
+            .Select(line => line.StartsWith("!", StringComparison.Ordinal)
+                ? line[1..].Trim()
+                : line)
+            .Select(NormalizeDomainInput)
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+    }
+
     private void SyncCustomHostlist()
     {
         // v1.6.0: Пропускаем синхронизацию, если пользователь её отключил

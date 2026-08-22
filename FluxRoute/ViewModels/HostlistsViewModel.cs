@@ -5,6 +5,13 @@ using System.IO;
 
 namespace FluxRoute.ViewModels;
 
+public enum HostlistUnsavedChangesDecision
+{
+    Save,
+    Discard,
+    Stay
+}
+
 /// <summary>
 /// ViewModel вкладки Хостлисты.
 /// v1.7.0: UI-Redesign
@@ -13,11 +20,22 @@ public partial class HostlistsViewModel : ObservableObject
 {
     private readonly Func<string> _getEngineDir;
     private readonly Action<string> _addLog;
+    private readonly Action<string, string>? _onSaved;
+    private HostlistFileItem? _activeFile;
 
-    public HostlistsViewModel(Func<string> getEngineDir, Action<string> addLog)
+    /// <summary>
+    /// UI callback для выбора действия при уходе с вкладки с несохранёнными изменениями.
+    /// </summary>
+    public Func<HostlistUnsavedChangesDecision>? UnsavedChangesPrompt { get; set; }
+
+    public HostlistsViewModel(
+        Func<string> getEngineDir,
+        Action<string> addLog,
+        Action<string, string>? onSaved = null)
     {
         _getEngineDir = getEngineDir;
         _addLog = addLog;
+        _onSaved = onSaved;
     }
 
     public ObservableCollection<HostlistFileItem> Files { get; } = new();
@@ -30,10 +48,83 @@ public partial class HostlistsViewModel : ObservableObject
 
     private string _originalContent = string.Empty;
 
+    partial void OnSelectedFileChanging(HostlistFileItem? value)
+    {
+        if (_isRestoringSelection
+            || value is null
+            || _activeFile is null
+            || ReferenceEquals(value, _activeFile)
+            || !HasChanges)
+            return;
+
+        switch (UnsavedChangesPrompt?.Invoke() ?? HostlistUnsavedChangesDecision.Stay)
+        {
+            case HostlistUnsavedChangesDecision.Save:
+                if (!TrySave())
+                    _restoreSelection = true;
+                break;
+            case HostlistUnsavedChangesDecision.Discard:
+                CancelEdit();
+                break;
+            case HostlistUnsavedChangesDecision.Stay:
+                _restoreSelection = true;
+                break;
+        }
+    }
+
     partial void OnSelectedFileChanged(HostlistFileItem? value)
     {
-        if (value is null) return;
+        if (_isRestoringSelection)
+        {
+            _isRestoringSelection = false;
+            return;
+        }
+
+        if (_restoreSelection)
+        {
+            _restoreSelection = false;
+            _isRestoringSelection = true;
+            SelectedFile = _activeFile;
+            _isRestoringSelection = false;
+            return;
+        }
+
+        if (value is null)
+            return;
+
+        _activeFile = value;
         LoadFileContent(value);
+    }
+
+    private bool _restoreSelection;
+    private bool _isRestoringSelection;
+
+    /// <summary>
+    /// Проверяет, можно ли покинуть вкладку хостлистов.
+    /// </summary>
+    public bool TryLeave()
+    {
+        if (!HasChanges)
+            return true;
+
+        return (UnsavedChangesPrompt?.Invoke() ?? HostlistUnsavedChangesDecision.Stay) switch
+        {
+            HostlistUnsavedChangesDecision.Save => SaveAndConfirm(),
+            HostlistUnsavedChangesDecision.Discard => DiscardAndConfirm(),
+            _ => false
+        };
+    }
+
+    private bool SaveAndConfirm()
+    {
+        Save();
+        return !HasChanges;
+    }
+
+    private bool DiscardAndConfirm()
+    {
+        CancelEdit();
+        return !HasChanges;
     }
 
     partial void OnEditorContentChanged(string value)
@@ -128,24 +219,85 @@ public partial class HostlistsViewModel : ObservableObject
     [RelayCommand]
     private void Save()
     {
-        if (SelectedFile is null) return;
+        TrySave();
+    }
+
+    private bool TrySave()
+    {
+        var file = SelectedFile ?? _activeFile;
+        if (file is null) return false;
         try
         {
-            var dir = Path.GetDirectoryName(SelectedFile.FullPath);
+            var dir = Path.GetDirectoryName(file.FullPath);
             if (!string.IsNullOrEmpty(dir))
                 Directory.CreateDirectory(dir);
 
-            File.WriteAllText(SelectedFile.FullPath, EditorContent);
-            _originalContent = EditorContent;
+            var contentToSave = IsUserHostlist(file.FileName)
+                ? NormalizeUserHostlistContent(EditorContent)
+                : EditorContent;
+
+            File.WriteAllText(file.FullPath, contentToSave);
+            _onSaved?.Invoke(file.FileName, contentToSave);
+            _originalContent = contentToSave;
+            EditorContent = contentToSave;
             HasChanges = false;
-            SelectedFile.Exists = true;
-            StatusText = $"Сохранено: {SelectedFile.FileName}";
-            _addLog($"[Хостлисты] Сохранён файл: {SelectedFile.FileName}");
+            file.Exists = true;
+            StatusText = $"Сохранено: {file.FileName}";
+            _addLog($"[Хостлисты] Сохранён файл: {file.FileName}");
+            return true;
         }
         catch (Exception ex)
         {
             StatusText = $"Ошибка сохранения: {ex.Message}";
+            return false;
         }
+    }
+
+    private static bool IsUserHostlist(string fileName) =>
+        fileName.Equals("list-general-user.txt", StringComparison.OrdinalIgnoreCase)
+        || fileName.Equals("list-exclude-user.txt", StringComparison.OrdinalIgnoreCase);
+
+    private static string NormalizeUserHostlistContent(string content)
+    {
+        if (string.IsNullOrEmpty(content))
+            return content;
+
+        return string.Join(
+            Environment.NewLine,
+            content
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Replace('\r', '\n')
+                .Split('\n')
+                .Select(NormalizeHostlistLine));
+    }
+    private static string NormalizeHostlistLine(string line)
+    {
+        var trimmed = line.Trim();
+        if (trimmed.Length == 0
+            || trimmed.StartsWith("#", StringComparison.Ordinal)
+            || trimmed.StartsWith(";", StringComparison.Ordinal))
+            return line;
+
+        var marker = trimmed.StartsWith("!", StringComparison.Ordinal) ? "!" : string.Empty;
+        var value = marker.Length > 0 ? trimmed[1..].Trim() : trimmed;
+
+        if (value.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            value = value[8..];
+        else if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            value = value[7..];
+
+        if (value.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+            value = value[4..];
+
+        var separatorIndex = value.IndexOfAny(new[] { '/', '?', '#' });
+        if (separatorIndex >= 0)
+            value = value[..separatorIndex];
+
+        var portSeparatorIndex = value.IndexOf(':');
+        if (portSeparatorIndex > 0)
+            value = value[..portSeparatorIndex];
+
+        return marker + value;
     }
 
     /// <summary>
@@ -154,10 +306,11 @@ public partial class HostlistsViewModel : ObservableObject
     [RelayCommand]
     private void CancelEdit()
     {
-        if (SelectedFile is null) return;
+        var file = SelectedFile ?? _activeFile;
+        if (file is null) return;
         EditorContent = _originalContent;
         HasChanges = false;
-        StatusText = $"Изменения отменены: {SelectedFile.FileName}";
+        StatusText = $"Изменения отменены: {file.FileName}";
     }
 
     /// <summary>
