@@ -1243,7 +1243,7 @@ public partial class MainViewModel : ObservableObject
                 .Select(r => (profile: Profiles.FirstOrDefault(p => p.FileName == r.FileName), r.Score))
                 .Where(x => x.profile is not null)
                 .Select(x => (x.profile!, x.Score));
-            _orchestrator.RestoreRankedProfiles(saved);
+            _orchestrator.RestoreRankedProfiles(saved, settings.LastProfileFileName);
         }
 
         _aiOrchestrator = new AiOrchestratorService(

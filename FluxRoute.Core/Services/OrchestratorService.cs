@@ -94,13 +94,16 @@ public sealed class OrchestratorService : IDisposable
     /// Восстанавливает кэш рейтинга из сохранённых настроек.
     /// Если рейтинг не пустой — при следующем Start() сканирование будет пропущено.
     /// </summary>
-    public void RestoreRankedProfiles(IEnumerable<(ProfileItem profile, int score)> saved)
+    public void RestoreRankedProfiles(
+        IEnumerable<(ProfileItem profile, int score)> saved,
+        string? preferredProfileFileName = null)
     {
-        _rankedProfiles = saved
+        _preferredProfileFileName = preferredProfileFileName;
+        var restored = saved
             .Where(x => x.score > 0)
             .Select(x => (x.profile, x.score, (ProfileProbeResult?)null))
-            .OrderByDescending(x => x.score)
             .ToList();
+        _rankedProfiles = RankProfiles(restored);
         if (_rankedProfiles.Count > 0)
             Notify($"📋 Рейтинг стратегий восстановлен из кэша ({_rankedProfiles.Count} шт.), сканирование пропущено.");
     }
