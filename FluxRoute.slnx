@@ -1,7 +1,14 @@
 <Solution>
-  <Project Path="FluxRoute.Core.Tests/FluxRoute.Core.Tests.csproj" />
   <Project Path="FluxRoute.AI/FluxRoute.AI.csproj" />
+  <Project Path="FluxRoute.Core.Tests/FluxRoute.Core.Tests.csproj" />
   <Project Path="FluxRoute.Core/FluxRoute.Core.csproj" />
   <Project Path="FluxRoute.Updater/FluxRoute.Updater.csproj" />
+  <Project Path="FluxRoute.V2.Backend/FluxRoute.V2.Backend.pyproj" Type="888888a0-9f3d-457c-b088-3a5042f75d52" Id="7ce97e4b-b085-4e92-a99d-4911054f7d41">
+    <Build />
+  </Project>
+  <Project Path="FluxRoute.V2.Frontend/FluxRoute.V2.Frontend.esproj">
+    <Build />
+    <Deploy />
+  </Project>
   <Project Path="FluxRoute/FluxRoute.csproj" />
 </Solution>
