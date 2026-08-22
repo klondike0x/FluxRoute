@@ -408,6 +408,35 @@ taskkill /PID <число> /F
 
 ---
 
+## Разработка 2.0 (ветка `v2-dev`)
+
+Новая версия постепенно переносится на Python + FastAPI и React + TypeScript + Vite.
+На этом этапе доступен только минимальный скелет и проверка связи между frontend и backend.
+
+### Запуск бэкенда (Python + FastAPI)
+
+```bash
+cd backend
+python -m venv venv
+venv\Scripts\activate  # или source venv/bin/activate
+pip install -r requirements.txt
+python run.py
+```
+
+### Запуск фронтенда (React + TypeScript)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Откройте [http://localhost:5173](http://localhost:5173). Backend доступен по адресу
+[http://localhost:8000/api/status](http://localhost:8000/api/status).
+
+Для Windows также доступны скрипты `scripts/start-backend.bat` и
+`scripts/start-frontend.bat`.
+
 ## 🌳 Экосистема
 
 FluxRoute построен на экосистеме open-source проектов:
