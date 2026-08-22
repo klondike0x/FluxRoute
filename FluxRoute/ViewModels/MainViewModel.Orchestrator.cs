@@ -810,19 +810,16 @@ public partial class MainViewModel
             ScanTimeRemaining = "✅ Завершено";
             SaveSettings();
 
-            var top = ProfileScores.FirstOrDefault(s => s.Score > 0);
-            ScanBestStrategyText = top is null
+            var bestProfile = _orchestrator.BestRankedProfile;
+            var bestScore = _orchestrator.BestRankedScore;
+            ScanBestStrategyText = bestProfile is null
                 ? "Рабочая стратегия не найдена"
-                : $"{top.DisplayName} · {top.ScoreText}";
-            if (top is not null)
+                : $"{bestProfile.DisplayName} · {bestScore}%";
+            if (bestProfile is not null)
             {
-                var profile = Profiles.FirstOrDefault(p => p.FileName == top.FileName);
-                if (profile is not null)
-                {
-                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ▶ Запуск лучшей стратегии «{profile.DisplayName}» ({(int)System.Math.Round((double)top.Score * 100)}%).");
-                    Logs.Add($"[Оркестратор] Лучшая стратегия после сканирования: «{profile.DisplayName}».");
-                    await SwitchProfileAsync(profile).ConfigureAwait(false);
-                }
+                AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ▶ Запуск лучшей стратегии «{bestProfile.DisplayName}» ({bestScore}%).");
+                Logs.Add($"[Оркестратор] Лучшая стратегия после сканирования: «{bestProfile.DisplayName}».");
+                await SwitchProfileAsync(bestProfile).ConfigureAwait(false);
             }
             else if (wasRunning && SelectedProfile is not null && !IsTrackedProcessRunning())
                 await EnsureProtectionRunningAsync().ConfigureAwait(false);
