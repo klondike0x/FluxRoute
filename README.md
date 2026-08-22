@@ -439,8 +439,8 @@ npm run dev
 ### Запуск через Visual Studio
 
 Для запуска привычной кнопкой F5 откройте `FluxRoute.V2.slnx`.
-Проект `FluxRoute.V2.pyproj` запускает `backend/dev.py`, который автоматически
-поднимает FastAPI и Vite.
+Проект `FluxRoute.V2.pyproj` запускает FastAPI backend, а отдельный проект `frontend/FluxRoute.V2.Frontend.esproj` запускает Vite.
+Оба проекта запускаются общим профилем Visual Studio.
 
 Перед первым запуском:
 
