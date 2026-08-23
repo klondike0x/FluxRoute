@@ -920,6 +920,23 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool closeToTray = true;
     partial void OnCloseToTrayChanged(bool value) => SaveSettings();
 
+    // Сохранённый выбор режима работы без прав администратора.
+    [ObservableProperty] private bool rememberAdminChoice;
+    partial void OnRememberAdminChoiceChanged(bool value)
+    {
+        if (value)
+            _adminChoiceContinueWithout = !IsRunningAsAdmin();
+        SaveSettings();
+    }
+    private bool _adminChoiceContinueWithout = true;
+
+    private static bool IsRunningAsAdmin()
+    {
+        using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        var principal = new System.Security.Principal.WindowsPrincipal(identity);
+        return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+    }
+
     // ═══ v1.6.0: Автозапуск через Планировщик задач ═══
     [ObservableProperty] private bool taskSchedulerAutoStart;
     partial void OnTaskSchedulerAutoStartChanged(bool value)
@@ -1369,6 +1386,8 @@ public partial class MainViewModel : ObservableObject
         SimpleMode = settings.SimpleMode;
         // ═══ v1.6.0: Крестик сворачивает в трей ═══
         CloseToTray = settings.CloseToTray;
+        RememberAdminChoice = settings.RememberAdminChoice;
+        _adminChoiceContinueWithout = settings.AdminChoiceContinueWithout;
         // ═══════════════════════════════════════
         GameFilterProtocol = settings.GameFilterProtocol;
         ShowProfileSwitchWarning = settings.ShowProfileSwitchWarning;
@@ -1455,6 +1474,8 @@ public partial class MainViewModel : ObservableObject
             SimpleMode = SimpleMode,
             // ═══ v1.6.0: Крестик сворачивает в трей ═══
             CloseToTray = CloseToTray,
+            RememberAdminChoice = RememberAdminChoice,
+            AdminChoiceContinueWithout = _adminChoiceContinueWithout,
             // ═══════════════════════════════════════
             GameFilterProtocol = GameFilterProtocol,
             ShowProfileSwitchWarning = ShowProfileSwitchWarning,
