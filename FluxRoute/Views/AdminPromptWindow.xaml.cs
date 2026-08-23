@@ -13,6 +13,8 @@ public partial class AdminPromptWindow : Window
     /// </summary>
     public bool ContinueWithoutAdmin { get; private set; }
 
+    public bool RememberChoice => RememberCheckBox.IsChecked == true;
+
     public AdminPromptWindow()
     {
         InitializeComponent();

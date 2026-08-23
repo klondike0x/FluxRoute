@@ -1,5 +1,6 @@
 using System.IO;
 using System.Net.Http;
+using System.Diagnostics;
 using System.Security.Principal;
 using System.Windows;
 using FluxRoute.AI.Services;
@@ -45,29 +46,55 @@ public partial class App : Application
 
             Log.Information("FluxRoute application host started. Arguments: {Arguments}", e.Args);
 
+            var settingsService = _host.Services.GetRequiredService<ISettingsService>();
+
             if (!IsRunningAsAdmin())
             {
                 Log.Warning("FluxRoute is running without administrator privileges.");
 
-                // Временно переключаем, чтобы закрытие диалога не завершило приложение.
-                ShutdownMode = ShutdownMode.OnExplicitShutdown;
-
-                var prompt = new AdminPromptWindow();
-                prompt.ShowDialog();
-
-                // Разрешение работать без прав действует только до закрытия приложения.
-                if (!prompt.ContinueWithoutAdmin)
+                var adminSettings = settingsService.Load();
+                if (adminSettings.RememberAdminChoice)
                 {
-                    Log.Information("User declined to continue without administrator privileges.");
-                    Shutdown();
-                    return;
+                    if (adminSettings.AdminChoiceContinueWithout)
+                    {
+                        Log.Information("Admin prompt skipped: user chose to continue without admin (remembered).");
+                    }
+                    else
+                    {
+                        Log.Information("Admin prompt skipped: restarting as admin (remembered).");
+                        RestartAsAdmin();
+                        Shutdown();
+                        return;
+                    }
+                }
+                else
+                {
+                    // Временно переключаем, чтобы закрытие диалога не завершило приложение.
+                    ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+                    var prompt = new AdminPromptWindow();
+                    prompt.ShowDialog();
+
+                    if (prompt.RememberChoice)
+                    {
+                        adminSettings.RememberAdminChoice = true;
+                        adminSettings.AdminChoiceContinueWithout = prompt.ContinueWithoutAdmin;
+                        settingsService.Save(adminSettings);
+                        Log.Information("Admin choice saved: continueWithout={Choice}", prompt.ContinueWithoutAdmin);
+                    }
+
+                    if (!prompt.ContinueWithoutAdmin)
+                    {
+                        Log.Information("User declined to continue without administrator privileges.");
+                        Shutdown();
+                        return;
+                    }
                 }
             }
 
             ShutdownMode = ShutdownMode.OnMainWindowClose;
 
             // ═══ v1.7.0: Онбординг при первом запуске ═══
-            var settingsService = _host.Services.GetRequiredService<ISettingsService>();
             var settings = settingsService.Load();
 
             // Миграция старых установок: профиль уже был выбран, но ранняя версия
@@ -442,5 +469,26 @@ public partial class App : Application
         using var identity = WindowsIdentity.GetCurrent();
         var principal = new WindowsPrincipal(identity);
         return principal.IsInRole(WindowsBuiltInRole.Administrator);
+    }
+
+    private static void RestartAsAdmin()
+    {
+        try
+        {
+            var exePath = Environment.ProcessPath
+                ?? System.Reflection.Assembly.GetEntryAssembly()?.Location;
+            if (exePath is not null)
+            {
+                Process.Start(new ProcessStartInfo(exePath)
+                {
+                    UseShellExecute = true,
+                    Verb = "runas"
+                });
+            }
+        }
+        catch
+        {
+            // Пользователь отменил UAC
+        }
     }
 }
