@@ -922,8 +922,20 @@ public partial class MainViewModel : ObservableObject
 
     // Сохранённый выбор режима работы без прав администратора.
     [ObservableProperty] private bool rememberAdminChoice;
-    partial void OnRememberAdminChoiceChanged(bool value) => SaveSettings();
+    partial void OnRememberAdminChoiceChanged(bool value)
+    {
+        if (value)
+            _adminChoiceContinueWithout = !IsRunningAsAdmin();
+        SaveSettings();
+    }
     private bool _adminChoiceContinueWithout = true;
+
+    private static bool IsRunningAsAdmin()
+    {
+        using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        var principal = new System.Security.Principal.WindowsPrincipal(identity);
+        return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+    }
 
     // ═══ v1.6.0: Автозапуск через Планировщик задач ═══
     [ObservableProperty] private bool taskSchedulerAutoStart;
