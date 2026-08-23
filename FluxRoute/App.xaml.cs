@@ -53,21 +53,30 @@ public partial class App : Application
                 Log.Warning("FluxRoute is running without administrator privileges.");
 
                 var adminSettings = settingsService.Load();
+                var showAdminPrompt = true;
                 if (adminSettings.RememberAdminChoice)
                 {
                     if (adminSettings.AdminChoiceContinueWithout)
                     {
                         Log.Information("Admin prompt skipped: user chose to continue without admin (remembered).");
+                        showAdminPrompt = false;
                     }
                     else
                     {
                         Log.Information("Admin prompt skipped: restarting as admin (remembered).");
-                        RestartAsAdmin();
-                        Shutdown();
-                        return;
+                        if (RestartAsAdmin(e.Args))
+                        {
+                            Shutdown();
+                            return;
+                        }
+
+                        Log.Warning("Remembered administrator elevation failed or was cancelled; showing the admin prompt again.");
+                        adminSettings.RememberAdminChoice = false;
+                        settingsService.Save(adminSettings);
                     }
                 }
-                else
+
+                if (showAdminPrompt)
                 {
                     // Временно переключаем, чтобы закрытие диалога не завершило приложение.
                     ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -75,7 +84,7 @@ public partial class App : Application
                     var prompt = new AdminPromptWindow();
                     prompt.ShowDialog();
 
-                    if (prompt.RememberChoice)
+                    if (prompt.ChoiceMade && prompt.RememberChoice)
                     {
                         adminSettings.RememberAdminChoice = true;
                         adminSettings.AdminChoiceContinueWithout = prompt.ContinueWithoutAdmin;
@@ -83,9 +92,9 @@ public partial class App : Application
                         Log.Information("Admin choice saved: continueWithout={Choice}", prompt.ContinueWithoutAdmin);
                     }
 
-                    if (!prompt.ContinueWithoutAdmin)
+                    if (!prompt.ChoiceMade || !prompt.ContinueWithoutAdmin)
                     {
-                        Log.Information("User declined to continue without administrator privileges.");
+                        Log.Information("User did not choose to continue without administrator privileges.");
                         Shutdown();
                         return;
                     }
@@ -471,24 +480,29 @@ public partial class App : Application
         return principal.IsInRole(WindowsBuiltInRole.Administrator);
     }
 
-    private static void RestartAsAdmin()
+    private static bool RestartAsAdmin(string[] arguments)
     {
         try
         {
             var exePath = Environment.ProcessPath
                 ?? System.Reflection.Assembly.GetEntryAssembly()?.Location;
-            if (exePath is not null)
+            if (exePath is null)
+                return false;
+
+            var startInfo = new ProcessStartInfo(exePath)
             {
-                Process.Start(new ProcessStartInfo(exePath)
-                {
-                    UseShellExecute = true,
-                    Verb = "runas"
-                });
-            }
+                UseShellExecute = true,
+                Verb = "runas"
+            };
+            foreach (var argument in arguments)
+                startInfo.ArgumentList.Add(argument);
+
+            return Process.Start(startInfo) is not null;
         }
         catch
         {
-            // Пользователь отменил UAC
+            // Пользователь отменил UAC или новый процесс не удалось запустить.
+            return false;
         }
     }
 }

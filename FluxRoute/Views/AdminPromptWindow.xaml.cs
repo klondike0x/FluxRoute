@@ -12,6 +12,7 @@ public partial class AdminPromptWindow : Window
     /// При перезапуске окно закрывается и процесс перезапускается от имени администратора.
     /// </summary>
     public bool ContinueWithoutAdmin { get; private set; }
+    public bool ChoiceMade { get; private set; }
 
     public bool RememberChoice => RememberCheckBox.IsChecked == true;
 
@@ -25,14 +26,20 @@ public partial class AdminPromptWindow : Window
         try
         {
             var exePath = Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule?.FileName;
-            if (exePath is not null)
+            if (exePath is null)
+                return;
+
+            var startInfo = new ProcessStartInfo(exePath)
             {
-                Process.Start(new ProcessStartInfo(exePath)
-                {
-                    UseShellExecute = true,
-                    Verb = "runas"
-                });
-            }
+                UseShellExecute = true,
+                Verb = "runas"
+            };
+            var commandLineArgs = Environment.GetCommandLineArgs();
+            for (var i = 1; i < commandLineArgs.Length; i++)
+                startInfo.ArgumentList.Add(commandLineArgs[i]);
+
+            if (Process.Start(startInfo) is null)
+                return;
         }
         catch
         {
@@ -41,12 +48,14 @@ public partial class AdminPromptWindow : Window
         }
 
         // Закрываем диалог — App.OnStartup() вызовет Shutdown()
+        ChoiceMade = true;
         ContinueWithoutAdmin = false;
         Close();
     }
 
     private void ContinueButton_Click(object sender, RoutedEventArgs e)
     {
+        ChoiceMade = true;
         ContinueWithoutAdmin = true;
         Close();
     }
