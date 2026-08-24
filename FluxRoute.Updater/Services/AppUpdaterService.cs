@@ -457,10 +457,7 @@ public class AppUpdaterService : IAppUpdaterService
                         timeout /t 1 /nobreak > nul
                         goto waitloop
                     )
-                    echo [FluxRoute Updater] Устанавливаем v{update.Version} через installer...
-                    start "" /wait "{tempInstaller}" /SILENT /NORESTART /CLOSEAPPLICATIONS
-                    if errorlevel 1 exit /b 1
-                    echo [FluxRoute Updater] Завершаем дочерние процессы после установки...
+                    echo [FluxRoute Updater] Завершаем дочерние процессы перед установкой...
                     taskkill /IM winws.exe /F > nul 2>&1
                     taskkill /IM winws2.exe /F > nul 2>&1
                     taskkill /IM WinDivert.exe /F > nul 2>&1
@@ -492,6 +489,9 @@ public class AppUpdaterService : IAppUpdaterService
                     goto wait_windivert_state_installer
 
                     :windivert_ready_after_installer
+                    echo [FluxRoute Updater] Устанавливаем v{update.Version} через installer...
+                    start "" /wait "{tempInstaller}" /SILENT /NORESTART /CLOSEAPPLICATIONS
+                    if errorlevel 1 exit /b 1
                     del /F /Q "{tempInstaller}" > nul 2>&1
                     echo [FluxRoute Updater] Запускаем FluxRoute v{update.Version}...
                     start "" "{installerExePath}"
