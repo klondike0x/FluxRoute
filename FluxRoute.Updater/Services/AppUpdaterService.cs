@@ -462,13 +462,18 @@ public class AppUpdaterService : IAppUpdaterService
                     if errorlevel 1 exit /b 1
                     echo [FluxRoute Updater] Завершаем дочерние процессы после установки...
                     taskkill /IM winws.exe /F > nul 2>&1
+                    taskkill /IM winws2.exe /F > nul 2>&1
                     taskkill /IM WinDivert.exe /F > nul 2>&1
                     net stop WinDivert > nul 2>&1
-                    echo [FluxRoute Updater] Ожидаем освобождения winws.exe и WinDivert...
+                    echo [FluxRoute Updater] Ожидаем освобождения winws.exe, winws2.exe и WinDivert...
                     set /a wait_winws_count=0
                     :wait_winws_after_installer
+                    set "winws_running="
                     tasklist /FI "IMAGENAME eq winws.exe" | find /I "winws.exe" > nul
-                    if errorlevel 1 goto wait_windivert_after_installer
+                    if not errorlevel 1 set "winws_running=1"
+                    tasklist /FI "IMAGENAME eq winws2.exe" | find /I "winws2.exe" > nul
+                    if not errorlevel 1 set "winws_running=1"
+                    if not defined winws_running goto wait_windivert_after_installer
                     set /a wait_winws_count+=1
                     if %wait_winws_count% GEQ 30 goto wait_windivert_after_installer
                     timeout /t 1 /nobreak > nul
@@ -545,13 +550,18 @@ public class AppUpdaterService : IAppUpdaterService
                 )
                 echo [FluxRoute Updater] Завершаем дочерние процессы...
                 taskkill /IM winws.exe /F > nul 2>&1
+                taskkill /IM winws2.exe /F > nul 2>&1
                 taskkill /IM WinDivert.exe /F > nul 2>&1
                 net stop WinDivert > nul 2>&1
-                echo [FluxRoute Updater] Ожидаем освобождения winws.exe и WinDivert...
+                echo [FluxRoute Updater] Ожидаем освобождения winws.exe, winws2.exe и WinDivert...
                 set /a wait_winws_count=0
                 :wait_winws_after_update
+                set "winws_running="
                 tasklist /FI "IMAGENAME eq winws.exe" | find /I "winws.exe" > nul
-                if errorlevel 1 goto wait_windivert_after_update
+                if not errorlevel 1 set "winws_running=1"
+                tasklist /FI "IMAGENAME eq winws2.exe" | find /I "winws2.exe" > nul
+                if not errorlevel 1 set "winws_running=1"
+                if not defined winws_running goto wait_windivert_after_update
                 set /a wait_winws_count+=1
                 if %wait_winws_count% GEQ 30 goto wait_windivert_after_update
                 timeout /t 1 /nobreak > nul
