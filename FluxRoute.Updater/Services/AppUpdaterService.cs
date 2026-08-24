@@ -460,6 +460,33 @@ public class AppUpdaterService : IAppUpdaterService
                     echo [FluxRoute Updater] Устанавливаем v{update.Version} через installer...
                     start "" /wait "{tempInstaller}" /SILENT /NORESTART /CLOSEAPPLICATIONS
                     if errorlevel 1 exit /b 1
+                    echo [FluxRoute Updater] Завершаем дочерние процессы после установки...
+                    taskkill /IM winws.exe /F > nul 2>&1
+                    taskkill /IM WinDivert.exe /F > nul 2>&1
+                    net stop WinDivert > nul 2>&1
+                    echo [FluxRoute Updater] Ожидаем освобождения winws.exe и WinDivert...
+                    set /a wait_winws_count=0
+                    :wait_winws_after_installer
+                    tasklist /FI "IMAGENAME eq winws.exe" | find /I "winws.exe" > nul
+                    if errorlevel 1 goto wait_windivert_after_installer
+                    set /a wait_winws_count+=1
+                    if %wait_winws_count% GEQ 30 goto wait_windivert_after_installer
+                    timeout /t 1 /nobreak > nul
+                    goto wait_winws_after_installer
+
+                    :wait_windivert_after_installer
+                    set /a wait_windivert_count=0
+                    :wait_windivert_state_installer
+                    sc query "WinDivert" > nul 2>&1
+                    if errorlevel 1060 goto windivert_ready_after_installer
+                    sc query "WinDivert" | findstr /I /C:"STOPPED" > nul
+                    if not errorlevel 1 goto windivert_ready_after_installer
+                    set /a wait_windivert_count+=1
+                    if %wait_windivert_count% GEQ 30 goto windivert_ready_after_installer
+                    timeout /t 1 /nobreak > nul
+                    goto wait_windivert_state_installer
+
+                    :windivert_ready_after_installer
                     del /F /Q "{tempInstaller}" > nul 2>&1
                     echo [FluxRoute Updater] Запускаем FluxRoute v{update.Version}...
                     start "" "{installerExePath}"
