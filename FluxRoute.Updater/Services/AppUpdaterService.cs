@@ -541,13 +541,6 @@ public class AppUpdaterService : IAppUpdaterService
                     timeout /t 1 /nobreak > nul
                     goto waitloop
                 )
-                echo [FluxRoute Updater] Устанавливаем v{update.Version}...
-                xcopy /E /Y /I "{extractedSourceDir}\*" "{exeDir}\"
-                if errorlevel 1 (
-                    echo [FluxRoute Updater] Ошибка копирования!
-                    pause
-                    exit /b 1
-                )
                 echo [FluxRoute Updater] Завершаем дочерние процессы...
                 taskkill /IM winws.exe /F > nul 2>&1
                 taskkill /IM winws2.exe /F > nul 2>&1
@@ -580,6 +573,13 @@ public class AppUpdaterService : IAppUpdaterService
                 goto wait_windivert_state
 
                 :windivert_ready_after_update
+                echo [FluxRoute Updater] Устанавливаем v{update.Version}...
+                xcopy /E /Y /I "{extractedSourceDir}\*" "{exeDir}\"
+                if errorlevel 1 (
+                    echo [FluxRoute Updater] Ошибка копирования!
+                    pause
+                    exit /b 1
+                )
                 echo [FluxRoute Updater] Очищаем временные файлы...
                 del /F /Q "{tempZip}" > nul 2>&1
                 rd /S /Q "{tempDir}" > nul 2>&1
