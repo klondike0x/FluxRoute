@@ -472,7 +472,7 @@ public class AppUpdaterService : IAppUpdaterService
                     if not errorlevel 1 set "winws_running=1"
                     if not defined winws_running goto wait_windivert_after_installer
                     set /a wait_winws_count+=1
-                    if %wait_winws_count% GEQ 30 goto wait_windivert_after_installer
+                    if %wait_winws_count% GEQ 30 goto update_abort_after_installer
                     timeout /t 1 /nobreak > nul
                     goto wait_winws_after_installer
 
@@ -484,10 +484,14 @@ public class AppUpdaterService : IAppUpdaterService
                     sc query "WinDivert" | findstr /I /C:"STOPPED" > nul
                     if not errorlevel 1 goto windivert_ready_after_installer
                     set /a wait_windivert_count+=1
-                    if %wait_windivert_count% GEQ 30 goto windivert_ready_after_installer
+                    if %wait_windivert_count% GEQ 30 goto update_abort_after_installer
                     timeout /t 1 /nobreak > nul
                     goto wait_windivert_state_installer
 
+                    :update_abort_after_installer
+                    echo [FluxRoute Updater] Не удалось полностью остановить winws.exe, winws2.exe или WinDivert. Обновление отменено.
+                    del /F /Q "{tempInstaller}" > nul 2>&1
+                    exit /b 1
                     :windivert_ready_after_installer
                     echo [FluxRoute Updater] Устанавливаем v{update.Version} через installer...
                     start "" /wait "{tempInstaller}" /SILENT /NORESTART /CLOSEAPPLICATIONS
@@ -556,7 +560,7 @@ public class AppUpdaterService : IAppUpdaterService
                 if not errorlevel 1 set "winws_running=1"
                 if not defined winws_running goto wait_windivert_after_update
                 set /a wait_winws_count+=1
-                if %wait_winws_count% GEQ 30 goto wait_windivert_after_update
+                if %wait_winws_count% GEQ 30 goto update_abort_after_update
                 timeout /t 1 /nobreak > nul
                 goto wait_winws_after_update
 
@@ -568,10 +572,15 @@ public class AppUpdaterService : IAppUpdaterService
                 sc query "WinDivert" | findstr /I /C:"STOPPED" > nul
                 if not errorlevel 1 goto windivert_ready_after_update
                 set /a wait_windivert_count+=1
-                if %wait_windivert_count% GEQ 30 goto windivert_ready_after_update
+                if %wait_windivert_count% GEQ 30 goto update_abort_after_update
                 timeout /t 1 /nobreak > nul
                 goto wait_windivert_state
 
+                :update_abort_after_update
+                echo [FluxRoute Updater] Не удалось полностью остановить winws.exe, winws2.exe или WinDivert. Обновление отменено.
+                del /F /Q "{tempZip}" > nul 2>&1
+                rd /S /Q "{tempDir}" > nul 2>&1
+                exit /b 1
                 :windivert_ready_after_update
                 echo [FluxRoute Updater] Устанавливаем v{update.Version}...
                 xcopy /E /Y /I "{extractedSourceDir}\*" "{exeDir}\"
