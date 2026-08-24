@@ -491,6 +491,7 @@ public class AppUpdaterService : IAppUpdaterService
                     :update_abort_after_installer
                     echo [FluxRoute Updater] Не удалось полностью остановить winws.exe, winws2.exe или WinDivert. Обновление отменено.
                     del /F /Q "{tempInstaller}" > nul 2>&1
+                    start "" "{installerExePath}"
                     exit /b 1
                     :windivert_ready_after_installer
                     echo [FluxRoute Updater] Устанавливаем v{update.Version} через installer...
@@ -580,6 +581,7 @@ public class AppUpdaterService : IAppUpdaterService
                 echo [FluxRoute Updater] Не удалось полностью остановить winws.exe, winws2.exe или WinDivert. Обновление отменено.
                 del /F /Q "{tempZip}" > nul 2>&1
                 rd /S /Q "{tempDir}" > nul 2>&1
+                start "" "{newExePath}"
                 exit /b 1
                 :windivert_ready_after_update
                 echo [FluxRoute Updater] Устанавливаем v{update.Version}...
