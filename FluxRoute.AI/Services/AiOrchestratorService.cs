@@ -594,6 +594,11 @@ public sealed class AiOrchestratorService : IDisposable
         await _notifyScoreUpdate(testProfile.FileName, result.Score).ConfigureAwait(false);
         g.LastVerificationScore = result.Score;
         g.LastVerifiedAt = DateTimeOffset.UtcNow;
+        // Если генотип удалён очисткой во время проверки — не воскрешаем запись в реестре,
+        // иначе после завершения проверки он вернул бы запись для уже удалённого файла
+        // (правка по Codex P1, девятый раунд).
+        if (_registry.GetById(g.Id) is null)
+            return false;
         _registry.Upsert(g);
         _registry.Save();
 
@@ -612,10 +617,14 @@ public sealed class AiOrchestratorService : IDisposable
             if (builtinOk.Count > 0)
             {
                 Notify($"🗑 ИИ: стратегия «{g.DisplayName}» ({result.Score}%) ниже порога {threshold}% — удалена автоматически.", result: result);
-                TryDeleteGenomeBatFile(g);
-                _registry.Remove(g.Id);
-                _registry.Save();
-                return true;
+                if (TryDeleteGenomeBatFile(g))
+                {
+                    _registry.Remove(g.Id);
+                    _registry.Save();
+                    return true;
+                }
+                // Файл не удалился — запись из реестра не убираем (Codex P2, 9-й раунд).
+                Notify($"⚠️ ИИ: не удалось удалить файл «{g.DisplayName}» — стратегия сохранена.", result: result);
             }
 
             Notify($"🧬 ИИ: стратегия «{g.DisplayName}» ({result.Score}%) ниже порога {threshold}%, но оставлена — встроенные тоже не проходят (сеть агрессивна).", result: result);
@@ -679,7 +688,13 @@ public sealed class AiOrchestratorService : IDisposable
             }
 
             Notify($"🗑 ИИ: стратегия «{g.DisplayName}» ({score}%) ниже порога {threshold}% на этой сети — удалена.");
-            TryDeleteGenomeBatFile(g);
+            if (!TryDeleteGenomeBatFile(g))
+            {
+                // Файл не удалился (занят/защищён) — запись из реестра не убираем,
+                // иначе LoadProfiles() снова найдёт BAT, а реестр им уже не управляет (Codex P2, 9-й раунд).
+                Notify($"⚠️ ИИ: не удалось удалить файл «{g.DisplayName}» — стратегия сохранена.");
+                continue;
+            }
             _registry.Remove(g.Id);
             deleted++;
         }
@@ -798,15 +813,22 @@ public sealed class AiOrchestratorService : IDisposable
         _registry.Save();
     }
 
-    private static void TryDeleteGenomeBatFile(StrategyGenome g)
+    /// <summary>
+    /// Пытается удалить BAT-файл генотипа. Возвращает true, если файла уже нет (нечего удалять)
+    /// или он успешно удалён; false — если файл существует, но удалить не удалось (занят/защищён).
+    /// </summary>
+    private static bool TryDeleteGenomeBatFile(StrategyGenome g)
     {
         try
         {
-            if (!string.IsNullOrEmpty(g.SourceBatPath) && File.Exists(g.SourceBatPath))
-                File.Delete(g.SourceBatPath);
+            if (string.IsNullOrEmpty(g.SourceBatPath) || !File.Exists(g.SourceBatPath))
+                return true; // файла уже нет — удалять нечего
+            File.Delete(g.SourceBatPath);
+            return true;
         }
         catch
         {
+            return false; // файл занят/защищён — не удалился
         }
     }
 
