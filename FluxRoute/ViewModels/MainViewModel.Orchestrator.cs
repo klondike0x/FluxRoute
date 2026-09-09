@@ -434,30 +434,27 @@ public partial class MainViewModel
 
     /// <summary>
     /// v1.7.1: Переносит результаты уже выполненного полного сканирования (ProfileScores)
-    /// в генотипы ИИ (LastVerificationScore/LastVerifiedAt), чтобы вкладка ИИ показывала
-    /// реальные значения без повторного запуска стратегий (rightк по Codex P2).
+    /// в генотипы ИИ (LastVerificationScore/LastVerifiedAt) и в сетевую историю/бандит,
+    /// чтобы вкладка ИИ и очистка/подбор видели реальные значения. Не перезапускает стратегии.
+    /// Score == 0 — легитимный результат (все цели упали), исключаем только -1 (pending/пропуск).
     /// </summary>
     private void PersistScanScoresIntoGenomes()
     {
         try
         {
-            var updated = false;
+            var results = new List<(Guid genomeId, int score)>();
             foreach (var g in _aiRegistry.GetGenomes().ToList())
             {
                 var score = ProfileScores.FirstOrDefault(s =>
                     string.Equals(s.FileName, g.BatFileName, StringComparison.OrdinalIgnoreCase)
                     || string.Equals(s.DisplayName, g.DisplayName, StringComparison.OrdinalIgnoreCase));
-                if (score is null || score.Score <= 0)
+                if (score is null || score.Score < 0)
                     continue;
 
-                g.LastVerificationScore = score.Score;
-                g.LastVerifiedAt = DateTimeOffset.UtcNow;
-                _aiRegistry.Upsert(g);
-                updated = true;
+                results.Add((g.Id, score.Score));
             }
 
-            if (updated)
-                _aiRegistry.Save();
+            _aiOrchestrator.PersistScanVerification(results);
         }
         catch (Exception ex)
         {

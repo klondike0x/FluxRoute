@@ -102,11 +102,12 @@ public sealed class AiOrchestratorPurgeTests : IDisposable
     }
 
     // Пишет outcome проверки генотипа на указанной сети.
-    private void SeedOutcome(Guid genomeId, string networkHash, int score)
+    private void SeedOutcome(Guid genomeId, string networkHash, int score, DateTimeOffset? timestamp = null)
         => _history.Append(new ProbeOutcome
         {
             GenomeId = genomeId,
             NetworkHash = networkHash,
+            Timestamp = timestamp ?? DateTimeOffset.UtcNow,
             Score = score,
             ProcessStable = true,
         });
@@ -161,5 +162,40 @@ public sealed class AiOrchestratorPurgeTests : IDisposable
 
         Assert.Equal(0, deleted);
         Assert.NotNull(_registry.GetById(weak.Id));
+    }
+
+    [Fact]
+    public async Task PurgeWeakEvolutions_BuiltinPassedBeforeButFailsNow_KeepsEvolution()
+    {
+        var builtin = AddBuiltin("general", 90);
+        var weak = AddEvolved("evolved_v1", 30);
+        var fp = _fingerprints.Capture();
+
+        // Встроенная стратегия: раньше проходила (90), но её ПОСЛЕДНИЙ результат на этой сети — 30.
+        // Устаревший успех не должен позволять удалять эволюции (правка по Codex P1).
+        SeedOutcome(builtin.Id, fp.Hash, 90, timestamp: DateTimeOffset.UtcNow.AddMinutes(-10));
+        SeedOutcome(builtin.Id, fp.Hash, 30, timestamp: DateTimeOffset.UtcNow);
+        SeedOutcome(weak.Id, fp.Hash, 30);
+
+        var deleted = await _service.PurgeWeakEvolutionsAsync();
+
+        Assert.Equal(0, deleted);
+        Assert.NotNull(_registry.GetById(weak.Id));
+    }
+
+    [Fact]
+    public async Task PersistScanVerification_RecordsOutcome_SoPurgeFindsCandidate()
+    {
+        var builtin = AddBuiltin("general", 90);
+        var weak = AddEvolved("evolved_v1", 30);
+
+        // «Сканировать все стратегии» переносит результаты в историю/геном через PersistScanVerification.
+        _service.PersistScanVerification(new[] { (builtin.Id, 90), (weak.Id, 30) });
+
+        // После этого очистка должна найти кандидата и удалить его (защита #62 соблюдена: builtin ок).
+        var deleted = await _service.PurgeWeakEvolutionsAsync();
+
+        Assert.Equal(1, deleted);
+        Assert.Null(_registry.GetById(weak.Id));
     }
 }

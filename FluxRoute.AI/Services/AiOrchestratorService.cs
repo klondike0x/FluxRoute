@@ -653,10 +653,15 @@ public sealed class AiOrchestratorService : IDisposable
             return 0;
         }
 
-        // Проверяем, есть ли на этой сети хотя бы одна встроенная стратегия, прошедшая порог.
+        // Проверяем, есть ли на этой сети хотя бы одна встроенная стратегия, чей ПОСЛЕДНИЙ
+        // результат ≥ порога. Берём именно последний outcome каждой встроенной: устаревший
+        // успех в прошлом не должен позволять удалять эволюции, если сейчас встроенная падает
+        // (правка по Codex P1, третий раунд).
         var builtinOk = _history.LoadForNetwork(fp.Hash)
-            .Where(o => _registry.GetById(o.GenomeId)?.Origin == StrategyOrigin.Builtin && o.Score >= threshold)
-            .Any();
+            .Where(o => _registry.GetById(o.GenomeId)?.Origin == StrategyOrigin.Builtin)
+            .GroupBy(o => o.GenomeId)
+            .Select(group => group.OrderByDescending(o => o.Timestamp).First())
+            .Any(o => o.Score >= threshold);
 
         var deleted = 0;
         foreach (var g in candidates)
@@ -694,6 +699,65 @@ public sealed class AiOrchestratorService : IDisposable
             .OrderByDescending(o => o.Timestamp)
             .FirstOrDefault();
         return last?.Score;
+    }
+
+    /// <summary>
+    /// Переносит результаты уже выполненного полного сканирования в генотипы ИИ:
+    /// пишет LastVerificationScore/LastVerifiedAt, а также сетевой outcome в историю и
+    /// в bandit-реестр. Без этого «Сканировать все стратегии» показывал бы счёт в UI,
+    /// но очистка/подбор/эволюция не видели бы результата (правка по Codex P2, третий раунд).
+    /// </summary>
+    public void PersistScanVerification(IReadOnlyList<(Guid genomeId, int score)> results)
+    {
+        if (results.Count == 0)
+            return;
+
+        var fp = _fingerprints.Capture();
+        _registry.MarkNetworkSeen(fp.Hash);
+        var updated = false;
+
+        foreach (var (genomeId, score) in results)
+        {
+            var g = _registry.GetById(genomeId);
+            if (g is null || score < 0)
+                continue;
+
+            var failureSig = score <= 0
+                ? "winws_failed"
+                : score < (int)Math.Round(FailThreshold * 100)
+                    ? "network_failed"
+                    : null;
+
+            _history.Append(new ProbeOutcome
+            {
+                GenomeId = genomeId,
+                NetworkHash = fp.Hash,
+                Timestamp = DateTimeOffset.UtcNow,
+                Score = score,
+                SuccessRate = score / 100.0,
+                ProcessStable = score > 0,
+                FailureSignature = failureSig,
+            });
+
+            if (score >= (int)Math.Round(FailThreshold * 100))
+            {
+                _registry.RecordBanditSuccess(genomeId, fp.Hash);
+                _bandit.RegisterSuccess(genomeId);
+            }
+            else
+            {
+                _registry.RecordBanditFailure(genomeId, fp.Hash);
+                _bandit.RegisterFailure(g, failureSig);
+            }
+
+            g.LastVerificationScore = score;
+            g.LastVerifiedAt = DateTimeOffset.UtcNow;
+            _registry.Upsert(g);
+            updated = true;
+        }
+
+        if (updated)
+            _registry.Save();
     }
 
     private void SyncBuiltins()
