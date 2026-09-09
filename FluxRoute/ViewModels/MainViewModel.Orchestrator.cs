@@ -851,18 +851,24 @@ public partial class MainViewModel
             // готовые результаты в генотипы БЕЗ повторного запуска стратегий (правка по Codex P2).
             if (AiEnabled)
             {
-                // Если сеть сменилась за время скана — результаты относятся к разным сетям и не
-                // должны быть помечены одним хэшем: иначе bandit/очистка получили бы наблюдения
-                // от чужой сети (правка по Codex P1, восьмой раунд). В этом случае не переносим.
-                if (string.Equals(_aiFingerprints.Capture().Hash, scanNetworkHash, StringComparison.Ordinal))
+                // При отмене скана ScanAllProfilesAsync возвращается штатно, а LastScanResults
+                // может содержать результаты ПРЕДЫДУЩЕГО завершённого скана — не переносим их
+                // под новым хэшем (правка по Codex P1, тринадцатый раунд).
+                if (!scanCt.IsCancellationRequested)
                 {
-                    PersistScanScoresIntoGenomes(scanNetworkHash);
-                }
-                else
-                {
-                    var msg = "Сеть изменилась во время сканирования — результаты не сохранены.";
-                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⚠️ {msg}");
-                    Logs.Add($"[ИИ] {msg}");
+                    // Если сеть сменилась за время скана — результаты относятся к разным сетям и не
+                    // должны быть помечены одним хэшем: иначе bandit/очистка получили бы наблюдения
+                    // от чужой сети (правка по Codex P1, восьмой раунд). В этом случае не переносим.
+                    if (string.Equals(_aiFingerprints.Capture().Hash, scanNetworkHash, StringComparison.Ordinal))
+                    {
+                        PersistScanScoresIntoGenomes(scanNetworkHash);
+                    }
+                    else
+                    {
+                        var msg = "Сеть изменилась во время сканирования — результаты не сохранены.";
+                        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⚠️ {msg}");
+                        Logs.Add($"[ИИ] {msg}");
+                    }
                 }
                 RebuildAiStrategyRows();
                 RefreshAiDashboard();
@@ -1080,14 +1086,19 @@ public partial class MainViewModel
                 // ProbeSelectedStrategyAsync не переподбирает/не эволюционирует, а только
                 // проверяет текущую стратегию и пишет результат в генотип.
                 var wasRunningBefore = IsTrackedProcessRunning();
-                await _aiOrchestrator.ProbeSelectedStrategyAsync(checkCt).ConfigureAwait(false);
-
-                // ProbeAsync (StopAfterProbe=false) оставляет winws запущенным, а внутри
-                // SwitchProfileAsync всегда стартует защиту. Восстанавливаем состояние:
-                // если до проверки защита была остановлена — останавливаем её снова
-                // (иначе ручная проверка незаметно запускала winws и ИИ-оркестратор) (Codex P1, 12-й раунд).
-                if (!wasRunningBefore && IsTrackedProcessRunning())
-                    Stop();
+                try
+                {
+                    await _aiOrchestrator.ProbeSelectedStrategyAsync(checkCt).ConfigureAwait(false);
+                }
+                finally
+                {
+                    // ProbeAsync (StopAfterProbe=false) оставляет winws запущенным, а внутри
+                    // SwitchProfileAsync всегда стартует защиту. Восстанавливаем состояние в
+                    // finally, чтобы оно применилось и при отмене/ошибке пробы — иначе ручная
+                    // проверка незаметно запускала winws и ИИ-оркестратор (Codex P1, 12/13-й раунд).
+                    if (!wasRunningBefore && IsTrackedProcessRunning())
+                        Stop();
+                }
 
                 var d = Application.Current?.Dispatcher;
                 if (d is not null && !d.HasShutdownStarted && !d.HasShutdownFinished)
