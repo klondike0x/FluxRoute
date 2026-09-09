@@ -41,7 +41,7 @@ public sealed class AiOrchestratorService : IDisposable
     private int _probeCountSinceEvolve;
     private DateTimeOffset _lastEvolutionUtc = DateTimeOffset.MinValue;
     private volatile bool _networkDirty;
-    private volatile bool _purgeInProgress;
+    private readonly SemaphoreSlim _aiGate = new(1, 1); // мьютекс: purge ∨ циклы ИИ выполняются исключающе
     private StrategyGenome? _currentGenome;
 
     public event EventHandler<OrchestratorEventArgs>? StatusChanged;
@@ -285,14 +285,12 @@ public sealed class AiOrchestratorService : IDisposable
 
     private async Task RunCycleAsync(CancellationToken ct)
     {
-        // Пауза цикла, пока идёт очистка эволюций: иначе цикл может переключать стратегии
-        // и писать bandit, пока PurgeWeakEvolutionsAsync удаляет геном/BAT (релизный PR #76, P1).
-        if (_purgeInProgress)
+        // Взаимное исключение с очисткой эволюций (и другими циклами ИИ): purge и цикл не могут
+        // выполняться одновременно — иначе цикл мог бы продолжать запись bandit/переключение,
+        // пока purge удаляет геном/BAT (релизный PR #76, P1).
+        await _aiGate.WaitAsync(ct).ConfigureAwait(false);
+        try
         {
-            Notify("ИИ: идёт очистка эволюций — пропускаю проверку.");
-            return;
-        }
-
         var ai = _aiSettings();
         _history.RotateOldEntries(ai.KeepHistoryDays);
 
@@ -390,6 +388,11 @@ public sealed class AiOrchestratorService : IDisposable
 
         _consecutiveFailures = 0;
         await SwitchToAlternativeAsync(fp, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _aiGate.Release();
+        }
     }
 
     private async Task RepickAfterNetworkChangeAsync(NetworkFingerprint fp, CancellationToken ct)
@@ -670,10 +673,10 @@ public sealed class AiOrchestratorService : IDisposable
     /// </summary>
     public async Task<int> PurgeWeakEvolutionsAsync(CancellationToken ct = default)
     {
-        // Сериализация с фоновыми циклами ИИ (LoopAsync/RunCycleAsync): они не выставляют
-        // IsScanning, поэтому очистка могла удалять геном/BAT, пока цикл переключал стратегии
-        // и записывал bandit (правка по Codex P1 — релизный PR #76). Цикл ставится на паузу.
-        _purgeInProgress = true;
+        // Взаимное исключение с циклами ИИ: purge и фоновые циклы не могут выполняться
+        // одновременно, иначе цикл мог продолжать запись bandit/переключение, пока очистка
+        // удаляет геном/BAT (релизный PR #76, P1). Цикл ждёт, а не пропускает.
+        await _aiGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             var threshold = _aiSettings().AutoDeleteBelowScore;
@@ -740,7 +743,7 @@ public sealed class AiOrchestratorService : IDisposable
         }
         finally
         {
-            _purgeInProgress = false;
+            _aiGate.Release();
         }
     }
 
