@@ -433,26 +433,27 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// v1.7.1: Переносит результаты уже выполненного полного сканирования (ProfileScores)
-    /// в генотипы ИИ (LastVerificationScore/LastVerifiedAt) и в сетевую историю/бандит,
-    /// чтобы вкладка ИИ и очистка/подбор видели реальные значения. Не перезапускает стратегии.
-    /// Score == 0 — легитимный результат (все цели упали), исключаем только -1 (pending/пропуск).
-    /// <paramref name="networkHash"/> — хэш сети, зафиксированный ДО начала скана.
+    /// v1.7.1: Переносит результаты уже выполненного полного сканирования в генотипы ИИ
+    /// (LastVerificationScore/LastVerifiedAt) и в сетевую историю/бандит с реальными данными
+    /// проверки, чтобы вкладка ИИ и очистка/подбор видели фактические значения.
+    /// Не перезапускает стратегии. <paramref name="networkHash"/> — хэш сети ДО начала скана.
     /// </summary>
     private void PersistScanScoresIntoGenomes(string networkHash)
     {
         try
         {
-            var results = new List<(Guid genomeId, int score)>();
+            var results = new List<(Guid genomeId, ProfileProbeResult result)>();
+            var lastScan = _orchestrator.LastScanResults;
             foreach (var g in _aiRegistry.GetGenomes().ToList())
             {
-                var score = ProfileScores.FirstOrDefault(s =>
-                    string.Equals(s.FileName, g.BatFileName, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(s.DisplayName, g.DisplayName, StringComparison.OrdinalIgnoreCase));
-                if (score is null || score.Score < 0)
+                var entry = lastScan.FirstOrDefault(e => e.result is not null &&
+                    (string.Equals(e.profile.FileName, g.BatFileName, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(e.profile.DisplayName, g.DisplayName, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(e.profile.FullPath, g.SourceBatPath, StringComparison.OrdinalIgnoreCase)));
+                if (entry.result is null || entry.result.Score < 0)
                     continue;
 
-                results.Add((g.Id, score.Score));
+                results.Add((g.Id, entry.result));
             }
 
             _aiOrchestrator.PersistScanVerification(results, networkHash);

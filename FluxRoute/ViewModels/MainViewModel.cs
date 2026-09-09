@@ -1445,6 +1445,10 @@ public partial class MainViewModel : ObservableObject
     public void SaveSettings()
     {
         if (!_settingsLoaded) return;
+        // Держим устаревшее поле UserCustomSitesText в синхроне с актуальными UI-списками:
+        // иначе удалённые/очищенные домены мигрировали бы обратно при следующем запуске
+        // (правка по Codex P1, одиннадцатый раунд).
+        RefreshUserCustomSitesText();
         var settings = new AppSettings
         {
             LastProfileFileName = SelectedProfile?.FileName,
@@ -1731,6 +1735,19 @@ public partial class MainViewModel : ObservableObject
         {
             return true;
         }
+    }
+
+    /// <summary>
+    /// Приводит устаревшее поле <see cref="UserCustomSitesText"/> к актуальному набору
+    /// UI-доменов (CustomTargetDomains + CustomExcludeDomains с префиксом «!»), чтобы legacy
+    /// миграционный источник не возвращал удалённые/очищенные домены после перезапуска.
+    /// </summary>
+    private void RefreshUserCustomSitesText()
+    {
+        UserCustomSitesText = string.Join(
+            "\n",
+            CustomTargetDomains
+                .Concat(CustomExcludeDomains.Select(domain => $"!{domain}")));
     }
 
     private void SyncCustomHostlist()

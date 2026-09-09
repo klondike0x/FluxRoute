@@ -729,12 +729,12 @@ public sealed class AiOrchestratorService : IDisposable
     /// <summary>
     /// Переносит результаты уже выполненного полного сканирования в генотипы ИИ:
     /// пишет LastVerificationScore/LastVerifiedAt, а также сетевой outcome в историю и
-    /// в bandit-реестр. Без этого «Сканировать все стратегии» показывал бы счёт в UI,
-    /// но очистка/подбор/эволюция не видели бы результата (правка по Codex P2, третий раунд).
+    /// в bandit-реестр, используя реальные данные проверки (ProcessStable/SuccessRate/
+    /// FailedChecks), а не реконструируя их из композитного счёта (правка по Codex P2, 11-й раунд).
     /// Сетевой хэш захватывается ДО начала скана и передаётся сюда, чтобы при смене сети
     /// в процессе скана все результаты не были бы помечены новым (а не фактическим) хэшем.
     /// </summary>
-    public void PersistScanVerification(IReadOnlyList<(Guid genomeId, int score)> results, string networkHash)
+    public void PersistScanVerification(IReadOnlyList<(Guid genomeId, ProfileProbeResult result)> results, string networkHash)
     {
         if (results.Count == 0)
             return;
@@ -742,15 +742,15 @@ public sealed class AiOrchestratorService : IDisposable
         _registry.MarkNetworkSeen(networkHash);
         var updated = false;
 
-        foreach (var (genomeId, score) in results)
+        foreach (var (genomeId, result) in results)
         {
             var g = _registry.GetById(genomeId);
-            if (g is null || score < 0)
+            if (g is null || result.Score < 0)
                 continue;
 
-            var failureSig = score <= 0
+            var failureSig = !result.ProcessStable
                 ? "winws_failed"
-                : score < (int)Math.Round(FailThreshold * 100)
+                : result.Score < (int)Math.Round(FailThreshold * 100)
                     ? "network_failed"
                     : null;
 
@@ -759,13 +759,15 @@ public sealed class AiOrchestratorService : IDisposable
                 GenomeId = genomeId,
                 NetworkHash = networkHash,
                 Timestamp = DateTimeOffset.UtcNow,
-                Score = score,
-                SuccessRate = score / 100.0,
-                ProcessStable = score > 0,
+                Score = result.Score,
+                SuccessRate = result.SuccessRate,
+                AvgLatencyMs = result.Checks.Where(c => c.ElapsedMs.HasValue).Select(c => c.ElapsedMs!.Value).DefaultIfEmpty(0).Average(),
+                ProcessStable = result.ProcessStable,
+                FailedTargetKeys = result.FailedChecks.Select(c => c.Key).ToList(),
                 FailureSignature = failureSig,
             });
 
-            if (score >= (int)Math.Round(FailThreshold * 100))
+            if (result.IsWorking(FailThreshold))
             {
                 _registry.RecordBanditSuccess(genomeId, networkHash);
                 _bandit.RegisterSuccess(genomeId);
@@ -776,7 +778,7 @@ public sealed class AiOrchestratorService : IDisposable
                 _bandit.RegisterFailure(g, failureSig);
             }
 
-            g.LastVerificationScore = score;
+            g.LastVerificationScore = result.Score;
             g.LastVerifiedAt = DateTimeOffset.UtcNow;
             _registry.Upsert(g);
             updated = true;
@@ -833,17 +835,20 @@ public sealed class AiOrchestratorService : IDisposable
     {
         try
         {
-            var candidates = new List<string>();
+            var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (!string.IsNullOrEmpty(g.SourceBatPath))
                 candidates.Add(g.SourceBatPath);
             if (!string.IsNullOrEmpty(g.BatFileName))
                 candidates.Add(Path.Combine(_engineDir(), "ai-evolved", g.BatFileName));
 
-            var existing = candidates.FirstOrDefault(File.Exists);
-            if (existing is null)
+            var existing = candidates.Where(File.Exists).ToList();
+            if (existing.Count == 0)
                 return true; // файла нигде нет — удалять нечего
 
-            File.Delete(existing);
+            // Удаляем ВСЕ живые копии (путь мог сохраниться в нескольких местах при переносе),
+            // а не только первую — иначе активная копия останется «бесхозной» (Codex P2, 11-й раунд).
+            foreach (var path in existing)
+                File.Delete(path);
             return true;
         }
         catch
