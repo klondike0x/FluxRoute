@@ -1134,19 +1134,25 @@ public partial class MainViewModel
         AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🗑 Запуск очистки слабых эволюций (порог {AiAutoDeleteBelowScore}%)...");
         var activeBeforePurge = SelectedProfile;
         var wasRunning = IsTrackedProcessRunning();
+        // Захватываем генотип, соответствующий активному профилю, ДО очистки —
+        // по нему потом определяем, была ли активная стратегия именно удалена
+        // (а не просто отсутствовала в реестре, как кастомная BAT без генотипа).
+        var activeGenomeBefore = activeBeforePurge is null
+            ? null
+            : _aiRegistry.GetGenomes().FirstOrDefault(g =>
+                string.Equals(g.BatFileName, activeBeforePurge.FileName, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(g.DisplayName, activeBeforePurge.DisplayName, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(g.SourceBatPath, activeBeforePurge.FullPath, StringComparison.OrdinalIgnoreCase));
         try
         {
             var deleted = await _aiOrchestrator.PurgeWeakEvolutionsAsync().ConfigureAwait(true);
             AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🗑 Удалено слабых эволюций: {deleted}");
             Logs.Add($"[ИИ] Очистка слабых эволюций: удалено {deleted}.");
 
-            // Удалялась ли активная (выбранная) стратегия? Проверяем по реестру: эволюция,
-            // отчищенная на шаге выше, уже не имеет соответствующего генотипа.
-            var activeDeleted = activeBeforePurge is not null &&
-                !_aiRegistry.GetGenomes().Any(g =>
-                    string.Equals(g.BatFileName, activeBeforePurge.FileName, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(g.DisplayName, activeBeforePurge.DisplayName, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(g.SourceBatPath, activeBeforePurge.FullPath, StringComparison.OrdinalIgnoreCase));
+            // Активная стратегия удалена очисткой ⇔ ей соответствовал генотип ДО очистки,
+            // и теперь этого генотипа больше нет в реестре (правка по Codex P2, седьмой раунд).
+            var activeDeleted = activeGenomeBefore is not null &&
+                _aiRegistry.GetById(activeGenomeBefore.Id) is null;
 
             // Останавливаем защиту ДО перезагрузки профилей, если активную стратегию удалили.
             // Иначе переключение на новый профиль перезапустит защиту, а следующий Stop() убил бы
