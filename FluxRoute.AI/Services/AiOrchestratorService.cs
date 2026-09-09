@@ -146,8 +146,18 @@ public sealed class AiOrchestratorService : IDisposable
         _registry.MarkNetworkSeen(fp.Hash);
         _registry.Save();
         Notify($"ИИ: проверка выбранной стратегии «{genome.DisplayName}»...");
-        await TryProbeAndPersistGenomeAsync(genome, fp, ct, isFreshlyEvolved: false, autoDeleteBelowThreshold: false)
-            .ConfigureAwait(false);
+        try
+        {
+            await TryProbeAndPersistGenomeAsync(genome, fp, ct, isFreshlyEvolved: false, autoDeleteBelowThreshold: false)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            // ProbeAsync переключается на NEW ProfileItem, которого нет в коллекции Profiles —
+            // возвращаем исходный выбранный профиль (правка по Codex P2, десятый раунд).
+            if (active is not null && !ReferenceEquals(_getActiveProfile(), active))
+                await _switchProfile(active).ConfigureAwait(false);
+        }
     }
 
     /// <summary>
@@ -814,16 +824,26 @@ public sealed class AiOrchestratorService : IDisposable
     }
 
     /// <summary>
-    /// Пытается удалить BAT-файл генотипа. Возвращает true, если файла уже нет (нечего удалять)
-    /// или он успешно удалён; false — если файл существует, но удалить не удалось (занят/защищён).
+    /// Пытается удалить BAT-файл генотипа. Возвращает true, если файл нигде не найден (удалять нечего)
+    /// или успешно удалён; false — если файл существует, но удалить не удалось (занят/защищён).
+    /// Учитывает, что сохранённый <see cref="StrategyGenome.SourceBatPath"/> может быть устаревшим:
+    /// дополнительно проверяем актуальное расположение engine/ai-evolved/&lt;BatFileName&gt;.
     /// </summary>
-    private static bool TryDeleteGenomeBatFile(StrategyGenome g)
+    private bool TryDeleteGenomeBatFile(StrategyGenome g)
     {
         try
         {
-            if (string.IsNullOrEmpty(g.SourceBatPath) || !File.Exists(g.SourceBatPath))
-                return true; // файла уже нет — удалять нечего
-            File.Delete(g.SourceBatPath);
+            var candidates = new List<string>();
+            if (!string.IsNullOrEmpty(g.SourceBatPath))
+                candidates.Add(g.SourceBatPath);
+            if (!string.IsNullOrEmpty(g.BatFileName))
+                candidates.Add(Path.Combine(_engineDir(), "ai-evolved", g.BatFileName));
+
+            var existing = candidates.FirstOrDefault(File.Exists);
+            if (existing is null)
+                return true; // файла нигде нет — удалять нечего
+
+            File.Delete(existing);
             return true;
         }
         catch

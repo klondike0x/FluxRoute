@@ -1181,25 +1181,29 @@ public partial class MainViewModel
             if (activeDeleted && wasRunning && IsRunning)
                 Stop();
 
-            // Подавляем предупреждение о смене профиля ПЕРЕД перезагрузкой: иначе LoadProfiles()
-            // сам поднимет warning и поставит в очередь восстановление уже удалённого профиля,
-            // а последующая установка флага не отменит этот callback (правка по Codex P2, восьмой раунд).
-            if (activeDeleted)
-                _suppressProfileWarning = true;
-
-            RebuildAiStrategyRows();
-            RefreshAiDashboard();
-            LoadProfiles();
-
-            if (activeDeleted)
+            // Подавляем смену профиля при перезагрузке ВСЕГДА: даже если активная эволюция не
+            // удалялась, LoadProfiles() пересоздаёт объекты профилей и может поднять ложное
+            // предупреждение/перезапуск защиты (правка по Codex P2, десятый раунд).
+            _suppressProfileWarning = true;
+            try
             {
-                SelectedProfile = Profiles.FirstOrDefault();
-                _suppressProfileWarning = false;
-                AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Профиль «{activeBeforePurge!.DisplayName}» удалён — переключено на «{SelectedProfile?.DisplayName ?? "—"}».");
+                RebuildAiStrategyRows();
+                RefreshAiDashboard();
+                LoadProfiles();
 
-                // Возвращаем защиту в исходное состояние запущенности на новом профиле.
-                if (wasRunning && SelectedProfile is not null && !IsTrackedProcessRunning())
-                    Start();
+                if (activeDeleted)
+                {
+                    SelectedProfile = Profiles.FirstOrDefault();
+                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Профиль «{activeBeforePurge!.DisplayName}» удалён — переключено на «{SelectedProfile?.DisplayName ?? "—"}».");
+
+                    // Возвращаем защиту в исходное состояние запущенности на новом профиле.
+                    if (wasRunning && SelectedProfile is not null && !IsTrackedProcessRunning())
+                        Start();
+                }
+            }
+            finally
+            {
+                _suppressProfileWarning = false;
             }
         }
         catch (Exception ex)
