@@ -1705,6 +1705,32 @@ public partial class MainViewModel : ObservableObject
             .Distinct(StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// v1.7.2: Читает уже записанные в hostlist домены (ручные правки пользователя),
+    /// чтобы синхронизация объединяла их с UI-набором, а не затирала (issue #89).
+    /// </summary>
+    private IEnumerable<string> ReadExistingHostlistDomains(string path)
+    {
+        if (!File.Exists(path))
+            return Enumerable.Empty<string>();
+        try
+        {
+            return File.ReadAllLines(path)
+                .Select(line => line.Trim())
+                .Where(line => !string.IsNullOrWhiteSpace(line)
+                    && !line.StartsWith("#", StringComparison.Ordinal)
+                    && !line.StartsWith(";", StringComparison.Ordinal)
+                    && !line.StartsWith("!", StringComparison.Ordinal))
+                .Select(NormalizeDomainInput)
+                .Where(line => !string.IsNullOrWhiteSpace(line))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return Enumerable.Empty<string>();
+        }
+    }
+
     private void SyncCustomHostlist()
     {
         // v1.6.0: Пропускаем синхронизацию, если пользователь её отключил
@@ -1735,16 +1761,21 @@ public partial class MainViewModel : ObservableObject
                     domains.Add(d.Trim());
             }
 
-            // Записываем list-general-user.txt
-            if (domains.Count > 0)
+            // Записываем list-general-user.txt.
+            // ═══ v1.7.2: безопасная синхронизация (issue #89) — объединяем домены из UI
+            // с теми, что уже лежат в файле, чтобы ручные правки пользователя не затирались.
+            domains.UnionWith(ReadExistingHostlistDomains(userHostlistPath));
+            var orderedDomains = domains.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
+
+            if (orderedDomains.Count > 0)
             {
                 // Используем явное удаление + запись, чтобы избежать кэширования
                 if (File.Exists(userHostlistPath))
                 {
                     try { File.SetAttributes(userHostlistPath, FileAttributes.Normal); } catch { }
                 }
-                File.WriteAllLines(userHostlistPath, domains.OrderBy(x => x), new UTF8Encoding(false));
-                Logs.Add($"[Sync] Записано {domains.Count} доменов в list-general-user.txt");
+                File.WriteAllLines(userHostlistPath, orderedDomains, new UTF8Encoding(false));
+                Logs.Add($"[Sync] Записано {orderedDomains.Count} доменов в list-general-user.txt");
             }
             else
             {

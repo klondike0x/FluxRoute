@@ -810,6 +810,16 @@ public partial class MainViewModel
             ScanTimeRemaining = "✅ Завершено";
             SaveSettings();
 
+            // ═══ v1.7.2: в режиме ИИ «Сканировать все стратегии» обновляет и ИИ-строки
+            // (генотипы), иначе данные о стратегиях на вкладке ИИ оставались с «—» (issue #89).
+            if (AiEnabled)
+            {
+                await _aiOrchestrator.ProbeAllEnabledStrategiesAsync(scanCt, autoDeleteBelowThreshold: false)
+                    .ConfigureAwait(false);
+                RebuildAiStrategyRows();
+                RefreshAiDashboard();
+            }
+
             var bestProfile = _orchestrator.BestRankedProfile;
             var bestScore = _orchestrator.BestRankedScore;
             ScanBestStrategyText = bestProfile is null
@@ -1017,7 +1027,10 @@ public partial class MainViewModel
         {
             if (AiEnabled)
             {
-                await _aiOrchestrator.ProbeAllEnabledStrategiesAsync(checkCt).ConfigureAwait(false);
+                // ═══ v1.7.2: «Проверить сейчас» проверяет только ВЫБРАННУЮ стратегию,
+                // а не гонит полный скан и не удаляет эволюции (issue #89).
+                // Автоудаление слабых стратегий — отдельное действие "Очистить слабые эволюции".
+                await _aiOrchestrator.CheckNowAsync(checkCt).ConfigureAwait(false);
                 var d = Application.Current?.Dispatcher;
                 if (d is not null && !d.HasShutdownStarted && !d.HasShutdownFinished)
                 {
@@ -1059,6 +1072,44 @@ public partial class MainViewModel
     private void ClearOrchestratorLogs()
     {
         OrchestratorLogs.Clear();
+    }
+
+    // ═══ v1.7.2: Отдельное действие очистки слабых эволюций (issue #89).
+    // Раньше автоудаление происходило скрыто внутри «Проверить сейчас»; теперь это
+    // явный шаг, подтверждаемый пользователем.
+    [RelayCommand]
+    private async Task CleanWeakEvolutions()
+    {
+        if (!AiEnabled)
+        {
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⚠️ Очистка эволюций доступна только в режиме ИИ.");
+            return;
+        }
+
+        if (!CustomDialog.Show(
+            "Очистить слабые эволюции",
+            $"Удалить эволюционированные стратегии с результатом ниже {AiAutoDeleteBelowScore}%?\n\n" +
+            "Встроенные стратегии удалены не будут.",
+            "Очистить",
+            "Отмена",
+            isDanger: true))
+            return;
+
+        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🗑 Запуск очистки слабых эволюций (порог {AiAutoDeleteBelowScore}%)...");
+        try
+        {
+            var deleted = await _aiOrchestrator.PurgeWeakEvolutionsAsync().ConfigureAwait(true);
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🗑 Удалено слабых эволюций: {deleted}");
+            Logs.Add($"[ИИ] Очистка слабых эволюций: удалено {deleted}.");
+            RebuildAiStrategyRows();
+            RefreshAiDashboard();
+            LoadProfiles();
+        }
+        catch (Exception ex)
+        {
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ❌ Ошибка очистки эволюций: {ex.Message}");
+            Logs.Add($"[ИИ] Ошибка очистки эволюций: {ex.Message}");
+        }
     }
 
     private bool IsTrackedProcessRunning()

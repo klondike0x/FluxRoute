@@ -119,7 +119,14 @@ public sealed class AiOrchestratorService : IDisposable
     [Obsolete("Use CheckNowAsync(CancellationToken) instead")]
     public Task CheckNowAsync_Legacy() => RunCycleAsync(CancellationToken.None);
 
-    public async Task ProbeAllEnabledStrategiesAsync(CancellationToken ct = default)
+    /// <summary>
+    /// Полное сканирование всех включённых стратегий ИИ с сохранением результатов проверки.
+    /// По умолчанию НЕ удаляет слабые эволюции — автоудаление вынесено в отдельное действие
+    /// (<see cref="PurgeWeakEvolutionsAsync"/>), чтобы кнопка «Проверить сейчас» не чистила стратегии тайно (issue #89).
+    /// </summary>
+    public async Task ProbeAllEnabledStrategiesAsync(
+        CancellationToken ct = default,
+        bool autoDeleteBelowThreshold = false)
     {
         var previousGenome = _currentGenome;
         var previousProfile = _getActiveProfile();
@@ -136,10 +143,11 @@ public sealed class AiOrchestratorService : IDisposable
                 Notify("ИИ: нет отмеченных стратегий для проверки.");
                 return;
             }
-            Notify($"ИИ: ручная проверка {list.Count} стратегий...");
+            Notify($"ИИ: проверка {list.Count} стратегий...");
             foreach (var g in list)
             {
-                var deleted = await TryProbeAndPersistGenomeAsync(g, fp, ct, isFreshlyEvolved: false).ConfigureAwait(false);
+                var deleted = await TryProbeAndPersistGenomeAsync(g, fp, ct, isFreshlyEvolved: false, autoDeleteBelowThreshold)
+                    .ConfigureAwait(false);
                 if (deleted && _currentGenome?.Id == g.Id)
                     _currentGenome = null;
             }
@@ -470,7 +478,7 @@ public sealed class AiOrchestratorService : IDisposable
         try
         {
             await _refreshProfiles().ConfigureAwait(false);
-            deleted = await TryProbeAndPersistGenomeAsync(child, fp, ct, isFreshlyEvolved: true).ConfigureAwait(false);
+            deleted = await TryProbeAndPersistGenomeAsync(child, fp, ct, isFreshlyEvolved: true, autoDeleteBelowThreshold: true).ConfigureAwait(false);
         }
         finally
         {
@@ -484,7 +492,7 @@ public sealed class AiOrchestratorService : IDisposable
     }
 
     private async Task<bool> TryProbeAndPersistGenomeAsync(StrategyGenome g, NetworkFingerprint fp, CancellationToken ct,
-        bool isFreshlyEvolved)
+        bool isFreshlyEvolved, bool autoDeleteBelowThreshold = false)
     {
         var testProfile = ResolveProfile(g);
         if (testProfile is null)
@@ -494,7 +502,7 @@ public sealed class AiOrchestratorService : IDisposable
         }
         Notify(isFreshlyEvolved
             ? $"ИИ: проверка новой стратегии «{g.DisplayName}»..."
-            : $"ИИ: ручная проверка «{g.DisplayName}»...");
+            : $"ИИ: проверка «{g.DisplayName}»...");
         var targets = BuildTargets();
         var probeOptions = new ProfileProbeOptions
         {
@@ -550,8 +558,10 @@ public sealed class AiOrchestratorService : IDisposable
         _registry.Save();
 
         // ═══ АВТОУДАЛЕНИЕ НЕУДАЧНЫХ ЭВОЛЮЦИОНИРОВАННЫХ СТРАТЕГИЙ ═══
+        // Срабатывает только при явно запрошенном автоудалении (проверка свежей эволюции/очистка).
+        // «Проверить сейчас» больше не чистит стратегии тайно (issue #89).
         var threshold = _aiSettings().AutoDeleteBelowScore;
-        if (g.Origin == StrategyOrigin.Evolved && result.Score < threshold)
+        if (autoDeleteBelowThreshold && g.Origin == StrategyOrigin.Evolved && result.Score < threshold)
         {
             // Проверяем, есть ли на этой сети хотя бы одна встроенная стратегия с Score >= threshold.
             // Если нет — сеть слишком агрессивна, удалять эволюцию несправедливо (исправление #62).
@@ -571,6 +581,60 @@ public sealed class AiOrchestratorService : IDisposable
             Notify($"🧬 ИИ: стратегия «{g.DisplayName}» ({result.Score}%) ниже порога {threshold}%, но оставлена — встроенные тоже не проходят (сеть агрессивна).", result: result);
         }
         return false;
+    }
+
+    /// <summary>
+    /// Отдельное действие очистки: удаляет эволюционированные стратегии, у которых
+    /// последняя проверка ниже порога <see cref="AiSettings.AutoDeleteBelowScore"/>.
+    /// Гарантия #62: эволюция удаляется только если на этой сети есть проходящая встроенная
+    /// стратегия (иначе сеть слишком агрессивна и удалять несправедливо).
+    /// Итог «Проверить сейчас» и «Сканировать все стратегии» НЕ запускают это скрыто (issue #89).
+    /// </summary>
+    public async Task<int> PurgeWeakEvolutionsAsync(CancellationToken ct = default)
+    {
+        var threshold = _aiSettings().AutoDeleteBelowScore;
+
+        // Собираем кандидатов на удаление: эволюции с результатом ниже порога
+        var candidates = _registry.GetGenomes()
+            .Where(g => g.Origin == StrategyOrigin.Evolved
+                && (g.LastVerificationScore is { } score && score < threshold))
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            Notify($"🗑 ИИ: нет слабых эволюций ниже порога {threshold}% для очистки.");
+            return 0;
+        }
+
+        var fp = await Task.Run(() => _fingerprints.Capture(), ct).ConfigureAwait(false);
+        _registry.MarkNetworkSeen(fp.Hash);
+        _registry.Save();
+
+        // Проверяем, есть ли на этой сети хотя бы одна встроенная стратегия, прошедшая порог.
+        var builtinOk = _history.LoadForNetwork(fp.Hash)
+            .Where(o => _registry.GetById(o.GenomeId)?.Origin == StrategyOrigin.Builtin && o.Score >= threshold)
+            .Any();
+
+        var deleted = 0;
+        foreach (var g in candidates)
+        {
+            if (ct.IsCancellationRequested) break;
+
+            if (!builtinOk)
+            {
+                Notify($"🧬 ИИ: «{g.DisplayName}» ({g.LastVerificationScore}%) ниже порога {threshold}%, но оставлена — встроенные тоже не проходят (сеть агрессивна).");
+                break;
+            }
+
+            Notify($"🗑 ИИ: стратегия «{g.DisplayName}» ({g.LastVerificationScore}%) ниже порога {threshold}% — удалена.");
+            TryDeleteGenomeBatFile(g);
+            _registry.Remove(g.Id);
+            deleted++;
+        }
+
+        _registry.Save();
+        Notify($"🗑 ИИ: очистка завершена — удалено {deleted} слабых эволюций.");
+        return deleted;
     }
 
     private void SyncBuiltins()
