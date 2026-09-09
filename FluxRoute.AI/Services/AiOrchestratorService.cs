@@ -255,6 +255,11 @@ public sealed class AiOrchestratorService : IDisposable
 
     private async Task PickAndApplyInitialAsync(CancellationToken ct)
     {
+        // Мьютекс с purge: стартовый переподбор материализует/применяет генотипы и не должен
+        // выполняться одновременно с очисткой (release #76, P2).
+        await _aiGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
         var fp = _fingerprints.Capture();
         _registry.MarkNetworkSeen(fp.Hash);
         _registry.Save();
@@ -281,6 +286,11 @@ public sealed class AiOrchestratorService : IDisposable
         }
 
         await ApplyGenomeAsync(pick, fp, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _aiGate.Release();
+        }
     }
 
     private async Task RunCycleAsync(CancellationToken ct)
@@ -479,14 +489,24 @@ public sealed class AiOrchestratorService : IDisposable
 
     public async Task EvolveNowAsync(CancellationToken ct = default)
     {
-        SyncBuiltins();
-        var fp = _fingerprints.Capture();
-        var child = await Task.Run(() => _evolver.Evolve(fp), ct).ConfigureAwait(false);
-        await _refreshProfiles().ConfigureAwait(false);
-        if (child is not null)
-            await VerifyEvolvedGenomeAsync(child, fp, ct).ConfigureAwait(false);
-        else
-            Notify("ИИ: эволюция не создала новую стратегию (мало активных родителей или дубликат).");
+        // Мьютекс с purge: явная эволюция материализует/проверяет генотипы и не должна
+        // выполняться одновременно с очисткой (release #76, P2).
+        await _aiGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            SyncBuiltins();
+            var fp = _fingerprints.Capture();
+            var child = await Task.Run(() => _evolver.Evolve(fp), ct).ConfigureAwait(false);
+            await _refreshProfiles().ConfigureAwait(false);
+            if (child is not null)
+                await VerifyEvolvedGenomeAsync(child, fp, ct).ConfigureAwait(false);
+            else
+                Notify("ИИ: эволюция не создала новую стратегию (мало активных родителей или дубликат).");
+        }
+        finally
+        {
+            _aiGate.Release();
+        }
     }
 
     private ProfileItem? ResolveProfile(StrategyGenome g)
