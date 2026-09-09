@@ -1746,20 +1746,13 @@ public partial class MainViewModel : ObservableObject
             var userHostlistPath = Path.Combine(listsDir, "list-general-user.txt");
             var domains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // 1. Берем домены из нового Менеджера доменов (вкладка "Домены")
+            // UI-набор (вкладка "Домены") — единственный источник истины при синхронизации.
+            // Устаревшее поле UserCustomSitesText сознательно НЕ подмешиваем: при удалении/очистке
+            // доменов в интерфейсе обновляется только CustomTargetDomains, поэтому legacy-значение
+            // возвращало бы удалённые домены обратно в файл (issue #89, правка по Codex).
             foreach (var d in CustomTargetDomains)
             {
                 if (!string.IsNullOrWhiteSpace(d))
-                    domains.Add(d.Trim());
-            }
-
-            // 2. Подхватываем из старого TextBox (для обратной совместимости)
-            if (!string.IsNullOrWhiteSpace(UserCustomSitesText))
-            {
-                var legacy = UserCustomSitesText
-                    .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .Where(s => !s.StartsWith("!"));
-                foreach (var d in legacy)
                     domains.Add(d.Trim());
             }
 

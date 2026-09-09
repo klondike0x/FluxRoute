@@ -432,6 +432,39 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>
+    /// v1.7.1: Переносит результаты уже выполненного полного сканирования (ProfileScores)
+    /// в генотипы ИИ (LastVerificationScore/LastVerifiedAt), чтобы вкладка ИИ показывала
+    /// реальные значения без повторного запуска стратегий (rightк по Codex P2).
+    /// </summary>
+    private void PersistScanScoresIntoGenomes()
+    {
+        try
+        {
+            var updated = false;
+            foreach (var g in _aiRegistry.GetGenomes().ToList())
+            {
+                var score = ProfileScores.FirstOrDefault(s =>
+                    string.Equals(s.FileName, g.BatFileName, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(s.DisplayName, g.DisplayName, StringComparison.OrdinalIgnoreCase));
+                if (score is null || score.Score <= 0)
+                    continue;
+
+                g.LastVerificationScore = score.Score;
+                g.LastVerifiedAt = DateTimeOffset.UtcNow;
+                _aiRegistry.Upsert(g);
+                updated = true;
+            }
+
+            if (updated)
+                _aiRegistry.Save();
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"[ИИ] Ошибка переноса результатов скана в генотипы: {ex.Message}");
+        }
+    }
+
     private Task EnsureProtectionRunningAsync()
     {
         var dispatcher = Application.Current?.Dispatcher;
@@ -812,11 +845,11 @@ public partial class MainViewModel
 
             // ═══ v1.7.1: в режиме ИИ «Сканировать все стратегии» обновляет и ИИ-строки
             // (генотипы), иначе данные о стратегиях на вкладке ИИ оставались с «—» (issue #89).
+            // Первый полный скан (ScanAllProfilesAsync) уже проверил все профили — переносим
+            // готовые результаты в генотипы БЕЗ повторного запуска стратегий (правка по Codex P2).
             if (AiEnabled)
             {
-                // Без ConfigureAwait(false) — продолжение должно вернуться в UI-поток,
-                // чтобы RebuildAiStrategyRows/RefreshAiDashboard трогали WPF-коллекции корректно.
-                await _aiOrchestrator.ProbeAllEnabledStrategiesAsync(scanCt, autoDeleteBelowThreshold: false);
+                PersistScanScoresIntoGenomes();
                 RebuildAiStrategyRows();
                 RefreshAiDashboard();
             }

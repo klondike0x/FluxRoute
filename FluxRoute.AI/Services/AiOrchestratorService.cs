@@ -633,22 +633,25 @@ public sealed class AiOrchestratorService : IDisposable
     public async Task<int> PurgeWeakEvolutionsAsync(CancellationToken ct = default)
     {
         var threshold = _aiSettings().AutoDeleteBelowScore;
+        var fp = await Task.Run(() => _fingerprints.Capture(), ct).ConfigureAwait(false);
+        _registry.MarkNetworkSeen(fp.Hash);
+        _registry.Save();
 
-        // Собираем кандидатов на удаление: эволюции с результатом ниже порога
+        // Кандидаты — эволюции, чей ПОСЛЕДНИЙ результат именно на ТЕКУЩЕЙ сети ниже порога.
+        // Не используем глобальный LastVerificationScore: он без привязки к сети, а порог защиты
+        // #62 вычисляется для текущей сети — обе стороны сравнения должны быть на одной сети.
         var candidates = _registry.GetGenomes()
-            .Where(g => g.Origin == StrategyOrigin.Evolved
-                && (g.LastVerificationScore is { } score && score < threshold))
+            .Where(g => g.Origin == StrategyOrigin.Evolved)
+            .Select(g => (genome: g, score: GetLatestScoreOnNetwork(g, fp.Hash)))
+            .Where(x => x.score is { } score && score < threshold)
+            .Select(x => x.genome)
             .ToList();
 
         if (candidates.Count == 0)
         {
-            Notify($"🗑 ИИ: нет слабых эволюций ниже порога {threshold}% для очистки.");
+            Notify($"🗑 ИИ: нет слабых эволюций ниже порога {threshold}% на этой сети.");
             return 0;
         }
-
-        var fp = await Task.Run(() => _fingerprints.Capture(), ct).ConfigureAwait(false);
-        _registry.MarkNetworkSeen(fp.Hash);
-        _registry.Save();
 
         // Проверяем, есть ли на этой сети хотя бы одна встроенная стратегия, прошедшая порог.
         var builtinOk = _history.LoadForNetwork(fp.Hash)
@@ -660,13 +663,17 @@ public sealed class AiOrchestratorService : IDisposable
         {
             if (ct.IsCancellationRequested) break;
 
+            var thisScore = GetLatestScoreOnNetwork(g, fp.Hash);
+            if (thisScore is not { } score)
+                continue; // нет данных именно на этой сети — не трогаем
+
             if (!builtinOk)
             {
-                Notify($"🧬 ИИ: «{g.DisplayName}» ({g.LastVerificationScore}%) ниже порога {threshold}%, но оставлена — встроенные тоже не проходят (сеть агрессивна).");
+                Notify($"🧬 ИИ: «{g.DisplayName}» ({score}%) ниже порога {threshold}%, но оставлена — встроенные тоже не проходят (сеть агрессивна).");
                 break;
             }
 
-            Notify($"🗑 ИИ: стратегия «{g.DisplayName}» ({g.LastVerificationScore}%) ниже порога {threshold}% — удалена.");
+            Notify($"🗑 ИИ: стратегия «{g.DisplayName}» ({score}%) ниже порога {threshold}% на этой сети — удалена.");
             TryDeleteGenomeBatFile(g);
             _registry.Remove(g.Id);
             deleted++;
@@ -675,6 +682,18 @@ public sealed class AiOrchestratorService : IDisposable
         _registry.Save();
         Notify($"🗑 ИИ: очистка завершена — удалено {deleted} слабых эволюций.");
         return deleted;
+    }
+
+    /// <summary>
+    /// Возвращает последний результат проверки генотипа именно на указанной сети.
+    /// Если на этой сети проверок не было — null.
+    /// </summary>
+    private int? GetLatestScoreOnNetwork(StrategyGenome g, string networkHash)
+    {
+        var last = _history.LoadFor(g.Id, networkHash)
+            .OrderByDescending(o => o.Timestamp)
+            .FirstOrDefault();
+        return last?.Score;
     }
 
     private void SyncBuiltins()

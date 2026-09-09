@@ -11,11 +11,12 @@ namespace FluxRoute.Core.Tests;
 /// Тесты для отдельного действия очистки слабых эволюций (issue #89):
 /// раньше слабые эволюции удалялись тайно внутри «Проверить сейчас»,
 /// теперь — только по явной кнопке «Очистить слабые эволюции».
+/// Правка по Codex: очистка учитывает сеть — кандидаты отбираются по последнему
+/// результату именно на ТЕКУЩЕЙ сети, а не по глобальному LastVerificationScore.
 /// </summary>
 public sealed class AiOrchestratorPurgeTests : IDisposable
 {
     private readonly string _tempDir;
-    private readonly string _historyPath;
     private readonly AiStrategyRegistry _registry;
     private readonly AiHistoryStore _history;
     private readonly AiOrchestratorService _service;
@@ -29,9 +30,8 @@ public sealed class AiOrchestratorPurgeTests : IDisposable
         var engineDir = Path.Combine(_tempDir, "engine");
         Directory.CreateDirectory(engineDir);
 
-        _historyPath = Path.Combine(_tempDir, "fluxroute-ai-history.jsonl");
         _registry = new AiStrategyRegistry(Path.Combine(_tempDir, "registry.json"));
-        _history = new AiHistoryStore(_historyPath);
+        _history = new AiHistoryStore(Path.Combine(_tempDir, "fluxroute-ai-history.jsonl"));
 
         var connectivityMock = new Mock<IConnectivityChecker>();
         connectivityMock
@@ -52,7 +52,6 @@ public sealed class AiOrchestratorPurgeTests : IDisposable
             () => engineDir,
             () => new AiSettings { AutoDeleteBelowScore = Threshold });
         var watcher = new NetworkChangeWatcher(_fingerprints);
-
         var settings = () => new AiSettings { AutoDeleteBelowScore = Threshold };
 
         _service = new AiOrchestratorService(
@@ -82,10 +81,10 @@ public sealed class AiOrchestratorPurgeTests : IDisposable
     }
 
     private StrategyGenome AddEvolved(string name, int score) =>
-        AddGenome(name, strategyOrigin: StrategyOrigin.Evolved, score: score);
+        AddGenome(name, StrategyOrigin.Evolved, score);
 
     private StrategyGenome AddBuiltin(string name, int score) =>
-        AddGenome(name, strategyOrigin: StrategyOrigin.Builtin, score: score);
+        AddGenome(name, StrategyOrigin.Builtin, score);
 
     private StrategyGenome AddGenome(string name, StrategyOrigin strategyOrigin, int score)
     {
@@ -102,26 +101,26 @@ public sealed class AiOrchestratorPurgeTests : IDisposable
         return g;
     }
 
-    // Регистрирует в истории проходящую встроенную стратегию на текущей сети (условие #62).
-    private void SeedBuiltinOk(string networkHash, Guid builtinId)
-    {
-        _history.Append(new ProbeOutcome
+    // Пишет outcome проверки генотипа на указанной сети.
+    private void SeedOutcome(Guid genomeId, string networkHash, int score)
+        => _history.Append(new ProbeOutcome
         {
-            GenomeId = builtinId,
+            GenomeId = genomeId,
             NetworkHash = networkHash,
-            Score = 90,
+            Score = score,
             ProcessStable = true,
         });
-    }
 
     [Fact]
     public async Task PurgeWeakEvolutions_DeletesWeakEvolution_WhenBuiltinOk()
     {
         var builtin = AddBuiltin("general", 90);
         var weak = AddEvolved("evolved_v1", 30);
-
         var fp = _fingerprints.Capture();
-        SeedBuiltinOk(fp.Hash, builtin.Id);
+
+        // Проходящая встроенная стратегия + слабая эволюция НА ЭТОЙ СЕТИ
+        SeedOutcome(builtin.Id, fp.Hash, 90);
+        SeedOutcome(weak.Id, fp.Hash, 30);
 
         var deleted = await _service.PurgeWeakEvolutionsAsync();
 
@@ -131,30 +130,32 @@ public sealed class AiOrchestratorPurgeTests : IDisposable
     }
 
     [Fact]
-    public async Task PurgeWeakEvolutions_NothingToPurge_ReturnsZero()
+    public async Task PurgeWeakEvolutions_SkipsEvolutionGoodOnThisNetwork_ReturnsZero()
     {
-        AddBuiltin("general", 90);
+        var builtin = AddBuiltin("general", 90);
+        var strong = AddEvolved("evolved_v1", 30);
+        var fp = _fingerprints.Capture();
+
+        // Эволюция "слаба" глобально (LastVerificationScore=30), но НА ЭТОЙ СЕТИ прошла — не кандидат.
+        SeedOutcome(builtin.Id, fp.Hash, 90);
+        SeedOutcome(strong.Id, fp.Hash, 90);
 
         var deleted = await _service.PurgeWeakEvolutionsAsync();
 
         Assert.Equal(0, deleted);
+        Assert.NotNull(_registry.GetById(strong.Id));
     }
 
     [Fact]
     public async Task PurgeWeakEvolutions_KeepsWeakEvolution_WhenNoBuiltinPasses()
     {
-        // Другой builtin, но с результатом НИЖЕ порога — сеть агрессивна (guard #62).
         var builtinLow = AddBuiltin("general2", 30);
         var weak = AddEvolved("evolved_v1", 30);
-
         var fp = _fingerprints.Capture();
-        // Ни одно проходящее встроенное событие на этой сети нет → удалять несправедливо.
-        _history.Append(new ProbeOutcome
-        {
-            GenomeId = builtinLow.Id,
-            NetworkHash = fp.Hash,
-            Score = 30,
-        });
+
+        // Слабая эволюция есть, но проходящих встроенных нет → guard #62, удалять несправедливо.
+        SeedOutcome(builtinLow.Id, fp.Hash, 30);
+        SeedOutcome(weak.Id, fp.Hash, 30);
 
         var deleted = await _service.PurgeWeakEvolutionsAsync();
 
