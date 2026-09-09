@@ -1077,9 +1077,18 @@ public partial class MainViewModel
             {
                 // ═══ v1.7.1: «Проверить сейчас» проверяет только ВЫБРАННУЮ стратегию,
                 // а не гонит полный скан и не удаляет эволюции (issue #89).
-                // ProbeSelectedStrategyAsync не переключает/не эволюционирует, а только
+                // ProbeSelectedStrategyAsync не переподбирает/не эволюционирует, а только
                 // проверяет текущую стратегию и пишет результат в генотип.
+                var wasRunningBefore = IsTrackedProcessRunning();
                 await _aiOrchestrator.ProbeSelectedStrategyAsync(checkCt).ConfigureAwait(false);
+
+                // ProbeAsync (StopAfterProbe=false) оставляет winws запущенным, а внутри
+                // SwitchProfileAsync всегда стартует защиту. Восстанавливаем состояние:
+                // если до проверки защита была остановлена — останавливаем её снова
+                // (иначе ручная проверка незаметно запускала winws и ИИ-оркестратор) (Codex P1, 12-й раунд).
+                if (!wasRunningBefore && IsTrackedProcessRunning())
+                    Stop();
+
                 var d = Application.Current?.Dispatcher;
                 if (d is not null && !d.HasShutdownStarted && !d.HasShutdownFinished)
                 {

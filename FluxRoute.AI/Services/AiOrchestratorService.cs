@@ -562,6 +562,16 @@ public sealed class AiOrchestratorService : IDisposable
             StopAfterProbe = false,
         };
         var result = await _probeService.ProbeAsync(testProfile, targets, probeOptions, ct).ConfigureAwait(false);
+
+        // Если сеть сменилась за время пробы (ожидание старта/стабилизации/проверки целей) —
+        // результат относится к другой сети и не должен быть записан под исходным хэшем:
+        // иначе bandit/очистка получили бы наблюдение от чужой сети (правка по Codex P2, 12-й раунд).
+        if (!string.Equals(_fingerprints.Capture().Hash, fp.Hash, StringComparison.Ordinal))
+        {
+            Notify($"⚠️ ИИ: сеть изменилась во время проверки «{g.DisplayName}» — результат не сохранён.");
+            return false;
+        }
+
         var failedKeys = result.FailedChecks.Select(x => x.Key).ToList();
         var avgLat = result.Checks.Where(x => x.ElapsedMs.HasValue).Select(x => x.ElapsedMs!.Value).DefaultIfEmpty(0)
             .Average();
