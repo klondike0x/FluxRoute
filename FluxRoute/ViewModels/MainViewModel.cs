@@ -1445,6 +1445,10 @@ public partial class MainViewModel : ObservableObject
     public void SaveSettings()
     {
         if (!_settingsLoaded) return;
+        // Держим устаревшее поле UserCustomSitesText в синхроне с актуальными UI-списками:
+        // иначе удалённые/очищенные домены мигрировали бы обратно при следующем запуске
+        // (правка по Codex P1, одиннадцатый раунд).
+        RefreshUserCustomSitesText();
         var settings = new AppSettings
         {
             LastProfileFileName = SelectedProfile?.FileName,
@@ -1705,6 +1709,47 @@ public partial class MainViewModel : ObservableObject
             .Distinct(StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// v1.7.1: Определяет, нужно ли реально перезаписывать hostlist.
+    /// Сравнивает нормированный набор доменов из файла с целевым UI-набором,
+    /// чтобы не трогать файл, если содержимое уже совпадает (идепотентность).
+    /// </summary>
+    private static bool HostlistFileNeedsWrite(string path, IReadOnlyList<string> domains, bool isEmpty)
+    {
+        try
+        {
+            if (!File.Exists(path))
+                return !isEmpty;
+
+            var existing = File.ReadAllLines(path)
+                .Select(line => line.Trim())
+                .Where(line => !string.IsNullOrWhiteSpace(line)
+                    && !line.StartsWith("#", StringComparison.Ordinal)
+                    && !line.StartsWith(";", StringComparison.Ordinal)
+                    && !line.StartsWith("!", StringComparison.Ordinal))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var wanted = domains.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return !existing.SetEquals(wanted);
+        }
+        catch
+        {
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Приводит устаревшее поле <see cref="UserCustomSitesText"/> к актуальному набору
+    /// UI-доменов (CustomTargetDomains + CustomExcludeDomains с префиксом «!»), чтобы legacy
+    /// миграционный источник не возвращал удалённые/очищенные домены после перезапуска.
+    /// </summary>
+    private void RefreshUserCustomSitesText()
+    {
+        UserCustomSitesText = string.Join(
+            "\n",
+            CustomTargetDomains
+                .Concat(CustomExcludeDomains.Select(domain => $"!{domain}")));
+    }
+
     private void SyncCustomHostlist()
     {
         // v1.6.0: Пропускаем синхронизацию, если пользователь её отключил
@@ -1718,42 +1763,48 @@ public partial class MainViewModel : ObservableObject
             var userHostlistPath = Path.Combine(listsDir, "list-general-user.txt");
             var domains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // 1. Берем домены из нового Менеджера доменов (вкладка "Домены")
+            // UI-набор (вкладка "Домены") — единственный источник истины при синхронизации.
+            // Устаревшее поле UserCustomSitesText сознательно НЕ подмешиваем: при удалении/очистке
+            // доменов в интерфейсе обновляется только CustomTargetDomains, поэтому legacy-значение
+            // возвращало бы удалённые домены обратно в файл (issue #89, правка по Codex).
             foreach (var d in CustomTargetDomains)
             {
                 if (!string.IsNullOrWhiteSpace(d))
                     domains.Add(d.Trim());
             }
 
-            // 2. Подхватываем из старого TextBox (для обратной совместимости)
-            if (!string.IsNullOrWhiteSpace(UserCustomSitesText))
-            {
-                var legacy = UserCustomSitesText
-                    .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .Where(s => !s.StartsWith("!"));
-                foreach (var d in legacy)
-                    domains.Add(d.Trim());
-            }
+            // Записываем list-general-user.txt.
+            // ═══ v1.7.1: идемпотентная синхронизация — не перезаписываем файл, если набор
+            // доменов уже совпадает (меньше лишних перезаписей и кэш-проблем). UI-набор при
+            // включённой синхронизации является источником истины, поэтому удаление домена
+            // через интерфейс корректно убирает его и из файла.
+            var orderedDomains = domains.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
 
-            // Записываем list-general-user.txt
-            if (domains.Count > 0)
+            if (HostlistFileNeedsWrite(userHostlistPath, orderedDomains, domains.Count == 0))
             {
-                // Используем явное удаление + запись, чтобы избежать кэширования
-                if (File.Exists(userHostlistPath))
+                if (orderedDomains.Count > 0)
                 {
-                    try { File.SetAttributes(userHostlistPath, FileAttributes.Normal); } catch { }
+                    // Используем явное удаление + запись, чтобы избежать кэширования
+                    if (File.Exists(userHostlistPath))
+                    {
+                        try { File.SetAttributes(userHostlistPath, FileAttributes.Normal); } catch { }
+                    }
+                    File.WriteAllLines(userHostlistPath, orderedDomains, new UTF8Encoding(false));
+                    Logs.Add($"[Sync] Записано {orderedDomains.Count} доменов в list-general-user.txt");
                 }
-                File.WriteAllLines(userHostlistPath, domains.OrderBy(x => x), new UTF8Encoding(false));
-                Logs.Add($"[Sync] Записано {domains.Count} доменов в list-general-user.txt");
+                else
+                {
+                    // Пустой список — удаляем файл или пишем комментарий
+                    if (File.Exists(userHostlistPath))
+                        File.Delete(userHostlistPath);
+                    else
+                        File.WriteAllText(userHostlistPath, "# custom domains empty\n", new UTF8Encoding(false));
+                    Logs.Add("[Sync] list-general-user.txt очищен");
+                }
             }
             else
             {
-                // Пустой список — удаляем файл или пишем комментарий
-                if (File.Exists(userHostlistPath))
-                    File.Delete(userHostlistPath);
-                else
-                    File.WriteAllText(userHostlistPath, "# custom domains empty\n", new UTF8Encoding(false));
-                Logs.Add("[Sync] list-general-user.txt очищен");
+                Logs.Add("[Sync] list-general-user.txt без изменений");
             }
 
             // ═══ v1.6.0: Синхронизация list-exclude-user.txt ═══

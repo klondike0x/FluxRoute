@@ -432,6 +432,38 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>
+    /// v1.7.1: Переносит результаты уже выполненного полного сканирования в генотипы ИИ
+    /// (LastVerificationScore/LastVerifiedAt) и в сетевую историю/бандит с реальными данными
+    /// проверки, чтобы вкладка ИИ и очистка/подбор видели фактические значения.
+    /// Не перезапускает стратегии. <paramref name="networkHash"/> — хэш сети ДО начала скана.
+    /// </summary>
+    private void PersistScanScoresIntoGenomes(string networkHash)
+    {
+        try
+        {
+            var results = new List<(Guid genomeId, ProfileProbeResult result)>();
+            var lastScan = _orchestrator.LastScanResults;
+            foreach (var g in _aiRegistry.GetGenomes().ToList())
+            {
+                var entry = lastScan.FirstOrDefault(e => e.result is not null &&
+                    (string.Equals(e.profile.FileName, g.BatFileName, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(e.profile.DisplayName, g.DisplayName, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(e.profile.FullPath, g.SourceBatPath, StringComparison.OrdinalIgnoreCase)));
+                if (entry.result is null || entry.result.Score < 0)
+                    continue;
+
+                results.Add((g.Id, entry.result));
+            }
+
+            _aiOrchestrator.PersistScanVerification(results, networkHash);
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"[ИИ] Ошибка переноса результатов скана в генотипы: {ex.Message}");
+        }
+    }
+
     private Task EnsureProtectionRunningAsync()
     {
         var dispatcher = Application.Current?.Dispatcher;
@@ -799,6 +831,9 @@ public partial class MainViewModel
         try
         {
             _suppressOrchestratorStop = true;
+            // ═══ v1.7.1: фиксируем сетевой хэш ДО начала скана — если сеть сменится в процессе,
+            // результаты не будут помечены новым (а не фактическим) хэшем (правка Codex P1, пятый раунд).
+            var scanNetworkHash = _aiFingerprints.Capture().Hash;
             await _orchestrator.ScanAllProfilesAsync(scanCt, progress, checkProgress);
             SortProfileScores();
             RebuildPassedScanProfiles();
@@ -809,6 +844,35 @@ public partial class MainViewModel
             ScanProgressValue = 100;
             ScanTimeRemaining = "✅ Завершено";
             SaveSettings();
+
+            // ═══ v1.7.1: в режиме ИИ «Сканировать все стратегии» обновляет и ИИ-строки
+            // (генотипы), иначе данные о стратегиях на вкладке ИИ оставались с «—» (issue #89).
+            // Первый полный скан (ScanAllProfilesAsync) уже проверил все профили — переносим
+            // готовые результаты в генотипы БЕЗ повторного запуска стратегий (правка по Codex P2).
+            if (AiEnabled)
+            {
+                // При отмене скана ScanAllProfilesAsync возвращается штатно, а LastScanResults
+                // может содержать результаты ПРЕДЫДУЩЕГО завершённого скана — не переносим их
+                // под новым хэшем (правка по Codex P1, тринадцатый раунд).
+                if (!scanCt.IsCancellationRequested)
+                {
+                    // Если сеть сменилась за время скана — результаты относятся к разным сетям и не
+                    // должны быть помечены одним хэшем: иначе bandit/очистка получили бы наблюдения
+                    // от чужой сети (правка по Codex P1, восьмой раунд). В этом случае не переносим.
+                    if (string.Equals(_aiFingerprints.Capture().Hash, scanNetworkHash, StringComparison.Ordinal))
+                    {
+                        PersistScanScoresIntoGenomes(scanNetworkHash);
+                    }
+                    else
+                    {
+                        var msg = "Сеть изменилась во время сканирования — результаты не сохранены.";
+                        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⚠️ {msg}");
+                        Logs.Add($"[ИИ] {msg}");
+                    }
+                }
+                RebuildAiStrategyRows();
+                RefreshAiDashboard();
+            }
 
             var bestProfile = _orchestrator.BestRankedProfile;
             var bestScore = _orchestrator.BestRankedScore;
@@ -1017,7 +1081,25 @@ public partial class MainViewModel
         {
             if (AiEnabled)
             {
-                await _aiOrchestrator.ProbeAllEnabledStrategiesAsync(checkCt).ConfigureAwait(false);
+                // ═══ v1.7.1: «Проверить сейчас» проверяет только ВЫБРАННУЮ стратегию,
+                // а не гонит полный скан и не удаляет эволюции (issue #89).
+                // ProbeSelectedStrategyAsync не переподбирает/не эволюционирует, а только
+                // проверяет текущую стратегию и пишет результат в генотип.
+                var wasRunningBefore = IsTrackedProcessRunning();
+                try
+                {
+                    await _aiOrchestrator.ProbeSelectedStrategyAsync(checkCt).ConfigureAwait(false);
+                }
+                finally
+                {
+                    // ProbeAsync (StopAfterProbe=false) оставляет winws запущенным, а внутри
+                    // SwitchProfileAsync всегда стартует защиту. Восстанавливаем состояние в
+                    // finally, чтобы оно применилось и при отмене/ошибке пробы — иначе ручная
+                    // проверка незаметно запускала winws и ИИ-оркестратор (Codex P1, 12/13-й раунд).
+                    if (!wasRunningBefore && IsTrackedProcessRunning())
+                        Stop();
+                }
+
                 var d = Application.Current?.Dispatcher;
                 if (d is not null && !d.HasShutdownStarted && !d.HasShutdownFinished)
                 {
@@ -1059,6 +1141,97 @@ public partial class MainViewModel
     private void ClearOrchestratorLogs()
     {
         OrchestratorLogs.Clear();
+    }
+
+    // ═══ v1.7.1: Отдельное действие очистки слабых эволюций (issue #89).
+    // Раньше автоудаление происходило скрыто внутри «Проверить сейчас»; теперь это
+    // явный шаг, подтверждаемый пользователем.
+    [RelayCommand]
+    private async Task CleanWeakEvolutions()
+    {
+        if (!AiEnabled)
+        {
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⚠️ Очистка эволюций доступна только в режиме ИИ.");
+            return;
+        }
+
+        // Сериализация очистки с проверками/сканированием (правка Codex P1, восьмой раунд):
+        // иначе очистка может удалить генотип/BAT, пока TryProbeAndPersistGenomeAsync ещё работает,
+        // и после завершения проверки тот воскресит запись в реестре удалённого файла.
+        if (IsScanning)
+        {
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⚠️ Дождитесь завершения текущей проверки/сканирования перед очисткой эволюций.");
+            return;
+        }
+
+        if (!CustomDialog.Show(
+            "Очистить слабые эволюции",
+            $"Удалить эволюционированные стратегии с результатом ниже {AiAutoDeleteBelowScore}%?\n\n" +
+            "Встроенные стратегии удалены не будут.",
+            "Очистить",
+            "Отмена",
+            isDanger: true))
+            return;
+
+        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🗑 Запуск очистки слабых эволюций (порог {AiAutoDeleteBelowScore}%)...");
+        var activeBeforePurge = SelectedProfile;
+        var wasRunning = IsTrackedProcessRunning();
+        // Захватываем генотип, соответствующий активному профилю, ДО очистки —
+        // по нему потом определяем, была ли активная стратегия именно удалена
+        // (а не просто отсутствовала в реестре, как кастомная BAT без генотипа).
+        var activeGenomeBefore = activeBeforePurge is null
+            ? null
+            : _aiRegistry.GetGenomes().FirstOrDefault(g =>
+                string.Equals(g.BatFileName, activeBeforePurge.FileName, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(g.DisplayName, activeBeforePurge.DisplayName, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(g.SourceBatPath, activeBeforePurge.FullPath, StringComparison.OrdinalIgnoreCase));
+        try
+        {
+            var deleted = await _aiOrchestrator.PurgeWeakEvolutionsAsync().ConfigureAwait(true);
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🗑 Удалено слабых эволюций: {deleted}");
+            Logs.Add($"[ИИ] Очистка слабых эволюций: удалено {deleted}.");
+
+            // Активная стратегия удалена очисткой ⇔ ей соответствовал генотип ДО очистки,
+            // и теперь этого генотипа больше нет в реестре (правка по Codex P2, седьмой раунд).
+            var activeDeleted = activeGenomeBefore is not null &&
+                _aiRegistry.GetById(activeGenomeBefore.Id) is null;
+
+            // Останавливаем защиту ДО перезагрузки профилей, если активную стратегию удалили.
+            // Иначе переключение на новый профиль перезапустит защиту, а следующий Stop() убил бы
+            // её и ИИ-оркестратор — и защита осталась бы выключенной (правка по Codex P1, шестой раунд).
+            if (activeDeleted && wasRunning && IsRunning)
+                Stop();
+
+            // Подавляем смену профиля при перезагрузке ВСЕГДА: даже если активная эволюция не
+            // удалялась, LoadProfiles() пересоздаёт объекты профилей и может поднять ложное
+            // предупреждение/перезапуск защиты (правка по Codex P2, десятый раунд).
+            _suppressProfileWarning = true;
+            try
+            {
+                RebuildAiStrategyRows();
+                RefreshAiDashboard();
+                LoadProfiles();
+
+                if (activeDeleted)
+                {
+                    SelectedProfile = Profiles.FirstOrDefault();
+                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Профиль «{activeBeforePurge!.DisplayName}» удалён — переключено на «{SelectedProfile?.DisplayName ?? "—"}».");
+
+                    // Возвращаем защиту в исходное состояние запущенности на новом профиле.
+                    if (wasRunning && SelectedProfile is not null && !IsTrackedProcessRunning())
+                        Start();
+                }
+            }
+            finally
+            {
+                _suppressProfileWarning = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ❌ Ошибка очистки эволюций: {ex.Message}");
+            Logs.Add($"[ИИ] Ошибка очистки эволюций: {ex.Message}");
+        }
     }
 
     private bool IsTrackedProcessRunning()

@@ -31,6 +31,12 @@ public sealed class OrchestratorService : IDisposable
     private List<(ProfileItem profile, int score, ProfileProbeResult? result)> _rankedProfiles = [];
     private string? _preferredProfileFileName;
 
+    /// <summary>
+    /// Результаты последнего полного сканирования (профиль + счёт + реальные данные проверки).
+    /// Используются для переноса в генотипы ИИ без повторного запуска стратегий.
+    /// </summary>
+    public IReadOnlyList<(ProfileItem profile, int score, ProfileProbeResult? result)> LastScanResults => _rankedProfiles;
+
     private readonly Func<IEnumerable<ProfileItem>> _getProfiles;
     private readonly Func<ProfileItem?> _getActiveProfile;
     private readonly Func<ProfileItem?, Task> _switchProfile;

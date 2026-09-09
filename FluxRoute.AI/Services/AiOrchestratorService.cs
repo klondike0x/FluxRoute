@@ -119,7 +119,64 @@ public sealed class AiOrchestratorService : IDisposable
     [Obsolete("Use CheckNowAsync(CancellationToken) instead")]
     public Task CheckNowAsync_Legacy() => RunCycleAsync(CancellationToken.None);
 
-    public async Task ProbeAllEnabledStrategiesAsync(CancellationToken ct = default)
+    /// <summary>
+    /// Точечная проверка ВЫБРАННОЙ (активно выбранной в интерфейсе) стратегии.
+    /// В отличие от <see cref="CheckNowAsync"/> (полный цикл с переподбором/сменой/эволюцией)
+    /// этот метод: не переподбирает, не переключает стратегию, не запускает эволюцию и
+    /// не удаляет эволюции. Он только проверяет текущую стратегию, записывает результат
+    /// (<see cref="StrategyGenome.LastVerificationScore"/>) в генотип и остаётся на месте (issue #89).
+    /// </summary>
+    public async Task ProbeSelectedStrategyAsync(CancellationToken ct = default)
+    {
+        var active = _getActiveProfile();
+        if (active is null)
+        {
+            Notify("ИИ: нет выбранной стратегии для проверки.");
+            return;
+        }
+
+        var genome = FindGenomeForProfile(active);
+        if (genome is null)
+        {
+            Notify($"ИИ: для «{active.DisplayName}» нет записи генотипа — проверка пропущена.");
+            return;
+        }
+
+        var fp = _fingerprints.Capture();
+        _registry.MarkNetworkSeen(fp.Hash);
+        _registry.Save();
+        Notify($"ИИ: проверка выбранной стратегии «{genome.DisplayName}»...");
+        try
+        {
+            await TryProbeAndPersistGenomeAsync(genome, fp, ct, isFreshlyEvolved: false, autoDeleteBelowThreshold: false)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            // ProbeAsync переключается на NEW ProfileItem, которого нет в коллекции Profiles —
+            // возвращаем исходный выбранный профиль (правка по Codex P2, десятый раунд).
+            if (active is not null && !ReferenceEquals(_getActiveProfile(), active))
+                await _switchProfile(active).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Находит генотип, соответствующий выбранному профилю (по имени bat/отображаемому имени/пути).
+    /// </summary>
+    private StrategyGenome? FindGenomeForProfile(ProfileItem profile) =>
+        _registry.GetGenomes().FirstOrDefault(g =>
+            string.Equals(g.BatFileName, profile.FileName, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(g.DisplayName, profile.DisplayName, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(g.SourceBatPath, profile.FullPath, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Полное сканирование всех включённых стратегий ИИ с сохранением результатов проверки.
+    /// По умолчанию НЕ удаляет слабые эволюции — автоудаление вынесено в отдельное действие
+    /// (<see cref="PurgeWeakEvolutionsAsync"/>), чтобы кнопка «Проверить сейчас» не чистила стратегии тайно (issue #89).
+    /// </summary>
+    public async Task ProbeAllEnabledStrategiesAsync(
+        CancellationToken ct = default,
+        bool autoDeleteBelowThreshold = false)
     {
         var previousGenome = _currentGenome;
         var previousProfile = _getActiveProfile();
@@ -136,10 +193,11 @@ public sealed class AiOrchestratorService : IDisposable
                 Notify("ИИ: нет отмеченных стратегий для проверки.");
                 return;
             }
-            Notify($"ИИ: ручная проверка {list.Count} стратегий...");
+            Notify($"ИИ: проверка {list.Count} стратегий...");
             foreach (var g in list)
             {
-                var deleted = await TryProbeAndPersistGenomeAsync(g, fp, ct, isFreshlyEvolved: false).ConfigureAwait(false);
+                var deleted = await TryProbeAndPersistGenomeAsync(g, fp, ct, isFreshlyEvolved: false, autoDeleteBelowThreshold)
+                    .ConfigureAwait(false);
                 if (deleted && _currentGenome?.Id == g.Id)
                     _currentGenome = null;
             }
@@ -470,7 +528,7 @@ public sealed class AiOrchestratorService : IDisposable
         try
         {
             await _refreshProfiles().ConfigureAwait(false);
-            deleted = await TryProbeAndPersistGenomeAsync(child, fp, ct, isFreshlyEvolved: true).ConfigureAwait(false);
+            deleted = await TryProbeAndPersistGenomeAsync(child, fp, ct, isFreshlyEvolved: true, autoDeleteBelowThreshold: true).ConfigureAwait(false);
         }
         finally
         {
@@ -484,7 +542,7 @@ public sealed class AiOrchestratorService : IDisposable
     }
 
     private async Task<bool> TryProbeAndPersistGenomeAsync(StrategyGenome g, NetworkFingerprint fp, CancellationToken ct,
-        bool isFreshlyEvolved)
+        bool isFreshlyEvolved, bool autoDeleteBelowThreshold = false)
     {
         var testProfile = ResolveProfile(g);
         if (testProfile is null)
@@ -494,7 +552,7 @@ public sealed class AiOrchestratorService : IDisposable
         }
         Notify(isFreshlyEvolved
             ? $"ИИ: проверка новой стратегии «{g.DisplayName}»..."
-            : $"ИИ: ручная проверка «{g.DisplayName}»...");
+            : $"ИИ: проверка «{g.DisplayName}»...");
         var targets = BuildTargets();
         var probeOptions = new ProfileProbeOptions
         {
@@ -504,6 +562,16 @@ public sealed class AiOrchestratorService : IDisposable
             StopAfterProbe = false,
         };
         var result = await _probeService.ProbeAsync(testProfile, targets, probeOptions, ct).ConfigureAwait(false);
+
+        // Если сеть сменилась за время пробы (ожидание старта/стабилизации/проверки целей) —
+        // результат относится к другой сети и не должен быть записан под исходным хэшем:
+        // иначе bandit/очистка получили бы наблюдение от чужой сети (правка по Codex P2, 12-й раунд).
+        if (!string.Equals(_fingerprints.Capture().Hash, fp.Hash, StringComparison.Ordinal))
+        {
+            Notify($"⚠️ ИИ: сеть изменилась во время проверки «{g.DisplayName}» — результат не сохранён.");
+            return false;
+        }
+
         var failedKeys = result.FailedChecks.Select(x => x.Key).ToList();
         var avgLat = result.Checks.Where(x => x.ElapsedMs.HasValue).Select(x => x.ElapsedMs!.Value).DefaultIfEmpty(0)
             .Average();
@@ -546,12 +614,19 @@ public sealed class AiOrchestratorService : IDisposable
         await _notifyScoreUpdate(testProfile.FileName, result.Score).ConfigureAwait(false);
         g.LastVerificationScore = result.Score;
         g.LastVerifiedAt = DateTimeOffset.UtcNow;
+        // Если генотип удалён очисткой во время проверки — не воскрешаем запись в реестре,
+        // иначе после завершения проверки он вернул бы запись для уже удалённого файла
+        // (правка по Codex P1, девятый раунд).
+        if (_registry.GetById(g.Id) is null)
+            return false;
         _registry.Upsert(g);
         _registry.Save();
 
         // ═══ АВТОУДАЛЕНИЕ НЕУДАЧНЫХ ЭВОЛЮЦИОНИРОВАННЫХ СТРАТЕГИЙ ═══
+        // Срабатывает только при явно запрошенном автоудалении (проверка свежей эволюции/очистка).
+        // «Проверить сейчас» больше не чистит стратегии тайно (issue #89).
         var threshold = _aiSettings().AutoDeleteBelowScore;
-        if (g.Origin == StrategyOrigin.Evolved && result.Score < threshold)
+        if (autoDeleteBelowThreshold && g.Origin == StrategyOrigin.Evolved && result.Score < threshold)
         {
             // Проверяем, есть ли на этой сети хотя бы одна встроенная стратегия с Score >= threshold.
             // Если нет — сеть слишком агрессивна, удалять эволюцию несправедливо (исправление #62).
@@ -562,15 +637,165 @@ public sealed class AiOrchestratorService : IDisposable
             if (builtinOk.Count > 0)
             {
                 Notify($"🗑 ИИ: стратегия «{g.DisplayName}» ({result.Score}%) ниже порога {threshold}% — удалена автоматически.", result: result);
-                TryDeleteGenomeBatFile(g);
-                _registry.Remove(g.Id);
-                _registry.Save();
-                return true;
+                if (TryDeleteGenomeBatFile(g))
+                {
+                    _registry.Remove(g.Id);
+                    _registry.Save();
+                    return true;
+                }
+                // Файл не удалился — запись из реестра не убираем (Codex P2, 9-й раунд).
+                Notify($"⚠️ ИИ: не удалось удалить файл «{g.DisplayName}» — стратегия сохранена.", result: result);
             }
 
             Notify($"🧬 ИИ: стратегия «{g.DisplayName}» ({result.Score}%) ниже порога {threshold}%, но оставлена — встроенные тоже не проходят (сеть агрессивна).", result: result);
         }
         return false;
+    }
+
+    /// <summary>
+    /// Отдельное действие очистки: удаляет эволюционированные стратегии, у которых
+    /// последняя проверка ниже порога <see cref="AiSettings.AutoDeleteBelowScore"/>.
+    /// Гарантия #62: эволюция удаляется только если на этой сети есть проходящая встроенная
+    /// стратегия (иначе сеть слишком агрессивна и удалять несправедливо).
+    /// Итог «Проверить сейчас» и «Сканировать все стратегии» НЕ запускают это скрыто (issue #89).
+    /// </summary>
+    public async Task<int> PurgeWeakEvolutionsAsync(CancellationToken ct = default)
+    {
+        var threshold = _aiSettings().AutoDeleteBelowScore;
+        var fp = await Task.Run(() => _fingerprints.Capture(), ct).ConfigureAwait(false);
+        _registry.MarkNetworkSeen(fp.Hash);
+        _registry.Save();
+
+        // Кандидаты — эволюции, чей ПОСЛЕДНИЙ результат именно на ТЕКУЩЕЙ сети ниже порога.
+        // Не используем глобальный LastVerificationScore: он без привязки к сети, а порог защиты
+        // #62 вычисляется для текущей сети — обе стороны сравнения должны быть на одной сети.
+        var candidates = _registry.GetGenomes()
+            .Where(g => g.Origin == StrategyOrigin.Evolved)
+            .Select(g => (genome: g, score: GetLatestScoreOnNetwork(g, fp.Hash)))
+            .Where(x => x.score is { } score && score < threshold)
+            .Select(x => x.genome)
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            Notify($"🗑 ИИ: нет слабых эволюций ниже порога {threshold}% на этой сети.");
+            return 0;
+        }
+
+        // Проверяем, есть ли на этой сети хотя бы одна встроенная стратегия, чей ПОСЛЕДНИЙ
+        // результат ≥ порога. Берём именно последний outcome каждой встроенной: устаревший
+        // успех в прошлом не должен позволять удалять эволюции, если сейчас встроенная падает
+        // (правка по Codex P1, третий раунд).
+        var builtinOk = _history.LoadForNetwork(fp.Hash)
+            .Where(o => _registry.GetById(o.GenomeId)?.Origin == StrategyOrigin.Builtin)
+            .GroupBy(o => o.GenomeId)
+            .Select(group => group.OrderByDescending(o => o.Timestamp).First())
+            .Any(o => o.Score >= threshold);
+
+        var deleted = 0;
+        foreach (var g in candidates)
+        {
+            if (ct.IsCancellationRequested) break;
+
+            var thisScore = GetLatestScoreOnNetwork(g, fp.Hash);
+            if (thisScore is not { } score)
+                continue; // нет данных именно на этой сети — не трогаем
+
+            if (!builtinOk)
+            {
+                Notify($"🧬 ИИ: «{g.DisplayName}» ({score}%) ниже порога {threshold}%, но оставлена — встроенные тоже не проходят (сеть агрессивна).");
+                break;
+            }
+
+            Notify($"🗑 ИИ: стратегия «{g.DisplayName}» ({score}%) ниже порога {threshold}% на этой сети — удалена.");
+            if (!TryDeleteGenomeBatFile(g))
+            {
+                // Файл не удалился (занят/защищён) — запись из реестра не убираем,
+                // иначе LoadProfiles() снова найдёт BAT, а реестр им уже не управляет (Codex P2, 9-й раунд).
+                Notify($"⚠️ ИИ: не удалось удалить файл «{g.DisplayName}» — стратегия сохранена.");
+                continue;
+            }
+            _registry.Remove(g.Id);
+            deleted++;
+        }
+
+        _registry.Save();
+        Notify($"🗑 ИИ: очистка завершена — удалено {deleted} слабых эволюций.");
+        return deleted;
+    }
+
+    /// <summary>
+    /// Возвращает последний результат проверки генотипа именно на указанной сети.
+    /// Если на этой сети проверок не было — null.
+    /// </summary>
+    private int? GetLatestScoreOnNetwork(StrategyGenome g, string networkHash)
+    {
+        var last = _history.LoadFor(g.Id, networkHash)
+            .OrderByDescending(o => o.Timestamp)
+            .FirstOrDefault();
+        return last?.Score;
+    }
+
+    /// <summary>
+    /// Переносит результаты уже выполненного полного сканирования в генотипы ИИ:
+    /// пишет LastVerificationScore/LastVerifiedAt, а также сетевой outcome в историю и
+    /// в bandit-реестр, используя реальные данные проверки (ProcessStable/SuccessRate/
+    /// FailedChecks), а не реконструируя их из композитного счёта (правка по Codex P2, 11-й раунд).
+    /// Сетевой хэш захватывается ДО начала скана и передаётся сюда, чтобы при смене сети
+    /// в процессе скана все результаты не были бы помечены новым (а не фактическим) хэшем.
+    /// </summary>
+    public void PersistScanVerification(IReadOnlyList<(Guid genomeId, ProfileProbeResult result)> results, string networkHash)
+    {
+        if (results.Count == 0)
+            return;
+
+        _registry.MarkNetworkSeen(networkHash);
+        var updated = false;
+
+        foreach (var (genomeId, result) in results)
+        {
+            var g = _registry.GetById(genomeId);
+            if (g is null || result.Score < 0)
+                continue;
+
+            var failureSig = !result.ProcessStable
+                ? "winws_failed"
+                : result.Score < (int)Math.Round(FailThreshold * 100)
+                    ? "network_failed"
+                    : null;
+
+            _history.Append(new ProbeOutcome
+            {
+                GenomeId = genomeId,
+                NetworkHash = networkHash,
+                Timestamp = DateTimeOffset.UtcNow,
+                Score = result.Score,
+                SuccessRate = result.SuccessRate,
+                AvgLatencyMs = result.Checks.Where(c => c.ElapsedMs.HasValue).Select(c => c.ElapsedMs!.Value).DefaultIfEmpty(0).Average(),
+                ProcessStable = result.ProcessStable,
+                FailedTargetKeys = result.FailedChecks.Select(c => c.Key).ToList(),
+                FailureSignature = failureSig,
+            });
+
+            if (result.IsWorking(FailThreshold))
+            {
+                _registry.RecordBanditSuccess(genomeId, networkHash);
+                _bandit.RegisterSuccess(genomeId);
+            }
+            else
+            {
+                _registry.RecordBanditFailure(genomeId, networkHash);
+                _bandit.RegisterFailure(g, failureSig);
+            }
+
+            g.LastVerificationScore = result.Score;
+            g.LastVerifiedAt = DateTimeOffset.UtcNow;
+            _registry.Upsert(g);
+            updated = true;
+        }
+
+        if (updated)
+            _registry.Save();
     }
 
     private void SyncBuiltins()
@@ -610,15 +835,35 @@ public sealed class AiOrchestratorService : IDisposable
         _registry.Save();
     }
 
-    private static void TryDeleteGenomeBatFile(StrategyGenome g)
+    /// <summary>
+    /// Пытается удалить BAT-файл генотипа. Возвращает true, если файл нигде не найден (удалять нечего)
+    /// или успешно удалён; false — если файл существует, но удалить не удалось (занят/защищён).
+    /// Учитывает, что сохранённый <see cref="StrategyGenome.SourceBatPath"/> может быть устаревшим:
+    /// дополнительно проверяем актуальное расположение engine/ai-evolved/&lt;BatFileName&gt;.
+    /// </summary>
+    private bool TryDeleteGenomeBatFile(StrategyGenome g)
     {
         try
         {
-            if (!string.IsNullOrEmpty(g.SourceBatPath) && File.Exists(g.SourceBatPath))
-                File.Delete(g.SourceBatPath);
+            var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (!string.IsNullOrEmpty(g.SourceBatPath))
+                candidates.Add(g.SourceBatPath);
+            if (!string.IsNullOrEmpty(g.BatFileName))
+                candidates.Add(Path.Combine(_engineDir(), "ai-evolved", g.BatFileName));
+
+            var existing = candidates.Where(File.Exists).ToList();
+            if (existing.Count == 0)
+                return true; // файла нигде нет — удалять нечего
+
+            // Удаляем ВСЕ живые копии (путь мог сохраниться в нескольких местах при переносе),
+            // а не только первую — иначе активная копия останется «бесхозной» (Codex P2, 11-й раунд).
+            foreach (var path in existing)
+                File.Delete(path);
+            return true;
         }
         catch
         {
+            return false; // файл занят/защищён — не удалился
         }
     }
 
