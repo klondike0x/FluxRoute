@@ -850,7 +850,19 @@ public partial class MainViewModel
             // готовые результаты в генотипы БЕЗ повторного запуска стратегий (правка по Codex P2).
             if (AiEnabled)
             {
-                PersistScanScoresIntoGenomes(scanNetworkHash);
+                // Если сеть сменилась за время скана — результаты относятся к разным сетям и не
+                // должны быть помечены одним хэшем: иначе bandit/очистка получили бы наблюдения
+                // от чужой сети (правка по Codex P1, восьмой раунд). В этом случае не переносим.
+                if (string.Equals(_aiFingerprints.Capture().Hash, scanNetworkHash, StringComparison.Ordinal))
+                {
+                    PersistScanScoresIntoGenomes(scanNetworkHash);
+                }
+                else
+                {
+                    var msg = "Сеть изменилась во время сканирования — результаты не сохранены.";
+                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⚠️ {msg}");
+                    Logs.Add($"[ИИ] {msg}");
+                }
                 RebuildAiStrategyRows();
                 RefreshAiDashboard();
             }
@@ -1122,6 +1134,15 @@ public partial class MainViewModel
             return;
         }
 
+        // Сериализация очистки с проверками/сканированием (правка Codex P1, восьмой раунд):
+        // иначе очистка может удалить генотип/BAT, пока TryProbeAndPersistGenomeAsync ещё работает,
+        // и после завершения проверки тот воскресит запись в реестре удалённого файла.
+        if (IsScanning)
+        {
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⚠️ Дождитесь завершения текущей проверки/сканирования перед очисткой эволюций.");
+            return;
+        }
+
         if (!CustomDialog.Show(
             "Очистить слабые эволюции",
             $"Удалить эволюционированные стратегии с результатом ниже {AiAutoDeleteBelowScore}%?\n\n" +
@@ -1160,13 +1181,18 @@ public partial class MainViewModel
             if (activeDeleted && wasRunning && IsRunning)
                 Stop();
 
+            // Подавляем предупреждение о смене профиля ПЕРЕД перезагрузкой: иначе LoadProfiles()
+            // сам поднимет warning и поставит в очередь восстановление уже удалённого профиля,
+            // а последующая установка флага не отменит этот callback (правка по Codex P2, восьмой раунд).
+            if (activeDeleted)
+                _suppressProfileWarning = true;
+
             RebuildAiStrategyRows();
             RefreshAiDashboard();
             LoadProfiles();
 
             if (activeDeleted)
             {
-                _suppressProfileWarning = true;
                 SelectedProfile = Profiles.FirstOrDefault();
                 _suppressProfileWarning = false;
                 AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Профиль «{activeBeforePurge!.DisplayName}» удалён — переключено на «{SelectedProfile?.DisplayName ?? "—"}».");
