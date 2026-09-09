@@ -814,8 +814,9 @@ public partial class MainViewModel
             // (генотипы), иначе данные о стратегиях на вкладке ИИ оставались с «—» (issue #89).
             if (AiEnabled)
             {
-                await _aiOrchestrator.ProbeAllEnabledStrategiesAsync(scanCt, autoDeleteBelowThreshold: false)
-                    .ConfigureAwait(false);
+                // Без ConfigureAwait(false) — продолжение должно вернуться в UI-поток,
+                // чтобы RebuildAiStrategyRows/RefreshAiDashboard трогали WPF-коллекции корректно.
+                await _aiOrchestrator.ProbeAllEnabledStrategiesAsync(scanCt, autoDeleteBelowThreshold: false);
                 RebuildAiStrategyRows();
                 RefreshAiDashboard();
             }
@@ -1029,8 +1030,9 @@ public partial class MainViewModel
             {
                 // ═══ v1.7.2: «Проверить сейчас» проверяет только ВЫБРАННУЮ стратегию,
                 // а не гонит полный скан и не удаляет эволюции (issue #89).
-                // Автоудаление слабых стратегий — отдельное действие "Очистить слабые эволюции".
-                await _aiOrchestrator.CheckNowAsync(checkCt).ConfigureAwait(false);
+                // ProbeSelectedStrategyAsync не переключает/не эволюционирует, а только
+                // проверяет текущую стратегию и пишет результат в генотип.
+                await _aiOrchestrator.ProbeSelectedStrategyAsync(checkCt).ConfigureAwait(false);
                 var d = Application.Current?.Dispatcher;
                 if (d is not null && !d.HasShutdownStarted && !d.HasShutdownFinished)
                 {

@@ -120,6 +120,46 @@ public sealed class AiOrchestratorService : IDisposable
     public Task CheckNowAsync_Legacy() => RunCycleAsync(CancellationToken.None);
 
     /// <summary>
+    /// Точечная проверка ВЫБРАННОЙ (активно выбранной в интерфейсе) стратегии.
+    /// В отличие от <see cref="CheckNowAsync"/> (полный цикл с переподбором/сменой/эволюцией)
+    /// этот метод: не переподбирает, не переключает стратегию, не запускает эволюцию и
+    /// не удаляет эволюции. Он только проверяет текущую стратегию, записывает результат
+    /// (<see cref="StrategyGenome.LastVerificationScore"/>) в генотип и остаётся на месте (issue #89).
+    /// </summary>
+    public async Task ProbeSelectedStrategyAsync(CancellationToken ct = default)
+    {
+        var active = _getActiveProfile();
+        if (active is null)
+        {
+            Notify("ИИ: нет выбранной стратегии для проверки.");
+            return;
+        }
+
+        var genome = FindGenomeForProfile(active);
+        if (genome is null)
+        {
+            Notify($"ИИ: для «{active.DisplayName}» нет записи генотипа — проверка пропущена.");
+            return;
+        }
+
+        var fp = _fingerprints.Capture();
+        _registry.MarkNetworkSeen(fp.Hash);
+        _registry.Save();
+        Notify($"ИИ: проверка выбранной стратегии «{genome.DisplayName}»...");
+        await TryProbeAndPersistGenomeAsync(genome, fp, ct, isFreshlyEvolved: false, autoDeleteBelowThreshold: false)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Находит генотип, соответствующий выбранному профилю (по имени bat/отображаемому имени/пути).
+    /// </summary>
+    private StrategyGenome? FindGenomeForProfile(ProfileItem profile) =>
+        _registry.GetGenomes().FirstOrDefault(g =>
+            string.Equals(g.BatFileName, profile.FileName, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(g.DisplayName, profile.DisplayName, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(g.SourceBatPath, profile.FullPath, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
     /// Полное сканирование всех включённых стратегий ИИ с сохранением результатов проверки.
     /// По умолчанию НЕ удаляет слабые эволюции — автоудаление вынесено в отдельное действие
     /// (<see cref="PurgeWeakEvolutionsAsync"/>), чтобы кнопка «Проверить сейчас» не чистила стратегии тайно (issue #89).
