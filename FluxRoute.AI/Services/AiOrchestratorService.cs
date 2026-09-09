@@ -41,6 +41,7 @@ public sealed class AiOrchestratorService : IDisposable
     private int _probeCountSinceEvolve;
     private DateTimeOffset _lastEvolutionUtc = DateTimeOffset.MinValue;
     private volatile bool _networkDirty;
+    private volatile bool _purgeInProgress;
     private StrategyGenome? _currentGenome;
 
     public event EventHandler<OrchestratorEventArgs>? StatusChanged;
@@ -284,6 +285,14 @@ public sealed class AiOrchestratorService : IDisposable
 
     private async Task RunCycleAsync(CancellationToken ct)
     {
+        // Пауза цикла, пока идёт очистка эволюций: иначе цикл может переключать стратегии
+        // и писать bandit, пока PurgeWeakEvolutionsAsync удаляет геном/BAT (релизный PR #76, P1).
+        if (_purgeInProgress)
+        {
+            Notify("ИИ: идёт очистка эволюций — пропускаю проверку.");
+            return;
+        }
+
         var ai = _aiSettings();
         _history.RotateOldEntries(ai.KeepHistoryDays);
 
@@ -661,10 +670,16 @@ public sealed class AiOrchestratorService : IDisposable
     /// </summary>
     public async Task<int> PurgeWeakEvolutionsAsync(CancellationToken ct = default)
     {
-        var threshold = _aiSettings().AutoDeleteBelowScore;
-        var fp = await Task.Run(() => _fingerprints.Capture(), ct).ConfigureAwait(false);
-        _registry.MarkNetworkSeen(fp.Hash);
-        _registry.Save();
+        // Сериализация с фоновыми циклами ИИ (LoopAsync/RunCycleAsync): они не выставляют
+        // IsScanning, поэтому очистка могла удалять геном/BAT, пока цикл переключал стратегии
+        // и записывал bandit (правка по Codex P1 — релизный PR #76). Цикл ставится на паузу.
+        _purgeInProgress = true;
+        try
+        {
+            var threshold = _aiSettings().AutoDeleteBelowScore;
+            var fp = await Task.Run(() => _fingerprints.Capture(), ct).ConfigureAwait(false);
+            _registry.MarkNetworkSeen(fp.Hash);
+            _registry.Save();
 
         // Кандидаты — эволюции, чей ПОСЛЕДНИЙ результат именно на ТЕКУЩЕЙ сети ниже порога.
         // Не используем глобальный LastVerificationScore: он без привязки к сети, а порог защиты
@@ -722,6 +737,11 @@ public sealed class AiOrchestratorService : IDisposable
         _registry.Save();
         Notify($"🗑 ИИ: очистка завершена — удалено {deleted} слабых эволюций.");
         return deleted;
+        }
+        finally
+        {
+            _purgeInProgress = false;
+        }
     }
 
     /// <summary>
