@@ -438,7 +438,7 @@ public partial class MainViewModel
     /// проверки, чтобы вкладка ИИ и очистка/подбор видели фактические значения.
     /// Не перезапускает стратегии. <paramref name="networkHash"/> — хэш сети ДО начала скана.
     /// </summary>
-    private void PersistScanScoresIntoGenomes(string networkHash)
+    private async Task PersistScanScoresIntoGenomes(string networkHash)
     {
         try
         {
@@ -456,7 +456,7 @@ public partial class MainViewModel
                 results.Add((g.Id, entry.result));
             }
 
-            _aiOrchestrator.PersistScanVerification(results, networkHash);
+            await _aiOrchestrator.PersistScanVerification(results, networkHash).ConfigureAwait(true);
         }
         catch (Exception ex)
         {
@@ -861,7 +861,7 @@ public partial class MainViewModel
                     // от чужой сети (правка по Codex P1, восьмой раунд). В этом случае не переносим.
                     if (string.Equals(_aiFingerprints.Capture().Hash, scanNetworkHash, StringComparison.Ordinal))
                     {
-                        PersistScanScoresIntoGenomes(scanNetworkHash);
+                        await PersistScanScoresIntoGenomes(scanNetworkHash);
                     }
                     else
                     {
