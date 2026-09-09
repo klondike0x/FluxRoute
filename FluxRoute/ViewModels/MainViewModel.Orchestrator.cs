@@ -1139,22 +1139,35 @@ public partial class MainViewModel
             var deleted = await _aiOrchestrator.PurgeWeakEvolutionsAsync().ConfigureAwait(true);
             AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🗑 Удалено слабых эволюций: {deleted}");
             Logs.Add($"[ИИ] Очистка слабых эволюций: удалено {deleted}.");
+
+            // Удалялась ли активная (выбранная) стратегия? Проверяем по реестру: эволюция,
+            // отчищенная на шаге выше, уже не имеет соответствующего генотипа.
+            var activeDeleted = activeBeforePurge is not null &&
+                !_aiRegistry.GetGenomes().Any(g =>
+                    string.Equals(g.BatFileName, activeBeforePurge.FileName, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(g.DisplayName, activeBeforePurge.DisplayName, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(g.SourceBatPath, activeBeforePurge.FullPath, StringComparison.OrdinalIgnoreCase));
+
+            // Останавливаем защиту ДО перезагрузки профилей, если активную стратегию удалили.
+            // Иначе переключение на новый профиль перезапустит защиту, а следующий Stop() убил бы
+            // её и ИИ-оркестратор — и защита осталась бы выключенной (правка по Codex P1, шестой раунд).
+            if (activeDeleted && wasRunning && IsRunning)
+                Stop();
+
             RebuildAiStrategyRows();
             RefreshAiDashboard();
             LoadProfiles();
 
-            // Если удалённая эволюция была активным профилем — переключаемся на доступную стратегию,
-            // подавив предупреждение о смене профиля. Иначе UI указывал бы на несуществующий профиль,
-            // а при перезапуске его нельзя было запустить (правка по Codex P2, четвёртый раунд).
-            if (activeBeforePurge is not null &&
-                !Profiles.Any(p => string.Equals(p.FileName, activeBeforePurge.FileName, StringComparison.OrdinalIgnoreCase)))
+            if (activeDeleted)
             {
-                if (wasRunning && IsRunning)
-                    Stop();
                 _suppressProfileWarning = true;
                 SelectedProfile = Profiles.FirstOrDefault();
                 _suppressProfileWarning = false;
-                AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Профиль «{activeBeforePurge.DisplayName}» удалён — переключено на «{SelectedProfile?.DisplayName ?? "—"}».");
+                AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Профиль «{activeBeforePurge!.DisplayName}» удалён — переключено на «{SelectedProfile?.DisplayName ?? "—"}».");
+
+                // Возвращаем защиту в исходное состояние запущенности на новом профиле.
+                if (wasRunning && SelectedProfile is not null && !IsTrackedProcessRunning())
+                    Start();
             }
         }
         catch (Exception ex)
