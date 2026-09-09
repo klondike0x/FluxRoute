@@ -41,6 +41,7 @@ public sealed class AiOrchestratorService : IDisposable
     private int _probeCountSinceEvolve;
     private DateTimeOffset _lastEvolutionUtc = DateTimeOffset.MinValue;
     private volatile bool _networkDirty;
+    private readonly SemaphoreSlim _aiGate = new(1, 1); // мьютекс: purge ∨ циклы ИИ выполняются исключающе
     private StrategyGenome? _currentGenome;
 
     public event EventHandler<OrchestratorEventArgs>? StatusChanged;
@@ -284,6 +285,12 @@ public sealed class AiOrchestratorService : IDisposable
 
     private async Task RunCycleAsync(CancellationToken ct)
     {
+        // Взаимное исключение с очисткой эволюций (и другими циклами ИИ): purge и цикл не могут
+        // выполняться одновременно — иначе цикл мог бы продолжать запись bandit/переключение,
+        // пока purge удаляет геном/BAT (релизный PR #76, P1).
+        await _aiGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
         var ai = _aiSettings();
         _history.RotateOldEntries(ai.KeepHistoryDays);
 
@@ -381,6 +388,11 @@ public sealed class AiOrchestratorService : IDisposable
 
         _consecutiveFailures = 0;
         await SwitchToAlternativeAsync(fp, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _aiGate.Release();
+        }
     }
 
     private async Task RepickAfterNetworkChangeAsync(NetworkFingerprint fp, CancellationToken ct)
@@ -661,10 +673,16 @@ public sealed class AiOrchestratorService : IDisposable
     /// </summary>
     public async Task<int> PurgeWeakEvolutionsAsync(CancellationToken ct = default)
     {
-        var threshold = _aiSettings().AutoDeleteBelowScore;
-        var fp = await Task.Run(() => _fingerprints.Capture(), ct).ConfigureAwait(false);
-        _registry.MarkNetworkSeen(fp.Hash);
-        _registry.Save();
+        // Взаимное исключение с циклами ИИ: purge и фоновые циклы не могут выполняться
+        // одновременно, иначе цикл мог продолжать запись bandit/переключение, пока очистка
+        // удаляет геном/BAT (релизный PR #76, P1). Цикл ждёт, а не пропускает.
+        await _aiGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var threshold = _aiSettings().AutoDeleteBelowScore;
+            var fp = await Task.Run(() => _fingerprints.Capture(), ct).ConfigureAwait(false);
+            _registry.MarkNetworkSeen(fp.Hash);
+            _registry.Save();
 
         // Кандидаты — эволюции, чей ПОСЛЕДНИЙ результат именно на ТЕКУЩЕЙ сети ниже порога.
         // Не используем глобальный LastVerificationScore: он без привязки к сети, а порог защиты
@@ -722,6 +740,11 @@ public sealed class AiOrchestratorService : IDisposable
         _registry.Save();
         Notify($"🗑 ИИ: очистка завершена — удалено {deleted} слабых эволюций.");
         return deleted;
+        }
+        finally
+        {
+            _aiGate.Release();
+        }
     }
 
     /// <summary>
