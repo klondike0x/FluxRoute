@@ -251,7 +251,8 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task RunAiEvolutionAsync()
     {
-        _aiOrchestrator.SyncRegistryFromEngine();
+        // Синхронизация теперь внутри EvolveNowAsync (под мьютексом): GarbageCollectEvolved
+        // удаляет эволюции и должен выполняться исключающе с purge/циклом (правка по ревью PR #94, P2).
         await _aiOrchestrator.EvolveNowAsync().ConfigureAwait(true);
         var d = Application.Current?.Dispatcher;
         if (d is not null && !d.CheckAccess())

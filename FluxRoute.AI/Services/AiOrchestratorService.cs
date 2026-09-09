@@ -494,7 +494,10 @@ public sealed class AiOrchestratorService : IDisposable
         await _aiGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            SyncBuiltins();
+            // Полная синхронизация ПОД мьютексом: GarbageCollectEvolved удаляет эволюции и
+            // должен выполняться исключающе с purge/циклом — иначе удалялась бы активная
+            // стратегия, пока цикл работает (правка по ревью PR #94, P2).
+            SyncRegistryFromEngine();
             var fp = _fingerprints.Capture();
             var child = await Task.Run(() => _evolver.Evolve(fp), ct).ConfigureAwait(false);
             await _refreshProfiles().ConfigureAwait(false);
