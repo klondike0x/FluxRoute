@@ -706,14 +706,15 @@ public sealed class AiOrchestratorService : IDisposable
     /// пишет LastVerificationScore/LastVerifiedAt, а также сетевой outcome в историю и
     /// в bandit-реестр. Без этого «Сканировать все стратегии» показывал бы счёт в UI,
     /// но очистка/подбор/эволюция не видели бы результата (правка по Codex P2, третий раунд).
+    /// Сетевой хэш захватывается ДО начала скана и передаётся сюда, чтобы при смене сети
+    /// в процессе скана все результаты не были бы помечены новым (а не фактическим) хэшем.
     /// </summary>
-    public void PersistScanVerification(IReadOnlyList<(Guid genomeId, int score)> results)
+    public void PersistScanVerification(IReadOnlyList<(Guid genomeId, int score)> results, string networkHash)
     {
         if (results.Count == 0)
             return;
 
-        var fp = _fingerprints.Capture();
-        _registry.MarkNetworkSeen(fp.Hash);
+        _registry.MarkNetworkSeen(networkHash);
         var updated = false;
 
         foreach (var (genomeId, score) in results)
@@ -731,7 +732,7 @@ public sealed class AiOrchestratorService : IDisposable
             _history.Append(new ProbeOutcome
             {
                 GenomeId = genomeId,
-                NetworkHash = fp.Hash,
+                NetworkHash = networkHash,
                 Timestamp = DateTimeOffset.UtcNow,
                 Score = score,
                 SuccessRate = score / 100.0,
@@ -741,12 +742,12 @@ public sealed class AiOrchestratorService : IDisposable
 
             if (score >= (int)Math.Round(FailThreshold * 100))
             {
-                _registry.RecordBanditSuccess(genomeId, fp.Hash);
+                _registry.RecordBanditSuccess(genomeId, networkHash);
                 _bandit.RegisterSuccess(genomeId);
             }
             else
             {
-                _registry.RecordBanditFailure(genomeId, fp.Hash);
+                _registry.RecordBanditFailure(genomeId, networkHash);
                 _bandit.RegisterFailure(g, failureSig);
             }
 

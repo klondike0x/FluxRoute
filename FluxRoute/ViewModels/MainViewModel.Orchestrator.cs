@@ -437,8 +437,9 @@ public partial class MainViewModel
     /// в генотипы ИИ (LastVerificationScore/LastVerifiedAt) и в сетевую историю/бандит,
     /// чтобы вкладка ИИ и очистка/подбор видели реальные значения. Не перезапускает стратегии.
     /// Score == 0 — легитимный результат (все цели упали), исключаем только -1 (pending/пропуск).
+    /// <paramref name="networkHash"/> — хэш сети, зафиксированный ДО начала скана.
     /// </summary>
-    private void PersistScanScoresIntoGenomes()
+    private void PersistScanScoresIntoGenomes(string networkHash)
     {
         try
         {
@@ -454,7 +455,7 @@ public partial class MainViewModel
                 results.Add((g.Id, score.Score));
             }
 
-            _aiOrchestrator.PersistScanVerification(results);
+            _aiOrchestrator.PersistScanVerification(results, networkHash);
         }
         catch (Exception ex)
         {
@@ -829,6 +830,9 @@ public partial class MainViewModel
         try
         {
             _suppressOrchestratorStop = true;
+            // ═══ v1.7.1: фиксируем сетевой хэш ДО начала скана — если сеть сменится в процессе,
+            // результаты не будут помечены новым (а не фактическим) хэшем (правка Codex P1, пятый раунд).
+            var scanNetworkHash = _aiFingerprints.Capture().Hash;
             await _orchestrator.ScanAllProfilesAsync(scanCt, progress, checkProgress);
             SortProfileScores();
             RebuildPassedScanProfiles();
@@ -846,7 +850,7 @@ public partial class MainViewModel
             // готовые результаты в генотипы БЕЗ повторного запуска стратегий (правка по Codex P2).
             if (AiEnabled)
             {
-                PersistScanScoresIntoGenomes();
+                PersistScanScoresIntoGenomes(scanNetworkHash);
                 RebuildAiStrategyRows();
                 RefreshAiDashboard();
             }

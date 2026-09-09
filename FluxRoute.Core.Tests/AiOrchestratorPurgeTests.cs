@@ -190,7 +190,7 @@ public sealed class AiOrchestratorPurgeTests : IDisposable
         var weak = AddEvolved("evolved_v1", 30);
 
         // «Сканировать все стратегии» переносит результаты в историю/геном через PersistScanVerification.
-        _service.PersistScanVerification(new[] { (builtin.Id, 90), (weak.Id, 30) });
+        _service.PersistScanVerification(new[] { (builtin.Id, 90), (weak.Id, 30) }, _fingerprints.Capture().Hash);
 
         // После этого очистка должна найти кандидата и удалить его (защита #62 соблюдена: builtin ок).
         var deleted = await _service.PurgeWeakEvolutionsAsync();
