@@ -129,6 +129,12 @@ public sealed class AiOrchestratorService : IDisposable
     /// </summary>
     public async Task ProbeSelectedStrategyAsync(CancellationToken ct = default)
     {
+        // Мьютекс с циклами/очисткой: точечная проверка пишет в bandit и реестр, и не должна
+        // выполняться одновременно с фоновым циклом (иначе теряется/портится cooldown-состояние).
+        // Правка по Codex (релизный PR #76, P2).
+        await _aiGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
         var active = _getActiveProfile();
         if (active is null)
         {
@@ -139,14 +145,14 @@ public sealed class AiOrchestratorService : IDisposable
         var genome = FindGenomeForProfile(active);
         if (genome is null)
         {
-            Notify($"ИИ: для «{active.DisplayName}» нет записи генотипа — проверка пропущена.");
+            Notify($@"ИИ: для «{active.DisplayName}» нет записи генотипа — проверка пропущена.");
             return;
         }
 
         var fp = _fingerprints.Capture();
         _registry.MarkNetworkSeen(fp.Hash);
         _registry.Save();
-        Notify($"ИИ: проверка выбранной стратегии «{genome.DisplayName}»...");
+        Notify($@"ИИ: проверка выбранной стратегии «{genome.DisplayName}»...");
         try
         {
             await TryProbeAndPersistGenomeAsync(genome, fp, ct, isFreshlyEvolved: false, autoDeleteBelowThreshold: false)
@@ -158,6 +164,11 @@ public sealed class AiOrchestratorService : IDisposable
             // возвращаем исходный выбранный профиль (правка по Codex P2, десятый раунд).
             if (active is not null && !ReferenceEquals(_getActiveProfile(), active))
                 await _switchProfile(active).ConfigureAwait(false);
+        }
+        }
+        finally
+        {
+            _aiGate.Release();
         }
     }
 
@@ -790,11 +801,18 @@ public sealed class AiOrchestratorService : IDisposable
     /// Сетевой хэш захватывается ДО начала скана и передаётся сюда, чтобы при смене сети
     /// в процессе скана все результаты не были бы помечены новым (а не фактическим) хэшем.
     /// </summary>
-    public void PersistScanVerification(IReadOnlyList<(Guid genomeId, ProfileProbeResult result)> results, string networkHash)
+    public async Task PersistScanVerification(IReadOnlyList<(Guid genomeId, ProfileProbeResult result)> results, string networkHash)
     {
         if (results.Count == 0)
             return;
 
+        // Мьютекс с циклами/очисткой: импорт результатов скана пишет в bandit/историю/реестр и
+        // не должен выполняться одновременно с фоновым циклом, иначе теряется/портится
+        // cooldown-состояние и сохраняются конфликтующие баллы за один генотип.
+        // Правка по Codex (релизный PR #76, P2).
+        await _aiGate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+        try
+        {
         _registry.MarkNetworkSeen(networkHash);
         var updated = false;
 
@@ -842,6 +860,11 @@ public sealed class AiOrchestratorService : IDisposable
 
         if (updated)
             _registry.Save();
+        }
+        finally
+        {
+            _aiGate.Release();
+        }
     }
 
     private void SyncBuiltins()
