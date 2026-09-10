@@ -121,6 +121,54 @@ public sealed class AiOrchestratorGenomeReconcileTests : IDisposable
     }
 
     [Fact]
+    public void GenomeMatchesProfile_DistinguishesSameNameBuiltinAndEvolvedBat()
+    {
+        // LoadProfiles при совпадении имён отдаёт предпочтение ai-evolved-пути: одноимённые BAT —
+        // РАЗНЫЕ стратегии, поэтому чужой генотип нельзя принять по имени (Codex P1, ревью #97).
+        var evolvedProfile = Profile("general.bat", "general", @"C:\engine\ai-evolved\general.bat");
+
+        Assert.False(AiOrchestratorService.GenomeMatchesProfile(
+            Genome("general.bat", "general", @"C:\engine\general.bat"), evolvedProfile));
+    }
+
+    [Fact]
+    public void GenomeMatchesProfile_FallsBackToName_WhenPathIsKnownOnOneSideOnly()
+    {
+        var profile = Profile("general.bat", "general", @"C:\engine\ai-evolved\general.bat");
+
+        // У генотипа путь не записан (исходный BAT неизвестен) — решает имя файла.
+        Assert.True(AiOrchestratorService.GenomeMatchesProfile(
+            Genome("general.bat", "general", null), profile));
+    }
+
+    [Fact]
+    public void GenomeMatchesProfile_NormalizesSeparatorsAndCase_InPathComparison()
+    {
+        var profile = Profile("evolved_v1.bat", "evolved_v1", @"C:\engine\ai-evolved\evolved_v1.bat");
+
+        Assert.True(AiOrchestratorService.GenomeMatchesProfile(
+            Genome("evolved_v1.bat", "evolved_v1", @"C:/ENGINE/AI-EVOLVED/EVOLVED_V1.BAT"), profile));
+        Assert.True(AiOrchestratorService.GenomeMatchesProfile(
+            Genome("evolved_v1.bat", "evolved_v1", @"   C:\engine\ai-evolved\evolved_v1.bat   "), profile));
+    }
+
+    [Fact]
+    public void ReconcileGenomeWithActiveProfile_ResetsGenome_WhenSameNameEvolvedPathIsActive()
+    {
+        _service.CurrentGenomeForTests = Genome("general.bat", "general", @"C:\engine\general.bat");
+        _service.ConsecutiveFailuresForTests = 1;
+        // Скан запустил ai-evolved BAT с тем же именем: генотип встроенной стратегии уже не подходит,
+        // иначе результат проверившегося профиля записался бы под Id встроенного генотипа.
+        _activeProfile = Profile("general.bat", "general", @"C:\engine\ai-evolved\general.bat");
+
+        var reset = _service.ReconcileGenomeWithActiveProfile();
+
+        Assert.True(reset);
+        Assert.Null(_service.CurrentGenomeForTests);
+        Assert.Equal(0, _service.ConsecutiveFailuresForTests);
+    }
+
+    [Fact]
     public void ReconcileGenomeWithActiveProfile_KeepsGenome_WhenActiveProfileMatches()
     {
         var genome = Genome("general.bat", "general", @"C:\engine\general.bat");

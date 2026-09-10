@@ -217,9 +217,13 @@ public sealed class AiOrchestratorService : IDisposable
         _registry.GetGenomes().FirstOrDefault(g => GenomeMatchesProfile(g, profile));
 
     /// <summary>
-    /// Сопоставление генотипа профилю по тем же признакам, что и в <see cref="FindGenomeForProfile"/>:
-    /// файл BAT, отображаемое имя, исходный путь. Пустые значения совпадением НЕ считаются — иначе
-    /// профиль без имени «подошёл» бы любому генотипу без имени.
+    /// Сопоставление генотипа профилю. Если путь BAT известен с ОБЕИХ сторон, решает только он:
+    /// одноимённые встроенный и ai-evolved BAT — это разные стратегии (<c>LoadProfiles</c> при
+    /// совпадении имён отдаёт предпочтение evolved-пути, MainViewModel.Diagnostics.cs), поэтому принять
+    /// чужой генотип по имени файла нельзя — результат проверки уйдёт в историю и бандит под чужим Id
+    /// (правка по Codex P1, ревью #97). Путь известен лишь с одной стороны — сопоставляем по файлу,
+    /// отображаемому имени и исходному пути, как раньше. Пустые значения совпадением НЕ считаются:
+    /// иначе профиль без имени «подошёл» бы любому генотипу без имени.
     /// </summary>
     public static bool GenomeMatchesProfile(StrategyGenome genome, ProfileItem profile)
     {
@@ -230,9 +234,27 @@ public sealed class AiOrchestratorService : IDisposable
             !string.IsNullOrWhiteSpace(left) &&
             string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
 
+        var genomePath = NormalizeBatPath(genome.SourceBatPath);
+        var profilePath = NormalizeBatPath(profile.FullPath);
+        if (genomePath.Length > 0 && profilePath.Length > 0)
+            return string.Equals(genomePath, profilePath, StringComparison.OrdinalIgnoreCase);
+
         return Same(genome.BatFileName, profile.FileName)
             || Same(genome.DisplayName, profile.DisplayName)
             || Same(genome.SourceBatPath, profile.FullPath);
+    }
+
+    /// <summary>
+    /// Путь BAT к единому виду для сравнения: без пробелов, с одинаковыми разделителями и без
+    /// хвостового разделителя. Файловая система не опрашивается — путь может быть сетевым или
+    /// недоступным, а сравнение должно оставаться чистой функцией.
+    /// </summary>
+    private static string NormalizeBatPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return string.Empty;
+
+        return path.Trim().Replace('/', '\\').TrimEnd('\\');
     }
 
     /// <summary>
