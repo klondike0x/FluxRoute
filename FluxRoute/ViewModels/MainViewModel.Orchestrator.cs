@@ -468,8 +468,33 @@ public partial class MainViewModel
         }
         catch (Exception ex)
         {
-            Logs.Add($"[ИИ] Ошибка переноса результатов скана в генотипы: {ex.Message}");
+            // Импорт идёт внутри сериализованного блока, то есть на пуле потоков, а Logs привязана
+            // к интерфейсу — запись обязана уйти на диспетчер (Codex P1, ревью #76).
+            AppendUiLog($"[ИИ] Ошибка переноса результатов скана в генотипы: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Запись в привязанную к интерфейсу коллекцию журнала из любого потока: на потоке диспетчера —
+    /// напрямую, иначе — через него (мутация UI-коллекции из пула роняет WPF).
+    /// </summary>
+    private void AppendUiLog(string message)
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null)
+        {
+            // Приложения нет (хедлесс-прогон) — UI-потока, который можно нарушить, тоже нет.
+            Logs.Add(message);
+            return;
+        }
+
+        if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+            return; // приложение завершается: очередь диспетчера уже не обслуживается
+
+        if (dispatcher.CheckAccess())
+            Logs.Add(message);
+        else
+            _ = dispatcher.InvokeAsync(() => Logs.Add(message));
     }
 
     private Task EnsureProtectionRunningAsync()
@@ -490,6 +515,32 @@ public partial class MainViewModel
             return Task.CompletedTask;
         }
         return dispatcher.InvokeAsync(EnsureOnUi).Task;
+    }
+
+    /// <summary>
+    /// Восстановление состояния после ручной пробы: <see cref="Stop"/> меняет привязанные к интерфейсу
+    /// коллекции журнала и наблюдаемые свойства, поэтому вызывать его с пула потоков нельзя — только
+    /// через диспетчер (Codex P1, ревью #76).
+    /// </summary>
+    private Task StopOnUiAsync()
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null)
+        {
+            // Приложения нет (хедлесс-прогон) — значит, нет и UI-потока, который можно нарушить.
+            Stop();
+            return Task.CompletedTask;
+        }
+
+        if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+            return Task.CompletedTask; // приложение завершается: очередь диспетчера уже не обслуживается
+
+        if (dispatcher.CheckAccess())
+        {
+            Stop();
+            return Task.CompletedTask;
+        }
+        return dispatcher.InvokeAsync(Stop).Task;
     }
 
     private (int successes, int trials, double wilsonLower) WilsonStatsForGenome(StrategyGenome g)
@@ -1168,10 +1219,13 @@ public partial class MainViewModel
                 // а не гонит полный скан и не удаляет эволюции (issue #89).
                 // ProbeSelectedStrategyAsync не переподбирает/не эволюционирует, а только
                 // проверяет текущую стратегию и пишет результат в генотип.
+                // ConfigureAwait(true): весь код после ожидания — это состояние UI (журнал, IsScanning,
+                // Stop/Start защиты, перезапуск профиля), поэтому продолжения обязаны возвращаться на
+                // поток диспетчера: мутация привязанных к UI коллекций из пула роняет WPF (Codex P1, ревью #76).
                 var wasRunningBefore = IsTrackedProcessRunning();
                 try
                 {
-                    await _aiOrchestrator.ProbeSelectedStrategyAsync(checkCt).ConfigureAwait(false);
+                    await _aiOrchestrator.ProbeSelectedStrategyAsync(checkCt).ConfigureAwait(true);
                 }
                 finally
                 {
@@ -1179,8 +1233,11 @@ public partial class MainViewModel
                     // SwitchProfileAsync всегда стартует защиту. Восстанавливаем состояние в
                     // finally, чтобы оно применилось и при отмене/ошибке пробы — иначе ручная
                     // проверка незаметно запускала winws и ИИ-оркестратор (Codex P1, 12/13-й раунд).
+                    // Stop() меняет привязанные к UI коллекции журнала и наблюдаемые свойства, поэтому
+                    // уходит на диспетчер независимо от потока продолжения: мутация из пула роняет WPF
+                    // (Codex P1, ревью #76).
                     if (!wasRunningBefore && IsTrackedProcessRunning())
-                        Stop();
+                        await StopOnUiAsync().ConfigureAwait(false);
                 }
 
                 var d = Application.Current?.Dispatcher;
@@ -1194,7 +1251,8 @@ public partial class MainViewModel
                 }
             }
             else
-                await _orchestrator.CheckNowAsync(checkCt).ConfigureAwait(false);
+                // ConfigureAwait(true): общие catch/finally ниже пишут в журнал и IsScanning — это UI-состояние.
+                await _orchestrator.CheckNowAsync(checkCt).ConfigureAwait(true);
         }
         catch (OperationCanceledException)
         {
