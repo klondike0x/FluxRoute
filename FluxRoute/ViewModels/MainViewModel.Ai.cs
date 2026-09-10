@@ -163,22 +163,35 @@ public partial class MainViewModel
                 Logs.Add($"[🧠] Ни одна стратегия не дала Score > 70%, запускаю эволюцию.");
 
                 var fp = _aiFingerprints.Capture();
-                var child = await Task.Run(() => _evolver.Evolve(fp));
-                if (child is not null)
+
+                // Эволюция + синхронизация реестра + запись .bat — под тем же мьютексом, что
+                // очистка и циклы ИИ. Иначе purge может удалить или снять с регистрации ту же
+                // стратегию, пока она создаётся и материализуется, и BAT с реестром разойдутся
+                // (release #76, P2). Обновление UI/профилей — уже вне мьютекса.
+                var child = await _aiOrchestrator.RunSerializedAsync(async () =>
                 {
+                    var evolved = await Task.Run(() => _evolver.Evolve(fp));
+                    if (evolved is null)
+                        return evolved;
+
                     _aiOrchestrator.SyncRegistryFromEngine();
-                    await RefreshProfilesInternalAsync();
 
                     // Материализуем .bat файл
                     var evolvedDir = Path.Combine(EngineDir, "ai-evolved");
                     Directory.CreateDirectory(evolvedDir);
-                    var batPath = Path.Combine(evolvedDir, $"{child.DisplayName}.bat");
+                    var batPath = Path.Combine(evolvedDir, $"{evolved.DisplayName}.bat");
                     if (!File.Exists(batPath))
                     {
                         var materializer = new FluxRoute.AI.Services.BatMaterializer();
-                        materializer.WriteBat(child, EngineDir);
+                        materializer.WriteBat(evolved, EngineDir);
                     }
 
+                    return evolved;
+                });
+
+                if (child is not null)
+                {
+                    await RefreshProfilesInternalAsync();
                     LoadProfiles();
                     RebuildAiStrategyRows();
 

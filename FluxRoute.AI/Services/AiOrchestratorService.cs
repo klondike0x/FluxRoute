@@ -94,6 +94,27 @@ public sealed class AiOrchestratorService : IDisposable
         _registry.Save();
     }
 
+    /// <summary>
+    /// Выполняет операцию под тем же мьютексом, что циклы ИИ, очистка и эволюция.
+    /// Нужен путям, которые мутируют генотипы/материализуют BAT в обход оркестратора
+    /// (например, целевая эволюция кнопки «Подобрать стратегию»): иначе purge может удалить
+    /// или снять с регистрации ту же стратегию, пока она создаётся, и BAT с реестром
+    /// разойдутся (release #76, P2).
+    /// </summary>
+    public async Task<T> RunSerializedAsync<T>(Func<Task<T>> operation, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+        await _aiGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            return await operation().ConfigureAwait(false);
+        }
+        finally
+        {
+            _aiGate.Release();
+        }
+    }
+
     public void Start()
     {
         if (_cts is not null)
