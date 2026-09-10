@@ -844,6 +844,9 @@ public partial class MainViewModel
             // циклом ИИ, выход должен идти через внешний путь отмены, а не через «успешное»
             // завершение уже отменённого скана (правка по Codex P2, ревью #97).
             var networkUnchangedAfterScan = false;
+            ProfileItem? bestProfile = null;
+            var bestScore = 0;
+            var bestProfileStarted = false;
             await _aiOrchestrator.RunSerializedAsync(async () =>
             {
                 // ═══ v1.7.1: сетевой хэш фиксируем непосредственно перед сканом, уже удерживая
@@ -862,6 +865,25 @@ public partial class MainViewModel
                 // ПРЕДЫДУЩЕГО скана — не переносим их под новым хэшем (Codex P1, 13-й раунд).
                 if (AiEnabled && !scanCt.IsCancellationRequested && networkUnchangedAfterScan)
                     PersistScanScoresIntoGenomes(scanNetworkHash);
+
+                // ═══ Финальный выбор и запуск лучшей стратегии — тоже под мьютексом:
+                // ScanAllProfilesAsync останавливает последний проверенный профиль, но оставляет его
+                // выбранным, поэтому цикл ИИ, ворвавшийся сразу после Release, проверил бы
+                // остановленный процесс и записал фейл в свой _currentGenome, а UI параллельно
+                // переключил бы профиль — состояние генотипа разошлось бы с рабочим профилем
+                // (правка по Codex P1, ревью #97).
+                bestProfile = _orchestrator.BestRankedProfile;
+                bestScore = _orchestrator.BestRankedScore;
+                if (bestProfile is not null)
+                {
+                    bestProfileStarted = true;
+                    await SwitchProfileAsync(bestProfile).ConfigureAwait(false);
+                }
+                else if (wasRunning && SelectedProfile is not null && !IsTrackedProcessRunning())
+                {
+                    bestProfileStarted = true;
+                    await EnsureProtectionRunningAsync().ConfigureAwait(false);
+                }
             }, scanCt);
 
             SortProfileScores();
@@ -893,19 +915,16 @@ public partial class MainViewModel
                 RefreshAiDashboard();
             }
 
-            var bestProfile = _orchestrator.BestRankedProfile;
-            var bestScore = _orchestrator.BestRankedScore;
+            // Профиль уже выбран и запущен внутри сериализованного блока; здесь только UI-часть:
+            // AddOrchestratorLog/Logs пишут в привязанные коллекции и должны идти с UI-потока.
             ScanBestStrategyText = bestProfile is null
                 ? "Рабочая стратегия не найдена"
                 : $"{bestProfile.DisplayName} · {bestScore}%";
-            if (bestProfile is not null)
+            if (bestProfileStarted && bestProfile is not null)
             {
                 AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ▶ Запуск лучшей стратегии «{bestProfile.DisplayName}» ({bestScore}%).");
                 Logs.Add($"[Оркестратор] Лучшая стратегия после сканирования: «{bestProfile.DisplayName}».");
-                await SwitchProfileAsync(bestProfile).ConfigureAwait(false);
             }
-            else if (wasRunning && SelectedProfile is not null && !IsTrackedProcessRunning())
-                await EnsureProtectionRunningAsync().ConfigureAwait(false);
 
             // Задержка перед закрытием оверлея, чтобы пользователь увидел "100% Завершено"
             await Task.Delay(800, scanCt).ConfigureAwait(false);
