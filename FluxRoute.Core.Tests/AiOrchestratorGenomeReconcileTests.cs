@@ -93,6 +93,67 @@ public sealed class AiOrchestratorGenomeReconcileTests : IDisposable
         };
 
     [Fact]
+    public void FindGenomeForProfile_PrefersEvolvedGenome_WhenBuiltinHasSameName()
+    {
+        var evolvedDir = Path.Combine(_engineDir, "ai-evolved");
+        Directory.CreateDirectory(evolvedDir);
+        File.WriteAllText(Path.Combine(_engineDir, "general.bat"), "@echo off");
+        File.WriteAllText(Path.Combine(evolvedDir, "general.bat"), "@echo off");
+
+        // Одноимённые стратегии: LoadProfiles при совпадении имён отдаёт evolved-путь, поэтому профиль
+        // этого пути обязан сопоставиться с эволюционированным генотипом, а не со встроенным — иначе
+        // импорт результата скана и выбор цели очистки сработали бы по чужому Id (Codex P2, ревью #76).
+        var builtin = Genome("general.bat", "general", Path.Combine(_engineDir, "general.bat"));
+        var evolved = Genome("general.bat", "general", Path.Combine(evolvedDir, "general.bat"),
+            StrategyOrigin.Evolved);
+        _registry.Upsert(builtin);
+        _registry.Upsert(evolved);
+
+        var found = _service.FindGenomeForProfile(
+            Profile("general.bat", "general", Path.Combine(evolvedDir, "general.bat")));
+
+        Assert.NotNull(found);
+        Assert.Equal(evolved.Id, found!.Id);
+
+        // Профиль встроенного BAT (корень engine) остаётся за встроенным генотипом.
+        var builtinFound = _service.FindGenomeForProfile(
+            Profile("general.bat", "general", Path.Combine(_engineDir, "general.bat")));
+
+        Assert.NotNull(builtinFound);
+        Assert.Equal(builtin.Id, builtinFound!.Id);
+    }
+
+    [Fact]
+    public void FindGenomeForProfile_RefreshesStalePath_AndFindsEvolvedGenome()
+    {
+        var evolvedDir = Path.Combine(_engineDir, "ai-evolved");
+        Directory.CreateDirectory(evolvedDir);
+        var currentBat = Path.Combine(evolvedDir, "evolved_v9.bat");
+        File.WriteAllText(currentBat, "@echo off");
+
+        // Портативную установку скопировали: в реестре остался путь прошлой копии, а профиль пришёл из
+        // текущей. Без лечения пути генотип считался бы чужим и результат скана не импортировался бы.
+        var genome = Genome("evolved_v9.bat", "evolved_v9",
+            @"C:\ПрошлаяКопия\engine\ai-evolved\evolved_v9.bat", StrategyOrigin.Evolved);
+        _registry.Upsert(genome);
+
+        var found = _service.FindGenomeForProfile(Profile("evolved_v9.bat", "evolved_v9", currentBat));
+
+        Assert.NotNull(found);
+        Assert.Equal(genome.Id, found!.Id);
+        Assert.Equal(currentBat, genome.SourceBatPath);
+    }
+
+    [Fact]
+    public void FindGenomeForProfile_ReturnsNull_WhenNothingMatches()
+    {
+        _registry.Upsert(Genome("general.bat", "general", Path.Combine(_engineDir, "general.bat")));
+
+        Assert.Null(_service.FindGenomeForProfile(
+            Profile("other.bat", "other", Path.Combine(_engineDir, "other.bat"))));
+    }
+
+    [Fact]
     public void ReconcileGenomeWithActiveProfile_RefreshesStaleBatPath_WhenPortableInstallMoved()
     {
         var evolvedDir = Path.Combine(_engineDir, "ai-evolved");

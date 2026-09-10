@@ -444,16 +444,21 @@ public partial class MainViewModel
         {
             var results = new List<(Guid genomeId, ProfileProbeResult result)>();
             var lastScan = _orchestrator.LastScanResults;
-            foreach (var g in _aiRegistry.GetGenomes().ToList())
+            var claimed = new HashSet<Guid>();
+            foreach (var entry in lastScan)
             {
-                var entry = lastScan.FirstOrDefault(e => e.result is not null &&
-                    (string.Equals(e.profile.FileName, g.BatFileName, StringComparison.OrdinalIgnoreCase)
-                     || string.Equals(e.profile.DisplayName, g.DisplayName, StringComparison.OrdinalIgnoreCase)
-                     || string.Equals(e.profile.FullPath, g.SourceBatPath, StringComparison.OrdinalIgnoreCase)));
                 if (entry.result is null || entry.result.Score < 0)
                     continue;
 
-                results.Add((g.Id, entry.result));
+                // Сопоставление по каноническому пути BAT, а не «по имени файла»: при одноимённых
+                // встроенном и ai-evolved BAT (LoadProfiles отдаёт профиль evolved-пути) прежний
+                // предикат подходил ОБОИМ генотипам, и результат скана записывался в историю и бандит
+                // под чужим Id — порча подбора и очистки (правка по Codex P2, ревью #76).
+                var genome = _aiOrchestrator.FindGenomeForProfile(entry.profile);
+                if (genome is null || !claimed.Add(genome.Id))
+                    continue;
+
+                results.Add((genome.Id, entry.result));
             }
 
             // Мьютекс уже удерживает вызывающий (весь скан-и-импорт атомарен относительно циклов
@@ -1257,12 +1262,13 @@ public partial class MainViewModel
         // Захватываем генотип, соответствующий активному профилю, ДО очистки —
         // по нему потом определяем, была ли активная стратегия именно удалена
         // (а не просто отсутствовала в реестре, как кастомная BAT без генотипа).
+        // Ищем по каноническому пути BAT: при одноимённых встроенном и ai-evolved BAT выбор «по имени»
+        // возвращал встроенный генотип, очистка удаляла активную эволюцию, а activeDeleted оставался
+        // false — защита не останавливалась и не перезапускалась, UI грузился на встроенный профиль,
+        // тогда как процесс прежней эволюции продолжал работать (правка по Codex P2, ревью #76).
         var activeGenomeBefore = activeBeforePurge is null
             ? null
-            : _aiRegistry.GetGenomes().FirstOrDefault(g =>
-                string.Equals(g.BatFileName, activeBeforePurge.FileName, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(g.DisplayName, activeBeforePurge.DisplayName, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(g.SourceBatPath, activeBeforePurge.FullPath, StringComparison.OrdinalIgnoreCase));
+            : _aiOrchestrator.FindGenomeForProfile(activeBeforePurge);
         try
         {
             var deleted = await _aiOrchestrator.PurgeWeakEvolutionsAsync().ConfigureAwait(true);
