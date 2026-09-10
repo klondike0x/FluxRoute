@@ -432,6 +432,71 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>
+    /// v1.7.1: Переносит результаты уже выполненного полного сканирования в генотипы ИИ
+    /// (LastVerificationScore/LastVerifiedAt) и в сетевую историю/бандит с реальными данными
+    /// проверки, чтобы вкладка ИИ и очистка/подбор видели фактические значения.
+    /// Не перезапускает стратегии. <paramref name="networkHash"/> — хэш сети ДО начала скана.
+    /// </summary>
+    private void PersistScanScoresIntoGenomes(string networkHash)
+    {
+        try
+        {
+            var results = new List<(Guid genomeId, ProfileProbeResult result)>();
+            var lastScan = _orchestrator.LastScanResults;
+            var claimed = new HashSet<Guid>();
+            foreach (var entry in lastScan)
+            {
+                if (entry.result is null || entry.result.Score < 0)
+                    continue;
+
+                // Сопоставление по каноническому пути BAT, а не «по имени файла»: при одноимённых
+                // встроенном и ai-evolved BAT (LoadProfiles отдаёт профиль evolved-пути) прежний
+                // предикат подходил ОБОИМ генотипам, и результат скана записывался в историю и бандит
+                // под чужим Id — порча подбора и очистки (правка по Codex P2, ревью #76).
+                var genome = _aiOrchestrator.FindGenomeForProfile(entry.profile);
+                if (genome is null || !claimed.Add(genome.Id))
+                    continue;
+
+                results.Add((genome.Id, entry.result));
+            }
+
+            // Мьютекс уже удерживает вызывающий (весь скан-и-импорт атомарен относительно циклов
+            // ИИ — релизный PR #76, P2), поэтому вызываем ядро импорта БЕЗ повторного захвата:
+            // SemaphoreSlim не реентерабелен, вложенный захват привёл бы к дедлоку.
+            _aiOrchestrator.ApplyScanResults(results, networkHash);
+        }
+        catch (Exception ex)
+        {
+            // Импорт идёт внутри сериализованного блока, то есть на пуле потоков, а Logs привязана
+            // к интерфейсу — запись обязана уйти на диспетчер (Codex P1, ревью #76).
+            AppendUiLog($"[ИИ] Ошибка переноса результатов скана в генотипы: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Запись в привязанную к интерфейсу коллекцию журнала из любого потока: на потоке диспетчера —
+    /// напрямую, иначе — через него (мутация UI-коллекции из пула роняет WPF).
+    /// </summary>
+    private void AppendUiLog(string message)
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null)
+        {
+            // Приложения нет (хедлесс-прогон) — UI-потока, который можно нарушить, тоже нет.
+            Logs.Add(message);
+            return;
+        }
+
+        if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+            return; // приложение завершается: очередь диспетчера уже не обслуживается
+
+        if (dispatcher.CheckAccess())
+            Logs.Add(message);
+        else
+            _ = dispatcher.InvokeAsync(() => Logs.Add(message));
+    }
+
     private Task EnsureProtectionRunningAsync()
     {
         var dispatcher = Application.Current?.Dispatcher;
@@ -450,6 +515,32 @@ public partial class MainViewModel
             return Task.CompletedTask;
         }
         return dispatcher.InvokeAsync(EnsureOnUi).Task;
+    }
+
+    /// <summary>
+    /// Восстановление состояния после ручной пробы: <see cref="Stop"/> меняет привязанные к интерфейсу
+    /// коллекции журнала и наблюдаемые свойства, поэтому вызывать его с пула потоков нельзя — только
+    /// через диспетчер (Codex P1, ревью #76).
+    /// </summary>
+    private Task StopOnUiAsync()
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null)
+        {
+            // Приложения нет (хедлесс-прогон) — значит, нет и UI-потока, который можно нарушить.
+            Stop();
+            return Task.CompletedTask;
+        }
+
+        if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+            return Task.CompletedTask; // приложение завершается: очередь диспетчера уже не обслуживается
+
+        if (dispatcher.CheckAccess())
+        {
+            Stop();
+            return Task.CompletedTask;
+        }
+        return dispatcher.InvokeAsync(Stop).Task;
     }
 
     private (int successes, int trials, double wilsonLower) WilsonStatsForGenome(StrategyGenome g)
@@ -672,8 +763,13 @@ public partial class MainViewModel
         _scanCts = null;
         _scanEtaTimer?.Stop();
         _scanEtaTimer = null;
-        // Инвалидируем поколение — старый finally увидит gen != _scanGeneration и не тронет IsScanning
+        // Инвалидируем поколение — старый finally увидит gen != _scanGeneration и не тронет IsScanning.
+        // Флаг подавления остановки снимаем прямо здесь: иначе после отмены скана «снаружи»
+        // (остановка защиты) его finally уже не выполнит свою ветку и флаг остался бы включённым
+        // навсегда — кнопка Stop больше не останавливала бы сервисы оркестратора
+        // (правка по Codex P2, ревью #97).
         _scanGeneration++;
+        _suppressOrchestratorStop = false;
         IsScanning = false;
         GlobalOverlayVisible = false;
         OnPropertyChanged(nameof(CanCancelScan));
@@ -798,8 +894,89 @@ public partial class MainViewModel
 
         try
         {
-            _suppressOrchestratorStop = true;
-            await _orchestrator.ScanAllProfilesAsync(scanCt, progress, checkProgress);
+            // ═══ Флаг подавления остановки ставится ВНУТРИ сериализованного блока, уже после захвата
+            // мьютекса. Ожидание в очереди за долгим циклом ИИ — это ещё не скан, и если пользователь
+            // жмёт Stop в этот момент, остановка сервисов оркестратора должна пройти штатно, а не быть
+            // подавлена: иначе процесс убит, а сервисы ИИ живы, и вставший из очереди скан снова
+            // поднял бы профили после явной остановки защиты (правка по Codex P2, ревью #97).
+            // Поднятый ранее скан снимается отменой в StopOrchestratorServices.
+            var networkUnchangedAfterScan = false;
+            ProfileItem? bestProfile = null;
+            var bestScore = 0;
+            var bestProfileStarted = false;
+
+            // ═══ Полный скан и импорт его результатов в генотипы ИИ — под ОДНИМ удержанием
+            // мьютекса с фоновыми циклами ИИ. Иначе RunCycleAsync успевал бы переключать/пробовать
+            // профили, пока скан их измеряет, и в bandit/историю попадали бы баллы за уже нарушенные
+            // профили. Сериализовать только запись мало — сериализуется весь скан-и-импорт
+            // (правка по Codex, релизный PR #76, P2).
+            // scanCt передаётся и в ожидание мьютекса: если скан отменят, пока он стоит в очереди за
+            // циклом ИИ, выход должен идти через внешний путь отмены, а не через «успешное»
+            // завершение уже отменённого скана (правка по Codex P2, ревью #97).
+            await _aiOrchestrator.RunSerializedAsync(async () =>
+            {
+                _suppressOrchestratorStop = true;
+
+                // ═══ v1.7.1: сетевой хэш фиксируем непосредственно перед сканом, уже удерживая
+                // мьютекс, — тогда два замера ограничивают сам скан, а не время ожидания в очереди
+                // за циклом ИИ (правка по Codex P2, ревью #97; ранее — P1, пятый раунд).
+                var scanNetworkHash = _aiFingerprints.Capture().Hash;
+
+                await _orchestrator.ScanAllProfilesAsync(scanCt, progress, checkProgress).ConfigureAwait(true);
+
+                // Если сеть сменилась за время скана — результаты относятся к разным сетям и не
+                // должны быть помечены одним хэшем (правка по Codex P1, восьмой раунд).
+                networkUnchangedAfterScan = string.Equals(_aiFingerprints.Capture().Hash, scanNetworkHash, StringComparison.Ordinal);
+
+                // Импорт идёт сразу, в том же удержании мьютекса — окна для цикла между измерением
+                // и записью нет. При отмене скана LastScanResults может содержать результаты
+                // ПРЕДЫДУЩЕГО скана — не переносим их под новым хэшем (Codex P1, 13-й раунд).
+                if (AiEnabled && !scanCt.IsCancellationRequested && networkUnchangedAfterScan)
+                    PersistScanScoresIntoGenomes(scanNetworkHash);
+
+                // ═══ Финальный выбор и запуск лучшей стратегии — тоже под мьютексом:
+                // ScanAllProfilesAsync останавливает последний проверенный профиль, но оставляет его
+                // выбранным, поэтому цикл ИИ, ворвавшийся сразу после Release, проверил бы
+                // остановленный процесс и записал фейл в свой _currentGenome, а UI параллельно
+                // переключил бы профиль — состояние генотипа разошлось бы с рабочим профилем
+                // (правка по Codex P1, ревью #97).
+                bestProfile = _orchestrator.BestRankedProfile;
+                bestScore = _orchestrator.BestRankedScore;
+
+                // ═══ После внешней отмены (Stop, кнопка отмены) профиль заново НЕ поднимаем:
+                // ScanAllProfilesAsync гасит OperationCanceledException внутри и возвращается штатно,
+                // поэтому без этой проверки фолбэк-ветка «защита была запущена, а процесс уже не
+                // работает» сразу стартовала бы профиль снова, отменяя явную остановку пользователя
+                // (правка по Codex P1, ревью #97).
+                if (!scanCt.IsCancellationRequested)
+                {
+                    if (bestProfile is not null)
+                    {
+                        bestProfileStarted = true;
+                        await SwitchProfileAsync(bestProfile).ConfigureAwait(false);
+                    }
+                    else if (wasRunning && SelectedProfile is not null && !IsTrackedProcessRunning())
+                    {
+                        bestProfileStarted = true;
+                        await EnsureProtectionRunningAsync().ConfigureAwait(false);
+                    }
+                }
+
+                // ═══ Состояние ИИ согласуем ПОД ТЕМ ЖЕ удержанием мьютекса и во всех случаях: рабочим
+                // становится либо лучший профиль скана, либо последний проверенный (фолбэк, когда ни
+                // один профиль не набрал очков), а скан в любом случае оставляет выбранным последний
+                // проверенный профиль. Если отслеживаемый генотип остался от прежнего профиля,
+                // следующий цикл проверит новый профиль, а результат запишет под чужим Id — порча
+                // истории и состояния бандита (правка по Codex P1, ревью #97).
+                _aiOrchestrator.ReconcileGenomeWithActiveProfile();
+
+                // ═══ Выход через внешний путь отмены, а не через успешное завершение: иначе отменённый
+                // скан перезаписал бы статус («Сканирование завершено»), сохранил настройки и обновил
+                // ИИ-строки как по полноценному прогону. Согласование генотипа выше уже выполнено —
+                // скан мог успеть переключить профиль до отмены (правка по Codex P1, ревью #97).
+                scanCt.ThrowIfCancellationRequested();
+            }, scanCt);
+
             SortProfileScores();
             RebuildPassedScanProfiles();
             UpdateScanBestStrategyText();
@@ -810,22 +987,35 @@ public partial class MainViewModel
             ScanTimeRemaining = "✅ Завершено";
             SaveSettings();
 
-            var top = ProfileScores.FirstOrDefault(s => s.Score > 0);
-            ScanBestStrategyText = top is null
-                ? "Рабочая стратегия не найдена"
-                : $"{top.DisplayName} · {top.ScoreText}";
-            if (top is not null)
+            // ═══ v1.7.1: в режиме ИИ «Сканировать все стратегии» обновляет и ИИ-строки
+            // (генотипы), иначе данные о стратегиях на вкладке ИИ оставались с «—» (issue #89).
+            // Первый полный скан (ScanAllProfilesAsync) уже проверил все профили — переносим
+            // готовые результаты в генотипы БЕЗ повторного запуска стратегий (правка по Codex P2).
+            if (AiEnabled)
             {
-                var profile = Profiles.FirstOrDefault(p => p.FileName == top.FileName);
-                if (profile is not null)
+                // Скан и импорт уже выполнены в одном удержании мьютекса выше; здесь остаётся
+                // только предупредить, если сеть сменилась и результаты сознательно не сохранены
+                // (правка по Codex P1, восьмой раунд).
+                if (!scanCt.IsCancellationRequested && !networkUnchangedAfterScan)
                 {
-                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ▶ Запуск лучшей стратегии «{profile.DisplayName}» ({(int)System.Math.Round((double)top.Score * 100)}%).");
-                    Logs.Add($"[Оркестратор] Лучшая стратегия после сканирования: «{profile.DisplayName}».");
-                    await SwitchProfileAsync(profile).ConfigureAwait(false);
+                    var msg = "Сеть изменилась во время сканирования — результаты не сохранены.";
+                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⚠️ {msg}");
+                    Logs.Add($"[ИИ] {msg}");
                 }
+                RebuildAiStrategyRows();
+                RefreshAiDashboard();
             }
-            else if (wasRunning && SelectedProfile is not null && !IsTrackedProcessRunning())
-                await EnsureProtectionRunningAsync().ConfigureAwait(false);
+
+            // Профиль уже выбран и запущен внутри сериализованного блока; здесь только UI-часть:
+            // AddOrchestratorLog/Logs пишут в привязанные коллекции и должны идти с UI-потока.
+            ScanBestStrategyText = bestProfile is null
+                ? "Рабочая стратегия не найдена"
+                : $"{bestProfile.DisplayName} · {bestScore}%";
+            if (bestProfileStarted && bestProfile is not null)
+            {
+                AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ▶ Запуск лучшей стратегии «{bestProfile.DisplayName}» ({bestScore}%).");
+                Logs.Add($"[Оркестратор] Лучшая стратегия после сканирования: «{bestProfile.DisplayName}».");
+            }
 
             // Задержка перед закрытием оверлея, чтобы пользователь увидел "100% Завершено"
             await Task.Delay(800, scanCt).ConfigureAwait(false);
@@ -941,7 +1131,12 @@ public partial class MainViewModel
     // ── Остановка сервисов оркестратора без изменения флага OrchestratorEnabled ──
     private void StopOrchestratorServices()
     {
-        if (_orchestratorStartInProgress && IsScanning)
+        // ═══ Скан оркестратора держит мьютекс ИИ и после остановки сервисов поднял бы профили заново,
+        // поэтому снимаем и выполняющийся скан, и стоящий в очереди за циклом ИИ. Прежнее условие
+        // (_orchestratorStartInProgress) не покрывало скан, запущенный кнопкой: нажатие Stop убивало
+        // процесс, но скан оставался жив и после отпускания мьютекса снова стартовал профили
+        // (правка по Codex P2, ревью #97).
+        if (IsScanning)
             CancelScan();
 
         if (!_orchestrator.IsRunning && !_aiOrchestrator.IsRunning)
@@ -1020,7 +1215,31 @@ public partial class MainViewModel
         {
             if (AiEnabled)
             {
-                await _aiOrchestrator.ProbeAllEnabledStrategiesAsync(checkCt).ConfigureAwait(false);
+                // ═══ v1.7.1: «Проверить сейчас» проверяет только ВЫБРАННУЮ стратегию,
+                // а не гонит полный скан и не удаляет эволюции (issue #89).
+                // ProbeSelectedStrategyAsync не переподбирает/не эволюционирует, а только
+                // проверяет текущую стратегию и пишет результат в генотип.
+                // ConfigureAwait(true): весь код после ожидания — это состояние UI (журнал, IsScanning,
+                // Stop/Start защиты, перезапуск профиля), поэтому продолжения обязаны возвращаться на
+                // поток диспетчера: мутация привязанных к UI коллекций из пула роняет WPF (Codex P1, ревью #76).
+                var wasRunningBefore = IsTrackedProcessRunning();
+                try
+                {
+                    await _aiOrchestrator.ProbeSelectedStrategyAsync(checkCt).ConfigureAwait(true);
+                }
+                finally
+                {
+                    // ProbeAsync (StopAfterProbe=false) оставляет winws запущенным, а внутри
+                    // SwitchProfileAsync всегда стартует защиту. Восстанавливаем состояние в
+                    // finally, чтобы оно применилось и при отмене/ошибке пробы — иначе ручная
+                    // проверка незаметно запускала winws и ИИ-оркестратор (Codex P1, 12/13-й раунд).
+                    // Stop() меняет привязанные к UI коллекции журнала и наблюдаемые свойства, поэтому
+                    // уходит на диспетчер независимо от потока продолжения: мутация из пула роняет WPF
+                    // (Codex P1, ревью #76).
+                    if (!wasRunningBefore && IsTrackedProcessRunning())
+                        await StopOnUiAsync().ConfigureAwait(false);
+                }
+
                 var d = Application.Current?.Dispatcher;
                 if (d is not null && !d.HasShutdownStarted && !d.HasShutdownFinished)
                 {
@@ -1032,7 +1251,8 @@ public partial class MainViewModel
                 }
             }
             else
-                await _orchestrator.CheckNowAsync(checkCt).ConfigureAwait(false);
+                // ConfigureAwait(true): общие catch/finally ниже пишут в журнал и IsScanning — это UI-состояние.
+                await _orchestrator.CheckNowAsync(checkCt).ConfigureAwait(true);
         }
         catch (OperationCanceledException)
         {
@@ -1064,6 +1284,118 @@ public partial class MainViewModel
         OrchestratorLogs.Clear();
     }
 
+    // ═══ v1.7.1: Отдельное действие очистки слабых эволюций (issue #89).
+    // Раньше автоудаление происходило скрыто внутри «Проверить сейчас»; теперь это
+    // явный шаг, подтверждаемый пользователем.
+    [RelayCommand]
+    private async Task CleanWeakEvolutions()
+    {
+        if (!AiEnabled)
+        {
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⚠️ Очистка эволюций доступна только в режиме ИИ.");
+            return;
+        }
+
+        // Сериализация очистки с проверками/сканированием (правка Codex P1, восьмой раунд):
+        // иначе очистка может удалить генотип/BAT, пока TryProbeAndPersistGenomeAsync ещё работает,
+        // и после завершения проверки тот воскресит запись в реестре удалённого файла.
+        if (IsScanning)
+        {
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⚠️ Дождитесь завершения текущей проверки/сканирования перед очисткой эволюций.");
+            return;
+        }
+
+        if (!CustomDialog.Show(
+            "Очистить слабые эволюции",
+            $"Удалить эволюционированные стратегии с результатом ниже {AiAutoDeleteBelowScore}%?\n\n" +
+            "Встроенные стратегии удалены не будут.",
+            "Очистить",
+            "Отмена",
+            isDanger: true))
+            return;
+
+        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🗑 Запуск очистки слабых эволюций (порог {AiAutoDeleteBelowScore}%)...");
+
+        // Снимок активного профиля, очистка, решение по её результату и остановка защиты идут в ОДНОМ
+        // удержании мьютекса ИИ. Раньше снимок брался до захвата гейта, а activeDeleted вычислялся
+        // после освобождения: запланированный цикл ИИ успевал переключить профиль с A на B между
+        // снимком и очисткой, и если очистка удаляла B, решение считалось по генотипу A — удалённая
+        // BAT оставалась запущенной, пока UI перезагружался на другой профиль (правка по Codex P1, ревью #76).
+        // Очистку вызываем ядром без повторного захвата гейта: SemaphoreSlim не реентерабелен,
+        // повторный WaitAsync внутри удержанного гейта — дедлок.
+        ProfileItem? activeBeforePurge = null;
+        var wasRunning = false;
+        var activeDeleted = false;
+        var deleted = 0;
+
+        await _aiOrchestrator.RunSerializedAsync(async () =>
+        {
+            activeBeforePurge = SelectedProfile;
+            wasRunning = IsTrackedProcessRunning();
+            // Захватываем генотип, соответствующий активному профилю, ДО очистки —
+            // по нему потом определяем, была ли активная стратегия именно удалена
+            // (а не просто отсутствовала в реестре, как кастомная BAT без генотипа).
+            // Ищем по каноническому пути BAT: при одноимённых встроенном и ai-evolved BAT выбор «по имени»
+            // возвращал встроенный генотип, очистка удаляла активную эволюцию, а activeDeleted оставался
+            // false — защита не останавливалась и не перезапускалась, UI грузился на встроенный профиль,
+            // тогда как процесс прежней эволюции продолжал работать (правка по Codex P2, ревью #76).
+            var activeGenomeBefore = activeBeforePurge is null
+                ? null
+                : _aiOrchestrator.FindGenomeForProfile(activeBeforePurge);
+
+            deleted = await _aiOrchestrator.PurgeWeakEvolutionsCoreAsync().ConfigureAwait(false);
+
+            // Активная стратегия удалена очисткой ⇔ ей соответствовал генотип ДО очистки,
+            // и теперь этого генотипа больше нет в реестре (правка по Codex P2, седьмой раунд).
+            activeDeleted = activeGenomeBefore is not null &&
+                _aiRegistry.GetById(activeGenomeBefore.Id) is null;
+
+            // Останавливаем защиту ДО перезагрузки профилей, если активную стратегию удалили.
+            // Иначе переключение на новый профиль перезапустит защиту, а следующий Stop() убил бы
+            // её и ИИ-оркестратор — и защита осталась бы выключенной (правка по Codex P1, шестой раунд).
+            // Stop() уходит на диспетчер: продолжение здесь идёт на пуле потоков, а Stop меняет
+            // привязанные к интерфейсу коллекции журнала и наблюдаемые свойства.
+            if (activeDeleted && wasRunning && IsRunning)
+                await StopOnUiAsync().ConfigureAwait(false);
+        }).ConfigureAwait(true);
+
+        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🗑 Удалено слабых эволюций: {deleted}");
+        Logs.Add($"[ИИ] Очистка слабых эволюций: удалено {deleted}.");
+
+        try
+        {
+            // Подавляем смену профиля при перезагрузке ВСЕГДА: даже если активная эволюция не
+            // удалялась, LoadProfiles() пересоздаёт объекты профилей и может поднять ложное
+            // предупреждение/перезапуск защиты (правка по Codex P2, десятый раунд).
+            _suppressProfileWarning = true;
+            try
+            {
+                RebuildAiStrategyRows();
+                RefreshAiDashboard();
+                LoadProfiles();
+
+                if (activeDeleted)
+                {
+                    SelectedProfile = Profiles.FirstOrDefault();
+                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ↩ Профиль «{activeBeforePurge!.DisplayName}» удалён — переключено на «{SelectedProfile?.DisplayName ?? "—"}».");
+
+                    // Возвращаем защиту в исходное состояние запущенности на новом профиле.
+                    if (wasRunning && SelectedProfile is not null && !IsTrackedProcessRunning())
+                        Start();
+                }
+            }
+            finally
+            {
+                _suppressProfileWarning = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ❌ Ошибка очистки эволюций: {ex.Message}");
+            Logs.Add($"[ИИ] Ошибка очистки эволюций: {ex.Message}");
+        }
+    }
+
     private bool IsTrackedProcessRunning()
     {
         try
@@ -1078,7 +1410,6 @@ public partial class MainViewModel
 
     // ── Мониторинг процессов для автопереключения пресетов ──
     private CancellationTokenSource? _processMonitorCts;
-    private string? _presetBeforeGameTrigger; // имя пресета, который был активен до триггера
     private ProfileItem? _profileBeforeTrigger; // профиль, активный до срабатывания триггера (для возврата)
 
     private void StartProcessMonitor()

@@ -236,17 +236,20 @@ public partial class MainWindow : Window
 
     private void OnTrayExitRequested(object? sender, EventArgs e)
     {
-        // Показываем модальное подтверждение перед закрытием
-        if (CustomDialog.Show(
+        // Сначала подтверждаем выход, затем защищаем несохранённое редактирование хостлистов.
+        if (!CustomDialog.Show(
                 "Завершить работу FluxRoute?",
                 "Все активные службы (WinDivert, WinWS) будут остановлены, защита прекратит работу.",
                 "Завершить",
                 "Отмена",
                 isDanger: true))
-        {
-            _isClosingConfirmed = true;
-            Close();
-        }
+            return;
+
+        if (!_vm.Hostlists.TryLeave())
+            return;
+
+        _isClosingConfirmed = true;
+        Close();
     }
 
     protected override void OnStateChanged(EventArgs e)
@@ -266,6 +269,11 @@ public partial class MainWindow : Window
     protected override void OnClosing(CancelEventArgs e)
     {
         base.OnClosing(e);
+
+        // Явное закрытие приложения (обновление или подтверждённый выход)
+        // не должно попадать под подтверждение или сворачивание в трей.
+        if (_vm.IsApplicationShutdownRequested)
+            _isClosingConfirmed = true;
 
         // ═══ v1.6.0: Feature #21 — Крестик сворачивает в трей ═══
         if (_vm.CloseToTray && !_isClosingConfirmed)
@@ -287,7 +295,8 @@ public partial class MainWindow : Window
                     "Все активные службы (WinDivert, WinWS) будут остановлены, защита прекратит работу.",
                     "Завершить",
                     "Отмена",
-                    isDanger: true))
+                    isDanger: true)
+                && _vm.Hostlists.TryLeave())
             {
                 _isClosingConfirmed = true;
                 _logger?.LogInformation("User confirmed FluxRoute shutdown from main window.");

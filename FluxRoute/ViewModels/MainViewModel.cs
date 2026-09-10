@@ -23,6 +23,10 @@ namespace FluxRoute.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
+    public bool IsApplicationShutdownRequested { get; private set; }
+
+    public void RequestApplicationShutdown() => IsApplicationShutdownRequested = true;
+
     // ── Коллекции ──
     public ObservableCollection<string> Logs { get; } = new();
     public ObservableCollection<ProfileItem> Profiles { get; } = new();
@@ -47,6 +51,14 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string newSiteInput = "";
     public ObservableCollection<string> CustomTargetDomains { get; } = new();
     public ObservableCollection<string> CustomExcludeDomains { get; } = new();
+
+    /// <summary>
+    /// Вклады пользовательских hostlist-файлов в общий набор исключений: <c>list-exclude-user.txt</c>
+    /// (он же вкладка «Домены») и помеченные строки «!domain» в <c>list-general-user.txt</c>.
+    /// Держим их раздельно, чтобы сохранение одного файла не затирало вклад другого
+    /// (Codex P2, ревью #76).
+    /// </summary>
+    private readonly UserHostlistExclusionSet _hostlistExclusions = new();
     [ObservableProperty] private string newPresetName = "";
     [ObservableProperty] private string newPresetTrigger = "";
 
@@ -157,8 +169,14 @@ public partial class MainViewModel : ObservableObject
         // Удаляем www. (регистронезависимо)
         input = System.Text.RegularExpressions.Regex.Replace(input, @"^www\.", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-        // Убираем завершающий слеш
-        input = input.TrimEnd('/');
+        // Оставляем только host-компонент, отбрасывая путь, query и fragment.
+        var separatorIndex = input.IndexOfAny(new[] { '/', '?', '#' });
+        if (separatorIndex >= 0)
+            input = input[..separatorIndex];
+
+        var portSeparatorIndex = input.IndexOf(':');
+        if (portSeparatorIndex > 0)
+            input = input[..portSeparatorIndex];
 
         // Удаляем оставшиеся пробелы (лишние, если были)
         input = input.Trim();
@@ -389,8 +407,10 @@ public partial class MainViewModel : ObservableObject
                 "Все активные службы и движки будут остановлены, обход DPI прекратит работу.",
                 "Завершить",
                 "Отмена",
-                isDanger: true))
+                isDanger: true)
+            && Hostlists.TryLeave())
         {
+            RequestApplicationShutdown();
             Application.Current.Shutdown();
         }
     }
@@ -399,7 +419,11 @@ public partial class MainViewModel : ObservableObject
     /// Внешний метод для MainWindow — устанавливает флаг подтверждённого закрытия.
     /// Вызывается из OnTrayExitRequested.
     /// </summary>
-    public void ConfirmClose() => Application.Current.Shutdown();
+    public void ConfirmClose()
+    {
+        RequestApplicationShutdown();
+        Application.Current.Shutdown();
+    }
 
     // ── События ──
     public event EventHandler? OpenSettingsRequested;
@@ -904,6 +928,23 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool closeToTray = true;
     partial void OnCloseToTrayChanged(bool value) => SaveSettings();
 
+    // Сохранённый выбор режима работы без прав администратора.
+    [ObservableProperty] private bool rememberAdminChoice;
+    partial void OnRememberAdminChoiceChanged(bool value)
+    {
+        if (value)
+            _adminChoiceContinueWithout = !IsRunningAsAdmin();
+        SaveSettings();
+    }
+    private bool _adminChoiceContinueWithout = true;
+
+    private static bool IsRunningAsAdmin()
+    {
+        using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        var principal = new System.Security.Principal.WindowsPrincipal(identity);
+        return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+    }
+
     // ═══ v1.6.0: Автозапуск через Планировщик задач ═══
     [ObservableProperty] private bool taskSchedulerAutoStart;
     partial void OnTaskSchedulerAutoStartChanged(bool value)
@@ -1146,7 +1187,8 @@ public partial class MainViewModel : ObservableObject
             loadProfiles: LoadProfiles,
             refreshDiagnostics: RefreshDiagnostics,
             addAppLog: msg => Logs.Add(msg),
-            addRecentLog: AddToRecentLogs);
+            addRecentLog: AddToRecentLogs,
+            requestApplicationShutdown: RequestApplicationShutdown);
 
         Diagnostics.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
         Service.PropertyChanged += (_, e) =>
@@ -1163,7 +1205,8 @@ public partial class MainViewModel : ObservableObject
         // ═══ v1.7.0: UI-Redesign — инициализация HostlistsViewModel ═══
         Hostlists = new HostlistsViewModel(
             getEngineDir: () => EngineDir,
-            addLog: msg => Logs.Add(msg));
+            addLog: msg => Logs.Add(msg),
+            onSaved: OnHostlistSaved);
         // ════════════════════════════════════════════════════════════
 
         Logs.Add("Приложение запущено.");
@@ -1243,7 +1286,7 @@ public partial class MainViewModel : ObservableObject
                 .Select(r => (profile: Profiles.FirstOrDefault(p => p.FileName == r.FileName), r.Score))
                 .Where(x => x.profile is not null)
                 .Select(x => (x.profile!, x.Score));
-            _orchestrator.RestoreRankedProfiles(saved);
+            _orchestrator.RestoreRankedProfiles(saved, settings.LastProfileFileName);
         }
 
         _aiOrchestrator = new AiOrchestratorService(
@@ -1351,6 +1394,8 @@ public partial class MainViewModel : ObservableObject
         SimpleMode = settings.SimpleMode;
         // ═══ v1.6.0: Крестик сворачивает в трей ═══
         CloseToTray = settings.CloseToTray;
+        RememberAdminChoice = settings.RememberAdminChoice;
+        _adminChoiceContinueWithout = settings.AdminChoiceContinueWithout;
         // ═══════════════════════════════════════
         GameFilterProtocol = settings.GameFilterProtocol;
         ShowProfileSwitchWarning = settings.ShowProfileSwitchWarning;
@@ -1375,7 +1420,16 @@ public partial class MainViewModel : ObservableObject
         TgProxyDomain = settings.TgProxy.Domain;
         TgProxyVerbose = settings.TgProxy.Verbose;
         TgProxyPreferIPv4 = settings.TgProxy.PreferIPv4;
-        TgProxyDcIps = string.IsNullOrWhiteSpace(settings.TgProxy.DcIps) ? "2:149.154.167.220\n4:149.154.167.220" : settings.TgProxy.DcIps;
+        const string defaultTgProxyDcIps = "4:149.154.167.220";
+        const string legacyTgProxyDcIps = "2:149.154.167.220\n4:149.154.167.220";
+        string savedTgProxyDcIps = (settings.TgProxy.DcIps ?? string.Empty)
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Trim();
+        TgProxyDcIps = string.IsNullOrWhiteSpace(savedTgProxyDcIps)
+            || string.Equals(savedTgProxyDcIps, legacyTgProxyDcIps, StringComparison.OrdinalIgnoreCase)
+            ? defaultTgProxyDcIps
+            : settings.TgProxy.DcIps;
         TgProxyCfEnabled = settings.TgProxy.CfProxyEnabled;
         // Migrate the previous defaults: direct Telegram routes are faster for media,
         // while Cloudflare remains available as a fallback.
@@ -1399,6 +1453,10 @@ public partial class MainViewModel : ObservableObject
     public void SaveSettings()
     {
         if (!_settingsLoaded) return;
+        // Держим устаревшее поле UserCustomSitesText в синхроне с актуальными UI-списками:
+        // иначе удалённые/очищенные домены мигрировали бы обратно при следующем запуске
+        // (правка по Codex P1, одиннадцатый раунд).
+        RefreshUserCustomSitesText();
         var settings = new AppSettings
         {
             LastProfileFileName = SelectedProfile?.FileName,
@@ -1428,6 +1486,8 @@ public partial class MainViewModel : ObservableObject
             SimpleMode = SimpleMode,
             // ═══ v1.6.0: Крестик сворачивает в трей ═══
             CloseToTray = CloseToTray,
+            RememberAdminChoice = RememberAdminChoice,
+            AdminChoiceContinueWithout = _adminChoiceContinueWithout,
             // ═══════════════════════════════════════
             GameFilterProtocol = GameFilterProtocol,
             ShowProfileSwitchWarning = ShowProfileSwitchWarning,
@@ -1474,6 +1534,11 @@ public partial class MainViewModel : ObservableObject
     {
         var selectedIndex = int.Parse(index);
         if (SimpleMode && selectedIndex is > 0 and not 7)
+            return;
+
+        if (SelectedTabIndex == 3
+            && selectedIndex != 3
+            && !Hostlists.TryLeave())
             return;
 
         SelectedTabIndex = selectedIndex;
@@ -1608,6 +1673,85 @@ public partial class MainViewModel : ObservableObject
     }
 
     // ── Синхронизация пользовательских доменов с движком (winws.exe) ──
+    private void OnHostlistSaved(string fileName, string content)
+    {
+        var target = fileName switch
+        {
+            UserHostlistImporter.TargetFileName => CustomTargetDomains,
+            UserHostlistImporter.ExclusionFileName => CustomExcludeDomains,
+            _ => null
+        };
+
+        if (target is null)
+            return;
+
+        var imported = UserHostlistImporter.Classify(fileName, content, NormalizeDomainInput);
+        var isExclusionFile = fileName == UserHostlistImporter.ExclusionFileName;
+
+        if (isExclusionFile)
+        {
+            // Содержимое этого файла — источник истины для своего набора (вкладка «Домены» пишет туда же),
+            // а вклад файла доменов сохраняется: иначе помеченные в нём строки перестанут попадать
+            // в --hostlist-exclude (Codex P2, ревью #76).
+            ApplyHostlistExclusions(imported.Excludes);
+        }
+        else
+        {
+            CustomTargetDomains.Clear();
+            foreach (var domain in imported.Targets)
+                CustomTargetDomains.Add(domain);
+
+            // Помеченные строки («!domain») — исключения: раньше префикс просто отбрасывался и домен
+            // попадал в целевые, а следующая синхронизация переписывала его в файл без пометки.
+            _hostlistExclusions.SetGeneralFileExclusions(imported.Excludes);
+            ApplyHostlistExclusions();
+        }
+
+        // Убираем устаревшие значения legacy-поля, иначе они снова попадут
+        // в hostlist при следующей синхронизации или перезапуске приложения.
+        UserCustomSitesText = string.Join(
+            "\n",
+            CustomTargetDomains.Concat(CustomExcludeDomains.Select(domain => $"!{domain}")));
+
+        SaveSettings();
+    }
+
+    /// <summary>
+    /// Приводит устаревшее поле <see cref="UserCustomSitesText"/> к актуальному набору
+    /// UI-доменов (CustomTargetDomains + CustomExcludeDomains с префиксом «!»), чтобы legacy
+    /// миграционный источник не возвращал удалённые/очищенные домены после перезапуска.
+    /// </summary>
+    private void RefreshUserCustomSitesText()
+    {
+        UserCustomSitesText = string.Join(
+            "\n",
+            CustomTargetDomains
+                .Concat(CustomExcludeDomains.Select(domain => $"!{domain}")));
+    }
+
+    /// <summary>
+    /// Пересобирает <see cref="CustomExcludeDomains"/> как объединение двух вкладов: набора вкладки
+    /// «Домены» и помеченных строк файла доменов (см. <see cref="UserHostlistExclusionSet"/>).
+    /// <paramref name="excludeFileDomains"/> передаётся, когда вклад файла исключений только что
+    /// заменён содержимым этого файла (сохранение в редакторе); иначе вкладом считается текущее
+    /// состояние UI-коллекции, куда исключения приходят из настроек.
+    /// </summary>
+    private void ApplyHostlistExclusions(IReadOnlyList<string>? excludeFileDomains = null)
+    {
+        _hostlistExclusions.SetExcludeFileDomains(excludeFileDomains ?? CustomExcludeDomains);
+
+        var effective = _hostlistExclusions.Build();
+        if (CustomExcludeDomains.Count == effective.Count
+            && CustomExcludeDomains.SequenceEqual(effective, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        CustomExcludeDomains.Clear();
+        foreach (var domain in effective)
+            CustomExcludeDomains.Add(domain);
+    }
+
     private void SyncCustomHostlist()
     {
         // v1.6.0: Пропускаем синхронизацию, если пользователь её отключил
@@ -1621,66 +1765,97 @@ public partial class MainViewModel : ObservableObject
             var userHostlistPath = Path.Combine(listsDir, "list-general-user.txt");
             var domains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // 1. Берем домены из нового Менеджера доменов (вкладка "Домены")
+            // UI-набор (вкладка "Домены") — единственный источник истины при синхронизации.
+            // Устаревшее поле UserCustomSitesText сознательно НЕ подмешиваем: при удалении/очистке
+            // доменов в интерфейсе обновляется только CustomTargetDomains, поэтому legacy-значение
+            // возвращало бы удалённые домены обратно в файл (issue #89, правка по Codex).
             foreach (var d in CustomTargetDomains)
             {
                 if (!string.IsNullOrWhiteSpace(d))
                     domains.Add(d.Trim());
             }
 
-            // 2. Подхватываем из старого TextBox (для обратной совместимости)
-            if (!string.IsNullOrWhiteSpace(UserCustomSitesText))
-            {
-                var legacy = UserCustomSitesText
-                    .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .Where(s => !s.StartsWith("!"));
-                foreach (var d in legacy)
-                    domains.Add(d.Trim());
-            }
+            // Записываем list-general-user.txt.
+            // ═══ v1.7.1: идемпотентная синхронизация — не перезаписываем файл, если набор
+            // доменов уже совпадает (меньше лишних перезаписей и кэш-проблем). UI-набор при
+            // включённой синхронизации является источником истины, поэтому удаление домена
+            // через интерфейс корректно убирает его и из файла.
+            var orderedDomains = domains.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
 
-            // Записываем list-general-user.txt
-            if (domains.Count > 0)
+            // Исключения собираются из двух файлов, поэтому оба вклада перечитываем перед записью:
+            // помеченные строки — из файла доменов, остальное — из набора вкладки «Домены»
+            // (Codex P2, ревью #76: иначе после перезапуска исключение выпадало из --hostlist-exclude).
+            _hostlistExclusions.SetGeneralFileExclusions(
+                UserHostlistImporter.ReadExclusionsFromFile(userHostlistPath, NormalizeDomainInput));
+            _hostlistExclusions.SetExcludeFileDomains(CustomExcludeDomains);
+            var generalFileExclusions = _hostlistExclusions.GeneralFileExclusions
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (HostlistSyncPolicy.NeedsWrite(userHostlistPath, orderedDomains, domains.Count == 0))
             {
-                // Используем явное удаление + запись, чтобы избежать кэширования
-                if (File.Exists(userHostlistPath))
+                if (orderedDomains.Count > 0 || generalFileExclusions.Count > 0)
                 {
-                    try { File.SetAttributes(userHostlistPath, FileAttributes.Normal); } catch { }
+                    // Используем явное удаление + запись, чтобы избежать кэширования
+                    if (File.Exists(userHostlistPath))
+                    {
+                        try { File.SetAttributes(userHostlistPath, FileAttributes.Normal); } catch { }
+                    }
+                    // Помеченные строки возвращаем в файл как есть: в набор целевых доменов они не
+                    // входят, но именно из них собирается исключение для --hostlist-exclude.
+                    File.WriteAllLines(
+                        userHostlistPath,
+                        orderedDomains.Concat(generalFileExclusions.Select(domain => $"!{domain}")),
+                        new UTF8Encoding(false));
+                    Logs.Add($"[Sync] Записано {orderedDomains.Count} доменов в list-general-user.txt");
                 }
-                File.WriteAllLines(userHostlistPath, domains.OrderBy(x => x), new UTF8Encoding(false));
-                Logs.Add($"[Sync] Записано {domains.Count} доменов в list-general-user.txt");
+                else
+                {
+                    // Пустой список — удаляем файл или пишем комментарий
+                    if (File.Exists(userHostlistPath))
+                        File.Delete(userHostlistPath);
+                    else
+                        File.WriteAllText(userHostlistPath, "# custom domains empty\n", new UTF8Encoding(false));
+                    Logs.Add("[Sync] list-general-user.txt очищен");
+                }
             }
             else
             {
-                // Пустой список — удаляем файл или пишем комментарий
-                if (File.Exists(userHostlistPath))
-                    File.Delete(userHostlistPath);
-                else
-                    File.WriteAllText(userHostlistPath, "# custom domains empty\n", new UTF8Encoding(false));
-                Logs.Add("[Sync] list-general-user.txt очищен");
+                Logs.Add("[Sync] list-general-user.txt без изменений");
             }
 
             // ═══ v1.6.0: Синхронизация list-exclude-user.txt ═══
-            var excludeHostlistPath = Path.Combine(listsDir, "list-exclude-user.txt");
-            var excludeDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var d in CustomExcludeDomains)
-            {
-                if (!string.IsNullOrWhiteSpace(d))
-                    excludeDomains.Add(d.Trim());
-            }
+            var excludeHostlistPath = Path.Combine(listsDir, UserHostlistImporter.ExclusionFileName);
+            // Действующий набор исключений = вклад вкладки «Домены» (он же список файла) + помеченные
+            // строки файла доменов. Объединение пересобираем здесь, чтобы после перезапуска
+            // приложения исключение не выпало из --hostlist-exclude (Codex P2, ревью #76).
+            ApplyHostlistExclusions();
+            var excludeDomains = new HashSet<string>(CustomExcludeDomains, StringComparer.OrdinalIgnoreCase);
 
-            if (excludeDomains.Count > 0)
+            // ═══ v1.7.1: та же идемпотентность, что и для list-general-user.txt. Без неё старт
+            // защиты переписывал файл из UI-коллекции и стирал комментарии и пустые строки,
+            // которые пользователь только что сохранил в редакторе (Codex P2, ревью PR #76).
+            var orderedExcludeDomains = excludeDomains.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
+            if (HostlistSyncPolicy.NeedsWrite(excludeHostlistPath, orderedExcludeDomains, excludeDomains.Count == 0))
             {
-                if (File.Exists(excludeHostlistPath))
+                if (orderedExcludeDomains.Count > 0)
                 {
-                    try { File.SetAttributes(excludeHostlistPath, FileAttributes.Normal); } catch { }
+                    if (File.Exists(excludeHostlistPath))
+                    {
+                        try { File.SetAttributes(excludeHostlistPath, FileAttributes.Normal); } catch { }
+                    }
+                    File.WriteAllLines(excludeHostlistPath, orderedExcludeDomains, new UTF8Encoding(false));
+                    Logs.Add($"[Sync] Записано {excludeDomains.Count} исключений в list-exclude-user.txt");
                 }
-                File.WriteAllLines(excludeHostlistPath, excludeDomains.OrderBy(x => x), new UTF8Encoding(false));
-                Logs.Add($"[Sync] Записано {excludeDomains.Count} исключений в list-exclude-user.txt");
+                else if (File.Exists(excludeHostlistPath))
+                {
+                    File.Delete(excludeHostlistPath);
+                    Logs.Add("[Sync] list-exclude-user.txt очищен");
+                }
             }
             else
             {
-                if (File.Exists(excludeHostlistPath))
-                    File.Delete(excludeHostlistPath);
+                Logs.Add("[Sync] list-exclude-user.txt без изменений");
             }
         }
         catch (Exception ex)

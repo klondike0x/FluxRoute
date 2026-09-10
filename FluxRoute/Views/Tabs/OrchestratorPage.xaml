@@ -17,6 +17,7 @@
                 <Button Margin="0,0,10,0" Command="{Binding ToggleOrchestratorCommand}">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource ActionBtn}">
+                            <Setter Property="FontFamily" Value="Segoe UI Symbol" />
                             <Setter Property="Content" Value="▶ Включить оркестратор" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding OrchestratorEnabled}" Value="True">
@@ -114,6 +115,11 @@
                         Padding="12,5" FontSize="12"
                         Command="{Binding ResetProfileRatingsCommand}"
                         ToolTip="Очистить историю оценок оркестратора и ИИ" />
+                <!-- ═══ v1.7.1: Отдельное действие очистки слабых эволюций (issue #89) ═══ -->
+                <Button Content="🗑 Очистить слабые эволюции" Style="{StaticResource RedBtn}"
+                        Padding="12,5" FontSize="12"
+                        Command="{Binding CleanWeakEvolutionsCommand}"
+                        ToolTip="Удалить эволюционированные стратегии с результатом ниже порога (только в режиме ИИ)" />
             </StackPanel>
 </StackPanel>
     </ScrollViewer>

@@ -64,7 +64,7 @@ internal sealed class TgWsProxyServer : IDisposable
     private int _sessionId;
     private readonly TgWsProxyDnsResolver _dnsResolver = new();
     private readonly ConcurrentDictionary<string, long> _routeCooldowns = new();
-    private readonly ConcurrentDictionary<int, string> _preferredRoutes = new();
+    private readonly ConcurrentDictionary<string, string> _preferredRoutes = new();
 
     private readonly record struct WebSocketCandidate(
         string Target, string Host, string RouteKey, bool ResolveTarget, bool IsFront);
@@ -85,6 +85,8 @@ internal sealed class TgWsProxyServer : IDisposable
         lock (_gate)
         {
             if (IsRunning) return;
+            _routeCooldowns.Clear();
+            _preferredRoutes.Clear();
             IPAddress address = ResolveListenAddress(options.ListenHost);
             _listener = new TcpListener(address, options.ListenPort);
             _listener.Start();
@@ -191,7 +193,7 @@ internal sealed class TgWsProxyServer : IDisposable
                         : candidate.Target;
                     if (string.IsNullOrWhiteSpace(candidateTarget))
                     {
-                        MarkRouteFailure(info.DataCenter, candidate.RouteKey, candidate.IsFront);
+                        MarkRouteFailure(info.DataCenter, info.IsMedia, candidate.RouteKey, candidate.IsFront);
                         if (options.Verbose)
                             WriteLog($"#{id}: DNS не разрешил {candidate.Host}");
                         continue;
@@ -209,7 +211,7 @@ internal sealed class TgWsProxyServer : IDisposable
                         bridgeStarted = true;
                         await BridgeWebSocketAsync(local, ws, crypto, relayHandshake,
                             info.TransportWord, options, serverToken);
-                        MarkRouteSuccess(info.DataCenter, candidate.RouteKey);
+                        MarkRouteSuccess(info.DataCenter, info.IsMedia, candidate.RouteKey);
                         return;
                     }
                     catch (OperationCanceledException) when (serverToken.IsCancellationRequested)
@@ -218,7 +220,7 @@ internal sealed class TgWsProxyServer : IDisposable
                     }
                     catch (Exception ex)
                     {
-                        MarkRouteFailure(info.DataCenter, candidate.RouteKey, candidate.IsFront);
+                        MarkRouteFailure(info.DataCenter, info.IsMedia, candidate.RouteKey, candidate.IsFront);
                         if (options.Verbose || ex is UpstreamDidNotRelayException)
                             WriteLog($"#{id}: WS {candidate.Host} недоступен — {ex.Message}");
 
@@ -430,11 +432,14 @@ internal sealed class TgWsProxyServer : IDisposable
         TgWsProxyProtocol.HandshakeInfo info, TgWsProxyOptions options)
     {
         int dc = TgWsProxyProtocol.GetWebSocketDataCenter(info.DataCenter);
+        string preferenceKey = GetRoutePreferenceKey(dc, info.IsMedia);
         var candidates = BuildWebSocketCandidates(info, options).ToList();
-        var fresh = candidates.Where(candidate => !IsRouteCooling(dc, candidate.RouteKey)).ToList();
+        var fresh = candidates
+            .Where(candidate => !IsRouteCooling(dc, info.IsMedia, candidate.RouteKey))
+            .ToList();
         if (fresh.Count == 0) fresh = candidates;
 
-        if (_preferredRoutes.TryGetValue(dc, out string? preferred))
+        if (_preferredRoutes.TryGetValue(preferenceKey, out string? preferred))
         {
             var preferredCandidates = fresh.Where(candidate => candidate.RouteKey == preferred).ToList();
             fresh = preferredCandidates.Concat(fresh.Where(candidate => candidate.RouteKey != preferred)).ToList();
@@ -456,7 +461,7 @@ internal sealed class TgWsProxyServer : IDisposable
         foreach (string host in hosts)
         {
             string target = string.IsNullOrWhiteSpace(directTarget) ? host : directTarget;
-            candidates.Add(new WebSocketCandidate(target, host, $"direct:{domainDataCenter}", false, false));
+            candidates.Add(new WebSocketCandidate(target, host, $"direct:{host}", false, false));
         }
 
         var frontCandidates = new List<WebSocketCandidate>();
@@ -495,27 +500,39 @@ internal sealed class TgWsProxyServer : IDisposable
         return candidates;
     }
 
-    private bool IsRouteCooling(int dc, string routeKey)
+    internal static string BuildRouteStateKey(int dataCenter, bool isMedia, string routeKey)
     {
-        string key = $"{dc}|{routeKey}";
+        int dc = TgWsProxyProtocol.GetWebSocketDataCenter(dataCenter);
+        return $"{dc}|{(isMedia ? "media" : "main")}|{routeKey}";
+    }
+
+    private static string GetRoutePreferenceKey(int dataCenter, bool isMedia)
+    {
+        int dc = TgWsProxyProtocol.GetWebSocketDataCenter(dataCenter);
+        return $"{dc}|{(isMedia ? "media" : "main")}";
+    }
+
+    private bool IsRouteCooling(int dc, bool isMedia, string routeKey)
+    {
+        string key = BuildRouteStateKey(dc, isMedia, routeKey);
         if (!_routeCooldowns.TryGetValue(key, out long expires)) return false;
         if (expires > Environment.TickCount64) return true;
         _routeCooldowns.TryRemove(key, out _);
         return false;
     }
 
-    private void MarkRouteFailure(int dataCenter, string routeKey, bool isFront)
+    private void MarkRouteFailure(int dataCenter, bool isMedia, string routeKey, bool isFront)
     {
-        int dc = TgWsProxyProtocol.GetWebSocketDataCenter(dataCenter);
-        _routeCooldowns[$"{dc}|{routeKey}"] = Environment.TickCount64
+        string key = BuildRouteStateKey(dataCenter, isMedia, routeKey);
+        _routeCooldowns[key] = Environment.TickCount64
             + (isFront ? 30_000 : 60_000);
     }
 
-    private void MarkRouteSuccess(int dataCenter, string routeKey)
+    private void MarkRouteSuccess(int dataCenter, bool isMedia, string routeKey)
     {
-        int dc = TgWsProxyProtocol.GetWebSocketDataCenter(dataCenter);
-        _routeCooldowns.TryRemove($"{dc}|{routeKey}", out _);
-        _preferredRoutes[dc] = routeKey;
+        string key = BuildRouteStateKey(dataCenter, isMedia, routeKey);
+        _routeCooldowns.TryRemove(key, out _);
+        _preferredRoutes[GetRoutePreferenceKey(dataCenter, isMedia)] = routeKey;
     }
 
     private static string ResolveDataCenterTarget(int dataCenter, bool isTest, TgWsProxyOptions options)

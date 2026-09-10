@@ -510,7 +510,8 @@ public partial class MainViewModel
                 _runStartedAt = null;
                 _runningProcess = null;
                 IsRunning = false;
-                Logs.Add("winws.exe завершился.");
+                var exitCode = SafeExitCode(winws);
+                Logs.Add($"winws.exe завершился (код выхода: {exitCode?.ToString() ?? "неизвестен"}).");
                 AddToRecentLogs("⏹ Завершён");
             }).ConfigureAwait(false);
         }
@@ -609,7 +610,8 @@ public partial class MainViewModel
                 _runStartedAt = null;
                 _runningProcess = null;
                 IsRunning = false;
-                Logs.Add("winws.exe завершился.");
+                var exitCode = winws is null ? (int?)null : SafeExitCode(winws);
+                Logs.Add($"winws.exe завершился (код выхода: {exitCode?.ToString() ?? "неизвестен"}).");
                 AddToRecentLogs("⏹ Завершён");
             }).ConfigureAwait(false);
         }
@@ -743,6 +745,18 @@ public partial class MainViewModel
         }
 
         return pids;
+    }
+
+    private static int? SafeExitCode(Process process)
+    {
+        try
+        {
+            return process.ExitCode;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static bool SafeHasExited(Process process)

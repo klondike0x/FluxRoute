@@ -99,4 +99,14 @@ public sealed class TgWsProxyProtocolTests
         Assert.True(info.IsTest);
         Assert.Equal(2, info.WireDataCenter);
     }
+    [Fact]
+    public void RouteStateKey_SeparatesMediaAndWebSocketHost()
+    {
+        string normal = TgWsProxyServer.BuildRouteStateKey(2, isMedia: false, "direct:kws2.web.telegram.org");
+        string media = TgWsProxyServer.BuildRouteStateKey(2, isMedia: true, "direct:kws2.web.telegram.org");
+        string mediaAlternateHost = TgWsProxyServer.BuildRouteStateKey(2, isMedia: true, "direct:kws2-1.web.telegram.org");
+
+        Assert.NotEqual(normal, media);
+        Assert.NotEqual(media, mediaAlternateHost);
+    }
 }

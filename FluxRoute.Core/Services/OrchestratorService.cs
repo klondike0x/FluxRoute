@@ -22,7 +22,20 @@ public sealed class OrchestratorService : IDisposable
     public bool IsScanning { get; private set; }
     public DateTimeOffset? NextCheckAt { get; private set; }
 
+    public ProfileItem? BestRankedProfile =>
+        _rankedProfiles.FirstOrDefault(x => x.score > 0).profile;
+
+    public int BestRankedScore =>
+        _rankedProfiles.FirstOrDefault(x => x.score > 0).score;
+
     private List<(ProfileItem profile, int score, ProfileProbeResult? result)> _rankedProfiles = [];
+    private string? _preferredProfileFileName;
+
+    /// <summary>
+    /// Результаты последнего полного сканирования (профиль + счёт + реальные данные проверки).
+    /// Используются для переноса в генотипы ИИ без повторного запуска стратегий.
+    /// </summary>
+    public IReadOnlyList<(ProfileItem profile, int score, ProfileProbeResult? result)> LastScanResults => _rankedProfiles;
 
     private readonly Func<IEnumerable<ProfileItem>> _getProfiles;
     private readonly Func<ProfileItem?> _getActiveProfile;
@@ -87,13 +100,16 @@ public sealed class OrchestratorService : IDisposable
     /// Восстанавливает кэш рейтинга из сохранённых настроек.
     /// Если рейтинг не пустой — при следующем Start() сканирование будет пропущено.
     /// </summary>
-    public void RestoreRankedProfiles(IEnumerable<(ProfileItem profile, int score)> saved)
+    public void RestoreRankedProfiles(
+        IEnumerable<(ProfileItem profile, int score)> saved,
+        string? preferredProfileFileName = null)
     {
-        _rankedProfiles = saved
+        _preferredProfileFileName = preferredProfileFileName;
+        var restored = saved
             .Where(x => x.score > 0)
             .Select(x => (x.profile, x.score, (ProfileProbeResult?)null))
-            .OrderByDescending(x => x.score)
             .ToList();
+        _rankedProfiles = RankProfiles(restored);
         if (_rankedProfiles.Count > 0)
             Notify($"📋 Рейтинг стратегий восстановлен из кэша ({_rankedProfiles.Count} шт.), сканирование пропущено.");
     }
@@ -159,6 +175,7 @@ public sealed class OrchestratorService : IDisposable
             }
 
             Notify($"Сканирование {profiles.Count} стратегий с проверкой winws.exe и целей...");
+            _preferredProfileFileName = _getActiveProfile()?.FileName;
             var targets = BuildTargets();
             var scores = new List<(ProfileItem profile, int score, ProfileProbeResult? result)>();
 
@@ -196,7 +213,7 @@ public sealed class OrchestratorService : IDisposable
                 await _notifyScoreUpdate(profile.FileName, result.Score).ConfigureAwait(false);
             }
 
-            _rankedProfiles = scores.OrderByDescending(x => x.score).ToList();
+            _rankedProfiles = RankProfiles(scores);
             var summary = string.Join(", ", _rankedProfiles.Take(3).Select(x => $"{x.profile.DisplayName}:{x.score}%"));
             Notify($"✅ Сканирование завершено.\nТоп: {summary}");
         }
@@ -341,7 +358,20 @@ public sealed class OrchestratorService : IDisposable
         }
         if (!updated)
             _rankedProfiles.Add((profile, score, result));
-        _rankedProfiles = _rankedProfiles.OrderByDescending(x => x.score).ToList();
+        _rankedProfiles = RankProfiles(_rankedProfiles);
+    }
+
+    private List<(ProfileItem profile, int score, ProfileProbeResult? result)> RankProfiles(
+        IEnumerable<(ProfileItem profile, int score, ProfileProbeResult? result)> entries)
+    {
+        return entries
+            .OrderByDescending(x => x.score)
+            .ThenByDescending(x => x.result?.ProcessStable ?? false)
+            .ThenByDescending(x => x.result?.SuccessRate ?? 0)
+            .ThenByDescending(x => _preferredProfileFileName is not null &&
+                                   string.Equals(x.profile.FileName, _preferredProfileFileName, StringComparison.OrdinalIgnoreCase))
+            .ThenBy(x => x.profile.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static bool IsSameProfile(ProfileItem? a, ProfileItem? b)
