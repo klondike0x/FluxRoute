@@ -886,15 +886,24 @@ public partial class MainViewModel
                 // (правка по Codex P1, ревью #97).
                 bestProfile = _orchestrator.BestRankedProfile;
                 bestScore = _orchestrator.BestRankedScore;
-                if (bestProfile is not null)
+
+                // ═══ После внешней отмены (Stop, кнопка отмены) профиль заново НЕ поднимаем:
+                // ScanAllProfilesAsync гасит OperationCanceledException внутри и возвращается штатно,
+                // поэтому без этой проверки фолбэк-ветка «защита была запущена, а процесс уже не
+                // работает» сразу стартовала бы профиль снова, отменяя явную остановку пользователя
+                // (правка по Codex P1, ревью #97).
+                if (!scanCt.IsCancellationRequested)
                 {
-                    bestProfileStarted = true;
-                    await SwitchProfileAsync(bestProfile).ConfigureAwait(false);
-                }
-                else if (wasRunning && SelectedProfile is not null && !IsTrackedProcessRunning())
-                {
-                    bestProfileStarted = true;
-                    await EnsureProtectionRunningAsync().ConfigureAwait(false);
+                    if (bestProfile is not null)
+                    {
+                        bestProfileStarted = true;
+                        await SwitchProfileAsync(bestProfile).ConfigureAwait(false);
+                    }
+                    else if (wasRunning && SelectedProfile is not null && !IsTrackedProcessRunning())
+                    {
+                        bestProfileStarted = true;
+                        await EnsureProtectionRunningAsync().ConfigureAwait(false);
+                    }
                 }
 
                 // ═══ Состояние ИИ согласуем ПОД ТЕМ ЖЕ удержанием мьютекса и во всех случаях: рабочим
@@ -904,6 +913,12 @@ public partial class MainViewModel
                 // следующий цикл проверит новый профиль, а результат запишет под чужим Id — порча
                 // истории и состояния бандита (правка по Codex P1, ревью #97).
                 _aiOrchestrator.ReconcileGenomeWithActiveProfile();
+
+                // ═══ Выход через внешний путь отмены, а не через успешное завершение: иначе отменённый
+                // скан перезаписал бы статус («Сканирование завершено»), сохранил настройки и обновил
+                // ИИ-строки как по полноценному прогону. Согласование генотипа выше уже выполнено —
+                // скан мог успеть переключить профиль до отмены (правка по Codex P1, ревью #97).
+                scanCt.ThrowIfCancellationRequested();
             }, scanCt);
 
             SortProfileScores();
