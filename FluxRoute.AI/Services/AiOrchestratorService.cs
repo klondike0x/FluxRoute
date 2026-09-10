@@ -282,15 +282,24 @@ public sealed class AiOrchestratorService : IDisposable
         if (genome.Origin != StrategyOrigin.Evolved)
             return;
 
-        if (!string.IsNullOrEmpty(genome.SourceBatPath) && File.Exists(genome.SourceBatPath))
-            return;
-
         if (string.IsNullOrEmpty(genome.BatFileName))
             return;
 
-        var path = Path.Combine(_engineDir(), "ai-evolved", genome.BatFileName);
-        if (File.Exists(path))
-            StoreBatPath(genome, path);
+        // ═══ Канонический путь evolved-стратегии — ТЕКУЩАЯ папка engine\ai-evolved, а не любой
+        // существующий файл: при копировании портативной установки старая папка остаётся доступной,
+        // и проверка «сохранённый путь ещё жив» навсегда закрепляла бы генотип за старой копией.
+        // Тогда живой профиль новой установки считался бы чужим — проверка выбранной стратегии
+        // пропускалась, а согласование сбрасывало генотип (правка по Codex P2, ревью #97).
+        var current = Path.Combine(_engineDir(), "ai-evolved", genome.BatFileName);
+        if (File.Exists(current))
+        {
+            StoreBatPath(genome, current);
+            return;
+        }
+
+        // Файла в текущей установке нет — оставляем сохранённый путь, если он ещё жив.
+        if (!string.IsNullOrEmpty(genome.SourceBatPath) && File.Exists(genome.SourceBatPath))
+            return;
     }
 
     /// <summary>
@@ -701,6 +710,11 @@ public sealed class AiOrchestratorService : IDisposable
     private ProfileItem? ResolveProfile(StrategyGenome g)
     {
         var engineDir = _engineDir();
+
+        // Сначала подтягиваем канонический путь BAT: при копировании портативной установки сохранённый
+        // абсолютный путь ведёт в старую папку, а профили грузятся из новой — запускать надо тот файл,
+        // который видит текущая установка (правка по Codex P2, ревью #97).
+        RefreshStaleBatPath(g);
 
         string? path = null;
         if (!string.IsNullOrEmpty(g.SourceBatPath) && File.Exists(g.SourceBatPath))

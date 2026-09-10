@@ -115,6 +115,33 @@ public sealed class AiOrchestratorGenomeReconcileTests : IDisposable
     }
 
     [Fact]
+    public void ReconcileGenomeWithActiveProfile_PrefersCurrentEnginePath_WhenOldCopyStillExists()
+    {
+        var evolvedDir = Path.Combine(_engineDir, "ai-evolved");
+        Directory.CreateDirectory(evolvedDir);
+        var currentBat = Path.Combine(evolvedDir, "evolved_v2.bat");
+        File.WriteAllText(currentBat, "@echo off");
+
+        // Установку скопировали, старая папка осталась доступной: сохранённый путь существует, но ведёт
+        // в прошлую копию. Канонический путь evolved-стратегии — текущая engine\ai-evolved, иначе живой
+        // профиль новой установки считался бы чужим (правка по Codex P2, ревью #97).
+        var oldDir = Path.Combine(_tempDir, "старая-копия", "ai-evolved");
+        Directory.CreateDirectory(oldDir);
+        var oldBat = Path.Combine(oldDir, "evolved_v2.bat");
+        File.WriteAllText(oldBat, "@echo off");
+
+        var genome = Genome("evolved_v2.bat", "evolved_v2", oldBat, StrategyOrigin.Evolved);
+        _service.CurrentGenomeForTests = genome;
+        _activeProfile = Profile("evolved_v2.bat", "evolved_v2", currentBat);
+
+        var reset = _service.ReconcileGenomeWithActiveProfile();
+
+        Assert.False(reset);
+        Assert.Same(genome, _service.CurrentGenomeForTests);
+        Assert.Equal(currentBat, genome.SourceBatPath);
+    }
+
+    [Fact]
     public void ReconcileGenomeWithActiveProfile_DoesNotAdoptEvolvedBat_ForBuiltinGenome()
     {
         var evolvedDir = Path.Combine(_engineDir, "ai-evolved");

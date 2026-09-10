@@ -707,8 +707,13 @@ public partial class MainViewModel
         _scanCts = null;
         _scanEtaTimer?.Stop();
         _scanEtaTimer = null;
-        // Инвалидируем поколение — старый finally увидит gen != _scanGeneration и не тронет IsScanning
+        // Инвалидируем поколение — старый finally увидит gen != _scanGeneration и не тронет IsScanning.
+        // Флаг подавления остановки снимаем прямо здесь: иначе после отмены скана «снаружи»
+        // (остановка защиты) его finally уже не выполнит свою ветку и флаг остался бы включённым
+        // навсегда — кнопка Stop больше не останавливала бы сервисы оркестратора
+        // (правка по Codex P2, ревью #97).
         _scanGeneration++;
+        _suppressOrchestratorStop = false;
         IsScanning = false;
         GlobalOverlayVisible = false;
         OnPropertyChanged(nameof(CanCancelScan));
@@ -833,7 +838,16 @@ public partial class MainViewModel
 
         try
         {
-            _suppressOrchestratorStop = true;
+            // ═══ Флаг подавления остановки ставится ВНУТРИ сериализованного блока, уже после захвата
+            // мьютекса. Ожидание в очереди за долгим циклом ИИ — это ещё не скан, и если пользователь
+            // жмёт Stop в этот момент, остановка сервисов оркестратора должна пройти штатно, а не быть
+            // подавлена: иначе процесс убит, а сервисы ИИ живы, и вставший из очереди скан снова
+            // поднял бы профили после явной остановки защиты (правка по Codex P2, ревью #97).
+            // Поднятый ранее скан снимается отменой в StopOrchestratorServices.
+            var networkUnchangedAfterScan = false;
+            ProfileItem? bestProfile = null;
+            var bestScore = 0;
+            var bestProfileStarted = false;
 
             // ═══ Полный скан и импорт его результатов в генотипы ИИ — под ОДНИМ удержанием
             // мьютекса с фоновыми циклами ИИ. Иначе RunCycleAsync успевал бы переключать/пробовать
@@ -843,12 +857,10 @@ public partial class MainViewModel
             // scanCt передаётся и в ожидание мьютекса: если скан отменят, пока он стоит в очереди за
             // циклом ИИ, выход должен идти через внешний путь отмены, а не через «успешное»
             // завершение уже отменённого скана (правка по Codex P2, ревью #97).
-            var networkUnchangedAfterScan = false;
-            ProfileItem? bestProfile = null;
-            var bestScore = 0;
-            var bestProfileStarted = false;
             await _aiOrchestrator.RunSerializedAsync(async () =>
             {
+                _suppressOrchestratorStop = true;
+
                 // ═══ v1.7.1: сетевой хэш фиксируем непосредственно перед сканом, уже удерживая
                 // мьютекс, — тогда два замера ограничивают сам скан, а не время ожидания в очереди
                 // за циклом ИИ (правка по Codex P2, ревью #97; ранее — P1, пятый раунд).
@@ -1048,7 +1060,12 @@ public partial class MainViewModel
     // ── Остановка сервисов оркестратора без изменения флага OrchestratorEnabled ──
     private void StopOrchestratorServices()
     {
-        if (_orchestratorStartInProgress && IsScanning)
+        // ═══ Скан оркестратора держит мьютекс ИИ и после остановки сервисов поднял бы профили заново,
+        // поэтому снимаем и выполняющийся скан, и стоящий в очереди за циклом ИИ. Прежнее условие
+        // (_orchestratorStartInProgress) не покрывало скан, запущенный кнопкой: нажатие Stop убивало
+        // процесс, но скан оставался жив и после отпускания мьютекса снова стартовал профили
+        // (правка по Codex P2, ревью #97).
+        if (IsScanning)
             CancelScan();
 
         if (!_orchestrator.IsRunning && !_aiOrchestrator.IsRunning)
