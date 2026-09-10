@@ -382,13 +382,18 @@ public static class ProfileBatLauncher
 
     /// <summary>
     /// Проверяет, содержит ли файл реальные домены (не только комментарии и пустые строки).
+    /// Помеченные строки («!domain») — это исключения, а не домены назначения: файл из одних
+    /// пометок не должен попадать в <c>--hostlist</c>.
     /// </summary>
     private static bool HasRealDomains(string path)
     {
         try
         {
             return File.ReadLines(path)
-                .Any(line => !string.IsNullOrWhiteSpace(line) && !line.TrimStart().StartsWith('#'));
+                .Select(line => line.TrimStart())
+                .Any(line => !string.IsNullOrWhiteSpace(line)
+                             && !line.StartsWith('#')
+                             && !line.StartsWith('!'));
         }
         catch
         {

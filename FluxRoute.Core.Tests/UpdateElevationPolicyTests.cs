@@ -19,10 +19,29 @@ public sealed class UpdateElevationPolicyTests
     // Процесс уже повышен — повторный запрос прав не нужен.
     [InlineData(true, true, false)]
     [InlineData(true, false, false)]
-    public void NeedsElevation_OnlyWhenEnginesSurvivedWithoutRights(
-        bool alreadyElevated, bool engineProcessStillRunning, bool expected)
+    public void NeedsElevation_OnlyWhenProtectionSurvivedWithoutRights(
+        bool alreadyElevated, bool protectionStillRunning, bool expected)
     {
-        Assert.Equal(expected, UpdateElevationPolicy.NeedsElevation(alreadyElevated, engineProcessStillRunning));
+        Assert.Equal(expected, UpdateElevationPolicy.NeedsElevation(alreadyElevated, protectionStillRunning));
+    }
+
+    [Theory]
+    // Служба драйвера WinDivert запущена — снимать её придётся с правами.
+    [InlineData("STATE : 4 RUNNING\r\n", 0, true)]
+    // Драйвер выгружается: если не успеет дойти до STOPPED за время ожидания в StopEnginesBestEffort,
+    // считаем его живым — батник ждёт освобождения драйвера и без прав не дождётся.
+    [InlineData("STATE : 3 STOP_PENDING\r\n", 0, true)]
+    [InlineData("STATE : 1 STOPPED\r\n", 0, false)]
+    // Служба не установлена (sc query возвращает 1060) — права не нужны.
+    [InlineData("", 1060, false)]
+    // Состояние не получили (доступ, таймаут, пустой вывод) — считаем, что снимать придётся с правами:
+    // тихий отказ BAT, который удаляет архив и запускает старую версию, хуже лишнего запроса UAC.
+    [InlineData("", 5, true)]
+    [InlineData(null, 0, true)]
+    [InlineData("[SC] OpenService FAILED\r\n", 0, true)]
+    public void IsServiceRunning_TreatsOnlyDefinitiveStopAsStopped(string? queryOutput, int exitCode, bool expected)
+    {
+        Assert.Equal(expected, UpdateElevationPolicy.IsServiceRunning(queryOutput, exitCode));
     }
 
     [Fact]
@@ -31,7 +50,7 @@ public sealed class UpdateElevationPolicyTests
         var psi = UpdateElevationPolicy.PreparePortableLaunch(
             @"C:\Temp\fluxroute-update.bat",
             isElevatedProbe: () => false,
-            engineRunningProbe: () => true);
+            protectionRunningProbe: () => true);
 
         Assert.Equal("runas", psi.Verb);
     }
@@ -42,7 +61,35 @@ public sealed class UpdateElevationPolicyTests
         var psi = UpdateElevationPolicy.PreparePortableLaunch(
             @"C:\Temp\fluxroute-update.bat",
             isElevatedProbe: () => false,
-            engineRunningProbe: () => false);
+            protectionRunningProbe: () => false);
+
+        Assert.True(string.IsNullOrEmpty(psi.Verb));
+    }
+
+    /// <summary>
+    /// Проверка «что именно считаем остаточной защитой»: живая kernel-служба WinDivert — тот самый
+    /// случай, который пропускала проверка только по именам процессов (Codex P1, ревью #76).
+    /// </summary>
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(false, true, true)]
+    [InlineData(true, true, true)]
+    public void IsProtectionRunning_CountsDriverServiceAsSurvivingProtection(
+        bool engineProcessRunning, bool driverServiceRunning, bool expected)
+    {
+        Assert.Equal(
+            expected,
+            UpdateElevationPolicy.IsProtectionRunning(() => engineProcessRunning, () => driverServiceRunning));
+    }
+
+    [Fact]
+    public void PreparePortableLaunch_KeepsUacOut_WhenProcessIsAlreadyElevated()
+    {
+        var psi = UpdateElevationPolicy.PreparePortableLaunch(
+            @"C:\Temp\fluxroute-update.bat",
+            isElevatedProbe: () => true,
+            protectionRunningProbe: () => true);
 
         Assert.True(string.IsNullOrEmpty(psi.Verb));
     }

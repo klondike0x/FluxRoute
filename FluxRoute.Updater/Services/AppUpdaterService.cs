@@ -599,15 +599,16 @@ public class AppUpdaterService : IAppUpdaterService
             await File.WriteAllTextAsync(batPath, bat, System.Text.Encoding.UTF8, ct);
 
             // ── 4. Снимаем защиту и запускаем bat через ShellExecute ───────
-            // Сначала пробуем остановить движки без повышения прав: обычно защиту поднимало само
-            // приложение, и замена проходит без запроса UAC. Если winws/WinDivert остались (подняты
-            // с правами администратора), BAT без прав не сможет их снять, дойдёт до ветки отмены и
+            // Сначала пробуем остановить движки и службу драйвера без повышения прав: обычно защиту
+            // поднимало само приложение, и замена проходит без запроса UAC. Если winws остался или
+            // жива kernel-служба WinDivert (у неё нет своего процесса — проверка только по именам
+            // процессов её не видела), BAT без прав не сможет их снять, дойдёт до ветки отмены и
             // молча запустит прежнюю версию, хотя UI уже отрапортовал успех (Codex P1, ревью #76).
             UpdateElevationPolicy.StopEnginesBestEffort();
             var launch = UpdateElevationPolicy.PreparePortableLaunch(
                 batPath,
                 UpdateElevationPolicy.IsProcessElevated,
-                UpdateElevationPolicy.IsEngineProcessRunning);
+                UpdateElevationPolicy.IsProtectionRunning);
 
             onProgress(string.Equals(launch.Verb, "runas", StringComparison.Ordinal)
                 ? "🔐 Защита запущена с правами администратора — запрашиваем права для её остановки..."

@@ -51,6 +51,14 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string newSiteInput = "";
     public ObservableCollection<string> CustomTargetDomains { get; } = new();
     public ObservableCollection<string> CustomExcludeDomains { get; } = new();
+
+    /// <summary>
+    /// Вклады пользовательских hostlist-файлов в общий набор исключений: <c>list-exclude-user.txt</c>
+    /// (он же вкладка «Домены») и помеченные строки «!domain» в <c>list-general-user.txt</c>.
+    /// Держим их раздельно, чтобы сохранение одного файла не затирало вклад другого
+    /// (Codex P2, ревью #76).
+    /// </summary>
+    private readonly UserHostlistExclusionSet _hostlistExclusions = new();
     [ObservableProperty] private string newPresetName = "";
     [ObservableProperty] private string newPresetTrigger = "";
 
@@ -1678,23 +1686,25 @@ public partial class MainViewModel : ObservableObject
             return;
 
         var imported = UserHostlistImporter.Classify(fileName, content, NormalizeDomainInput);
+        var isExclusionFile = fileName == UserHostlistImporter.ExclusionFileName;
 
-        target.Clear();
-        foreach (var domain in fileName == UserHostlistImporter.ExclusionFileName
-                     ? imported.Excludes
-                     : imported.Targets)
+        if (isExclusionFile)
         {
-            target.Add(domain);
+            // Содержимое этого файла — источник истины для своего набора (вкладка «Домены» пишет туда же),
+            // а вклад файла доменов сохраняется: иначе помеченные в нём строки перестанут попадать
+            // в --hostlist-exclude (Codex P2, ревью #76).
+            ApplyHostlistExclusions(imported.Excludes);
         }
-
-        // Помеченные строки («!domain») файла доменов — исключения. Раньше префикс просто
-        // отбрасывался и домен попадал в целевые: следующая синхронизация переписывала его
-        // в файл без пометки, и явное исключение превращалось во включение (Codex P2, ревью #76).
-        // Добавляем, не заменяя набор: исключения живут и в отдельном файле, и во вкладке UI.
-        foreach (var domain in imported.Excludes)
+        else
         {
-            if (!CustomExcludeDomains.Contains(domain, StringComparer.OrdinalIgnoreCase))
-                CustomExcludeDomains.Add(domain);
+            CustomTargetDomains.Clear();
+            foreach (var domain in imported.Targets)
+                CustomTargetDomains.Add(domain);
+
+            // Помеченные строки («!domain») — исключения: раньше префикс просто отбрасывался и домен
+            // попадал в целевые, а следующая синхронизация переписывала его в файл без пометки.
+            _hostlistExclusions.SetGeneralFileExclusions(imported.Excludes);
+            ApplyHostlistExclusions();
         }
 
         // Убираем устаревшие значения legacy-поля, иначе они снова попадут
@@ -1717,6 +1727,29 @@ public partial class MainViewModel : ObservableObject
             "\n",
             CustomTargetDomains
                 .Concat(CustomExcludeDomains.Select(domain => $"!{domain}")));
+    }
+
+    /// <summary>
+    /// Пересобирает <see cref="CustomExcludeDomains"/> как объединение двух вкладов: набора вкладки
+    /// «Домены» и помеченных строк файла доменов (см. <see cref="UserHostlistExclusionSet"/>).
+    /// <paramref name="excludeFileDomains"/> передаётся, когда вклад файла исключений только что
+    /// заменён содержимым этого файла (сохранение в редакторе); иначе вкладом считается текущее
+    /// состояние UI-коллекции, куда исключения приходят из настроек.
+    /// </summary>
+    private void ApplyHostlistExclusions(IReadOnlyList<string>? excludeFileDomains = null)
+    {
+        _hostlistExclusions.SetExcludeFileDomains(excludeFileDomains ?? CustomExcludeDomains);
+
+        var effective = _hostlistExclusions.Build();
+        if (CustomExcludeDomains.Count == effective.Count
+            && CustomExcludeDomains.SequenceEqual(effective, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        CustomExcludeDomains.Clear();
+        foreach (var domain in effective)
+            CustomExcludeDomains.Add(domain);
     }
 
     private void SyncCustomHostlist()
@@ -1749,16 +1782,31 @@ public partial class MainViewModel : ObservableObject
             // через интерфейс корректно убирает его и из файла.
             var orderedDomains = domains.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
 
+            // Исключения собираются из двух файлов, поэтому оба вклада перечитываем перед записью:
+            // помеченные строки — из файла доменов, остальное — из набора вкладки «Домены»
+            // (Codex P2, ревью #76: иначе после перезапуска исключение выпадало из --hostlist-exclude).
+            _hostlistExclusions.SetGeneralFileExclusions(
+                UserHostlistImporter.ReadExclusionsFromFile(userHostlistPath, NormalizeDomainInput));
+            _hostlistExclusions.SetExcludeFileDomains(CustomExcludeDomains);
+            var generalFileExclusions = _hostlistExclusions.GeneralFileExclusions
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
             if (HostlistSyncPolicy.NeedsWrite(userHostlistPath, orderedDomains, domains.Count == 0))
             {
-                if (orderedDomains.Count > 0)
+                if (orderedDomains.Count > 0 || generalFileExclusions.Count > 0)
                 {
                     // Используем явное удаление + запись, чтобы избежать кэширования
                     if (File.Exists(userHostlistPath))
                     {
                         try { File.SetAttributes(userHostlistPath, FileAttributes.Normal); } catch { }
                     }
-                    File.WriteAllLines(userHostlistPath, orderedDomains, new UTF8Encoding(false));
+                    // Помеченные строки возвращаем в файл как есть: в набор целевых доменов они не
+                    // входят, но именно из них собирается исключение для --hostlist-exclude.
+                    File.WriteAllLines(
+                        userHostlistPath,
+                        orderedDomains.Concat(generalFileExclusions.Select(domain => $"!{domain}")),
+                        new UTF8Encoding(false));
                     Logs.Add($"[Sync] Записано {orderedDomains.Count} доменов в list-general-user.txt");
                 }
                 else
@@ -1777,13 +1825,12 @@ public partial class MainViewModel : ObservableObject
             }
 
             // ═══ v1.6.0: Синхронизация list-exclude-user.txt ═══
-            var excludeHostlistPath = Path.Combine(listsDir, "list-exclude-user.txt");
-            var excludeDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var d in CustomExcludeDomains)
-            {
-                if (!string.IsNullOrWhiteSpace(d))
-                    excludeDomains.Add(d.Trim());
-            }
+            var excludeHostlistPath = Path.Combine(listsDir, UserHostlistImporter.ExclusionFileName);
+            // Действующий набор исключений = вклад вкладки «Домены» (он же список файла) + помеченные
+            // строки файла доменов. Объединение пересобираем здесь, чтобы после перезапуска
+            // приложения исключение не выпало из --hostlist-exclude (Codex P2, ревью #76).
+            ApplyHostlistExclusions();
+            var excludeDomains = new HashSet<string>(CustomExcludeDomains, StringComparer.OrdinalIgnoreCase);
 
             // ═══ v1.7.1: та же идемпотентность, что и для list-general-user.txt. Без неё старт
             // защиты переписывал файл из UI-коллекции и стирал комментарии и пустые строки,

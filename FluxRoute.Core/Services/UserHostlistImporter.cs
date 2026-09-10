@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace FluxRoute.Core.Services;
@@ -61,6 +62,53 @@ public static class UserHostlistImporter
             .ToList();
 
         return new HostlistImportResult(targetsResult, excludes.Distinct(StringComparer.OrdinalIgnoreCase).ToList());
+    }
+
+    /// <summary>
+    /// Читает помеченные строки («!domain») из файла доменов. Синхронизация — единственное место,
+    /// где <c>list-exclude-user.txt</c> получает актуальный набор исключений, поэтому вклад файла
+    /// перечитывается с диска: иначе исключение, помеченное до этой правки или восстановленное из
+    /// старого файла, так и не попало бы в <c>--hostlist-exclude</c>.
+    /// </summary>
+    public static List<string> ReadExclusionsFromFile(string path, Func<string, string> normalize)
+    {
+        ArgumentNullException.ThrowIfNull(normalize);
+
+        try
+        {
+            if (!File.Exists(path))
+                return [];
+
+            return Classify(TargetFileName, File.ReadAllText(path), normalize).Excludes.ToList();
+        }
+        catch
+        {
+            // Файла нет или он занят — исключения просто не добавим.
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Объединяет исключения из двух источников: содержимое <c>list-exclude-user.txt</c> (он же
+    /// вкладка «Домены») и помеченные строки <c>list-general-user.txt</c>. Без объединения
+    /// сохранение одного файла затирало вклад другого, и помеченный домен переставал попадать
+    /// в <c>--hostlist-exclude</c> (Codex P2, ревью #76).
+    /// </summary>
+    public static List<string> MergeExclusions(IEnumerable<string>? excludeFileDomains, IEnumerable<string>? generalFileExclusions)
+    {
+        var result = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var domain in (excludeFileDomains ?? []).Concat(generalFileExclusions ?? []))
+        {
+            var trimmed = domain?.Trim();
+            if (string.IsNullOrEmpty(trimmed) || !seen.Add(trimmed))
+                continue;
+
+            result.Add(trimmed);
+        }
+
+        return result;
     }
 
     private static IEnumerable<string> EnumerateLines(string? content)

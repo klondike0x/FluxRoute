@@ -131,4 +131,69 @@ public sealed class UserHostlistImporterTests : IDisposable
         Assert.Equal(["ads.example.com"], result.Excludes);
         Assert.False(HostlistSyncPolicy.NeedsWrite(path, result.Targets, result.Targets.Count == 0));
     }
+
+    [Fact]
+    public void ReadExclusionsFromFile_TakesOnlyMarkedLines()
+    {
+        var path = Path.Combine(_tempDir, UserHostlistImporter.TargetFileName);
+        File.WriteAllText(path, "# комментарий\nyoutube.com\n!ads.example.com\n!tracker.example.com\n");
+
+        var excludes = UserHostlistImporter.ReadExclusionsFromFile(path, Normalize);
+
+        Assert.Equal(["ads.example.com", "tracker.example.com"], excludes);
+    }
+
+    [Fact]
+    public void ReadExclusionsFromFile_MissingFile_ReturnsEmpty()
+    {
+        var excludes = UserHostlistImporter.ReadExclusionsFromFile(
+            Path.Combine(_tempDir, "нет-такого-файла.txt"),
+            Normalize);
+
+        Assert.Empty(excludes);
+    }
+
+    [Fact]
+    public void MergeExclusions_UnionsBothSources_WithoutDuplicates()
+    {
+        var merged = UserHostlistImporter.MergeExclusions(
+            ["ads.example.com"],
+            ["Ads.EXAMPLE.com", "tracker.example.com"]);
+
+        Assert.Equal(["ads.example.com", "tracker.example.com"], merged);
+    }
+
+    /// <summary>
+    /// Сценарий находки: домен помечен в <c>list-general-user.txt</c>, затем пользователь сохраняет
+    /// <c>list-exclude-user.txt</c>. Вклад второго файла заменяется его содержимым, вклад первого
+    /// сохраняется — исключение продолжает попадать в <c>--hostlist-exclude</c>. Прежняя реализация
+    /// заменяла общий набор целиком, и помеченный домен исчезал (Codex P2, ревью #76).
+    /// </summary>
+    [Fact]
+    public void ExclusionSet_KeepsGeneralFileMarkers_WhenExcludeFileIsSaved()
+    {
+        var set = new UserHostlistExclusionSet();
+
+        set.SetGeneralFileExclusions(["ads.example.com"]);
+        set.SetExcludeFileDomains(["api.example.com"]);
+        Assert.Equal(["api.example.com", "ads.example.com"], set.Build());
+
+        set.SetExcludeFileDomains(["api.example.com", "cdn.example.com"]);
+        Assert.Equal(["api.example.com", "cdn.example.com", "ads.example.com"], set.Build());
+
+        // Сохранение файла доменов заменяет только его собственный вклад.
+        set.SetGeneralFileExclusions(["other.example.com"]);
+        Assert.Equal(["api.example.com", "cdn.example.com", "other.example.com"], set.Build());
+    }
+
+    [Fact]
+    public void ExclusionSet_IgnoresBlankEntries_AndBuildsFullUnion_FromScratch()
+    {
+        var set = new UserHostlistExclusionSet();
+
+        set.SetExcludeFileDomains([null!, "  ", " ads.example.com "]);
+        set.SetGeneralFileExclusions(["ads.example.com", "tracker.example.com"]);
+
+        Assert.Equal(["ads.example.com", "tracker.example.com"], set.Build());
+    }
 }
