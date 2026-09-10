@@ -115,6 +115,23 @@ public sealed class AiOrchestratorService : IDisposable
         }
     }
 
+    /// <summary>
+    /// То же, что <see cref="RunSerializedAsync{T}"/>, но для операции без результата.
+    /// </summary>
+    public async Task RunSerializedAsync(Func<Task> operation, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+        await _aiGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            await operation().ConfigureAwait(false);
+        }
+        finally
+        {
+            _aiGate.Release();
+        }
+    }
+
     public void Start()
     {
         if (_cts is not null)
@@ -195,12 +212,176 @@ public sealed class AiOrchestratorService : IDisposable
 
     /// <summary>
     /// Находит генотип, соответствующий выбранному профилю (по имени bat/отображаемому имени/пути).
+    /// Сначала прямое сопоставление; если не нашлось — у генотипов мог устареть сохранённый путь
+    /// (переезд портативной установки), пути подтягиваются и сопоставление повторяется.
     /// </summary>
-    private StrategyGenome? FindGenomeForProfile(ProfileItem profile) =>
-        _registry.GetGenomes().FirstOrDefault(g =>
-            string.Equals(g.BatFileName, profile.FileName, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(g.DisplayName, profile.DisplayName, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(g.SourceBatPath, profile.FullPath, StringComparison.OrdinalIgnoreCase));
+    private StrategyGenome? FindGenomeForProfile(ProfileItem profile)
+    {
+        var genomes = _registry.GetGenomes();
+        var match = genomes.FirstOrDefault(g => GenomeMatchesProfile(g, profile));
+        if (match is not null)
+            return match;
+
+        foreach (var g in genomes)
+            RefreshStaleBatPath(g);
+
+        return _registry.GetGenomes().FirstOrDefault(g => GenomeMatchesProfile(g, profile));
+    }
+
+    /// <summary>
+    /// Сопоставление генотипа профилю. Если путь BAT известен с ОБЕИХ сторон, решает только он:
+    /// одноимённые встроенный и ai-evolved BAT — это разные стратегии (<c>LoadProfiles</c> при
+    /// совпадении имён отдаёт предпочтение evolved-пути, MainViewModel.Diagnostics.cs), поэтому принять
+    /// чужой генотип по имени файла нельзя — результат проверки уйдёт в историю и бандит под чужим Id
+    /// (правка по Codex P1, ревью #97). Путь известен лишь с одной стороны — сопоставляем по файлу,
+    /// отображаемому имени и исходному пути, как раньше. Пустые значения совпадением НЕ считаются:
+    /// иначе профиль без имени «подошёл» бы любому генотипу без имени.
+    /// </summary>
+    public static bool GenomeMatchesProfile(StrategyGenome genome, ProfileItem profile)
+    {
+        ArgumentNullException.ThrowIfNull(genome);
+        ArgumentNullException.ThrowIfNull(profile);
+
+        static bool Same(string? left, string? right) =>
+            !string.IsNullOrWhiteSpace(left) &&
+            string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+
+        var genomePath = NormalizeBatPath(genome.SourceBatPath);
+        var profilePath = NormalizeBatPath(profile.FullPath);
+        if (genomePath.Length > 0 && profilePath.Length > 0)
+            return string.Equals(genomePath, profilePath, StringComparison.OrdinalIgnoreCase);
+
+        return Same(genome.BatFileName, profile.FileName)
+            || Same(genome.DisplayName, profile.DisplayName)
+            || Same(genome.SourceBatPath, profile.FullPath);
+    }
+
+    /// <summary>
+    /// Путь BAT к единому виду для сравнения: без пробелов, с одинаковыми разделителями и без
+    /// хвостового разделителя. Файловая система не опрашивается — путь может быть сетевым или
+    /// недоступным, а сравнение должно оставаться чистой функцией.
+    /// </summary>
+    private static string NormalizeBatPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return string.Empty;
+
+        return path.Trim().Replace('/', '\\').TrimEnd('\\');
+    }
+
+    /// <summary>
+    /// Подтягивает устаревший путь BAT у генотипа: портативная установка могла переехать, и в реестре
+    /// остаётся прежний абсолютный путь, хотя файл лежит в текущей папке <c>engine\ai-evolved</c>.
+    /// Без этого сопоставление «генотип ↔ профиль» по пути сочло бы свой же генотип чужим (Codex P2, ревью #97).
+    /// </summary>
+    private void RefreshStaleBatPath(StrategyGenome genome)
+    {
+        // Лечим только эволюционированные стратегии: их BAT лежит в engine\ai-evolved и опознаётся по
+        // имени файла, тогда как встроенные заново регистрируются SyncBuiltins по актуальному пути,
+        // и подмена пути встроенного генотипа на одноимённый evolved-BAT была бы ошибкой.
+        if (genome.Origin != StrategyOrigin.Evolved)
+            return;
+
+        if (string.IsNullOrEmpty(genome.BatFileName))
+            return;
+
+        // ═══ Канонический путь evolved-стратегии — ТЕКУЩАЯ папка engine\ai-evolved, а не любой
+        // существующий файл: при копировании портативной установки старая папка остаётся доступной,
+        // и проверка «сохранённый путь ещё жив» навсегда закрепляла бы генотип за старой копией.
+        // Тогда живой профиль новой установки считался бы чужим — проверка выбранной стратегии
+        // пропускалась, а согласование сбрасывало генотип (правка по Codex P2, ревью #97).
+        var current = Path.Combine(_engineDir(), "ai-evolved", genome.BatFileName);
+        if (File.Exists(current))
+        {
+            StoreBatPath(genome, current);
+            return;
+        }
+
+        // Файла в текущей установке нет — оставляем сохранённый путь, если он ещё жив.
+        if (!string.IsNullOrEmpty(genome.SourceBatPath) && File.Exists(genome.SourceBatPath))
+            return;
+    }
+
+    /// <summary>
+    /// Ищет существующий BAT генотипа. Встроенная стратегия живёт в корне <c>engine</c>, эволюционированная —
+    /// в <c>engine\ai-evolved</c>; подставлять встроенной одноимённый evolved-файл нельзя — это другая
+    /// стратегия, и закреплённый за встроенным генотипом путь сделал бы его «владельцем» живого профиля
+    /// (Codex P2, ревью #97). Материализацию из полей делает вызывающий.
+    /// </summary>
+    internal static string? FindExistingBatPath(StrategyGenome g, string engineDir)
+    {
+        if (!string.IsNullOrEmpty(g.SourceBatPath) && File.Exists(g.SourceBatPath))
+            return g.SourceBatPath;
+
+        if (string.IsNullOrEmpty(g.BatFileName))
+            return null;
+
+        var candidate = g.Origin == StrategyOrigin.Builtin
+            ? Path.Combine(engineDir, g.BatFileName)
+            : Path.Combine(engineDir, "ai-evolved", g.BatFileName);
+
+        return File.Exists(candidate) ? candidate : null;
+    }
+
+    /// <summary>
+    /// Записывает актуальный путь BAT в генотип и реестр, если он отличается от сохранённого.
+    /// </summary>
+    private void StoreBatPath(StrategyGenome genome, string path)
+    {
+        var fileName = Path.GetFileName(path);
+        if (string.Equals(genome.SourceBatPath, path, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(genome.BatFileName, fileName, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        genome.SourceBatPath = path;
+        genome.BatFileName = fileName;
+        _registry.Upsert(genome);
+        _registry.Save();
+    }
+
+    /// <summary>
+    /// Согласует отслеживаемый генотип с профилем, который реально работает. Вызывается под УЖЕ
+    /// удержанным мьютексом <see cref="_aiGate"/> после внешней смены профиля (полный скан запустил
+    /// лучшую стратегию): следующий цикл проверяет НОВЫЙ профиль, и если <c>_currentGenome</c> остался
+    /// от прежнего, результат проверки уйдёт в историю и бандит под чужим Id — состояние разъедется
+    /// (правка по Codex P1, ревью #97).
+    /// </summary>
+    /// <returns><c>true</c>, если отслеживаемый генотип сброшен.</returns>
+    public bool ReconcileGenomeWithActiveProfile()
+    {
+        if (_currentGenome is null)
+            return false;
+
+        // Путь в реестре мог устареть при переезде портативной установки — иначе сравнение по пути
+        // сочло бы свой же генотип чужим и сбросило его без причины (Codex P2, ревью #97).
+        RefreshStaleBatPath(_currentGenome);
+
+        var active = _getActiveProfile();
+        if (active is not null && GenomeMatchesProfile(_currentGenome, active))
+            return false;
+
+        _currentGenome = null;
+        // Счётчик неудач относился к прежнему генотипу: если его не обнулить, первая же неудачная
+        // проверка новой стратегии добьёт унаследованную серию и её снимут раньше, чем она получит
+        // положенное число попыток (как и в обычной ветке смены стратегии) — Codex P2, ревью #97.
+        _consecutiveFailures = 0;
+        Notify("ИИ: активный профиль изменён вне ИИ — отслеживаемая стратегия сброшена, подбор на следующем цикле.");
+        return true;
+    }
+
+    /// <summary>Отслеживаемый генотип — для тестов согласования состояния (ревью #97, P1).</summary>
+    internal StrategyGenome? CurrentGenomeForTests
+    {
+        get => _currentGenome;
+        set => _currentGenome = value;
+    }
+
+    /// <summary>Серия неудач по отслеживаемому генотипу — для тестов согласования (ревью #97, P2).</summary>
+    internal int ConsecutiveFailuresForTests
+    {
+        get => _consecutiveFailures;
+        set => _consecutiveFailures = value;
+    }
 
     /// <summary>
     /// Полное сканирование всех включённых стратегий ИИ с сохранением результатов проверки.
@@ -353,6 +534,9 @@ public sealed class AiOrchestratorService : IDisposable
             {
                 Notify("ИИ: текущая стратегия отключена, переподбор...");
                 _currentGenome = null;
+                // Серия неудач относилась к снятой стратегии — иначе следующая получила бы
+                // унаследованный счётчик и была бы снята раньше положенного (Codex P2, ревью #97).
+                _consecutiveFailures = 0;
                 await RepickAfterNetworkChangeAsync(fp, ct).ConfigureAwait(false);
                 return;
             }
@@ -548,29 +732,21 @@ public sealed class AiOrchestratorService : IDisposable
     {
         var engineDir = _engineDir();
 
-        string? path = null;
-        if (!string.IsNullOrEmpty(g.SourceBatPath) && File.Exists(g.SourceBatPath))
-            path = g.SourceBatPath;
-        else if (!string.IsNullOrEmpty(g.BatFileName))
-        {
-            path = Path.Combine(engineDir, "ai-evolved", g.BatFileName);
-            if (!File.Exists(path))
-            {
-                path = _materializer.WriteBat(g, engineDir);
-                g.SourceBatPath = path;
-                g.BatFileName = Path.GetFileName(path);
-                _registry.Upsert(g);
-                _registry.Save();
-            }
-        }
-        else if (g.Origin == StrategyOrigin.Evolved)
-        {
+        // Сначала подтягиваем канонический путь BAT: при копировании портативной установки сохранённый
+        // абсолютный путь ведёт в старую папку, а профили грузятся из новой — запускать надо тот файл,
+        // который видит текущая установка (правка по Codex P2, ревью #97).
+        RefreshStaleBatPath(g);
+
+        string? path = FindExistingBatPath(g, engineDir);
+
+        // Материализация из полей генотипа — только для эволюционированных: восстановленный BAT
+        // пишется в engine\ai-evolved, а встроенную стратегию туда «переселять» нельзя
+        // (правка по Codex P2, ревью #97).
+        if (path is null && g.Origin == StrategyOrigin.Evolved)
             path = _materializer.WriteBat(g, engineDir);
-            g.SourceBatPath = path;
-            g.BatFileName = Path.GetFileName(path);
-            _registry.Upsert(g);
-            _registry.Save();
-        }
+
+        if (path is not null && File.Exists(path))
+            StoreBatPath(g, path);
 
         if (path is null || !File.Exists(path))
             return null;
@@ -834,6 +1010,29 @@ public sealed class AiOrchestratorService : IDisposable
         await _aiGate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
         try
         {
+            ApplyScanResults(results, networkHash);
+        }
+        finally
+        {
+            _aiGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Ядро переноса результатов уже выполненного полного сканирования в генотипы: пишет
+    /// LastVerificationScore/LastVerifiedAt, а также сетевой outcome в историю и bandit-реестр по
+    /// реальным данным проверки (ProcessStable/SuccessRate/FailedChecks), а не реконструируя их из
+    /// композитного счёта. Сетевой хэш захватывается ДО начала скана и передаётся сюда, чтобы при
+    /// смене сети в процессе скана результаты не были помечены новым (а не фактическим) хэшем.
+    /// НЕ захватывает <c>_aiGate</c>: вызывающий обязан держать мьютекс, чтобы между измерением
+    /// профилей и записью результата не вклинился фоновый цикл ИИ — сериализовать нужно весь
+    /// скан-и-импорт целиком, а не только запись (релизный PR #76, P2).
+    /// </summary>
+    public void ApplyScanResults(IReadOnlyList<(Guid genomeId, ProfileProbeResult result)> results, string networkHash)
+    {
+        if (results.Count == 0)
+            return;
+
         _registry.MarkNetworkSeen(networkHash);
         var updated = false;
 
@@ -881,11 +1080,6 @@ public sealed class AiOrchestratorService : IDisposable
 
         if (updated)
             _registry.Save();
-        }
-        finally
-        {
-            _aiGate.Release();
-        }
     }
 
     private void SyncBuiltins()
