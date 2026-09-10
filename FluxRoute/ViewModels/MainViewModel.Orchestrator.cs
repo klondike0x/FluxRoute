@@ -878,18 +878,20 @@ public partial class MainViewModel
                 {
                     bestProfileStarted = true;
                     await SwitchProfileAsync(bestProfile).ConfigureAwait(false);
-
-                    // Согласуем состояние ИИ под тем же удержанием мьютекса: если рабочим стал профиль
-                    // с другим генотипом, отслеживаемый генотип надо сбросить, иначе следующий цикл
-                    // проверит новый профиль, а результат запишет под старым _currentGenome.Id
-                    // (правка по Codex P1, ревью #97).
-                    _aiOrchestrator.ReconcileGenomeWithActiveProfile();
                 }
                 else if (wasRunning && SelectedProfile is not null && !IsTrackedProcessRunning())
                 {
                     bestProfileStarted = true;
                     await EnsureProtectionRunningAsync().ConfigureAwait(false);
                 }
+
+                // ═══ Состояние ИИ согласуем ПОД ТЕМ ЖЕ удержанием мьютекса и во всех случаях: рабочим
+                // становится либо лучший профиль скана, либо последний проверенный (фолбэк, когда ни
+                // один профиль не набрал очков), а скан в любом случае оставляет выбранным последний
+                // проверенный профиль. Если отслеживаемый генотип остался от прежнего профиля,
+                // следующий цикл проверит новый профиль, а результат запишет под чужим Id — порча
+                // истории и состояния бандита (правка по Codex P1, ревью #97).
+                _aiOrchestrator.ReconcileGenomeWithActiveProfile();
             }, scanCt);
 
             SortProfileScores();
