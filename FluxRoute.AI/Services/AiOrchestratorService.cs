@@ -303,6 +303,27 @@ public sealed class AiOrchestratorService : IDisposable
     }
 
     /// <summary>
+    /// Ищет существующий BAT генотипа. Встроенная стратегия живёт в корне <c>engine</c>, эволюционированная —
+    /// в <c>engine\ai-evolved</c>; подставлять встроенной одноимённый evolved-файл нельзя — это другая
+    /// стратегия, и закреплённый за встроенным генотипом путь сделал бы его «владельцем» живого профиля
+    /// (Codex P2, ревью #97). Материализацию из полей делает вызывающий.
+    /// </summary>
+    internal static string? FindExistingBatPath(StrategyGenome g, string engineDir)
+    {
+        if (!string.IsNullOrEmpty(g.SourceBatPath) && File.Exists(g.SourceBatPath))
+            return g.SourceBatPath;
+
+        if (string.IsNullOrEmpty(g.BatFileName))
+            return null;
+
+        var candidate = g.Origin == StrategyOrigin.Builtin
+            ? Path.Combine(engineDir, g.BatFileName)
+            : Path.Combine(engineDir, "ai-evolved", g.BatFileName);
+
+        return File.Exists(candidate) ? candidate : null;
+    }
+
+    /// <summary>
     /// Записывает актуальный путь BAT в генотип и реестр, если он отличается от сохранённого.
     /// </summary>
     private void StoreBatPath(StrategyGenome genome, string path)
@@ -716,25 +737,16 @@ public sealed class AiOrchestratorService : IDisposable
         // который видит текущая установка (правка по Codex P2, ревью #97).
         RefreshStaleBatPath(g);
 
-        string? path = null;
-        if (!string.IsNullOrEmpty(g.SourceBatPath) && File.Exists(g.SourceBatPath))
-            path = g.SourceBatPath;
-        else if (!string.IsNullOrEmpty(g.BatFileName))
-        {
-            path = Path.Combine(engineDir, "ai-evolved", g.BatFileName);
-            if (!File.Exists(path))
-                path = _materializer.WriteBat(g, engineDir);
+        string? path = FindExistingBatPath(g, engineDir);
 
-            // Найденный по имени файла путь мог отличаться от сохранённого (переезд портативной
-            // установки) — реестр надо освежить, иначе генотип перестанет сопоставляться со своим
-            // профилем (Codex P2, ревью #97).
-            StoreBatPath(g, path);
-        }
-        else if (g.Origin == StrategyOrigin.Evolved)
-        {
+        // Материализация из полей генотипа — только для эволюционированных: восстановленный BAT
+        // пишется в engine\ai-evolved, а встроенную стратегию туда «переселять» нельзя
+        // (правка по Codex P2, ревью #97).
+        if (path is null && g.Origin == StrategyOrigin.Evolved)
             path = _materializer.WriteBat(g, engineDir);
+
+        if (path is not null && File.Exists(path))
             StoreBatPath(g, path);
-        }
 
         if (path is null || !File.Exists(path))
             return null;
