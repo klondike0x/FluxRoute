@@ -234,4 +234,56 @@ public sealed class AiOrchestratorPurgeTests : IDisposable
         Assert.Equal(1, deleted);
         Assert.Null(_registry.GetById(weak.Id));
     }
+
+    [Fact]
+    public async Task PurgeCore_UnderSerializedGate_DeletesWithoutDeadlock()
+    {
+        var builtin = AddBuiltin("general", 90);
+        var weak = AddEvolved("evolved_v1", 30);
+        var fp = _fingerprints.Capture();
+        SeedOutcome(builtin.Id, fp.Hash, 90);
+        SeedOutcome(weak.Id, fp.Hash, 30);
+
+        // Production-путь кнопки очистки: снимок активного профиля, очистка и решение activeDeleted
+        // идут под ОДНИМ удержанием мьютекса (RunSerializedAsync), а сама очистка — ядром без захвата.
+        // Повторный WaitAsync по тому же SemaphoreSlim (он не реентерабелен) повесил бы кнопку навсегда,
+        // поэтому проверяем не только результат, но и то, что операция завершается (Codex P1, ревью #76).
+        var deleted = -1;
+        var serialized = _service.RunSerializedAsync(async () =>
+        {
+            deleted = await _service.PurgeWeakEvolutionsCoreAsync().ConfigureAwait(false);
+        });
+
+        var finished = await Task.WhenAny(serialized, Task.Delay(TimeSpan.FromSeconds(10)));
+        Assert.Same(serialized, finished);
+        await serialized;
+
+        Assert.Equal(1, deleted);
+        Assert.Null(_registry.GetById(weak.Id));
+    }
+
+    [Fact]
+    public async Task PurgeWeakEvolutions_WaitsForGateHeldBySerializedRun()
+    {
+        var builtin = AddBuiltin("general", 90);
+        var weak = AddEvolved("evolved_v1", 30);
+        var fp = _fingerprints.Capture();
+        SeedOutcome(builtin.Id, fp.Hash, 90);
+        SeedOutcome(weak.Id, fp.Hash, 30);
+
+        // Публичная (гейтедная) очистка обязана ждать чужое удержание гейта, а не выполнять удаление
+        // параллельно с циклом/сканом: именно это гарантирует, что цикл не переключит профиль
+        // в середине операции (Codex P1, ревью #76).
+        var gateHeld = new TaskCompletionSource();
+        var serialized = _service.RunSerializedAsync(async () => await gateHeld.Task.ConfigureAwait(false));
+
+        var purge = _service.PurgeWeakEvolutionsAsync();
+        await Task.Delay(300);
+        Assert.False(purge.IsCompleted);
+
+        gateHeld.SetResult();
+        await serialized;
+        Assert.Equal(1, await purge);
+        Assert.Null(_registry.GetById(weak.Id));
+    }
 }

@@ -1315,35 +1315,55 @@ public partial class MainViewModel
             return;
 
         AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🗑 Запуск очистки слабых эволюций (порог {AiAutoDeleteBelowScore}%)...");
-        var activeBeforePurge = SelectedProfile;
-        var wasRunning = IsTrackedProcessRunning();
-        // Захватываем генотип, соответствующий активному профилю, ДО очистки —
-        // по нему потом определяем, была ли активная стратегия именно удалена
-        // (а не просто отсутствовала в реестре, как кастомная BAT без генотипа).
-        // Ищем по каноническому пути BAT: при одноимённых встроенном и ai-evolved BAT выбор «по имени»
-        // возвращал встроенный генотип, очистка удаляла активную эволюцию, а activeDeleted оставался
-        // false — защита не останавливалась и не перезапускалась, UI грузился на встроенный профиль,
-        // тогда как процесс прежней эволюции продолжал работать (правка по Codex P2, ревью #76).
-        var activeGenomeBefore = activeBeforePurge is null
-            ? null
-            : _aiOrchestrator.FindGenomeForProfile(activeBeforePurge);
-        try
+
+        // Снимок активного профиля, очистка, решение по её результату и остановка защиты идут в ОДНОМ
+        // удержании мьютекса ИИ. Раньше снимок брался до захвата гейта, а activeDeleted вычислялся
+        // после освобождения: запланированный цикл ИИ успевал переключить профиль с A на B между
+        // снимком и очисткой, и если очистка удаляла B, решение считалось по генотипу A — удалённая
+        // BAT оставалась запущенной, пока UI перезагружался на другой профиль (правка по Codex P1, ревью #76).
+        // Очистку вызываем ядром без повторного захвата гейта: SemaphoreSlim не реентерабелен,
+        // повторный WaitAsync внутри удержанного гейта — дедлок.
+        ProfileItem? activeBeforePurge = null;
+        var wasRunning = false;
+        var activeDeleted = false;
+        var deleted = 0;
+
+        await _aiOrchestrator.RunSerializedAsync(async () =>
         {
-            var deleted = await _aiOrchestrator.PurgeWeakEvolutionsAsync().ConfigureAwait(true);
-            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🗑 Удалено слабых эволюций: {deleted}");
-            Logs.Add($"[ИИ] Очистка слабых эволюций: удалено {deleted}.");
+            activeBeforePurge = SelectedProfile;
+            wasRunning = IsTrackedProcessRunning();
+            // Захватываем генотип, соответствующий активному профилю, ДО очистки —
+            // по нему потом определяем, была ли активная стратегия именно удалена
+            // (а не просто отсутствовала в реестре, как кастомная BAT без генотипа).
+            // Ищем по каноническому пути BAT: при одноимённых встроенном и ai-evolved BAT выбор «по имени»
+            // возвращал встроенный генотип, очистка удаляла активную эволюцию, а activeDeleted оставался
+            // false — защита не останавливалась и не перезапускалась, UI грузился на встроенный профиль,
+            // тогда как процесс прежней эволюции продолжал работать (правка по Codex P2, ревью #76).
+            var activeGenomeBefore = activeBeforePurge is null
+                ? null
+                : _aiOrchestrator.FindGenomeForProfile(activeBeforePurge);
+
+            deleted = await _aiOrchestrator.PurgeWeakEvolutionsCoreAsync().ConfigureAwait(false);
 
             // Активная стратегия удалена очисткой ⇔ ей соответствовал генотип ДО очистки,
             // и теперь этого генотипа больше нет в реестре (правка по Codex P2, седьмой раунд).
-            var activeDeleted = activeGenomeBefore is not null &&
+            activeDeleted = activeGenomeBefore is not null &&
                 _aiRegistry.GetById(activeGenomeBefore.Id) is null;
 
             // Останавливаем защиту ДО перезагрузки профилей, если активную стратегию удалили.
             // Иначе переключение на новый профиль перезапустит защиту, а следующий Stop() убил бы
             // её и ИИ-оркестратор — и защита осталась бы выключенной (правка по Codex P1, шестой раунд).
+            // Stop() уходит на диспетчер: продолжение здесь идёт на пуле потоков, а Stop меняет
+            // привязанные к интерфейсу коллекции журнала и наблюдаемые свойства.
             if (activeDeleted && wasRunning && IsRunning)
-                Stop();
+                await StopOnUiAsync().ConfigureAwait(false);
+        }).ConfigureAwait(true);
 
+        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🗑 Удалено слабых эволюций: {deleted}");
+        Logs.Add($"[ИИ] Очистка слабых эволюций: удалено {deleted}.");
+
+        try
+        {
             // Подавляем смену профиля при перезагрузке ВСЕГДА: даже если активная эволюция не
             // удалялась, LoadProfiles() пересоздаёт объекты профилей и может поднять ложное
             // предупреждение/перезапуск защиты (правка по Codex P2, десятый раунд).

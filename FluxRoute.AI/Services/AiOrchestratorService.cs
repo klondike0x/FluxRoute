@@ -914,25 +914,43 @@ public sealed class AiOrchestratorService : IDisposable
         await _aiGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var threshold = _aiSettings().AutoDeleteBelowScore;
-            var fp = await Task.Run(() => _fingerprints.Capture(), ct).ConfigureAwait(false);
-            _registry.MarkNetworkSeen(fp.Hash);
-            _registry.Save();
+            return await PurgeWeakEvolutionsCoreAsync(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _aiGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Ядро очистки БЕЗ захвата мьютекса ИИ. Вызывать только тогда, когда гейт уже удержан
+    /// вызывающим (внутри <see cref="RunSerializedAsync(Func{Task}, CancellationToken)"/>): повторный
+    /// <c>WaitAsync</c> по тому же <c>SemaphoreSlim</c> — дедлок, он не реентерабелен.
+    /// Нужно тем операциям, которые обязаны быть атомарны ВМЕСТЕ с очисткой: UI-команда очистки
+    /// берёт снимок активного профиля до очистки и решает по её результату, останавливать ли
+    /// защиту, — всё это под одним удержанием гейта (правка по Codex P1, ревью #76).
+    /// </summary>
+    public async Task<int> PurgeWeakEvolutionsCoreAsync(CancellationToken ct = default)
+    {
+        var threshold = _aiSettings().AutoDeleteBelowScore;
+        var fp = await Task.Run(() => _fingerprints.Capture(), ct).ConfigureAwait(false);
+        _registry.MarkNetworkSeen(fp.Hash);
+        _registry.Save();
 
         // Кандидаты — эволюции, чей ПОСЛЕДНИЙ результат именно на ТЕКУЩЕЙ сети ниже порога.
         // Не используем глобальный LastVerificationScore: он без привязки к сети, а порог защиты
         // #62 вычисляется для текущей сети — обе стороны сравнения должны быть на одной сети.
         var candidates = _registry.GetGenomes()
-            .Where(g => g.Origin == StrategyOrigin.Evolved)
-            .Select(g => (genome: g, score: GetLatestScoreOnNetwork(g, fp.Hash)))
-            .Where(x => x.score is { } score && score < threshold)
-            .Select(x => x.genome)
-            .ToList();
+        .Where(g => g.Origin == StrategyOrigin.Evolved)
+        .Select(g => (genome: g, score: GetLatestScoreOnNetwork(g, fp.Hash)))
+        .Where(x => x.score is { } score && score < threshold)
+        .Select(x => x.genome)
+        .ToList();
 
         if (candidates.Count == 0)
         {
-            Notify($"🗑 ИИ: нет слабых эволюций ниже порога {threshold}% на этой сети.");
-            return 0;
+        Notify($"🗑 ИИ: нет слабых эволюций ниже порога {threshold}% на этой сети.");
+        return 0;
         }
 
         // Проверяем, есть ли на этой сети хотя бы одна встроенная стратегия, чей ПОСЛЕДНИЙ
@@ -940,46 +958,41 @@ public sealed class AiOrchestratorService : IDisposable
         // успех в прошлом не должен позволять удалять эволюции, если сейчас встроенная падает
         // (правка по Codex P1, третий раунд).
         var builtinOk = _history.LoadForNetwork(fp.Hash)
-            .Where(o => _registry.GetById(o.GenomeId)?.Origin == StrategyOrigin.Builtin)
-            .GroupBy(o => o.GenomeId)
-            .Select(group => group.OrderByDescending(o => o.Timestamp).First())
-            .Any(o => o.Score >= threshold);
+        .Where(o => _registry.GetById(o.GenomeId)?.Origin == StrategyOrigin.Builtin)
+        .GroupBy(o => o.GenomeId)
+        .Select(group => group.OrderByDescending(o => o.Timestamp).First())
+        .Any(o => o.Score >= threshold);
 
         var deleted = 0;
         foreach (var g in candidates)
         {
-            if (ct.IsCancellationRequested) break;
+        if (ct.IsCancellationRequested) break;
 
-            var thisScore = GetLatestScoreOnNetwork(g, fp.Hash);
-            if (thisScore is not { } score)
-                continue; // нет данных именно на этой сети — не трогаем
+        var thisScore = GetLatestScoreOnNetwork(g, fp.Hash);
+        if (thisScore is not { } score)
+            continue; // нет данных именно на этой сети — не трогаем
 
-            if (!builtinOk)
-            {
-                Notify($"🧬 ИИ: «{g.DisplayName}» ({score}%) ниже порога {threshold}%, но оставлена — встроенные тоже не проходят (сеть агрессивна).");
-                break;
-            }
+        if (!builtinOk)
+        {
+            Notify($"🧬 ИИ: «{g.DisplayName}» ({score}%) ниже порога {threshold}%, но оставлена — встроенные тоже не проходят (сеть агрессивна).");
+            break;
+        }
 
-            Notify($"🗑 ИИ: стратегия «{g.DisplayName}» ({score}%) ниже порога {threshold}% на этой сети — удалена.");
-            if (!TryDeleteGenomeBatFile(g))
-            {
-                // Файл не удалился (занят/защищён) — запись из реестра не убираем,
-                // иначе LoadProfiles() снова найдёт BAT, а реестр им уже не управляет (Codex P2, 9-й раунд).
-                Notify($"⚠️ ИИ: не удалось удалить файл «{g.DisplayName}» — стратегия сохранена.");
-                continue;
-            }
-            _registry.Remove(g.Id);
-            deleted++;
+        Notify($"🗑 ИИ: стратегия «{g.DisplayName}» ({score}%) ниже порога {threshold}% на этой сети — удалена.");
+        if (!TryDeleteGenomeBatFile(g))
+        {
+            // Файл не удалился (занят/защищён) — запись из реестра не убираем,
+            // иначе LoadProfiles() снова найдёт BAT, а реестр им уже не управляет (Codex P2, 9-й раунд).
+            Notify($"⚠️ ИИ: не удалось удалить файл «{g.DisplayName}» — стратегия сохранена.");
+            continue;
+        }
+        _registry.Remove(g.Id);
+        deleted++;
         }
 
         _registry.Save();
         Notify($"🗑 ИИ: очистка завершена — удалено {deleted} слабых эволюций.");
         return deleted;
-        }
-        finally
-        {
-            _aiGate.Release();
-        }
     }
 
     /// <summary>
