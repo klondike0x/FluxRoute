@@ -1710,34 +1710,6 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// v1.7.1: Определяет, нужно ли реально перезаписывать hostlist.
-    /// Сравнивает нормированный набор доменов из файла с целевым UI-набором,
-    /// чтобы не трогать файл, если содержимое уже совпадает (идепотентность).
-    /// </summary>
-    private static bool HostlistFileNeedsWrite(string path, IReadOnlyList<string> domains, bool isEmpty)
-    {
-        try
-        {
-            if (!File.Exists(path))
-                return !isEmpty;
-
-            var existing = File.ReadAllLines(path)
-                .Select(line => line.Trim())
-                .Where(line => !string.IsNullOrWhiteSpace(line)
-                    && !line.StartsWith("#", StringComparison.Ordinal)
-                    && !line.StartsWith(";", StringComparison.Ordinal)
-                    && !line.StartsWith("!", StringComparison.Ordinal))
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var wanted = domains.ToHashSet(StringComparer.OrdinalIgnoreCase);
-            return !existing.SetEquals(wanted);
-        }
-        catch
-        {
-            return true;
-        }
-    }
-
-    /// <summary>
     /// Приводит устаревшее поле <see cref="UserCustomSitesText"/> к актуальному набору
     /// UI-доменов (CustomTargetDomains + CustomExcludeDomains с префиксом «!»), чтобы legacy
     /// миграционный источник не возвращал удалённые/очищенные домены после перезапуска.
@@ -1780,7 +1752,7 @@ public partial class MainViewModel : ObservableObject
             // через интерфейс корректно убирает его и из файла.
             var orderedDomains = domains.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
 
-            if (HostlistFileNeedsWrite(userHostlistPath, orderedDomains, domains.Count == 0))
+            if (HostlistSyncPolicy.NeedsWrite(userHostlistPath, orderedDomains, domains.Count == 0))
             {
                 if (orderedDomains.Count > 0)
                 {
@@ -1816,19 +1788,30 @@ public partial class MainViewModel : ObservableObject
                     excludeDomains.Add(d.Trim());
             }
 
-            if (excludeDomains.Count > 0)
+            // ═══ v1.7.1: та же идемпотентность, что и для list-general-user.txt. Без неё старт
+            // защиты переписывал файл из UI-коллекции и стирал комментарии и пустые строки,
+            // которые пользователь только что сохранил в редакторе (Codex P2, ревью PR #76).
+            var orderedExcludeDomains = excludeDomains.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
+            if (HostlistSyncPolicy.NeedsWrite(excludeHostlistPath, orderedExcludeDomains, excludeDomains.Count == 0))
             {
-                if (File.Exists(excludeHostlistPath))
+                if (orderedExcludeDomains.Count > 0)
                 {
-                    try { File.SetAttributes(excludeHostlistPath, FileAttributes.Normal); } catch { }
+                    if (File.Exists(excludeHostlistPath))
+                    {
+                        try { File.SetAttributes(excludeHostlistPath, FileAttributes.Normal); } catch { }
+                    }
+                    File.WriteAllLines(excludeHostlistPath, orderedExcludeDomains, new UTF8Encoding(false));
+                    Logs.Add($"[Sync] Записано {excludeDomains.Count} исключений в list-exclude-user.txt");
                 }
-                File.WriteAllLines(excludeHostlistPath, excludeDomains.OrderBy(x => x), new UTF8Encoding(false));
-                Logs.Add($"[Sync] Записано {excludeDomains.Count} исключений в list-exclude-user.txt");
+                else if (File.Exists(excludeHostlistPath))
+                {
+                    File.Delete(excludeHostlistPath);
+                    Logs.Add("[Sync] list-exclude-user.txt очищен");
+                }
             }
             else
             {
-                if (File.Exists(excludeHostlistPath))
-                    File.Delete(excludeHostlistPath);
+                Logs.Add("[Sync] list-exclude-user.txt без изменений");
             }
         }
         catch (Exception ex)
