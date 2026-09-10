@@ -17,6 +17,7 @@ namespace FluxRoute.Core.Tests;
 public sealed class AiOrchestratorGenomeReconcileTests : IDisposable
 {
     private readonly string _tempDir;
+    private readonly string _engineDir;
     private readonly AiStrategyRegistry _registry;
     private readonly AiOrchestratorService _service;
     private ProfileItem? _activeProfile;
@@ -27,6 +28,7 @@ public sealed class AiOrchestratorGenomeReconcileTests : IDisposable
         Directory.CreateDirectory(_tempDir);
         var engineDir = Path.Combine(_tempDir, "engine");
         Directory.CreateDirectory(engineDir);
+        _engineDir = engineDir;
 
         _registry = new AiStrategyRegistry(Path.Combine(_tempDir, "registry.json"));
         var history = new AiHistoryStore(Path.Combine(_tempDir, "fluxroute-ai-history.jsonl"));
@@ -79,14 +81,56 @@ public sealed class AiOrchestratorGenomeReconcileTests : IDisposable
     private static ProfileItem Profile(string fileName, string displayName, string fullPath) =>
         new() { FileName = fileName, DisplayName = displayName, FullPath = fullPath };
 
-    private static StrategyGenome Genome(string? batFileName, string displayName, string? sourceBatPath) =>
+    private static StrategyGenome Genome(string? batFileName, string displayName, string? sourceBatPath,
+        StrategyOrigin origin = StrategyOrigin.Builtin) =>
         new()
         {
             BatFileName = batFileName,
             DisplayName = displayName,
             SourceBatPath = sourceBatPath,
+            Origin = origin,
             OrchestratorEnabled = true,
         };
+
+    [Fact]
+    public void ReconcileGenomeWithActiveProfile_RefreshesStaleBatPath_WhenPortableInstallMoved()
+    {
+        var evolvedDir = Path.Combine(_engineDir, "ai-evolved");
+        Directory.CreateDirectory(evolvedDir);
+        var evolvedBat = Path.Combine(evolvedDir, "evolved_v1.bat");
+        File.WriteAllText(evolvedBat, "@echo off");
+
+        // Установка переехала: в реестре остался прежний абсолютный путь к тому же BAT.
+        var genome = Genome("evolved_v1.bat", "evolved_v1",
+            @"C:\СтароеМесто\engine\ai-evolved\evolved_v1.bat", StrategyOrigin.Evolved);
+        _service.CurrentGenomeForTests = genome;
+        _activeProfile = Profile("evolved_v1.bat", "evolved_v1", evolvedBat);
+
+        var reset = _service.ReconcileGenomeWithActiveProfile();
+
+        // Это своя же стратегия — генотип сохраняется, а устаревший путь подтягивается из ai-evolved.
+        Assert.False(reset);
+        Assert.Same(genome, _service.CurrentGenomeForTests);
+        Assert.Equal(evolvedBat, genome.SourceBatPath);
+    }
+
+    [Fact]
+    public void ReconcileGenomeWithActiveProfile_DoesNotAdoptEvolvedBat_ForBuiltinGenome()
+    {
+        var evolvedDir = Path.Combine(_engineDir, "ai-evolved");
+        Directory.CreateDirectory(evolvedDir);
+        var evolvedBat = Path.Combine(evolvedDir, "general.bat");
+        File.WriteAllText(evolvedBat, "@echo off");
+
+        // Одноимённый evolved-BAT не «усыновляется» встроенным генотипом: у встроенных канонический
+        // путь — engine\<имя>, и заново регистрирует их SyncBuiltins.
+        _service.CurrentGenomeForTests = Genome("general.bat", "general",
+            @"C:\СтароеМесто\engine\general.bat");
+        _activeProfile = Profile("general.bat", "general", evolvedBat);
+
+        Assert.True(_service.ReconcileGenomeWithActiveProfile());
+        Assert.Null(_service.CurrentGenomeForTests);
+    }
 
     [Fact]
     public void GenomeMatchesProfile_MatchesByBatFile_DisplayName_OrSourcePath()
