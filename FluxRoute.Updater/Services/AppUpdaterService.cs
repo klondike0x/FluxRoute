@@ -506,13 +506,7 @@ public class AppUpdaterService : IAppUpdaterService
                 await File.WriteAllTextAsync(batPath, installerBat, System.Text.Encoding.UTF8, ct);
                 onProgress("🚀 Запускаем installer с правами администратора...");
 
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = batPath,
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    UseShellExecute = true,
-                    Verb = "runas"
-                });
+                Process.Start(UpdateElevationPolicy.CreateBatLaunch(batPath, needsElevation: true));
 
                 return (true, null);
             }
@@ -582,6 +576,9 @@ public class AppUpdaterService : IAppUpdaterService
                 del /F /Q "{tempZip}" > nul 2>&1
                 rd /S /Q "{tempDir}" > nul 2>&1
                 start "" "{newExePath}"
+                rem Окно updater скрыто, поэтому об отказе сообщаем отдельной консолью:
+                rem иначе UI уже отрапортовал успех, а пользователь просто видит прежнюю версию.
+                start "" cmd /c "echo [FluxRoute Updater] Обновление не установлено: защита не остановилась (winws/WinDivert). Запущена прежняя версия. & timeout /t 25 /nobreak > nul"
                 exit /b 1
                 :windivert_ready_after_update
                 echo [FluxRoute Updater] Устанавливаем v{update.Version}...
@@ -600,22 +597,72 @@ public class AppUpdaterService : IAppUpdaterService
                 """;
 
             await File.WriteAllTextAsync(batPath, bat, System.Text.Encoding.UTF8, ct);
-            onProgress("🚀 Запускаем установщик...");
 
-            // ── 4. Запускаем bat через ShellExecute ───────────────────────
-            var psi = new ProcessStartInfo
+            // ── 4. Снимаем защиту и запускаем bat через ShellExecute ───────
+            // Сначала пробуем остановить движки без повышения прав: обычно защиту поднимало само
+            // приложение, и замена проходит без запроса UAC. Если winws/WinDivert остались (подняты
+            // с правами администратора), BAT без прав не сможет их снять, дойдёт до ветки отмены и
+            // молча запустит прежнюю версию, хотя UI уже отрапортовал успех (Codex P1, ревью #76).
+            UpdateElevationPolicy.StopEnginesBestEffort();
+            var launch = UpdateElevationPolicy.PreparePortableLaunch(
+                batPath,
+                UpdateElevationPolicy.IsProcessElevated,
+                UpdateElevationPolicy.IsEngineProcessRunning);
+
+            onProgress(string.Equals(launch.Verb, "runas", StringComparison.Ordinal)
+                ? "🔐 Защита запущена с правами администратора — запрашиваем права для её остановки..."
+                : "🚀 Запускаем установщик...");
+
+            try
             {
-                FileName        = batPath,
-                WindowStyle     = ProcessWindowStyle.Hidden,
-                UseShellExecute = true
-            };
-            Process.Start(psi);
+                Process.Start(launch);
+            }
+            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+            {
+                // ERROR_CANCELLED — пользователь отказался от UAC. Ничего не заменено, поэтому
+                // возвращаем честный отказ: UI не должен рапортовать об успешном обновлении.
+                TryDeleteArtifacts(batPath, tempZip, tempDir);
+                return (false, "Обновление отменено: для остановки защиты требуются права администратора. "
+                             + "Остановите защиту и повторите обновление.");
+            }
 
             return (true, null);
         }
         catch (Exception ex)
         {
             return (false, $"Ошибка обновления: {ex.Message}");
+        }
+    }
+
+    /// <summary>Удаляет временные файлы обновления, если запуск BAT не состоялся.</summary>
+    private static void TryDeleteArtifacts(string batPath, string tempZip, string tempDir)
+    {
+        try
+        {
+            if (File.Exists(batPath))
+                File.Delete(batPath);
+        }
+        catch
+        {
+            // Временный BAT удалится при следующей уборке — срывом обновления это не является.
+        }
+
+        try
+        {
+            if (File.Exists(tempZip))
+                File.Delete(tempZip);
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+        catch
+        {
         }
     }
 }

@@ -1083,7 +1083,11 @@ public sealed class AiOrchestratorService : IDisposable
 
             if (result.IsWorking(FailThreshold))
             {
-                _registry.RecordBanditSuccess(genomeId, networkHash);
+                // Вес — фактический счёт профиля, а не «1 за успех»: иначе все рабочие профили
+                // получают одинаковое Beta(2,1), и выбор между ними (BestKnownForNetwork после
+                // согласования генотипа) решает порядок перечисления в реестре — сразу после скана
+                // ИИ мог вернуться на слабую стратегию (Codex P2, ревью #76).
+                _registry.RecordBanditOutcome(genomeId, networkHash, result.Score / 100.0);
                 _bandit.RegisterSuccess(genomeId);
             }
             else

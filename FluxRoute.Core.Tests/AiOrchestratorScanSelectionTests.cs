@@ -226,4 +226,48 @@ public sealed class AiOrchestratorScanSelectionTests : IDisposable
         Assert.NotNull(pick);
         Assert.Equal(_strong.Id, pick!.Id);
     }
+
+    /// <summary>
+    /// Свежая сеть: в Beta-состоянии только результаты скана. Если писать всем рабочим профилям
+    /// одинаковый «успех», 76% и 85% дают ровно одно и то же Beta(2,1), и выбор между ними решает
+    /// порядок перечисления в реестре — сразу после скана ИИ мог вернуться на слабую стратегию
+    /// (Codex P2, ревью #76). Счёт профиля обязан влиять на его среднюю.
+    /// </summary>
+    [Fact]
+    public async Task ScanResults_KeepTheirRelativeScores_SoScanWinnerOutranksWeakerStrategy()
+    {
+        var hash = _fingerprints.Capture().Hash;
+        await ImportScanResultsAsync(hash);
+
+        var (weakAlpha, weakBeta) = _registry.GetAggregatedBeta(_weak.Id);
+        var (strongAlpha, strongBeta) = _registry.GetAggregatedBeta(_strong.Id);
+
+        Assert.True(strongAlpha / (strongAlpha + strongBeta) > weakAlpha / (weakAlpha + weakBeta),
+            "счёт скана должен различать профили: иначе 76% и 85% неразличимы");
+
+        // По одной пробе на профиль — импорт скана не удваивает историю.
+        Assert.Equal(1.0, _registry.SumPullsForGenomeOnNetwork(_weak.Id, hash));
+        Assert.Equal(1.0, _registry.SumPullsForGenomeOnNetwork(_strong.Id, hash));
+
+        // Порядок перечисления не должен решать исход: слабый профиль идёт первым.
+        Assert.Equal(_strong.Id, _bandit.BestKnownForNetwork([_weak, _strong], hash)!.Id);
+        Assert.Equal(_strong.Id, _bandit.BestKnownForNetwork([_strong, _weak], hash)!.Id);
+    }
+
+    /// <summary>
+    /// Тот же инвариант на пути цикла ИИ: после скана на свежей сети ИИ обязан поднять сильный профиль,
+    /// а не тот, что стоит первым в списке.
+    /// </summary>
+    [Fact]
+    public async Task AfterScanOnFreshNetwork_NextCycleRunsScanWinner_NotTheWeakerProfile()
+    {
+        var hash = _fingerprints.Capture().Hash;
+        await ImportScanResultsAsync(hash);
+        _service.CurrentGenomeForTests = null;
+
+        await _service.CheckNowAsync();
+
+        Assert.Equal(_strong.Id, _service.CurrentGenomeForTests!.Id);
+        Assert.Equal(_strongProfile.FullPath, _activeProfile!.FullPath);
+    }
 }

@@ -1669,17 +1669,33 @@ public partial class MainViewModel : ObservableObject
     {
         var target = fileName switch
         {
-            "list-general-user.txt" => CustomTargetDomains,
-            "list-exclude-user.txt" => CustomExcludeDomains,
+            UserHostlistImporter.TargetFileName => CustomTargetDomains,
+            UserHostlistImporter.ExclusionFileName => CustomExcludeDomains,
             _ => null
         };
 
         if (target is null)
             return;
 
+        var imported = UserHostlistImporter.Classify(fileName, content, NormalizeDomainInput);
+
         target.Clear();
-        foreach (var domain in ParseHostlistContent(content))
+        foreach (var domain in fileName == UserHostlistImporter.ExclusionFileName
+                     ? imported.Excludes
+                     : imported.Targets)
+        {
             target.Add(domain);
+        }
+
+        // Помеченные строки («!domain») файла доменов — исключения. Раньше префикс просто
+        // отбрасывался и домен попадал в целевые: следующая синхронизация переписывала его
+        // в файл без пометки, и явное исключение превращалось во включение (Codex P2, ревью #76).
+        // Добавляем, не заменяя набор: исключения живут и в отдельном файле, и во вкладке UI.
+        foreach (var domain in imported.Excludes)
+        {
+            if (!CustomExcludeDomains.Contains(domain, StringComparer.OrdinalIgnoreCase))
+                CustomExcludeDomains.Add(domain);
+        }
 
         // Убираем устаревшие значения legacy-поля, иначе они снова попадут
         // в hostlist при следующей синхронизации или перезапуске приложения.
@@ -1688,25 +1704,6 @@ public partial class MainViewModel : ObservableObject
             CustomTargetDomains.Concat(CustomExcludeDomains.Select(domain => $"!{domain}")));
 
         SaveSettings();
-    }
-
-    private IEnumerable<string> ParseHostlistContent(string content)
-    {
-        if (string.IsNullOrWhiteSpace(content))
-            return Enumerable.Empty<string>();
-
-        return content
-            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line.Trim())
-            .Where(line => !string.IsNullOrWhiteSpace(line)
-                && !line.StartsWith("#", StringComparison.Ordinal)
-                && !line.StartsWith(";", StringComparison.Ordinal))
-            .Select(line => line.StartsWith("!", StringComparison.Ordinal)
-                ? line[1..].Trim()
-                : line)
-            .Select(NormalizeDomainInput)
-            .Where(line => !string.IsNullOrWhiteSpace(line))
-            .Distinct(StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
