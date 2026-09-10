@@ -125,12 +125,15 @@ public sealed class AiOrchestratorGenomeReconcileTests : IDisposable
     {
         var genome = Genome("general.bat", "general", @"C:\engine\general.bat");
         _service.CurrentGenomeForTests = genome;
+        _service.ConsecutiveFailuresForTests = 1;
         _activeProfile = Profile("general.bat", "general", @"C:\engine\general.bat");
 
         var reset = _service.ReconcileGenomeWithActiveProfile();
 
         Assert.False(reset);
         Assert.Same(genome, _service.CurrentGenomeForTests);
+        // Свой профиль остался — серия неудач по нему сохраняется.
+        Assert.Equal(1, _service.ConsecutiveFailuresForTests);
     }
 
     [Fact]
@@ -138,6 +141,7 @@ public sealed class AiOrchestratorGenomeReconcileTests : IDisposable
     {
         var genome = Genome("general.bat", "general", @"C:\engine\general.bat");
         _service.CurrentGenomeForTests = genome;
+        _service.ConsecutiveFailuresForTests = 2;
         // Скан выбрал и запустил другую стратегию — отслеживаемый генотип больше не соответствует
         // рабочему профилю и должен быть сброшен, иначе результат уйдёт под старым Id.
         _activeProfile = Profile("evolved_v1.bat", "evolved_v1", @"C:\engine\ai-evolved\evolved_v1.bat");
@@ -146,6 +150,9 @@ public sealed class AiOrchestratorGenomeReconcileTests : IDisposable
 
         Assert.True(reset);
         Assert.Null(_service.CurrentGenomeForTests);
+        // Серия неудач относилась к прежнему генотипу: новая стратегия не должна быть снята
+        // после первой же осечки из-за унаследованного счётчика (Codex P2, ревью #97).
+        Assert.Equal(0, _service.ConsecutiveFailuresForTests);
     }
 
     [Fact]

@@ -253,6 +253,10 @@ public sealed class AiOrchestratorService : IDisposable
             return false;
 
         _currentGenome = null;
+        // Счётчик неудач относился к прежнему генотипу: если его не обнулить, первая же неудачная
+        // проверка новой стратегии добьёт унаследованную серию и её снимут раньше, чем она получит
+        // положенное число попыток (как и в обычной ветке смены стратегии) — Codex P2, ревью #97.
+        _consecutiveFailures = 0;
         Notify("ИИ: активный профиль изменён вне ИИ — отслеживаемая стратегия сброшена, подбор на следующем цикле.");
         return true;
     }
@@ -262,6 +266,13 @@ public sealed class AiOrchestratorService : IDisposable
     {
         get => _currentGenome;
         set => _currentGenome = value;
+    }
+
+    /// <summary>Серия неудач по отслеживаемому генотипу — для тестов согласования (ревью #97, P2).</summary>
+    internal int ConsecutiveFailuresForTests
+    {
+        get => _consecutiveFailures;
+        set => _consecutiveFailures = value;
     }
 
     /// <summary>
@@ -415,6 +426,9 @@ public sealed class AiOrchestratorService : IDisposable
             {
                 Notify("ИИ: текущая стратегия отключена, переподбор...");
                 _currentGenome = null;
+                // Серия неудач относилась к снятой стратегии — иначе следующая получила бы
+                // унаследованный счётчик и была бы снята раньше положенного (Codex P2, ревью #97).
+                _consecutiveFailures = 0;
                 await RepickAfterNetworkChangeAsync(fp, ct).ConfigureAwait(false);
                 return;
             }
