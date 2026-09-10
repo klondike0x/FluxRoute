@@ -834,18 +834,23 @@ public partial class MainViewModel
         try
         {
             _suppressOrchestratorStop = true;
-            // ═══ v1.7.1: фиксируем сетевой хэш ДО начала скана — если сеть сменится в процессе,
-            // результаты не будут помечены новым (а не фактическим) хэшем (правка Codex P1, пятый раунд).
-            var scanNetworkHash = _aiFingerprints.Capture().Hash;
 
             // ═══ Полный скан и импорт его результатов в генотипы ИИ — под ОДНИМ удержанием
             // мьютекса с фоновыми циклами ИИ. Иначе RunCycleAsync успевал бы переключать/пробовать
             // профили, пока скан их измеряет, и в bandit/историю попадали бы баллы за уже нарушенные
             // профили. Сериализовать только запись мало — сериализуется весь скан-и-импорт
             // (правка по Codex, релизный PR #76, P2).
+            // scanCt передаётся и в ожидание мьютекса: если скан отменят, пока он стоит в очереди за
+            // циклом ИИ, выход должен идти через внешний путь отмены, а не через «успешное»
+            // завершение уже отменённого скана (правка по Codex P2, ревью #97).
             var networkUnchangedAfterScan = false;
             await _aiOrchestrator.RunSerializedAsync(async () =>
             {
+                // ═══ v1.7.1: сетевой хэш фиксируем непосредственно перед сканом, уже удерживая
+                // мьютекс, — тогда два замера ограничивают сам скан, а не время ожидания в очереди
+                // за циклом ИИ (правка по Codex P2, ревью #97; ранее — P1, пятый раунд).
+                var scanNetworkHash = _aiFingerprints.Capture().Hash;
+
                 await _orchestrator.ScanAllProfilesAsync(scanCt, progress, checkProgress).ConfigureAwait(true);
 
                 // Если сеть сменилась за время скана — результаты относятся к разным сетям и не
@@ -857,7 +862,7 @@ public partial class MainViewModel
                 // ПРЕДЫДУЩЕГО скана — не переносим их под новым хэшем (Codex P1, 13-й раунд).
                 if (AiEnabled && !scanCt.IsCancellationRequested && networkUnchangedAfterScan)
                     PersistScanScoresIntoGenomes(scanNetworkHash);
-            });
+            }, scanCt);
 
             SortProfileScores();
             RebuildPassedScanProfiles();
