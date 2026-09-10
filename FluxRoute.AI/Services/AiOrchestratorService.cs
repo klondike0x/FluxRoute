@@ -200,7 +200,10 @@ public sealed class AiOrchestratorService : IDisposable
         {
             // ProbeAsync переключается на NEW ProfileItem, которого нет в коллекции Profiles —
             // возвращаем исходный выбранный профиль (правка по Codex P2, десятый раунд).
-            if (active is not null && !ReferenceEquals(_getActiveProfile(), active))
+            // Но при отменённом токене профиль не возвращаем: Stop во время «Проверить сейчас»
+            // гасит winws и отменяет проверку, а SwitchProfileAsync внутри всегда стартует защиту —
+            // возврат профиля незаметно отменял Stop (Codex P1, ревью релизного PR #76).
+            if (!ct.IsCancellationRequested && active is not null && !ReferenceEquals(_getActiveProfile(), active))
                 await _switchProfile(active).ConfigureAwait(false);
         }
         }
