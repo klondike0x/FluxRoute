@@ -214,10 +214,55 @@ public sealed class AiOrchestratorService : IDisposable
     /// Находит генотип, соответствующий выбранному профилю (по имени bat/отображаемому имени/пути).
     /// </summary>
     private StrategyGenome? FindGenomeForProfile(ProfileItem profile) =>
-        _registry.GetGenomes().FirstOrDefault(g =>
-            string.Equals(g.BatFileName, profile.FileName, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(g.DisplayName, profile.DisplayName, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(g.SourceBatPath, profile.FullPath, StringComparison.OrdinalIgnoreCase));
+        _registry.GetGenomes().FirstOrDefault(g => GenomeMatchesProfile(g, profile));
+
+    /// <summary>
+    /// Сопоставление генотипа профилю по тем же признакам, что и в <see cref="FindGenomeForProfile"/>:
+    /// файл BAT, отображаемое имя, исходный путь. Пустые значения совпадением НЕ считаются — иначе
+    /// профиль без имени «подошёл» бы любому генотипу без имени.
+    /// </summary>
+    public static bool GenomeMatchesProfile(StrategyGenome genome, ProfileItem profile)
+    {
+        ArgumentNullException.ThrowIfNull(genome);
+        ArgumentNullException.ThrowIfNull(profile);
+
+        static bool Same(string? left, string? right) =>
+            !string.IsNullOrWhiteSpace(left) &&
+            string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+
+        return Same(genome.BatFileName, profile.FileName)
+            || Same(genome.DisplayName, profile.DisplayName)
+            || Same(genome.SourceBatPath, profile.FullPath);
+    }
+
+    /// <summary>
+    /// Согласует отслеживаемый генотип с профилем, который реально работает. Вызывается под УЖЕ
+    /// удержанным мьютексом <see cref="_aiGate"/> после внешней смены профиля (полный скан запустил
+    /// лучшую стратегию): следующий цикл проверяет НОВЫЙ профиль, и если <c>_currentGenome</c> остался
+    /// от прежнего, результат проверки уйдёт в историю и бандит под чужим Id — состояние разъедется
+    /// (правка по Codex P1, ревью #97).
+    /// </summary>
+    /// <returns><c>true</c>, если отслеживаемый генотип сброшен.</returns>
+    public bool ReconcileGenomeWithActiveProfile()
+    {
+        if (_currentGenome is null)
+            return false;
+
+        var active = _getActiveProfile();
+        if (active is not null && GenomeMatchesProfile(_currentGenome, active))
+            return false;
+
+        _currentGenome = null;
+        Notify("ИИ: активный профиль изменён вне ИИ — отслеживаемая стратегия сброшена, подбор на следующем цикле.");
+        return true;
+    }
+
+    /// <summary>Отслеживаемый генотип — для тестов согласования состояния (ревью #97, P1).</summary>
+    internal StrategyGenome? CurrentGenomeForTests
+    {
+        get => _currentGenome;
+        set => _currentGenome = value;
+    }
 
     /// <summary>
     /// Полное сканирование всех включённых стратегий ИИ с сохранением результатов проверки.

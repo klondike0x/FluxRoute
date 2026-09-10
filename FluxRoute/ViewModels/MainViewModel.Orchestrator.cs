@@ -878,6 +878,12 @@ public partial class MainViewModel
                 {
                     bestProfileStarted = true;
                     await SwitchProfileAsync(bestProfile).ConfigureAwait(false);
+
+                    // Согласуем состояние ИИ под тем же удержанием мьютекса: если рабочим стал профиль
+                    // с другим генотипом, отслеживаемый генотип надо сбросить, иначе следующий цикл
+                    // проверит новый профиль, а результат запишет под старым _currentGenome.Id
+                    // (правка по Codex P1, ревью #97).
+                    _aiOrchestrator.ReconcileGenomeWithActiveProfile();
                 }
                 else if (wasRunning && SelectedProfile is not null && !IsTrackedProcessRunning())
                 {
