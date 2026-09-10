@@ -115,6 +115,23 @@ public sealed class AiOrchestratorService : IDisposable
         }
     }
 
+    /// <summary>
+    /// То же, что <see cref="RunSerializedAsync{T}"/>, но для операции без результата.
+    /// </summary>
+    public async Task RunSerializedAsync(Func<Task> operation, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+        await _aiGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            await operation().ConfigureAwait(false);
+        }
+        finally
+        {
+            _aiGate.Release();
+        }
+    }
+
     public void Start()
     {
         if (_cts is not null)
@@ -834,6 +851,29 @@ public sealed class AiOrchestratorService : IDisposable
         await _aiGate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
         try
         {
+            ApplyScanResults(results, networkHash);
+        }
+        finally
+        {
+            _aiGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Ядро переноса результатов уже выполненного полного сканирования в генотипы: пишет
+    /// LastVerificationScore/LastVerifiedAt, а также сетевой outcome в историю и bandit-реестр по
+    /// реальным данным проверки (ProcessStable/SuccessRate/FailedChecks), а не реконструируя их из
+    /// композитного счёта. Сетевой хэш захватывается ДО начала скана и передаётся сюда, чтобы при
+    /// смене сети в процессе скана результаты не были помечены новым (а не фактическим) хэшем.
+    /// НЕ захватывает <c>_aiGate</c>: вызывающий обязан держать мьютекс, чтобы между измерением
+    /// профилей и записью результата не вклинился фоновый цикл ИИ — сериализовать нужно весь
+    /// скан-и-импорт целиком, а не только запись (релизный PR #76, P2).
+    /// </summary>
+    public void ApplyScanResults(IReadOnlyList<(Guid genomeId, ProfileProbeResult result)> results, string networkHash)
+    {
+        if (results.Count == 0)
+            return;
+
         _registry.MarkNetworkSeen(networkHash);
         var updated = false;
 
@@ -881,11 +921,6 @@ public sealed class AiOrchestratorService : IDisposable
 
         if (updated)
             _registry.Save();
-        }
-        finally
-        {
-            _aiGate.Release();
-        }
     }
 
     private void SyncBuiltins()

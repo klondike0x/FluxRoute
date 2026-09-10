@@ -438,7 +438,7 @@ public partial class MainViewModel
     /// проверки, чтобы вкладка ИИ и очистка/подбор видели фактические значения.
     /// Не перезапускает стратегии. <paramref name="networkHash"/> — хэш сети ДО начала скана.
     /// </summary>
-    private async Task PersistScanScoresIntoGenomes(string networkHash)
+    private void PersistScanScoresIntoGenomes(string networkHash)
     {
         try
         {
@@ -456,7 +456,10 @@ public partial class MainViewModel
                 results.Add((g.Id, entry.result));
             }
 
-            await _aiOrchestrator.PersistScanVerification(results, networkHash).ConfigureAwait(true);
+            // Мьютекс уже удерживает вызывающий (весь скан-и-импорт атомарен относительно циклов
+            // ИИ — релизный PR #76, P2), поэтому вызываем ядро импорта БЕЗ повторного захвата:
+            // SemaphoreSlim не реентерабелен, вложенный захват привёл бы к дедлоку.
+            _aiOrchestrator.ApplyScanResults(results, networkHash);
         }
         catch (Exception ex)
         {
@@ -834,7 +837,28 @@ public partial class MainViewModel
             // ═══ v1.7.1: фиксируем сетевой хэш ДО начала скана — если сеть сменится в процессе,
             // результаты не будут помечены новым (а не фактическим) хэшем (правка Codex P1, пятый раунд).
             var scanNetworkHash = _aiFingerprints.Capture().Hash;
-            await _orchestrator.ScanAllProfilesAsync(scanCt, progress, checkProgress);
+
+            // ═══ Полный скан и импорт его результатов в генотипы ИИ — под ОДНИМ удержанием
+            // мьютекса с фоновыми циклами ИИ. Иначе RunCycleAsync успевал бы переключать/пробовать
+            // профили, пока скан их измеряет, и в bandit/историю попадали бы баллы за уже нарушенные
+            // профили. Сериализовать только запись мало — сериализуется весь скан-и-импорт
+            // (правка по Codex, релизный PR #76, P2).
+            var networkUnchangedAfterScan = false;
+            await _aiOrchestrator.RunSerializedAsync(async () =>
+            {
+                await _orchestrator.ScanAllProfilesAsync(scanCt, progress, checkProgress).ConfigureAwait(true);
+
+                // Если сеть сменилась за время скана — результаты относятся к разным сетям и не
+                // должны быть помечены одним хэшем (правка по Codex P1, восьмой раунд).
+                networkUnchangedAfterScan = string.Equals(_aiFingerprints.Capture().Hash, scanNetworkHash, StringComparison.Ordinal);
+
+                // Импорт идёт сразу, в том же удержании мьютекса — окна для цикла между измерением
+                // и записью нет. При отмене скана LastScanResults может содержать результаты
+                // ПРЕДЫДУЩЕГО скана — не переносим их под новым хэшем (Codex P1, 13-й раунд).
+                if (AiEnabled && !scanCt.IsCancellationRequested && networkUnchangedAfterScan)
+                    PersistScanScoresIntoGenomes(scanNetworkHash);
+            });
+
             SortProfileScores();
             RebuildPassedScanProfiles();
             UpdateScanBestStrategyText();
@@ -851,24 +875,14 @@ public partial class MainViewModel
             // готовые результаты в генотипы БЕЗ повторного запуска стратегий (правка по Codex P2).
             if (AiEnabled)
             {
-                // При отмене скана ScanAllProfilesAsync возвращается штатно, а LastScanResults
-                // может содержать результаты ПРЕДЫДУЩЕГО завершённого скана — не переносим их
-                // под новым хэшем (правка по Codex P1, тринадцатый раунд).
-                if (!scanCt.IsCancellationRequested)
+                // Скан и импорт уже выполнены в одном удержании мьютекса выше; здесь остаётся
+                // только предупредить, если сеть сменилась и результаты сознательно не сохранены
+                // (правка по Codex P1, восьмой раунд).
+                if (!scanCt.IsCancellationRequested && !networkUnchangedAfterScan)
                 {
-                    // Если сеть сменилась за время скана — результаты относятся к разным сетям и не
-                    // должны быть помечены одним хэшем: иначе bandit/очистка получили бы наблюдения
-                    // от чужой сети (правка по Codex P1, восьмой раунд). В этом случае не переносим.
-                    if (string.Equals(_aiFingerprints.Capture().Hash, scanNetworkHash, StringComparison.Ordinal))
-                    {
-                        await PersistScanScoresIntoGenomes(scanNetworkHash);
-                    }
-                    else
-                    {
-                        var msg = "Сеть изменилась во время сканирования — результаты не сохранены.";
-                        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⚠️ {msg}");
-                        Logs.Add($"[ИИ] {msg}");
-                    }
+                    var msg = "Сеть изменилась во время сканирования — результаты не сохранены.";
+                    AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ⚠️ {msg}");
+                    Logs.Add($"[ИИ] {msg}");
                 }
                 RebuildAiStrategyRows();
                 RefreshAiDashboard();

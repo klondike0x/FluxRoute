@@ -189,8 +189,10 @@ public sealed class AiOrchestratorPurgeTests : IDisposable
         var builtin = AddBuiltin("general", 90);
         var weak = AddEvolved("evolved_v1", 30);
 
-        // «Сканировать все стратегии» переносит результаты в историю/геном через PersistScanVerification.
-        _service.PersistScanVerification(
+        // «Сканировать все стратегии» переносит результаты в историю/геном через PersistScanVerification
+        // (gated-обёртка). Вызов обязательно дожидаемся: импорт асинхронный, иначе purge успел бы
+        // отработать до записи наблюдений и тест стал бы флаки.
+        await _service.PersistScanVerification(
             new[]
             {
                 (builtin.Id, new ProfileProbeResult { Score = 90, SuccessRate = 0.9, ProcessStable = true }),
@@ -199,6 +201,34 @@ public sealed class AiOrchestratorPurgeTests : IDisposable
             _fingerprints.Capture().Hash);
 
         // После этого очистка должна найти кандидата и удалить его (защита #62 соблюдена: builtin ок).
+        var deleted = await _service.PurgeWeakEvolutionsAsync();
+
+        Assert.Equal(1, deleted);
+        Assert.Null(_registry.GetById(weak.Id));
+    }
+
+    [Fact]
+    public async Task ApplyScanResults_UnderSerializedScanGate_RecordsOutcome_SoPurgeFindsCandidate()
+    {
+        var builtin = AddBuiltin("general", 90);
+        var weak = AddEvolved("evolved_v1", 30);
+
+        // Production-путь «Сканировать все стратегии»: полный скан и импорт его результатов идут под
+        // ОДНИМ удержанием мьютекса (RunSerializedAsync), импорт — через негейтедное ядро
+        // ApplyScanResults (релизный PR #76, P2). Проверяем именно эту связку.
+        await _service.RunSerializedAsync(async () =>
+        {
+            _service.ApplyScanResults(
+                new[]
+                {
+                    (builtin.Id, new ProfileProbeResult { Score = 90, SuccessRate = 0.9, ProcessStable = true }),
+                    (weak.Id, new ProfileProbeResult { Score = 30, SuccessRate = 0.3, ProcessStable = true }),
+                },
+                _fingerprints.Capture().Hash);
+
+            await Task.CompletedTask.ConfigureAwait(false);
+        });
+
         var deleted = await _service.PurgeWeakEvolutionsAsync();
 
         Assert.Equal(1, deleted);
