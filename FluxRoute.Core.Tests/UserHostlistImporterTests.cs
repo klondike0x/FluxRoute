@@ -385,6 +385,7 @@ public sealed class UserHostlistImporterTests : IDisposable
 
         var rewritten = UserHostlistImporter.RemoveMarkerLines(
             content,
+            Normalize,
             domain => domain == "ads.example.com");
 
         var expected = string.Join(
@@ -406,7 +407,7 @@ public sealed class UserHostlistImporterTests : IDisposable
         var crlf = new string((char)13, 1) + (char)10;
         var content = "# комментарий" + lf + "api.example.com" + crlf + "!ads.example.com" + lf;
 
-        var rewritten = UserHostlistImporter.RemoveMarkerLines(content, domain => domain == "ads.example.com");
+        var rewritten = UserHostlistImporter.RemoveMarkerLines(content, Normalize, domain => domain == "ads.example.com");
 
         Assert.Equal("# комментарий" + lf + "api.example.com" + crlf, rewritten);
     }
@@ -421,7 +422,7 @@ public sealed class UserHostlistImporterTests : IDisposable
         var lf = (char)10;
         var content = "ads.example.com" + lf + "!ads.example.com" + lf + "!tracker.example.com" + lf;
 
-        var rewritten = UserHostlistImporter.RemoveMarkerLines(content, _ => true);
+        var rewritten = UserHostlistImporter.RemoveMarkerLines(content, Normalize, _ => true);
 
         Assert.Equal("ads.example.com" + lf, rewritten);
     }
@@ -431,8 +432,64 @@ public sealed class UserHostlistImporterTests : IDisposable
     {
         var content = string.Join(Environment.NewLine, "youtube.com", "!tracker.example.com", "");
 
-        Assert.Null(UserHostlistImporter.RemoveMarkerLines(content, domain => domain == "ads.example.com"));
-        Assert.Null(UserHostlistImporter.RemoveMarkerLines(null, _ => true));
-        Assert.Null(UserHostlistImporter.RemoveMarkerLines(string.Empty, _ => true));
+        Assert.Null(UserHostlistImporter.RemoveMarkerLines(content, Normalize, domain => domain == "ads.example.com"));
+        Assert.Null(UserHostlistImporter.RemoveMarkerLines(null, Normalize, _ => true));
+        Assert.Null(UserHostlistImporter.RemoveMarkerLines(string.Empty, Normalize, _ => true));
+    }
+
+    /// <summary>
+    /// Пометку можно записать вручную в форме, которую принимает разбор файла
+    /// («!https://www.example.com/path»). Сравнивать её с нормализованным доменом из UI нужно тем же
+    /// правилом нормализации: иначе строка осталась бы в файле, а синхронизация вернула бы исключение
+    /// (Codex P2, ревью pullrequestreview-5191575589).
+    /// </summary>
+    [Fact]
+    public void RemoveMarkerLines_NormalizesMarkerBeforeMatching()
+    {
+        var lf = (char)10;
+        var content = "youtube.com" + lf + "!https://www.Example.com/path?x=1" + lf;
+
+        var rewritten = UserHostlistImporter.RemoveMarkerLines(
+            content,
+            Normalize,
+            domain => string.Equals(domain, "example.com", StringComparison.OrdinalIgnoreCase));
+
+        Assert.Equal("youtube.com" + lf, rewritten);
+    }
+
+    /// <summary>
+    /// Домен может быть сразу в обоих вкладах: и в наборе list-exclude-user.txt, и в пометке файла
+    /// доменов. Удаление из вкладки «Домены» обязано убрать его везде — иначе синхронизация
+    /// перечитает пометку с диска и вернёт исключение (Codex P2, ревью pullrequestreview-5191575589).
+    /// </summary>
+    [Fact]
+    public void ExclusionSet_RemoveDomainFromAllSources_ClearsBothContributions()
+    {
+        var set = new UserHostlistExclusionSet();
+        set.SetExcludeFileDomains(["ads.example.com", "api.example.com"]);
+        set.SetGeneralFileExclusions(["ads.example.com"]);
+
+        var (excludeFileChanged, generalFileChanged) = set.RemoveDomainFromAllSources("ads.example.com");
+
+        Assert.True(excludeFileChanged);
+        Assert.True(generalFileChanged);
+        Assert.Equal(["api.example.com"], set.ExcludeFileDomains);
+        Assert.Equal(["api.example.com"], set.Build());
+
+        Assert.Equal((false, false), set.RemoveDomainFromAllSources("ads.example.com"));
+        Assert.Equal((false, false), set.RemoveDomainFromAllSources(null));
+    }
+
+    [Fact]
+    public void ExclusionSet_RemoveDomainFromAllSources_OnlyGeneralFileMarker()
+    {
+        var set = new UserHostlistExclusionSet();
+        set.SetGeneralFileExclusions(["ads.example.com", "tracker.example.com"]);
+
+        var (excludeFileChanged, generalFileChanged) = set.RemoveDomainFromAllSources("TRACKER.example.com");
+
+        Assert.False(excludeFileChanged);
+        Assert.True(generalFileChanged);
+        Assert.Equal(["ads.example.com"], set.Build());
     }
 }

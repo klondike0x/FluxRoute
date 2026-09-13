@@ -1357,8 +1357,16 @@ public partial class MainViewModel
             // иначе исключение вылетало бы мимо обработчика ниже, асинхронная RelayCommand падала бы
             // без сообщения в журнале, а интерфейс оставался бы не восстановленным
             // (Codex P2, ревью #76).
+            //
+            // Разрешение генотипа активного профиля — внутри обработчика: FindGenomeForProfile
+            // обновляет устаревший путь BAT и сохраняет реестр, то есть тоже пишет на диск и может
+            // упасть с тем же эффектом (Codex P2, ревью pullrequestreview-5191575589).
             try
             {
+                activeGenomeBefore = activeBeforePurge is null
+                    ? null
+                    : _aiOrchestrator.FindGenomeForProfile(activeBeforePurge);
+
                 deleted = await _aiOrchestrator.PurgeWeakEvolutionsCoreAsync().ConfigureAwait(false);
             }
             catch (Exception ex)

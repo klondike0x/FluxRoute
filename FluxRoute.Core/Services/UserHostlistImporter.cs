@@ -156,16 +156,24 @@ public static class UserHostlistImporter
 
     /// <summary>
     /// Убирает из содержимого файла доменов помеченные строки «!domain», для которых
-    /// <paramref name="shouldRemove"/> вернул true (домен передаётся без префикса). Остальные
-    /// строки, включая комментарии, пустые строки и переводы строк, сохраняются как есть.
+    /// <paramref name="shouldRemove"/> вернул true. Домен перед сравнением нормализуется тем же
+    /// правилом, что и при разборе файла (<paramref name="normalize"/>): пометка, записанная вручную
+    /// как «!https://www.example.com/path», иначе не совпала бы с нормализованным доменом из UI —
+    /// строка осталась бы в файле, а следующая синхронизация вернула бы исключение
+    /// (Codex P2, ревью pullrequestreview-5191401080 и pullrequestreview-5191575589).
+    /// Остальные строки, включая комментарии, пустые строки и переводы строк, сохраняются как есть.
     /// Возвращает <c>null</c>, если удалять нечего и файл переписывать не нужно.
     ///
-    /// Нужно при удалении исключения из вкладки «Домены»: она показывает объединение вкладов,
-    /// а синхронизация перечитывает пометки файла доменов с диска — без правки файла удалённое
-    /// исключение возвращалось бы обратно (Codex P2, ревью pullrequestreview-5191401080).
+    /// Нужно при удалении исключения из вкладки «Домены»: она показывает объединение вкладов, а
+    /// синхронизация перечитывает пометки файла доменов с диска — без правки файла удалённое
+    /// исключение возвращалось бы обратно.
     /// </summary>
-    public static string? RemoveMarkerLines(string? content, Func<string, bool> shouldRemove)
+    public static string? RemoveMarkerLines(
+        string? content,
+        Func<string, string> normalize,
+        Func<string, bool> shouldRemove)
     {
+        ArgumentNullException.ThrowIfNull(normalize);
         ArgumentNullException.ThrowIfNull(shouldRemove);
 
         if (string.IsNullOrEmpty(content))
@@ -177,10 +185,14 @@ public static class UserHostlistImporter
         foreach (var (line, terminator) in EnumerateLinesWithTerminators(content))
         {
             var trimmed = line.Trim();
-            if (trimmed.StartsWith("!", StringComparison.Ordinal) && shouldRemove(trimmed[1..].Trim()))
+            if (trimmed.StartsWith("!", StringComparison.Ordinal))
             {
-                removed++;
-                continue;
+                var domain = normalize(trimmed[1..].Trim())?.Trim() ?? string.Empty;
+                if (domain.Length > 0 && shouldRemove(domain))
+                {
+                    removed++;
+                    continue;
+                }
             }
 
             result.Append(line).Append(terminator);

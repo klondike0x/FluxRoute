@@ -81,6 +81,26 @@ public sealed class UserHostlistExclusionSet
     public void ClearExcludeFileDomains() => _excludeFileDomains.Clear();
 
     /// <summary>
+    /// Убирает домен из ОБОИХ вкладов сразу: он может быть и в наборе <c>list-exclude-user.txt</c>,
+    /// и в помеченной строке «!domain» файла доменов. Ранний выход после первого совпадения оставлял
+    /// пометку, и синхронизация, перечитав её с диска, возвращала исключение обратно
+    /// (Codex P2, ревью pullrequestreview-5191575589).
+    ///
+    /// Возвращает, какие вклады изменились: вызывающему нужно знать, править ли файл доменов.
+    /// </summary>
+    public (bool ExcludeFileChanged, bool GeneralFileChanged) RemoveDomainFromAllSources(string? domain)
+    {
+        var excludeFileChanged = RemoveExcludeFileDomain(domain);
+
+        var trimmed = domain?.Trim();
+        var generalFileChanged = !string.IsNullOrEmpty(trimmed)
+            && _generalFileExclusions.RemoveAll(
+                existing => string.Equals(existing, trimmed, StringComparison.OrdinalIgnoreCase)) > 0;
+
+        return (excludeFileChanged, generalFileChanged);
+    }
+
+    /// <summary>
     /// Обновляет вклад файла исключений и отдаёт объединение вкладов для UI и движка (вызывается при
     /// пересборке набора исключений). <paramref name="savedExcludeFileDomains"/> передаётся только
     /// тогда, когда файл исключений сохранён в редакторе — его содержимое и есть новый вклад. Без

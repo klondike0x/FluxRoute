@@ -276,7 +276,8 @@ public partial class MainViewModel : ObservableObject
                 // Пометки «!domain» принадлежат файлу доменов: очистка списка исключений убирает и их,
                 // иначе синхронизация перечитает их из файла и вернёт исключения обратно
                 // (Codex P2, ревью pullrequestreview-5191401080).
-                RemoveGeneralFileMarkers(_ => true);
+                _hostlistExclusions.SetGeneralFileExclusions([]);
+                RewriteGeneralFileMarkers(_ => true);
             }
             SaveSettings();
             SyncCustomHostlist();
@@ -1813,49 +1814,46 @@ public partial class MainViewModel : ObservableObject
         if (target.Length == 0)
             return;
 
-        if (_hostlistExclusions.RemoveExcludeFileDomain(target))
-            return;
+        // Домен может быть в обоих вкладах сразу: и в наборе list-exclude-user.txt, и в пометке
+        // «!domain» файла доменов. Ранний выход после первого совпадения оставлял пометку, и
+        // синхронизация, перечитав её с диска, возвращала домен обратно — хотя в журнале уже
+        // написано об удалении (Codex P2, ревью pullrequestreview-5191575589).
+        var (_, generalFileChanged) = _hostlistExclusions.RemoveDomainFromAllSources(target);
 
-        RemoveGeneralFileMarkers(marker => string.Equals(marker, target, StringComparison.OrdinalIgnoreCase));
+        if (generalFileChanged)
+            RewriteGeneralFileMarkers(marker => string.Equals(marker, target, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
-    /// Убирает помеченные строки «!domain» из файла доменов и из его вклада. Файл правится точечно:
-    /// комментарии, пустые строки, порядок и переводы строк остальных строк сохраняются. Без правки
-    /// файла синхронизация перечитала бы пометку с диска и вернула исключение
-    /// (Codex P2, ревью pullrequestreview-5191401080). Возвращает false, если убирать нечего.
+    /// Переписывает файл доменов, убирая из него помеченные строки, подходящие под условие.
+    /// Файл правится точечно: комментарии, пустые строки, порядок и переводы строк остальных строк
+    /// сохраняются. Без правки файла синхронизация перечитала бы пометки с диска и вернула исключения
+    /// (Codex P2, ревью pullrequestreview-5191401080).
     /// </summary>
-    private bool RemoveGeneralFileMarkers(Func<string, bool> shouldRemove)
+    private void RewriteGeneralFileMarkers(Func<string, bool> shouldRemove)
     {
-        var remaining = _hostlistExclusions.GeneralFileExclusions
-            .Where(marker => !shouldRemove(marker))
-            .ToList();
-
-        if (remaining.Count == _hostlistExclusions.GeneralFileExclusions.Count)
-            return false;
-
-        _hostlistExclusions.SetGeneralFileExclusions(remaining);
-
         var path = Path.Combine(EngineDir, "lists", UserHostlistImporter.TargetFileName);
         try
         {
-            if (File.Exists(path))
-            {
-                var rewritten = UserHostlistImporter.RemoveMarkerLines(File.ReadAllText(path), shouldRemove);
-                if (rewritten is not null)
-                {
-                    try { File.SetAttributes(path, FileAttributes.Normal); } catch { }
-                    File.WriteAllText(path, rewritten, new UTF8Encoding(false));
-                    AddToRecentLogs($"🗑 Пометка исключения удалена из {UserHostlistImporter.TargetFileName}");
-                }
-            }
+            if (!File.Exists(path))
+                return;
+
+            var rewritten = UserHostlistImporter.RemoveMarkerLines(
+                File.ReadAllText(path),
+                NormalizeDomainInput,
+                shouldRemove);
+
+            if (rewritten is null)
+                return;
+
+            try { File.SetAttributes(path, FileAttributes.Normal); } catch { }
+            File.WriteAllText(path, rewritten, new UTF8Encoding(false));
+            AddToRecentLogs($"🗑 Пометки исключений обновлены в {UserHostlistImporter.TargetFileName}");
         }
         catch (Exception ex)
         {
             Logs.Add($"❌ Не удалось обновить {UserHostlistImporter.TargetFileName}: {ex.Message}");
         }
-
-        return true;
     }
 
     private void SyncCustomHostlist()
