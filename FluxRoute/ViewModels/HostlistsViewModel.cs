@@ -12,6 +12,22 @@ public enum HostlistUnsavedChangesDecision
     Stay
 }
 
+/// <summary>Итог сохранения незаписанных правок хостлистов при программном завершении приложения.</summary>
+public enum HostlistPendingEditsResult
+{
+    /// <summary>Несохранённых правок не было — сохранять нечего.</summary>
+    NothingToSave,
+
+    /// <summary>Правки записаны в сам хостлист.</summary>
+    SavedInPlace,
+
+    /// <summary>Записать хостлист не удалось, но содержимое уцелело в каталоге восстановления.</summary>
+    PreservedToRecovery,
+
+    /// <summary>Записать не удалось и копию сохранить тоже: правки остались только в памяти.</summary>
+    NotPreserved
+}
+
 /// <summary>
 /// ViewModel вкладки Хостлисты.
 /// v1.7.0: UI-Redesign
@@ -21,6 +37,7 @@ public partial class HostlistsViewModel : ObservableObject
     private readonly Func<string> _getEngineDir;
     private readonly Action<string> _addLog;
     private readonly Action<string, string>? _onSaved;
+    private readonly Func<string> _getRecoveryDir;
     private HostlistFileItem? _activeFile;
 
     /// <summary>
@@ -31,12 +48,25 @@ public partial class HostlistsViewModel : ObservableObject
     public HostlistsViewModel(
         Func<string> getEngineDir,
         Action<string> addLog,
-        Action<string, string>? onSaved = null)
+        Action<string, string>? onSaved = null,
+        Func<string>? getRecoveryDir = null)
     {
         _getEngineDir = getEngineDir;
         _addLog = addLog;
         _onSaved = onSaved;
+        _getRecoveryDir = getRecoveryDir ?? DefaultRecoveryDir;
     }
+
+    /// <summary>
+    /// Каталог для копий несохранённых правок. Путь самого хостлиста может быть недоступен для записи
+    /// (системный <c>hosts</c> при работе без прав администратора), поэтому копию кладём в каталог
+    /// данных пользователя — он доступен всегда, копия переживёт завершение приложения
+    /// (Codex P2, ревью pullrequestreview-5191837234).
+    /// </summary>
+    private static string DefaultRecoveryDir() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "FluxRoute",
+        "recovery");
 
     public ObservableCollection<HostlistFileItem> Files { get; } = new();
 
@@ -230,34 +260,37 @@ public partial class HostlistsViewModel : ObservableObject
     /// подтверждения закрытия, где единственная проверка <see cref="TryLeave"/> и живёт
     /// (Codex P2, ревью pullrequestreview-5191769205).
     ///
-    /// Возвращает true, если правок не было или они записаны. Если записать не удалось (файл занят
-    /// или доступен только для чтения), содержимое кладётся рядом в файл <c>.unsaved</c>, а результат
-    /// остаётся false — вызывающий обязан сообщить пользователю
-    /// (Codex P2, ревью pullrequestreview-5191807645).
+    /// Если записать хостлист не удалось (файл занят, каталог доступен только для чтения или это
+    /// системный hosts без прав администратора), содержимое кладётся в каталог восстановления —
+    /// недоступным может оказаться и каталог самого файла, поэтому копия идёт в данные пользователя.
+    /// Результат различает эти случаи: вызывающий обязан сообщить пользователю, уцелели ли правки
+    /// (Codex P2, ревью pullrequestreview-5191807645 и pullrequestreview-5191837234).
     /// </summary>
-    public bool SavePendingEdits()
+    public HostlistPendingEditsResult SavePendingEdits()
     {
         if (!HasChanges)
-            return true;
+            return HostlistPendingEditsResult.NothingToSave;
 
         if (TrySave() && !HasChanges)
-            return true;
+            return HostlistPendingEditsResult.SavedInPlace;
 
-        PreservePendingEditsBesideFile();
-        return false;
+        return PreservePendingEditsToRecoveryDir()
+            ? HostlistPendingEditsResult.PreservedToRecovery
+            : HostlistPendingEditsResult.NotPreserved;
     }
 
     /// <summary>
-    /// Кладёт несохранённый буфер рядом с редактируемым файлом (<c>&lt;файл&gt;.unsaved</c>): при
-    /// программном завершении содержимое редактора иначе пропало бы совсем. Строки-комментарии в
+    /// Кладёт несохранённый буфер в каталог восстановления (<c>&lt;хостлист&gt;.&lt;время&gt;.unsaved</c>):
+    /// при программном завершении содержимое редактора иначе пропало бы совсем. Строки-комментарии в
     /// начале объясняют происхождение записи, дальше содержимое переносится как есть, поэтому файл
     /// можно вернуть на место хостлиста (Codex P2, ревью pullrequestreview-5191807645).
+    /// Возвращает true, если копия действительно записана.
     /// </summary>
-    private void PreservePendingEditsBesideFile()
+    private bool PreservePendingEditsToRecoveryDir()
     {
         var file = SelectedFile ?? _activeFile;
         if (file is null)
-            return;
+            return false;
 
         try
         {
@@ -265,21 +298,35 @@ public partial class HostlistsViewModel : ObservableObject
                 ? NormalizeUserHostlistContent(EditorContent)
                 : EditorContent;
 
-            var recoveryPath = file.FullPath + ".unsaved";
+            var recoveryDir = _getRecoveryDir();
+            Directory.CreateDirectory(recoveryDir);
+
+            var recoveryPath = Path.Combine(
+                recoveryDir,
+                $"{SanitizeFileName(file.FileName)}.{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.unsaved");
+
             File.WriteAllText(
                 recoveryPath,
                 $"# FluxRoute: несохранённые правки от {DateTime.Now:yyyy-MM-dd HH:mm:ss}{Environment.NewLine}"
-                + $"# Исходный файл: {file.FileName}{Environment.NewLine}"
+                + $"# Исходный файл: {file.FileName} ({file.FullPath}){Environment.NewLine}"
                 + content);
 
             StatusText = $"Правки не записаны, копия: {Path.GetFileName(recoveryPath)}";
-            _addLog($"[Хостлисты] Не удалось записать {file.FileName}; правки сохранены в {Path.GetFileName(recoveryPath)}");
+            _addLog($"[Хостлисты] Не удалось записать {file.FileName}; правки сохранены в {recoveryPath}");
+            return true;
         }
         catch (Exception ex)
         {
             StatusText = $"Ошибка сохранения: {ex.Message}";
-            _addLog($"[Хостлисты] Не удалось сохранить правки {file.FileName}: {ex.Message}");
+            _addLog($"[Хостлисты] Не удалось сохранить правки {file.FileName} и копию в каталоге восстановления: {ex.Message}");
+            return false;
         }
+    }
+
+    private static string SanitizeFileName(string fileName)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        return new string(fileName.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray());
     }
 
     private bool TrySave()

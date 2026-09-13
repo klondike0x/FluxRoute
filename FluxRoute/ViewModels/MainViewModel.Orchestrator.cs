@@ -972,12 +972,22 @@ public partial class MainViewModel
                 // мьютекс, — тогда два замера ограничивают сам скан, а не время ожидания в очереди
                 // за циклом ИИ (правка по Codex P2, ревью #97; ранее — P1, пятый раунд).
                 var scanNetworkHash = _aiFingerprints.Capture().Hash;
+                // Номер изменения сети на старте скана: кратковременный разрыв (сеть ушла и вернулась
+                // с тем же отпечатком) на концах скана не виден по хэшам, а часть профилей измерена
+                // без сети — такие результаты нельзя импортировать под общим хэшем (Codex P2,
+                // ревью pullrequestreview-5191837234).
+                var scanNetworkGeneration = _aiNetworkWatcher.Generation;
 
                 await _orchestrator.ScanAllProfilesAsync(scanCt, progress, checkProgress).ConfigureAwait(true);
 
                 // Если сеть сменилась за время скана — результаты относятся к разным сетям и не
-                // должны быть помечены одним хэшем (правка по Codex P1, восьмой раунд).
-                networkUnchangedAfterScan = string.Equals(_aiFingerprints.Capture().Hash, scanNetworkHash, StringComparison.Ordinal);
+                // должны быть помечены одним хэшем (правка по Codex P1, восьмой раунд). Одного
+                // сравнения хэшей мало: смена с возвратом к прежнему отпечатку даёт равные концы,
+                // поэтому дополнительно требуем, чтобы счётчик изменений сети не двигался
+                // (Codex P2, ревью pullrequestreview-5191837234).
+                networkUnchangedAfterScan =
+                    string.Equals(_aiFingerprints.Capture().Hash, scanNetworkHash, StringComparison.Ordinal)
+                    && _aiNetworkWatcher.Generation == scanNetworkGeneration;
 
                 // Импорт идёт сразу, в том же удержании мьютекса — окна для цикла между измерением
                 // и записью нет. При отмене скана LastScanResults может содержать результаты

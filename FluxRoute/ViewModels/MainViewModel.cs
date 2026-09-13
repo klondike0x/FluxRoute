@@ -31,28 +31,35 @@ public partial class MainViewModel : ObservableObject
     /// подтверждения закрытия, поэтому буфер редактора пропадал молча
     /// (Codex P2, ревью pullrequestreview-5191769205).
     ///
-    /// Возвращает false, если правки записать не удалось: содержимое остаётся в файле
-    /// <c>&lt;хостлист&gt;.unsaved</c>, а вызывающий обязан сообщить об этом пользователю
-    /// (Codex P2, ревью pullrequestreview-5191807645).
+    /// Возвращает итог сохранения, чтобы вызывающий сообщил пользователю, уцелели ли правки
+    /// (Codex P2, ревью pullrequestreview-5191807645 и pullrequestreview-5191837234).
     /// </summary>
-    public bool RequestApplicationShutdown()
+    public HostlistPendingEditsResult RequestApplicationShutdown()
     {
-        var saved = SaveHostlistEditsBeforeShutdown();
-        if (!saved)
-            AddToRecentLogs("⚠️ Правки хостлистов не записаны — копия в файле .unsaved рядом с хостлистом");
+        var outcome = SaveHostlistEditsBeforeShutdown();
+
+        switch (outcome)
+        {
+            case HostlistPendingEditsResult.PreservedToRecovery:
+                AddToRecentLogs("⚠️ Правки хостлистов не записаны — копия в каталоге восстановления (см. журнал)");
+                break;
+            case HostlistPendingEditsResult.NotPreserved:
+                AddToRecentLogs("⚠️ Правки хостлистов сохранить не удалось — ни в файл, ни в копию");
+                break;
+        }
 
         IsApplicationShutdownRequested = true;
-        return saved;
+        return outcome;
     }
 
     /// <summary>
     /// Сохраняет незаписанные правки хостлистов перед программным завершением. Путь обновления может
     /// вызвать нас с пула потоков, а сохранение меняет привязанное к интерфейсу состояние
     /// (редактор, журнал), поэтому в этом случае сохраняем на диспетчере
-    /// (Codex P2, ревью pullrequestreview-5191769205). Возвращает результат сохранения
-    /// (Codex P2, ревью pullrequestreview-5191807645).
+    /// (Codex P2, ревью pullrequestreview-5191769205). Возвращает итог сохранения
+    /// (Codex P2, ревью pullrequestreview-5191807645 и pullrequestreview-5191837234).
     /// </summary>
-    private bool SaveHostlistEditsBeforeShutdown()
+    private HostlistPendingEditsResult SaveHostlistEditsBeforeShutdown()
     {
         var dispatcher = Application.Current?.Dispatcher;
         if (dispatcher is null || dispatcher.CheckAccess()
@@ -857,6 +864,7 @@ public partial class MainViewModel : ObservableObject
     private readonly AiStrategyRegistry _aiRegistry;
     private readonly AiHistoryStore _aiHistoryStore;
     private readonly NetworkFingerprintProvider _aiFingerprints;
+    private readonly NetworkChangeWatcher _aiNetworkWatcher;
     private readonly DispatcherTimer _orchestratorUiTimer = new(DispatcherPriority.Render) { Interval = TimeSpan.FromSeconds(1) };
 
     // ── Сервис (wrappers → ServiceViewModel) ──
@@ -1162,6 +1170,7 @@ public partial class MainViewModel : ObservableObject
         _aiRegistry = aiRegistry;
         _aiHistoryStore = aiHistoryStore;
         _aiFingerprints = aiFingerprints;
+        _aiNetworkWatcher = aiNetworkWatcher;
         _httpClientFactory = httpClientFactory;
         _taskScheduler = taskScheduler ?? new TaskSchedulerService();
         _trayIcon = trayIcon;

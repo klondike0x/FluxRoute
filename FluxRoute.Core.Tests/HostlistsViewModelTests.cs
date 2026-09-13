@@ -128,7 +128,7 @@ public sealed class HostlistsViewModelTests : IDisposable
         viewModel.EditorContent = "https://pending.example/";
         Assert.True(viewModel.HasChanges);
 
-        Assert.True(viewModel.SavePendingEdits());
+        Assert.Equal(HostlistPendingEditsResult.SavedInPlace, viewModel.SavePendingEdits());
 
         Assert.False(viewModel.HasChanges);
         Assert.Contains(
@@ -151,22 +151,26 @@ public sealed class HostlistsViewModelTests : IDisposable
         viewModel.SelectedFile = viewModel.Files
             .Single(file => file.FileName == "list-general-user.txt");
 
-        Assert.True(viewModel.SavePendingEdits());
+        Assert.Equal(HostlistPendingEditsResult.NothingToSave, viewModel.SavePendingEdits());
         Assert.Empty(notifications);
     }
 
     /// <summary>
-    /// Если записать хостлист не удалось (файл занят или доступен только для чтения), завершение не
-    /// должно терять буфер: правки кладутся рядом в файл .unsaved, а метод сообщает о неудаче
-    /// (Codex P2, ревью pullrequestreview-5191807645).
+    /// Если записать хостлист не удалось (файл занят, каталог только для чтения или системный hosts
+    /// без прав администратора), завершение не должно терять буфер: правки кладутся в каталог
+    /// восстановления — каталог самого файла может быть недоступен для записи, поэтому копия идёт в
+    /// данные пользователя, а результат различает «сохранено» и «уцелело в копии»
+    /// (Codex P2, ревью pullrequestreview-5191807645 и pullrequestreview-5191837234).
     /// </summary>
     [Fact]
-    public void SavePendingEdits_WhenFileIsLocked_PreservesBufferBesideFile_AndReportsFailure()
+    public void SavePendingEdits_WhenFileIsLocked_PreservesBufferToRecoveryDir()
     {
         var logs = new List<string>();
+        var recoveryDir = Path.Combine(_tempDir, "recovery");
         var viewModel = new HostlistsViewModel(
             getEngineDir: () => _tempDir,
-            addLog: logs.Add);
+            addLog: logs.Add,
+            getRecoveryDir: () => recoveryDir);
 
         viewModel.LoadHostlistFiles();
         viewModel.SelectedFile = viewModel.Files
@@ -177,16 +181,47 @@ public sealed class HostlistsViewModelTests : IDisposable
         {
             viewModel.EditorContent = "https://pending.example/";
 
-            Assert.False(viewModel.SavePendingEdits());
+            Assert.Equal(HostlistPendingEditsResult.PreservedToRecovery, viewModel.SavePendingEdits());
         }
 
-        var recoveryPath = path + ".unsaved";
-        Assert.True(File.Exists(recoveryPath));
+        var recoveryPath = Assert.Single(Directory.GetFiles(recoveryDir, "*.unsaved"));
         var recovery = File.ReadAllText(recoveryPath);
         Assert.Contains("pending.example", recovery);
         Assert.Contains("list-general-user.txt", recovery);
         Assert.True(viewModel.HasChanges);
-        Assert.Contains(logs, entry => entry.Contains("unsaved"));
+        Assert.Contains(logs, entry => entry.Contains(recoveryPath));
+        // Копия идёт в каталог восстановления, а не в каталог недоступного файла.
+        Assert.False(File.Exists(path + ".unsaved"));
+    }
+
+    /// <summary>
+    /// Если недоступен и каталог восстановления, результат честно говорит, что правки не уцелели:
+    /// вызывающий обязан сообщить об этом пользователю, а не отчитываться о сохранённой копии
+    /// (Codex P2, ревью pullrequestreview-5191837234).
+    /// </summary>
+    [Fact]
+    public void SavePendingEdits_WhenRecoveryDirUnavailable_ReportsNotPreserved()
+    {
+        var logs = new List<string>();
+        var blockedPath = Path.Combine(_tempDir, "не-каталог");
+        File.WriteAllText(blockedPath, string.Empty); // вместо каталога — файл
+
+        var viewModel = new HostlistsViewModel(
+            getEngineDir: () => _tempDir,
+            addLog: logs.Add,
+            getRecoveryDir: () => Path.Combine(blockedPath, "recovery"));
+
+        viewModel.LoadHostlistFiles();
+        viewModel.SelectedFile = viewModel.Files
+            .Single(file => file.FileName == "list-general-user.txt");
+
+        var path = Path.Combine(_tempDir, "lists", "list-general-user.txt");
+        using (new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+        {
+            viewModel.EditorContent = "https://pending.example/";
+
+            Assert.Equal(HostlistPendingEditsResult.NotPreserved, viewModel.SavePendingEdits());
+        }
     }
 
     [Fact]

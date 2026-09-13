@@ -11,6 +11,15 @@ public sealed class NetworkChangeWatcher : IDisposable
 
     private Timer? _debounceTimer;
     private NetworkFingerprint? _lastEmitted;
+    private int _generation;
+
+    /// <summary>
+    /// Номер изменения сети: увеличивается каждый раз, когда зафиксированный отпечаток сменился.
+    /// Нужен длинным операциям (полный скан): сравнение отпечатков на концах не замечает
+    /// кратковременный разрыв, когда сеть ушла и вернулась с тем же хэшем, а часть замеров сделана
+    /// без сети или на другой сети (Codex P2, ревью pullrequestreview-5191837234).
+    /// </summary>
+    public int Generation => Volatile.Read(ref _generation);
 
     public event EventHandler<(NetworkFingerprint OldFp, NetworkFingerprint NewFp)>? NetworkChanged;
 
@@ -43,6 +52,7 @@ public sealed class NetworkChangeWatcher : IDisposable
                         if (oldSnap?.Hash == next.Hash)
                             return;
                         _lastEmitted = next;
+                        Interlocked.Increment(ref _generation);
                     }
 
                     if (oldSnap is not null)

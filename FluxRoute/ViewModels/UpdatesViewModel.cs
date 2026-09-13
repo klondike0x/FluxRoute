@@ -27,7 +27,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
     private readonly Action _refreshDiagnostics;
     private readonly Action<string> _addAppLog;
     private readonly Action<string> _addRecentLog;
-    private readonly Func<bool> _requestApplicationShutdown;
+    private readonly Func<HostlistPendingEditsResult> _requestApplicationShutdown;
 
     private UpdateInfo? _pendingUpdate;
     private AppUpdateInfo? _pendingAppUpdate;
@@ -61,7 +61,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
         Action refreshDiagnostics,
         Action<string> addAppLog,
         Action<string> addRecentLog,
-        Func<bool> requestApplicationShutdown)
+        Func<HostlistPendingEditsResult> requestApplicationShutdown)
     {
         _updater = updater;
         _appUpdater = appUpdater;
@@ -329,13 +329,20 @@ public sealed partial class UpdatesViewModel : ObservableObject
             AddLog($"✅ FluxRoute v{update.Version} установлен, перезапуск...");
 
             // Правки хостлистов сохраняются до завершения. Отказаться от завершения нельзя: апдейтер
-            // ждёт завершения процесса перед заменой файлов. Если записать не удалось, содержимое
-            // лежит в файле .unsaved рядом с хостлистом, и об этом сообщаем в обоих журналах
-            // (Codex P2, ревью pullrequestreview-5191807645).
-            if (!_requestApplicationShutdown())
+            // ждёт завершения процесса перед заменой файлов. Если записать сам хостлист не удалось,
+            // содержимое лежит в каталоге восстановления, а если и копию записать не получилось —
+            // сообщаем, что правки потеряны (Codex P2, ревью pullrequestreview-5191807645
+            // и pullrequestreview-5191837234).
+            switch (_requestApplicationShutdown())
             {
-                AddLog("⚠️ Правки хостлистов записать не удалось — копия сохранена в файле .unsaved рядом с хостлистом");
-                _addAppLog("⚠️ Правки хостлистов сохранены в файл .unsaved: запись в сам хостлист не удалась");
+                case HostlistPendingEditsResult.PreservedToRecovery:
+                    AddLog("⚠️ Правки хостлистов записать не удалось — копия в каталоге восстановления");
+                    _addAppLog("⚠️ Правки хостлистов сохранены в каталог восстановления: запись в сам хостлист не удалась");
+                    break;
+                case HostlistPendingEditsResult.NotPreserved:
+                    AddLog("⚠️ Правки хостлистов сохранить не удалось — ни в файл, ни в копию");
+                    _addAppLog("⚠️ Правки хостлистов потеряны: запись в файл и в копию не удалась");
+                    break;
             }
 
             Application.Current?.Dispatcher.Invoke(() => Application.Current.Shutdown());
