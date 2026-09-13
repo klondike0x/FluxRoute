@@ -37,6 +37,7 @@ public sealed class AiOrchestratorScanSelectionTests : IDisposable
     private readonly ProfileItem _weakProfile;
     private readonly ProfileItem _strongProfile;
     private readonly List<ProfileItem?> _switches = [];
+    private readonly List<ProfileItem?> _restoreSelectionCalls = [];
     private ProfileItem? _activeProfile;
 
     public AiOrchestratorScanSelectionTests()
@@ -94,6 +95,12 @@ public sealed class AiOrchestratorScanSelectionTests : IDisposable
             switchProfile: p =>
             {
                 _switches.Add(p);
+                _activeProfile = p;
+                return Task.CompletedTask;
+            },
+            restoreSelection: p =>
+            {
+                _restoreSelectionCalls.Add(p);
                 _activeProfile = p;
                 return Task.CompletedTask;
             },

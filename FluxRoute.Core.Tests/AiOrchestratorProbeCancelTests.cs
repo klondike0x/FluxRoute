@@ -23,6 +23,7 @@ public sealed class AiOrchestratorProbeCancelTests : IDisposable
     private readonly NetworkFingerprintProvider _fingerprints;
     private readonly ProfileItem _selectedProfile;
     private readonly List<ProfileItem?> _switches = [];
+    private readonly List<ProfileItem?> _restoreSelectionCalls = [];
     private ProfileItem? _activeProfile;
     private Action<ProfileItem?>? _onSwitch;
 
@@ -71,13 +72,17 @@ public sealed class AiOrchestratorProbeCancelTests : IDisposable
     }
 
     /// <summary>
-    /// Отмена во время пробы (кнопка Stop): профиль не возвращаем, повторного запуска защиты нет.
+    /// Отмена во время пробы (кнопка Stop или закрытие окна подбора): движок не трогаем — иначе
+    /// SwitchProfileAsync снова поднял бы winws после Stop, — но выбор профиля возвращаем служебным
+    /// путём: пробный профиль не входит в коллекцию Profiles, и без возврата выбор оставался бы
+    /// «висящим» вне списка при работающем winws
+    /// (Codex P1, ревью релизного PR #76; P2, ревью pullrequestreview-5191690237).
     /// </summary>
     [Fact]
-    public async Task ProbeSelectedStrategy_WhenCancelled_DoesNotRestoreProfile()
+    public async Task ProbeSelectedStrategy_WhenCancelled_RestoresSelectionWithoutTouchingEngine()
     {
         using var cts = new CancellationTokenSource();
-        // Stop приходит ровно тогда, когда проверка уже переключилась на пробный профиль.
+        // Отмена приходит ровно тогда, когда проверка уже переключилась на пробный профиль.
         _onSwitch = profile =>
         {
             if (profile is not null)
@@ -88,11 +93,14 @@ public sealed class AiOrchestratorProbeCancelTests : IDisposable
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => service.ProbeSelectedStrategyAsync(cts.Token));
 
-        // Единственное переключение — на пробный профиль. Обратно на выбранный не ушли:
-        // иначе SwitchProfileAsync снова поднял бы winws после Stop.
+        // В движок ушло только переключение на пробный профиль: повторного SwitchProfileAsync нет.
         var probeSwitch = Assert.Single(_switches);
         Assert.Equal(_batPath, probeSwitch!.FullPath);
-        Assert.NotSame(_selectedProfile, _activeProfile);
+
+        // Выбор возвращён отдельным путём, без обращения к движку.
+        var restored = Assert.Single(_restoreSelectionCalls);
+        Assert.Same(_selectedProfile, restored);
+        Assert.Same(_selectedProfile, _activeProfile);
     }
 
     /// <summary>
@@ -118,6 +126,8 @@ public sealed class AiOrchestratorProbeCancelTests : IDisposable
 
         Assert.Equal(2, _switches.Count);
         Assert.Same(_selectedProfile, _activeProfile);
+        // Возврат через движок, а не служебный: защита должна вернуться на прежнюю стратегию.
+        Assert.Empty(_restoreSelectionCalls);
     }
 
     private AiOrchestratorService CreateService(Mock<IConnectivityChecker> connectivity)
@@ -131,6 +141,12 @@ public sealed class AiOrchestratorProbeCancelTests : IDisposable
                 _switches.Add(profile);
                 _activeProfile = profile;
                 _onSwitch?.Invoke(profile);
+                return Task.CompletedTask;
+            },
+            restoreSelection: profile =>
+            {
+                _restoreSelectionCalls.Add(profile);
+                _activeProfile = profile;
                 return Task.CompletedTask;
             },
             getTargetsPath: () => "",

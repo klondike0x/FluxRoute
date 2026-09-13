@@ -1313,6 +1313,7 @@ public partial class MainViewModel : ObservableObject
             () => Profiles,
             () => SelectedProfile,
             SwitchProfileAsync,
+            RestoreProbeSelectionAsync,
             () => TargetsPath,
             UpdateProfileScoreAsync,
             () => EngineDir,

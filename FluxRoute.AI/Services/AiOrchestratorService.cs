@@ -19,6 +19,7 @@ public sealed class AiOrchestratorService : IDisposable
     private readonly Func<IEnumerable<ProfileItem>> _getProfiles;
     private readonly Func<ProfileItem?> _getActiveProfile;
     private readonly Func<ProfileItem?, Task> _switchProfile;
+    private readonly Func<ProfileItem?, Task> _restoreSelection;
     private readonly Func<string> _getTargetsPath;
     private readonly Func<string, int, Task> _notifyScoreUpdate;
     private readonly Func<string> _engineDir;
@@ -50,6 +51,7 @@ public sealed class AiOrchestratorService : IDisposable
         Func<IEnumerable<ProfileItem>> getProfiles,
         Func<ProfileItem?> getActiveProfile,
         Func<ProfileItem?, Task> switchProfile,
+        Func<ProfileItem?, Task> restoreSelection,
         Func<string> getTargetsPath,
         Func<string, int, Task> notifyScoreUpdate,
         Func<string> engineDir,
@@ -69,6 +71,7 @@ public sealed class AiOrchestratorService : IDisposable
         _getProfiles = getProfiles;
         _getActiveProfile = getActiveProfile;
         _switchProfile = switchProfile;
+        _restoreSelection = restoreSelection;
         _getTargetsPath = getTargetsPath;
         _notifyScoreUpdate = notifyScoreUpdate;
         _engineDir = engineDir;
@@ -198,13 +201,24 @@ public sealed class AiOrchestratorService : IDisposable
         }
         finally
         {
-            // ProbeAsync переключается на NEW ProfileItem, которого нет в коллекции Profiles —
-            // возвращаем исходный выбранный профиль (правка по Codex P2, десятый раунд).
-            // Но при отменённом токене профиль не возвращаем: Stop во время «Проверить сейчас»
-            // гасит winws и отменяет проверку, а SwitchProfileAsync внутри всегда стартует защиту —
-            // возврат профиля незаметно отменял Stop (Codex P1, ревью релизного PR #76).
-            if (!ct.IsCancellationRequested && active is not null && !ReferenceEquals(_getActiveProfile(), active))
-                await _switchProfile(active).ConfigureAwait(false);
+            // ProbeAsync переключается на NEW ProfileItem, которого нет в коллекции Profiles, —
+            // без возврата выбранный профиль остаётся «висящим» вне списка, а winws при этом работает.
+            // Возврат зависит от того, отменили проверку или нет:
+            //  * обычное завершение — полный возврат через _switchProfile (движок снова поднимает
+            //    прежнюю стратегию);
+            //  * отмена — только выбор в интерфейсе (_restoreSelection): SwitchProfileAsync внутри
+            //    всегда стартует защиту, поэтому при Stop во время проверки возврат профиля незаметно
+            //    отменял Stop. Но и не возвращать выбор нельзя: закрытие окна подбора (StrategyScanWindow
+            //    → CancelScanCommand, без Stop) отменяет ту же проверку, и выбор оставался вне Profiles
+            //    при работающем winws (Codex P1, ревью релизного PR #76; P2, ревью
+            //    pullrequestreview-5191690237).
+            if (active is not null && !ReferenceEquals(_getActiveProfile(), active))
+            {
+                if (ct.IsCancellationRequested)
+                    await _restoreSelection(active).ConfigureAwait(false);
+                else
+                    await _switchProfile(active).ConfigureAwait(false);
+            }
         }
         }
         finally

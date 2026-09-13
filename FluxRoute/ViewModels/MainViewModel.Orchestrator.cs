@@ -543,6 +543,57 @@ public partial class MainViewModel
         return dispatcher.InvokeAsync(Stop).Task;
     }
 
+    /// <summary>
+    /// Возвращает выбор профиля после ОТМЕНЁННОЙ точечной проверки, не трогая движок.
+    /// Через <see cref="SwitchProfileAsync"/> возвращать нельзя: он всегда стартует защиту, поэтому
+    /// при Stop во время проверки возврат профиля незаметно отменял остановку. Но и не возвращать
+    /// выбор нельзя: окно подбора при закрытии отменяет ту же проверку без остановки защиты, и
+    /// выбранный профиль оставался объектом вне коллекции <c>Profiles</c> при работающем winws
+    /// (Codex P1, ревью релизного PR #76; P2, ревью pullrequestreview-5191690237).
+    /// </summary>
+    private Task RestoreProbeSelectionAsync(ProfileItem? profile)
+    {
+        if (profile is null)
+            return Task.CompletedTask;
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+            return Task.CompletedTask;
+
+        if (dispatcher.CheckAccess())
+        {
+            ApplyProbeSelection(profile);
+            return Task.CompletedTask;
+        }
+
+        return dispatcher.InvokeAsync(() => ApplyProbeSelection(profile)).Task;
+    }
+
+    /// <summary>
+    /// Возвращает выбор на профиль, который был активен до проверки. Предупреждение о смене стратегии
+    /// и перезапуск защиты подавляются: это служебный возврат выбора, движок остаётся как есть
+    /// (см. <see cref="RestoreProbeSelectionAsync"/>).
+    /// </summary>
+    private void ApplyProbeSelection(ProfileItem profile)
+    {
+        // Профиль ищем в текущей коллекции: после перезагрузки списка это может быть другой объект
+        // с тем же каноническим путём BAT, и выбранным должен стать именно он.
+        var restored = Profiles.FirstOrDefault(p => ReferenceEquals(p, profile))
+            ?? Profiles.FirstOrDefault(p => !string.IsNullOrEmpty(p.FullPath)
+                && string.Equals(p.FullPath, profile.FullPath, StringComparison.OrdinalIgnoreCase))
+            ?? profile;
+
+        _suppressProfileWarning = true;
+        try
+        {
+            SelectedProfile = restored;
+        }
+        finally
+        {
+            _suppressProfileWarning = false;
+        }
+    }
+
     private (int successes, int trials, double wilsonLower) WilsonStatsForGenome(StrategyGenome g)
     {
         var outcomes = _aiHistoryStore.LoadAll().Where(o => o.GenomeId == g.Id).ToList();

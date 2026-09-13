@@ -56,6 +56,7 @@ public sealed class AiOrchestratorGenomeReconcileTests : IDisposable
             getProfiles: () => new List<ProfileItem>(),
             getActiveProfile: () => _activeProfile,
             switchProfile: _ => Task.CompletedTask,
+            restoreSelection: _ => Task.CompletedTask,
             getTargetsPath: () => "",
             notifyScoreUpdate: (_, _) => Task.CompletedTask,
             engineDir: () => engineDir,

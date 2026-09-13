@@ -58,6 +58,7 @@ public sealed class AiOrchestratorPurgeTests : IDisposable
             getProfiles: () => new List<ProfileItem>(),
             getActiveProfile: () => null,
             switchProfile: _ => Task.CompletedTask,
+            restoreSelection: _ => Task.CompletedTask,
             getTargetsPath: () => "",
             notifyScoreUpdate: (_, _) => Task.CompletedTask,
             engineDir: () => engineDir,
