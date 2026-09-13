@@ -21,6 +21,7 @@ public sealed class AiOrchestratorProbeCancelTests : IDisposable
     private readonly AiStrategyRegistry _registry;
     private readonly AiHistoryStore _history;
     private readonly NetworkFingerprintProvider _fingerprints;
+    private readonly NetworkChangeWatcher _watcher;
     private readonly ProfileItem _selectedProfile;
     private readonly List<ProfileItem?> _switches = [];
     private readonly List<ProfileItem?> _restoreSelectionCalls = [];
@@ -55,6 +56,7 @@ public sealed class AiOrchestratorProbeCancelTests : IDisposable
 
         _history = new AiHistoryStore(Path.Combine(_tempDir, "history.jsonl"));
         _fingerprints = new NetworkFingerprintProvider();
+        _watcher = new NetworkChangeWatcher(_fingerprints);
         _activeProfile = _selectedProfile;
     }
 
@@ -130,6 +132,36 @@ public sealed class AiOrchestratorProbeCancelTests : IDisposable
         Assert.Empty(_restoreSelectionCalls);
     }
 
+    /// <summary>
+    /// Смена сети во время пробы обесценивает её результат, даже если отпечаток успел вернуться к
+    /// исходному: сравнение одних хэшей на концах такой разрыв пропускает, а проверки в это время
+    /// измеряли недоступную сеть — ложный отказ уходил бы в историю и bandit как настоящий, вплоть до
+    /// удаления только что выведенной стратегии (Codex P2, ревью pullrequestreview-5191937751).
+    /// </summary>
+    [Fact]
+    public async Task ProbeSelectedStrategy_WhenNetworkChangesMidProbe_DoesNotPersistResult()
+    {
+        var connectivity = new Mock<IConnectivityChecker>();
+        connectivity
+            .Setup(c => c.CheckAllAsync(
+                It.IsAny<IEnumerable<TargetEntry>>(),
+                It.IsAny<bool>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<IProgress<CheckResult>>()))
+            // Так о смене сети узнаёт сам сервис — событие системы NetworkAddressChanged. Отпечаток при
+            // этом может вернуться к исходному, поэтому на концах пробы хэши совпадают.
+            .Callback(() => _watcher.RegisterNetworkChangeSignal())
+            // Проверки провалены: без учёта смены сети этот отказ ушёл бы в историю.
+            .ReturnsAsync((0.0, new List<CheckResult>()));
+
+        var service = CreateService(connectivity);
+
+        await service.ProbeSelectedStrategyAsync(CancellationToken.None);
+
+        Assert.Empty(_history.LoadAll());
+    }
+
     private AiOrchestratorService CreateService(Mock<IConnectivityChecker> connectivity)
     {
         var materializer = new BatMaterializer();
@@ -158,7 +190,7 @@ public sealed class AiOrchestratorProbeCancelTests : IDisposable
             ensureProtectionRunning: () => Task.CompletedTask,
             connectivity.Object,
             _fingerprints,
-            new NetworkChangeWatcher(_fingerprints),
+            _watcher,
             _registry,
             _history,
             new BanditSelector(_registry, new Random(1)),

@@ -825,12 +825,20 @@ public sealed class AiOrchestratorService : IDisposable
             ProcessWaitTimeout = TimeSpan.FromSeconds(8),
             StopAfterProbe = false,
         };
+        // Номер изменения сети на старте пробы. Одного сравнения хэшей на концах мало: разрыв, при
+        // котором сеть ушла и вернулась к прежнему отпечатку, концы не разводит, а проверки в это время
+        // измеряли недоступную сеть — отказ уходил бы в историю и bandit как настоящий, вплоть до
+        // удаления только что выведенной стратегии (Codex P2, ревью pullrequestreview-5191937751).
+        var networkGenerationBeforeProbe = _networkWatcher.Generation;
+
         var result = await _probeService.ProbeAsync(testProfile, targets, probeOptions, ct).ConfigureAwait(false);
 
-        // Если сеть сменилась за время пробы (ожидание старта/стабилизации/проверки целей) —
-        // результат относится к другой сети и не должен быть записан под исходным хэшем:
-        // иначе bandit/очистка получили бы наблюдение от чужой сети (правка по Codex P2, 12-й раунд).
-        if (!string.Equals(_fingerprints.Capture().Hash, fp.Hash, StringComparison.Ordinal))
+        // Если сеть сменилась за время пробы (ожидание старта/стабилизации/проверки целей) — результат
+        // относится к другой сети и не должен быть записан под исходным хэшем: иначе bandit/очистка
+        // получили бы наблюдение от чужой сети (правка по Codex P2, 12-й раунд; счётчик смены сети —
+        // 14-й раунд, ревью pullrequestreview-5191937751).
+        if (!string.Equals(_fingerprints.Capture().Hash, fp.Hash, StringComparison.Ordinal)
+            || _networkWatcher.Generation != networkGenerationBeforeProbe)
         {
             Notify($"⚠️ ИИ: сеть изменилась во время проверки «{g.DisplayName}» — результат не сохранён.");
             return false;
