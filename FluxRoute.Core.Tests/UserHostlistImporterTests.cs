@@ -365,4 +365,74 @@ public sealed class UserHostlistImporterTests : IDisposable
 
         Assert.Equal(["api.example.com"], resolved);
     }
+
+    /// <summary>
+    /// Удаление исключения, которым владеет файл доменов: правка файла не должна задевать остальные
+    /// строки — комментарии, пустые строки, порядок и переводы строк сохраняются
+    /// (Codex P2, ревью pullrequestreview-5191401080).
+    /// </summary>
+    [Fact]
+    public void RemoveMarkerLines_DropsOnlyMatchingMarker_AndKeepsOtherLines()
+    {
+        var content = string.Join(
+            Environment.NewLine,
+            "# мои домены",
+            "youtube.com",
+            "!ads.example.com",
+            "; заметка",
+            "!tracker.example.com",
+            "");
+
+        var rewritten = UserHostlistImporter.RemoveMarkerLines(
+            content,
+            domain => domain == "ads.example.com");
+
+        var expected = string.Join(
+            Environment.NewLine,
+            "# мои домены",
+            "youtube.com",
+            "; заметка",
+            "!tracker.example.com",
+            "");
+
+        Assert.Equal(expected, rewritten);
+    }
+
+    /// <summary>Переводы строк остальных строк не меняются: LF остаётся LF, CRLF — CRLF.</summary>
+    [Fact]
+    public void RemoveMarkerLines_KeepsMixedLineEndings()
+    {
+        var lf = (char)10;
+        var crlf = new string((char)13, 1) + (char)10;
+        var content = "# комментарий" + lf + "api.example.com" + crlf + "!ads.example.com" + lf;
+
+        var rewritten = UserHostlistImporter.RemoveMarkerLines(content, domain => domain == "ads.example.com");
+
+        Assert.Equal("# комментарий" + lf + "api.example.com" + crlf, rewritten);
+    }
+
+    /// <summary>
+    /// Очистка списка исключений убирает все пометки сразу, а строки без «!» не трогает: домены
+    /// назначения остаются целевыми (Codex P2, ревью pullrequestreview-5191401080).
+    /// </summary>
+    [Fact]
+    public void RemoveMarkerLines_RemovesAllMarkers_AndIgnoresPlainDomains()
+    {
+        var lf = (char)10;
+        var content = "ads.example.com" + lf + "!ads.example.com" + lf + "!tracker.example.com" + lf;
+
+        var rewritten = UserHostlistImporter.RemoveMarkerLines(content, _ => true);
+
+        Assert.Equal("ads.example.com" + lf, rewritten);
+    }
+
+    [Fact]
+    public void RemoveMarkerLines_NothingToRemove_ReturnsNull()
+    {
+        var content = string.Join(Environment.NewLine, "youtube.com", "!tracker.example.com", "");
+
+        Assert.Null(UserHostlistImporter.RemoveMarkerLines(content, domain => domain == "ads.example.com"));
+        Assert.Null(UserHostlistImporter.RemoveMarkerLines(null, _ => true));
+        Assert.Null(UserHostlistImporter.RemoveMarkerLines(string.Empty, _ => true));
+    }
 }

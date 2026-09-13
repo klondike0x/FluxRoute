@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace FluxRoute.Core.Services;
 
@@ -152,6 +153,65 @@ public static class UserHostlistImporter
             .Select(domain => domain.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+    /// <summary>
+    /// Убирает из содержимого файла доменов помеченные строки «!domain», для которых
+    /// <paramref name="shouldRemove"/> вернул true (домен передаётся без префикса). Остальные
+    /// строки, включая комментарии, пустые строки и переводы строк, сохраняются как есть.
+    /// Возвращает <c>null</c>, если удалять нечего и файл переписывать не нужно.
+    ///
+    /// Нужно при удалении исключения из вкладки «Домены»: она показывает объединение вкладов,
+    /// а синхронизация перечитывает пометки файла доменов с диска — без правки файла удалённое
+    /// исключение возвращалось бы обратно (Codex P2, ревью pullrequestreview-5191401080).
+    /// </summary>
+    public static string? RemoveMarkerLines(string? content, Func<string, bool> shouldRemove)
+    {
+        ArgumentNullException.ThrowIfNull(shouldRemove);
+
+        if (string.IsNullOrEmpty(content))
+            return null;
+
+        var result = new StringBuilder();
+        var removed = 0;
+
+        foreach (var (line, terminator) in EnumerateLinesWithTerminators(content))
+        {
+            var trimmed = line.Trim();
+            if (trimmed.StartsWith("!", StringComparison.Ordinal) && shouldRemove(trimmed[1..].Trim()))
+            {
+                removed++;
+                continue;
+            }
+
+            result.Append(line).Append(terminator);
+        }
+
+        return removed > 0 ? result.ToString() : null;
+    }
+
+    /// <summary>
+    /// Перечисляет строки вместе с их переводом строки (LF, CRLF или CR) — нужно, чтобы
+    /// редактирование файла не меняло переводы строк в остальных строках.
+    /// </summary>
+    private static IEnumerable<(string Line, string Terminator)> EnumerateLinesWithTerminators(string content)
+    {
+        var start = 0;
+
+        for (var i = 0; i < content.Length; i++)
+        {
+            if (content[i] != (char)13 && content[i] != (char)10)
+                continue;
+
+            var terminatorLength = content[i] == (char)13 && i + 1 < content.Length && content[i + 1] == (char)10 ? 2 : 1;
+            yield return (content[start..i], content.Substring(i, terminatorLength));
+
+            i += terminatorLength - 1;
+            start = i + 1;
+        }
+
+        if (start < content.Length)
+            yield return (content[start..], string.Empty);
+    }
 
     private static IEnumerable<string> EnumerateLines(string? content)
     {

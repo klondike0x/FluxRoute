@@ -13,10 +13,19 @@ public static class HostlistSyncPolicy
 {
     /// <summary>
     /// true — файл нужно перезаписать (или создать при непустом наборе), false — содержимое совпадает.
-    /// Комментарии (#, ;) и строки с префиксом «!» при сравнении игнорируются: важно только
-    /// эффективное множество доменов.
+    /// Комментарии (#, ;) при сравнении игнорируются: важно только эффективное множество доменов.
+    ///
+    /// <paramref name="markedLinesAreExclusions"/> — для <c>list-exclude-user.txt</c>, где строка
+    /// «!domain» тоже исключение (<see cref="UserHostlistImporter.Classify"/> принимает любую её форму).
+    /// В файле доменов такие строки — вклад другого набора, поэтому там они отбрасываются: иначе
+    /// исключение сравнивалось бы с набором целей и файл переписывался бы на каждом старте защиты
+    /// (Codex P2, ревью pullrequestreview-5191401080).
     /// </summary>
-    public static bool NeedsWrite(string path, IReadOnlyList<string> domains, bool isEmpty)
+    public static bool NeedsWrite(
+        string path,
+        IReadOnlyList<string> domains,
+        bool isEmpty,
+        bool markedLinesAreExclusions = false)
     {
         try
         {
@@ -27,8 +36,12 @@ public static class HostlistSyncPolicy
                 .Select(line => line.Trim())
                 .Where(line => !string.IsNullOrWhiteSpace(line)
                     && !line.StartsWith("#", StringComparison.Ordinal)
-                    && !line.StartsWith(";", StringComparison.Ordinal)
-                    && !line.StartsWith("!", StringComparison.Ordinal))
+                    && !line.StartsWith(";", StringComparison.Ordinal))
+                .Select(line => markedLinesAreExclusions && line.StartsWith("!", StringComparison.Ordinal)
+                    ? line[1..].Trim()
+                    : line)
+                .Where(line => line.Length > 0
+                    && (markedLinesAreExclusions || !line.StartsWith("!", StringComparison.Ordinal)))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var wanted = domains.ToHashSet(StringComparer.OrdinalIgnoreCase);
             return !existing.SetEquals(wanted);

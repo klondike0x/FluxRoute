@@ -237,7 +237,7 @@ public partial class MainViewModel : ObservableObject
         {
             list.Remove(domain);
             if (SelectedTabMode == "Exclusions")
-                _hostlistExclusions.RemoveExcludeFileDomain(domain);
+                RemoveExclusionFromOwnerSource(domain);
             SaveSettings();
             SyncCustomHostlist();
             AddToRecentLogs($"🗑 Удалён домен: {domain}");
@@ -271,7 +271,13 @@ public partial class MainViewModel : ObservableObject
         {
             list.Clear();
             if (SelectedTabMode == "Exclusions")
+            {
                 _hostlistExclusions.ClearExcludeFileDomains();
+                // Пометки «!domain» принадлежат файлу доменов: очистка списка исключений убирает и их,
+                // иначе синхронизация перечитает их из файла и вернёт исключения обратно
+                // (Codex P2, ревью pullrequestreview-5191401080).
+                RemoveGeneralFileMarkers(_ => true);
+            }
             SaveSettings();
             SyncCustomHostlist();
             AddToRecentLogs($"🗑 Список {modeName} очищен");
@@ -1794,6 +1800,64 @@ public partial class MainViewModel : ObservableObject
             CustomExcludeDomains.Add(domain);
     }
 
+    /// <summary>
+    /// Убирает исключение из того источника, который им владеет: набора файла
+    /// <c>list-exclude-user.txt</c> или пометки «!domain» файла доменов. Вкладка «Домены» показывает
+    /// объединение вкладов, поэтому удаление только из UI-коллекции ничего не даёт: синхронизация
+    /// перечитывает пометки файла доменов с диска и возвращает домен обратно, хотя в журнале уже
+    /// написано, что он удалён (Codex P2, ревью pullrequestreview-5191401080).
+    /// </summary>
+    private void RemoveExclusionFromOwnerSource(string domain)
+    {
+        var target = NormalizeDomainInput(domain);
+        if (target.Length == 0)
+            return;
+
+        if (_hostlistExclusions.RemoveExcludeFileDomain(target))
+            return;
+
+        RemoveGeneralFileMarkers(marker => string.Equals(marker, target, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Убирает помеченные строки «!domain» из файла доменов и из его вклада. Файл правится точечно:
+    /// комментарии, пустые строки, порядок и переводы строк остальных строк сохраняются. Без правки
+    /// файла синхронизация перечитала бы пометку с диска и вернула исключение
+    /// (Codex P2, ревью pullrequestreview-5191401080). Возвращает false, если убирать нечего.
+    /// </summary>
+    private bool RemoveGeneralFileMarkers(Func<string, bool> shouldRemove)
+    {
+        var remaining = _hostlistExclusions.GeneralFileExclusions
+            .Where(marker => !shouldRemove(marker))
+            .ToList();
+
+        if (remaining.Count == _hostlistExclusions.GeneralFileExclusions.Count)
+            return false;
+
+        _hostlistExclusions.SetGeneralFileExclusions(remaining);
+
+        var path = Path.Combine(EngineDir, "lists", UserHostlistImporter.TargetFileName);
+        try
+        {
+            if (File.Exists(path))
+            {
+                var rewritten = UserHostlistImporter.RemoveMarkerLines(File.ReadAllText(path), shouldRemove);
+                if (rewritten is not null)
+                {
+                    try { File.SetAttributes(path, FileAttributes.Normal); } catch { }
+                    File.WriteAllText(path, rewritten, new UTF8Encoding(false));
+                    AddToRecentLogs($"🗑 Пометка исключения удалена из {UserHostlistImporter.TargetFileName}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"❌ Не удалось обновить {UserHostlistImporter.TargetFileName}: {ex.Message}");
+        }
+
+        return true;
+    }
+
     private void SyncCustomHostlist()
     {
         // v1.6.0: Пропускаем синхронизацию, если пользователь её отключил
@@ -1881,7 +1945,15 @@ public partial class MainViewModel : ObservableObject
             // защиты переписывал файл из UI-коллекции и стирал комментарии и пустые строки,
             // которые пользователь только что сохранил в редакторе (Codex P2, ревью PR #76).
             var orderedExcludeDomains = excludeDomains.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
-            if (HostlistSyncPolicy.NeedsWrite(excludeHostlistPath, orderedExcludeDomains, excludeDomains.Count == 0))
+            // Строка «!domain» здесь тоже исключение (list-exclude-user.txt читается целиком), поэтому
+            // при сравнении префикс снимается, а не отбрасывается вместе со строкой: иначе файл
+            // считался бы разошедшимся и переписывался бы с потерей комментариев
+            // (Codex P2, ревью pullrequestreview-5191401080).
+            if (HostlistSyncPolicy.NeedsWrite(
+                excludeHostlistPath,
+                orderedExcludeDomains,
+                excludeDomains.Count == 0,
+                markedLinesAreExclusions: true))
             {
                 if (orderedExcludeDomains.Count > 0)
                 {

@@ -83,6 +83,57 @@ public sealed class HostlistSyncPolicyTests : IDisposable
         Assert.False(HostlistSyncPolicy.NeedsWrite(path, new[] { "api.example.com" }, isEmpty: false));
     }
 
+    /// <summary>
+    /// В файле исключений строка «!домен» — тоже исключение (<see cref="UserHostlistImporter.Classify"/>
+    /// принимает любую форму строки), поэтому при сравнении префикс снимается, а не отбрасывается
+    /// вместе со строкой. Иначе эффективный набор совпадает, но файл считается разошедшимся и
+    /// переписывается с потерей комментариев и форматирования
+    /// (Codex P2, ревью pullrequestreview-5191401080).
+    /// </summary>
+    [Fact]
+    public void NeedsWrite_ExclusionFile_MarkedEntry_CountsAsExclusion()
+    {
+        var content = string.Join(
+            Environment.NewLine,
+            "# мои исключения",
+            "api.example.com",
+            "!tracker.example.com",
+            "");
+
+        var path = Write("list-exclude-user.txt", content);
+
+        Assert.False(HostlistSyncPolicy.NeedsWrite(
+            path,
+            new[] { "api.example.com", "tracker.example.com" },
+            isEmpty: false,
+            markedLinesAreExclusions: true));
+    }
+
+    [Fact]
+    public void NeedsWrite_ExclusionFile_MissingMarkedEntry_ReturnsTrue()
+    {
+        var path = Write("list-exclude-user.txt", "api.example.com\n");
+
+        Assert.True(HostlistSyncPolicy.NeedsWrite(
+            path,
+            new[] { "api.example.com", "tracker.example.com" },
+            isEmpty: false,
+            markedLinesAreExclusions: true));
+    }
+
+    [Fact]
+    public void NeedsWrite_ExclusionFile_OnlyMarkerLine_WithEmptyWantedSet_ReturnsFalse()
+    {
+        // Одна строка «!» без домена не превращается в пустую запись набора.
+        var path = Write("list-exclude-user.txt", "!\n");
+
+        Assert.False(HostlistSyncPolicy.NeedsWrite(
+            path,
+            Array.Empty<string>(),
+            isEmpty: true,
+            markedLinesAreExclusions: true));
+    }
+
     [Fact]
     public void NeedsWrite_MissingFile_WithDomains_ReturnsTrue()
     {
