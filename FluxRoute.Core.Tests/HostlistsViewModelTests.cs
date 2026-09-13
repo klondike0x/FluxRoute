@@ -155,6 +155,40 @@ public sealed class HostlistsViewModelTests : IDisposable
         Assert.Empty(notifications);
     }
 
+    /// <summary>
+    /// Если записать хостлист не удалось (файл занят или доступен только для чтения), завершение не
+    /// должно терять буфер: правки кладутся рядом в файл .unsaved, а метод сообщает о неудаче
+    /// (Codex P2, ревью pullrequestreview-5191807645).
+    /// </summary>
+    [Fact]
+    public void SavePendingEdits_WhenFileIsLocked_PreservesBufferBesideFile_AndReportsFailure()
+    {
+        var logs = new List<string>();
+        var viewModel = new HostlistsViewModel(
+            getEngineDir: () => _tempDir,
+            addLog: logs.Add);
+
+        viewModel.LoadHostlistFiles();
+        viewModel.SelectedFile = viewModel.Files
+            .Single(file => file.FileName == "list-general-user.txt");
+
+        var path = Path.Combine(_tempDir, "lists", "list-general-user.txt");
+        using (new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+        {
+            viewModel.EditorContent = "https://pending.example/";
+
+            Assert.False(viewModel.SavePendingEdits());
+        }
+
+        var recoveryPath = path + ".unsaved";
+        Assert.True(File.Exists(recoveryPath));
+        var recovery = File.ReadAllText(recoveryPath);
+        Assert.Contains("pending.example", recovery);
+        Assert.Contains("list-general-user.txt", recovery);
+        Assert.True(viewModel.HasChanges);
+        Assert.Contains(logs, entry => entry.Contains("unsaved"));
+    }
+
     [Fact]
     public void SaveCommand_ExcludeList_NotifiesOwnerWithUpdatedContent()
     {

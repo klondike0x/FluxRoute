@@ -224,18 +224,62 @@ public partial class HostlistsViewModel : ObservableObject
 
     /// <summary>
     /// Сохраняет незаписанные правки редактора перед программным завершением приложения (обновление,
-    /// подтверждённый выход из трея). Спрашивать здесь неуместно: обновление уже установлено и
-    /// приложение обязано перезапуститься, но и молча терять буфер редактора нельзя — путь обновления
-    /// завершает приложение в обход подтверждения закрытия, где единственная проверка
-    /// <see cref="TryLeave"/> и живёт (Codex P2, ревью pullrequestreview-5191769205).
-    /// Возвращает true, если правок не было или они записаны.
+    /// подтверждённый выход из трея). Спрашивать здесь неуместно: обновление уже установлено, а
+    /// апдейтер ждёт завершения процесса перед заменой файлов, поэтому завершение обязательно. Но и
+    /// молча терять буфер редактора нельзя — путь обновления завершает приложение в обход
+    /// подтверждения закрытия, где единственная проверка <see cref="TryLeave"/> и живёт
+    /// (Codex P2, ревью pullrequestreview-5191769205).
+    ///
+    /// Возвращает true, если правок не было или они записаны. Если записать не удалось (файл занят
+    /// или доступен только для чтения), содержимое кладётся рядом в файл <c>.unsaved</c>, а результат
+    /// остаётся false — вызывающий обязан сообщить пользователю
+    /// (Codex P2, ревью pullrequestreview-5191807645).
     /// </summary>
     public bool SavePendingEdits()
     {
         if (!HasChanges)
             return true;
 
-        return TrySave() && !HasChanges;
+        if (TrySave() && !HasChanges)
+            return true;
+
+        PreservePendingEditsBesideFile();
+        return false;
+    }
+
+    /// <summary>
+    /// Кладёт несохранённый буфер рядом с редактируемым файлом (<c>&lt;файл&gt;.unsaved</c>): при
+    /// программном завершении содержимое редактора иначе пропало бы совсем. Строки-комментарии в
+    /// начале объясняют происхождение записи, дальше содержимое переносится как есть, поэтому файл
+    /// можно вернуть на место хостлиста (Codex P2, ревью pullrequestreview-5191807645).
+    /// </summary>
+    private void PreservePendingEditsBesideFile()
+    {
+        var file = SelectedFile ?? _activeFile;
+        if (file is null)
+            return;
+
+        try
+        {
+            var content = IsUserHostlist(file.FileName)
+                ? NormalizeUserHostlistContent(EditorContent)
+                : EditorContent;
+
+            var recoveryPath = file.FullPath + ".unsaved";
+            File.WriteAllText(
+                recoveryPath,
+                $"# FluxRoute: несохранённые правки от {DateTime.Now:yyyy-MM-dd HH:mm:ss}{Environment.NewLine}"
+                + $"# Исходный файл: {file.FileName}{Environment.NewLine}"
+                + content);
+
+            StatusText = $"Правки не записаны, копия: {Path.GetFileName(recoveryPath)}";
+            _addLog($"[Хостлисты] Не удалось записать {file.FileName}; правки сохранены в {Path.GetFileName(recoveryPath)}");
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Ошибка сохранения: {ex.Message}";
+            _addLog($"[Хостлисты] Не удалось сохранить правки {file.FileName}: {ex.Message}");
+        }
     }
 
     private bool TrySave()

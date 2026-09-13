@@ -27,7 +27,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
     private readonly Action _refreshDiagnostics;
     private readonly Action<string> _addAppLog;
     private readonly Action<string> _addRecentLog;
-    private readonly Action _requestApplicationShutdown;
+    private readonly Func<bool> _requestApplicationShutdown;
 
     private UpdateInfo? _pendingUpdate;
     private AppUpdateInfo? _pendingAppUpdate;
@@ -61,7 +61,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
         Action refreshDiagnostics,
         Action<string> addAppLog,
         Action<string> addRecentLog,
-        Action requestApplicationShutdown)
+        Func<bool> requestApplicationShutdown)
     {
         _updater = updater;
         _appUpdater = appUpdater;
@@ -327,7 +327,17 @@ public sealed partial class UpdatesViewModel : ObservableObject
         if (success)
         {
             AddLog($"✅ FluxRoute v{update.Version} установлен, перезапуск...");
-            _requestApplicationShutdown();
+
+            // Правки хостлистов сохраняются до завершения. Отказаться от завершения нельзя: апдейтер
+            // ждёт завершения процесса перед заменой файлов. Если записать не удалось, содержимое
+            // лежит в файле .unsaved рядом с хостлистом, и об этом сообщаем в обоих журналах
+            // (Codex P2, ревью pullrequestreview-5191807645).
+            if (!_requestApplicationShutdown())
+            {
+                AddLog("⚠️ Правки хостлистов записать не удалось — копия сохранена в файле .unsaved рядом с хостлистом");
+                _addAppLog("⚠️ Правки хостлистов сохранены в файл .unsaved: запись в сам хостлист не удалась");
+            }
+
             Application.Current?.Dispatcher.Invoke(() => Application.Current.Shutdown());
         }
         else

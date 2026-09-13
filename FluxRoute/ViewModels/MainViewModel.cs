@@ -30,30 +30,38 @@ public partial class MainViewModel : ObservableObject
     /// сохраняем незаписанные правки хостлистов: путь обновления завершает приложение в обход
     /// подтверждения закрытия, поэтому буфер редактора пропадал молча
     /// (Codex P2, ревью pullrequestreview-5191769205).
+    ///
+    /// Возвращает false, если правки записать не удалось: содержимое остаётся в файле
+    /// <c>&lt;хостлист&gt;.unsaved</c>, а вызывающий обязан сообщить об этом пользователю
+    /// (Codex P2, ревью pullrequestreview-5191807645).
     /// </summary>
-    public void RequestApplicationShutdown()
+    public bool RequestApplicationShutdown()
     {
-        SaveHostlistEditsBeforeShutdown();
+        var saved = SaveHostlistEditsBeforeShutdown();
+        if (!saved)
+            AddToRecentLogs("⚠️ Правки хостлистов не записаны — копия в файле .unsaved рядом с хостлистом");
+
         IsApplicationShutdownRequested = true;
+        return saved;
     }
 
     /// <summary>
     /// Сохраняет незаписанные правки хостлистов перед программным завершением. Путь обновления может
     /// вызвать нас с пула потоков, а сохранение меняет привязанное к интерфейсу состояние
     /// (редактор, журнал), поэтому в этом случае сохраняем на диспетчере
-    /// (Codex P2, ревью pullrequestreview-5191769205).
+    /// (Codex P2, ревью pullrequestreview-5191769205). Возвращает результат сохранения
+    /// (Codex P2, ревью pullrequestreview-5191807645).
     /// </summary>
-    private void SaveHostlistEditsBeforeShutdown()
+    private bool SaveHostlistEditsBeforeShutdown()
     {
         var dispatcher = Application.Current?.Dispatcher;
         if (dispatcher is null || dispatcher.CheckAccess()
             || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
         {
-            Hostlists.SavePendingEdits();
-            return;
+            return Hostlists.SavePendingEdits();
         }
 
-        dispatcher.Invoke(() => Hostlists.SavePendingEdits());
+        return dispatcher.Invoke(() => Hostlists.SavePendingEdits());
     }
 
     // ── Коллекции ──
