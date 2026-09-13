@@ -112,27 +112,46 @@ public static class UserHostlistImporter
     }
 
     /// <summary>
-    /// Восстанавливает вклад <c>list-exclude-user.txt</c> из объединённого набора, сохранённого
-    /// прежними версиями: там оба вклада лежали вместе, поэтому помеченные строки файла доменов
-    /// вычитаются — они вклад другого файла. Нужно один раз при переносе настроек; дальше вклад
-    /// хранится отдельным полем и больше из объединения не собирается
-    /// (Codex P2, ревью #76).
+    /// Вклад <c>list-exclude-user.txt</c> — отдельно от вклада помеченных строк файла доменов.
+    /// Помеченные строки принадлежат ДРУГОМУ файлу, но их копию синхронизация хранит и в файле
+    /// исключений (движок читает исключения только отсюда), поэтому «зеркало» надо вычитать в двух
+    /// случаях: при переносе объединённого набора настроек прежних версий и при сохранении файла
+    /// исключений из редактора — иначе снятая в файле доменов пометка «!domain» оставалась бы в силе
+    /// уже через файл исключений (Codex P2, ревью #76 и pullrequestreview-5191366024).
     /// </summary>
     public static List<string> DeriveExcludeFileDomains(
         IEnumerable<string>? mergedDomains,
         IEnumerable<string>? generalFileExclusions)
     {
-        var generalMarkers = new HashSet<string>(
-            (generalFileExclusions ?? []).Where(domain => !string.IsNullOrWhiteSpace(domain)).Select(domain => domain.Trim()),
-            StringComparer.OrdinalIgnoreCase);
+        var generalMarkers = new HashSet<string>(NormalizeDomains(generalFileExclusions), StringComparer.OrdinalIgnoreCase);
 
-        return (mergedDomains ?? [])
-            .Where(domain => !string.IsNullOrWhiteSpace(domain))
-            .Select(domain => domain.Trim())
+        return NormalizeDomains(mergedDomains)
             .Where(domain => !generalMarkers.Contains(domain))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
+
+    /// <summary>
+    /// Вклад <c>list-exclude-user.txt</c> при запуске приложения. Сохранённый список используется
+    /// КАК ЕСТЬ, даже если он пуст (например, все исключения приходили из пометок «!domain»):
+    /// повторный разбор объединённого набора вернул бы в набор исключений домен из пометки, снятой
+    /// пока приложение было закрыто. Выводить вклад разрешено только когда поля в настройках ещё нет
+    /// (<c>null</c>) — это настройки прежних версий (Codex P2, ревью pullrequestreview-5191366024).
+    /// </summary>
+    public static List<string> ResolveExcludeFileDomains(
+        IEnumerable<string>? persistedExcludeFileDomains,
+        IEnumerable<string>? mergedDomains,
+        IEnumerable<string>? generalFileExclusions)
+        => persistedExcludeFileDomains is not null
+            ? NormalizeDomains(persistedExcludeFileDomains)
+            : DeriveExcludeFileDomains(mergedDomains, generalFileExclusions);
+
+    /// <summary>Убирает пустые записи, обрезает пробелы и дедуплицирует набор доменов.</summary>
+    private static List<string> NormalizeDomains(IEnumerable<string>? domains)
+        => (domains ?? [])
+            .Where(domain => !string.IsNullOrWhiteSpace(domain))
+            .Select(domain => domain.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     private static IEnumerable<string> EnumerateLines(string? content)
     {

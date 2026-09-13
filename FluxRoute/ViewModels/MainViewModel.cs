@@ -1400,19 +1400,17 @@ public partial class MainViewModel : ObservableObject
         }
 
         // Вклад list-exclude-user.txt переносим отдельным полем. У настроек прежних версий такого
-        // поля нет, поэтому объединённый набор разделяем, вычитая помеченные строки файла доменов:
-        // они вклад другого файла, и без вычитания домен из снятой пометки «!domain» попадал бы
-        // в набор исключений и переезжал бы в list-exclude-user.txt (Codex P2, ревью #76).
-        var persistedExcludeFileDomains = settings.CustomExcludeFileDomains;
-        if (persistedExcludeFileDomains is not { Count: > 0 })
-        {
-            var generalFileHostlistPath = Path.Combine(EngineDir, "lists", UserHostlistImporter.TargetFileName);
-            persistedExcludeFileDomains = UserHostlistImporter.DeriveExcludeFileDomains(
-                CustomExcludeDomains,
-                UserHostlistImporter.ReadExclusionsFromFile(generalFileHostlistPath, NormalizeDomainInput));
-        }
-
-        _hostlistExclusions.SetExcludeFileDomains(persistedExcludeFileDomains);
+        // поля нет (null), и тогда объединённый набор разделяем, вычитая помеченные строки файла
+        // доменов: они вклад другого файла. Пустой сохранённый список — настоящий вклад, поэтому
+        // повторно его не разбираем: иначе домен из пометки, снятой пока приложение было закрыто,
+        // вернулся бы в набор исключений и переехал бы в list-exclude-user.txt
+        // (Codex P2, ревью #76 и pullrequestreview-5191366024).
+        _hostlistExclusions.SetExcludeFileDomains(UserHostlistImporter.ResolveExcludeFileDomains(
+            settings.CustomExcludeFileDomains,
+            CustomExcludeDomains,
+            UserHostlistImporter.ReadExclusionsFromFile(
+                Path.Combine(EngineDir, "lists", UserHostlistImporter.TargetFileName),
+                NormalizeDomainInput)));
 
         AutoUpdateEnabled = settings.AutoUpdateEnabled;
         AutoStartEnabled = settings.AutoStartEnabled;
@@ -1721,10 +1719,22 @@ public partial class MainViewModel : ObservableObject
 
         if (isExclusionFile)
         {
-            // Содержимое этого файла — источник истины для своего набора (вкладка «Домены» пишет туда же),
-            // а вклад файла доменов сохраняется: иначе помеченные в нём строки перестанут попадать
-            // в --hostlist-exclude (Codex P2, ревью #76).
-            ApplyHostlistExclusions(imported.Excludes);
+            // Содержимое этого файла — источник истины для своего набора (вкладка «Домены» пишет туда
+            // же), а вклад файла доменов сохраняется: иначе помеченные в нём строки перестанут
+            // попадать в --hostlist-exclude (Codex P2, ревью #76).
+            //
+            // Но синхронизация хранит в файле исключений и «зеркало» помеченных строк файла доменов
+            // (движок читает исключения только отсюда). Такие строки принадлежат другому файлу,
+            // поэтому при сохранении файла в редакторе они не становятся его собственным набором:
+            // иначе снятая в файле доменов пометка «!domain» осталась бы в силе уже через файл
+            // исключений (Codex P2, ревью pullrequestreview-5191366024).
+            var generalFileMarkers = _hostlistExclusions.GeneralFileExclusions.Concat(
+                UserHostlistImporter.ReadExclusionsFromFile(
+                    Path.Combine(EngineDir, "lists", UserHostlistImporter.TargetFileName),
+                    NormalizeDomainInput));
+
+            ApplyHostlistExclusions(
+                UserHostlistImporter.DeriveExcludeFileDomains(imported.Excludes, generalFileMarkers));
         }
         else
         {

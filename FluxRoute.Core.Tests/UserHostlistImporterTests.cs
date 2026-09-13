@@ -309,4 +309,60 @@ public sealed class UserHostlistImporterTests : IDisposable
 
         Assert.Empty(UserHostlistImporter.DeriveExcludeFileDomains(null, ["ads.example.com"]));
     }
+
+    /// <summary>
+    /// Сохранение файла исключений из редактора: синхронизация пишет в этот файл и «зеркало»
+    /// помеченных строк файла доменов (движок читает исключения только отсюда). Такие строки не
+    /// становятся собственным набором файла — иначе снятая в файле доменов пометка «!domain»
+    /// осталась бы в силе уже через файл исключений (Codex P2, ревью pullrequestreview-5191366024).
+    /// </summary>
+    [Fact]
+    public void DeriveExcludeFileDomains_DropsMirroredMarkers_WhenExclusionFileIsSaved()
+    {
+        // В файле лежат и собственный домен, и «зеркало» пометки из list-general-user.txt.
+        var savedExclusionFileLines = new[] { "api.example.com", "ads.example.com" };
+
+        var owned = UserHostlistImporter.DeriveExcludeFileDomains(savedExclusionFileLines, ["ads.example.com"]);
+
+        Assert.Equal(["api.example.com"], owned);
+    }
+
+    /// <summary>
+    /// Запуск приложения: сохранённый вклад используется как есть, даже если он пуст. Разбор из
+    /// объединённого набора разрешён только для настроек прежних версий (поля нет — null), иначе
+    /// домен из пометки, снятой пока приложение было закрыто, вернулся бы в файл исключений
+    /// (Codex P2, ревью pullrequestreview-5191366024).
+    /// </summary>
+    [Fact]
+    public void ResolveExcludeFileDomains_EmptySavedContribution_IsNotDerivedAgain()
+    {
+        var resolved = UserHostlistImporter.ResolveExcludeFileDomains(
+            persistedExcludeFileDomains: [],
+            mergedDomains: ["ads.example.com"],
+            generalFileExclusions: []);
+
+        Assert.Empty(resolved);
+    }
+
+    [Fact]
+    public void ResolveExcludeFileDomains_SavedContribution_IsUsedAsIs()
+    {
+        var resolved = UserHostlistImporter.ResolveExcludeFileDomains(
+            persistedExcludeFileDomains: [" CDN.example.com ", "cdn.example.com"],
+            mergedDomains: ["ads.example.com"],
+            generalFileExclusions: ["ads.example.com"]);
+
+        Assert.Equal(["CDN.example.com"], resolved);
+    }
+
+    [Fact]
+    public void ResolveExcludeFileDomains_MissingField_IsDerivedFromMergedSet()
+    {
+        var resolved = UserHostlistImporter.ResolveExcludeFileDomains(
+            persistedExcludeFileDomains: null,
+            mergedDomains: ["api.example.com", "ads.example.com"],
+            generalFileExclusions: ["ads.example.com"]);
+
+        Assert.Equal(["api.example.com"], resolved);
+    }
 }

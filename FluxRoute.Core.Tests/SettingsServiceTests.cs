@@ -83,14 +83,35 @@ public sealed class SettingsServiceTests : IDisposable
     }
 
     /// <summary>
-    /// Настройки прежних версий не содержат отдельного поля: после загрузки поле пустое, но не null —
-    /// вклад восстанавливается миграцией, а не падением (Codex P2, ревью #76).
+    /// Настройки прежних версий не содержат отдельного поля, и после загрузки оно остаётся null:
+    /// только так его можно отличить от сохранённого пустого вклада, который разбирать повторно
+    /// нельзя (Codex P2, ревью pullrequestreview-5191366024).
     /// </summary>
     [Fact]
-    public void Load_WhenExcludeFileDomainsAbsent_ReturnsEmptyList()
+    public void Load_WhenExcludeFileDomainsAbsent_StaysNull()
     {
         var svc = CreateService();
         svc.Save(new AppSettings { CustomExcludeDomains = ["ads.example.com"] });
+
+        var loaded = svc.Load();
+
+        Assert.Null(loaded.CustomExcludeFileDomains);
+    }
+
+    /// <summary>
+    /// Пустой вклад — это сохранённое значение, а не отсутствие поля: загрузка обязана вернуть пустой
+    /// список, иначе вклад выводился бы заново из объединённого набора и домен из снятой пометки
+    /// возвращался бы в набор исключений (Codex P2, ревью pullrequestreview-5191366024).
+    /// </summary>
+    [Fact]
+    public void SaveAndLoad_EmptyExcludeFileDomains_StaysEmpty()
+    {
+        var svc = CreateService();
+        svc.Save(new AppSettings
+        {
+            CustomExcludeDomains = ["ads.example.com"],
+            CustomExcludeFileDomains = []
+        });
 
         var loaded = svc.Load();
 

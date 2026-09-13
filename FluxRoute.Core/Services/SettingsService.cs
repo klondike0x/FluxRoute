@@ -58,8 +58,12 @@ public sealed class AppSettings
     /// помеченные строки «!domain» файла доменов. Без раздельного хранения снятая в файле доменов
     /// пометка возвращалась бы из объединённой копии и переезжала в <c>list-exclude-user.txt</c>
     /// (Codex P2, ревью #76).
+    ///
+    /// <c>null</c> означает настройки прежних версий: поля ещё не было, и вклад нужно вывести из
+    /// объединённого набора. Пустой список — это НАСТОЯЩИЙ (пустой) вклад, поэтому нормализация его
+    /// не подменяет (Codex P2, ревью pullrequestreview-5191366024).
     /// </summary>
-    public List<string> CustomExcludeFileDomains { get; set; } = new();
+    public List<string>? CustomExcludeFileDomains { get; set; }
     // ═══════════════════════════════════════════
 
     // Рейтинг стратегий
@@ -384,7 +388,9 @@ public sealed class SettingsService : ISettingsService
         settings.UserSites ??= new List<string>();
         settings.CustomTargetDomains ??= new List<string>();
         settings.CustomExcludeDomains ??= new List<string>();
-        settings.CustomExcludeFileDomains ??= new List<string>();
+        // CustomExcludeFileDomains намеренно НЕ инициализируем: null отличает настройки прежних
+        // версий (поля ещё не было) от сохранённого пустого вклада, который надо сохранить как есть
+        // (Codex P2, ревью pullrequestreview-5191366024).
         settings.Presets ??= new List<ConfigPreset>();
         settings.FallbackMirrors ??= new Dictionary<string, string>();
 
