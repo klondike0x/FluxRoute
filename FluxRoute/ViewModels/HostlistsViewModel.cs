@@ -222,6 +222,22 @@ public partial class HostlistsViewModel : ObservableObject
         TrySave();
     }
 
+    /// <summary>
+    /// Сохраняет незаписанные правки редактора перед программным завершением приложения (обновление,
+    /// подтверждённый выход из трея). Спрашивать здесь неуместно: обновление уже установлено и
+    /// приложение обязано перезапуститься, но и молча терять буфер редактора нельзя — путь обновления
+    /// завершает приложение в обход подтверждения закрытия, где единственная проверка
+    /// <see cref="TryLeave"/> и живёт (Codex P2, ревью pullrequestreview-5191769205).
+    /// Возвращает true, если правок не было или они записаны.
+    /// </summary>
+    public bool SavePendingEdits()
+    {
+        if (!HasChanges)
+            return true;
+
+        return TrySave() && !HasChanges;
+    }
+
     private bool TrySave()
     {
         var file = SelectedFile ?? _activeFile;

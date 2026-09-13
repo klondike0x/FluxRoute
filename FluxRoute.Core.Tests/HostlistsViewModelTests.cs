@@ -108,6 +108,53 @@ public sealed class HostlistsViewModelTests : IDisposable
             File.ReadAllText(Path.Combine(_tempDir, "lists", "list-general-user.txt")));
     }
 
+    /// <summary>
+    /// Программное завершение (путь обновления приложения) не должно терять несохранённый буфер
+    /// редактора: перед выходом правки записываются в файл, а владелец получает уведомление
+    /// (Codex P2, ревью pullrequestreview-5191769205).
+    /// </summary>
+    [Fact]
+    public void SavePendingEdits_WritesEditorBuffer_AndNotifiesOwner()
+    {
+        var notifications = new List<(string FileName, string Content)>();
+        var viewModel = new HostlistsViewModel(
+            getEngineDir: () => _tempDir,
+            addLog: _ => { },
+            onSaved: (fileName, savedContent) => notifications.Add((fileName, savedContent)));
+
+        viewModel.LoadHostlistFiles();
+        viewModel.SelectedFile = viewModel.Files
+            .Single(file => file.FileName == "list-general-user.txt");
+        viewModel.EditorContent = "https://pending.example/";
+        Assert.True(viewModel.HasChanges);
+
+        Assert.True(viewModel.SavePendingEdits());
+
+        Assert.False(viewModel.HasChanges);
+        Assert.Contains(
+            "pending.example",
+            File.ReadAllText(Path.Combine(_tempDir, "lists", "list-general-user.txt")));
+        Assert.Equal("list-general-user.txt", Assert.Single(notifications).FileName);
+    }
+
+    /// <summary>Без несохранённых правок завершение ничего не пишет и владельца не дёргает.</summary>
+    [Fact]
+    public void SavePendingEdits_WithoutChanges_DoesNothing()
+    {
+        var notifications = new List<(string FileName, string Content)>();
+        var viewModel = new HostlistsViewModel(
+            getEngineDir: () => _tempDir,
+            addLog: _ => { },
+            onSaved: (fileName, savedContent) => notifications.Add((fileName, savedContent)));
+
+        viewModel.LoadHostlistFiles();
+        viewModel.SelectedFile = viewModel.Files
+            .Single(file => file.FileName == "list-general-user.txt");
+
+        Assert.True(viewModel.SavePendingEdits());
+        Assert.Empty(notifications);
+    }
+
     [Fact]
     public void SaveCommand_ExcludeList_NotifiesOwnerWithUpdatedContent()
     {

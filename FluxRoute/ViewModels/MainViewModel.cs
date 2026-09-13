@@ -25,7 +25,36 @@ public partial class MainViewModel : ObservableObject
 {
     public bool IsApplicationShutdownRequested { get; private set; }
 
-    public void RequestApplicationShutdown() => IsApplicationShutdownRequested = true;
+    /// <summary>
+    /// Запрос программного завершения приложения (обновление, подтверждённый выход). Перед выходом
+    /// сохраняем незаписанные правки хостлистов: путь обновления завершает приложение в обход
+    /// подтверждения закрытия, поэтому буфер редактора пропадал молча
+    /// (Codex P2, ревью pullrequestreview-5191769205).
+    /// </summary>
+    public void RequestApplicationShutdown()
+    {
+        SaveHostlistEditsBeforeShutdown();
+        IsApplicationShutdownRequested = true;
+    }
+
+    /// <summary>
+    /// Сохраняет незаписанные правки хостлистов перед программным завершением. Путь обновления может
+    /// вызвать нас с пула потоков, а сохранение меняет привязанное к интерфейсу состояние
+    /// (редактор, журнал), поэтому в этом случае сохраняем на диспетчере
+    /// (Codex P2, ревью pullrequestreview-5191769205).
+    /// </summary>
+    private void SaveHostlistEditsBeforeShutdown()
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess()
+            || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+        {
+            Hostlists.SavePendingEdits();
+            return;
+        }
+
+        dispatcher.Invoke(() => Hostlists.SavePendingEdits());
+    }
 
     // ── Коллекции ──
     public ObservableCollection<string> Logs { get; } = new();
