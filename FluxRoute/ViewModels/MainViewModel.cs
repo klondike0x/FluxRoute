@@ -218,6 +218,10 @@ public partial class MainViewModel : ObservableObject
         }
 
         list.Add(input);
+        // Правка вкладки «Исключения» меняет вклад list-exclude-user.txt: держим его отдельно,
+        // иначе объединённый набор перезаписывал бы вклад (Codex P2, ревью #76).
+        if (SelectedTabMode == "Exclusions")
+            _hostlistExclusions.AddExcludeFileDomains([input]);
         NewSiteInput = "";
         SaveSettings();
         SyncCustomHostlist();
@@ -232,6 +236,8 @@ public partial class MainViewModel : ObservableObject
         if (list.Contains(domain))
         {
             list.Remove(domain);
+            if (SelectedTabMode == "Exclusions")
+                _hostlistExclusions.RemoveExcludeFileDomain(domain);
             SaveSettings();
             SyncCustomHostlist();
             AddToRecentLogs($"🗑 Удалён домен: {domain}");
@@ -264,6 +270,8 @@ public partial class MainViewModel : ObservableObject
             "Очистить", "Отмена", isDanger: true))
         {
             list.Clear();
+            if (SelectedTabMode == "Exclusions")
+                _hostlistExclusions.ClearExcludeFileDomains();
             SaveSettings();
             SyncCustomHostlist();
             AddToRecentLogs($"🗑 Список {modeName} очищен");
@@ -295,18 +303,23 @@ public partial class MainViewModel : ObservableObject
     {
         var list = SelectedTabMode == "Exclusions" ? CustomExcludeDomains : CustomTargetDomains;
         var existing = new HashSet<string>(list, StringComparer.OrdinalIgnoreCase);
-        var added = 0;
+        var added = new List<string>();
 
         foreach (var domain in domains)
         {
             if (existing.Add(domain))
             {
                 list.Add(domain);
-                added++;
+                added.Add(domain);
             }
         }
 
-        return added;
+        // Импорт во вкладке «Исключения» — правка вклада list-exclude-user.txt, поэтому домены
+        // добавляются и в отдельно хранимый вклад (Codex P2, ревью #76).
+        if (SelectedTabMode == "Exclusions")
+            _hostlistExclusions.AddExcludeFileDomains(added);
+
+        return added.Count;
     }
 
     [RelayCommand]
@@ -1386,6 +1399,21 @@ public partial class MainViewModel : ObservableObject
             foreach (var s in settings.UserSites.Where(x => x.StartsWith("!"))) CustomExcludeDomains.Add(s.TrimStart('!'));
         }
 
+        // Вклад list-exclude-user.txt переносим отдельным полем. У настроек прежних версий такого
+        // поля нет, поэтому объединённый набор разделяем, вычитая помеченные строки файла доменов:
+        // они вклад другого файла, и без вычитания домен из снятой пометки «!domain» попадал бы
+        // в набор исключений и переезжал бы в list-exclude-user.txt (Codex P2, ревью #76).
+        var persistedExcludeFileDomains = settings.CustomExcludeFileDomains;
+        if (persistedExcludeFileDomains is not { Count: > 0 })
+        {
+            var generalFileHostlistPath = Path.Combine(EngineDir, "lists", UserHostlistImporter.TargetFileName);
+            persistedExcludeFileDomains = UserHostlistImporter.DeriveExcludeFileDomains(
+                CustomExcludeDomains,
+                UserHostlistImporter.ReadExclusionsFromFile(generalFileHostlistPath, NormalizeDomainInput));
+        }
+
+        _hostlistExclusions.SetExcludeFileDomains(persistedExcludeFileDomains);
+
         AutoUpdateEnabled = settings.AutoUpdateEnabled;
         AutoStartEnabled = settings.AutoStartEnabled;
         MinimizeToTray = settings.MinimizeToTray;
@@ -1478,6 +1506,9 @@ public partial class MainViewModel : ObservableObject
                 .ToList(),
             CustomTargetDomains = CustomTargetDomains.ToList(),
             CustomExcludeDomains = CustomExcludeDomains.ToList(),
+            // Вклад list-exclude-user.txt сохраняем отдельно от объединённого набора: из объединения
+            // его не восстановить без потери снятых пометок «!domain» (Codex P2, ревью #76).
+            CustomExcludeFileDomains = _hostlistExclusions.ExcludeFileDomains.ToList(),
             AutoUpdateEnabled = AutoUpdateEnabled,
             AutoStartEnabled = AutoStartEnabled,
             MinimizeToTray = MinimizeToTray,
@@ -1731,16 +1762,17 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Пересобирает <see cref="CustomExcludeDomains"/> как объединение двух вкладов: набора вкладки
-    /// «Домены» и помеченных строк файла доменов (см. <see cref="UserHostlistExclusionSet"/>).
+    /// «Домены» (он же вклад <c>list-exclude-user.txt</c>) и помеченных строк файла доменов
+    /// (см. <see cref="UserHostlistExclusionSet"/>).
     /// <paramref name="excludeFileDomains"/> передаётся, когда вклад файла исключений только что
-    /// заменён содержимым этого файла (сохранение в редакторе); иначе вкладом считается текущее
-    /// состояние UI-коллекции, куда исключения приходят из настроек.
+    /// заменён содержимым этого файла (сохранение в редакторе). Без аргумента вклад НЕ пересобирается
+    /// из <see cref="CustomExcludeDomains"/>: объединение уже содержит помеченные строки файла
+    /// доменов, поэтому снятая пометка «!domain» оставалась бы в силе и следующая синхронизация
+    /// переносила бы домен в <c>list-exclude-user.txt</c> (Codex P2, ревью #76).
     /// </summary>
     private void ApplyHostlistExclusions(IReadOnlyList<string>? excludeFileDomains = null)
     {
-        _hostlistExclusions.SetExcludeFileDomains(excludeFileDomains ?? CustomExcludeDomains);
-
-        var effective = _hostlistExclusions.Build();
+        var effective = _hostlistExclusions.UpdateExclusions(excludeFileDomains);
         if (CustomExcludeDomains.Count == effective.Count
             && CustomExcludeDomains.SequenceEqual(effective, StringComparer.OrdinalIgnoreCase))
         {
@@ -1782,12 +1814,13 @@ public partial class MainViewModel : ObservableObject
             // через интерфейс корректно убирает его и из файла.
             var orderedDomains = domains.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
 
-            // Исключения собираются из двух файлов, поэтому оба вклада перечитываем перед записью:
-            // помеченные строки — из файла доменов, остальное — из набора вкладки «Домены»
-            // (Codex P2, ревью #76: иначе после перезапуска исключение выпадало из --hostlist-exclude).
+            // Исключения собираются из двух файлов, поэтому вклад файла доменов перечитываем перед
+            // записью: помеченные строки — из файла доменов, а набор вкладки «Исключения» — из
+            // отдельно хранимого вклада list-exclude-user.txt (Codex P2, ревью #76: иначе после
+            // перезапуска исключение выпадало из --hostlist-exclude, а домен из снятой пометки
+            // возвращался в набор исключений).
             _hostlistExclusions.SetGeneralFileExclusions(
                 UserHostlistImporter.ReadExclusionsFromFile(userHostlistPath, NormalizeDomainInput));
-            _hostlistExclusions.SetExcludeFileDomains(CustomExcludeDomains);
             var generalFileExclusions = _hostlistExclusions.GeneralFileExclusions
                 .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
                 .ToList();
@@ -1827,10 +1860,12 @@ public partial class MainViewModel : ObservableObject
             // ═══ v1.6.0: Синхронизация list-exclude-user.txt ═══
             var excludeHostlistPath = Path.Combine(listsDir, UserHostlistImporter.ExclusionFileName);
             // Действующий набор исключений = вклад вкладки «Домены» (он же список файла) + помеченные
-            // строки файла доменов. Объединение пересобираем здесь, чтобы после перезапуска
-            // приложения исключение не выпало из --hostlist-exclude (Codex P2, ревью #76).
+            // строки файла доменов. В list-exclude-user.txt пишем именно объединение: движок получает
+            // исключения из самого файла (--hostlist-exclude), а помеченные строки файла доменов winws
+            // не разбирает. Объединение считается заново из актуальных вкладов, поэтому домен из
+            // снятой в файле доменов пометки в файл исключений не переезжает (Codex P2, ревью #76).
             ApplyHostlistExclusions();
-            var excludeDomains = new HashSet<string>(CustomExcludeDomains, StringComparer.OrdinalIgnoreCase);
+            var excludeDomains = new HashSet<string>(_hostlistExclusions.Build(), StringComparer.OrdinalIgnoreCase);
 
             // ═══ v1.7.1: та же идемпотентность, что и для list-general-user.txt. Без неё старт
             // защиты переписывал файл из UI-коллекции и стирал комментарии и пустые строки,

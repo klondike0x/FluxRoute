@@ -51,6 +51,15 @@ public sealed class AppSettings
     /// Список доменов для исключения из проверки.
     /// </summary>
     public List<string> CustomExcludeDomains { get; set; } = new();
+
+    /// <summary>
+    /// Вклад <c>list-exclude-user.txt</c> (вкладка «Домены» → «Исключения»), хранимый ОТДЕЛЬНО от
+    /// <see cref="CustomExcludeDomains"/>: тот содержит объединение — вклад файла исключений плюс
+    /// помеченные строки «!domain» файла доменов. Без раздельного хранения снятая в файле доменов
+    /// пометка возвращалась бы из объединённой копии и переезжала в <c>list-exclude-user.txt</c>
+    /// (Codex P2, ревью #76).
+    /// </summary>
+    public List<string> CustomExcludeFileDomains { get; set; } = new();
     // ═══════════════════════════════════════════
 
     // Рейтинг стратегий
@@ -375,6 +384,7 @@ public sealed class SettingsService : ISettingsService
         settings.UserSites ??= new List<string>();
         settings.CustomTargetDomains ??= new List<string>();
         settings.CustomExcludeDomains ??= new List<string>();
+        settings.CustomExcludeFileDomains ??= new List<string>();
         settings.Presets ??= new List<ConfigPreset>();
         settings.FallbackMirrors ??= new Dictionary<string, string>();
 

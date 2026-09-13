@@ -111,6 +111,29 @@ public static class UserHostlistImporter
         return result;
     }
 
+    /// <summary>
+    /// Восстанавливает вклад <c>list-exclude-user.txt</c> из объединённого набора, сохранённого
+    /// прежними версиями: там оба вклада лежали вместе, поэтому помеченные строки файла доменов
+    /// вычитаются — они вклад другого файла. Нужно один раз при переносе настроек; дальше вклад
+    /// хранится отдельным полем и больше из объединения не собирается
+    /// (Codex P2, ревью #76).
+    /// </summary>
+    public static List<string> DeriveExcludeFileDomains(
+        IEnumerable<string>? mergedDomains,
+        IEnumerable<string>? generalFileExclusions)
+    {
+        var generalMarkers = new HashSet<string>(
+            (generalFileExclusions ?? []).Where(domain => !string.IsNullOrWhiteSpace(domain)).Select(domain => domain.Trim()),
+            StringComparer.OrdinalIgnoreCase);
+
+        return (mergedDomains ?? [])
+            .Where(domain => !string.IsNullOrWhiteSpace(domain))
+            .Select(domain => domain.Trim())
+            .Where(domain => !generalMarkers.Contains(domain))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     private static IEnumerable<string> EnumerateLines(string? content)
     {
         if (string.IsNullOrWhiteSpace(content))

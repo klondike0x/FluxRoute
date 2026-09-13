@@ -1327,6 +1327,16 @@ public partial class MainViewModel
         var wasRunning = false;
         var activeDeleted = false;
         var deleted = 0;
+        Exception? purgeError = null;
+        // Генотип активного профиля на момент ДО очистки. Нужен не только для решения об остановке
+        // защиты, но и в ветке сбоя очистки: она могла успеть удалить активную эволюцию.
+        StrategyGenome? activeGenomeBefore = null;
+
+        // Активная стратегия удалена очисткой ⇔ ей соответствовал генотип ДО очистки, и теперь этого
+        // генотипа больше нет в реестре. Вынесено в локальную функцию: по этому же признаку решаем
+        // судьбу защиты, если очистка упала на середине.
+        bool ActiveGenomeDeleted() =>
+            activeGenomeBefore is not null && _aiRegistry.GetById(activeGenomeBefore.Id) is null;
 
         await _aiOrchestrator.RunSerializedAsync(async () =>
         {
@@ -1339,16 +1349,28 @@ public partial class MainViewModel
             // возвращал встроенный генотип, очистка удаляла активную эволюцию, а activeDeleted оставался
             // false — защита не останавливалась и не перезапускалась, UI грузился на встроенный профиль,
             // тогда как процесс прежней эволюции продолжал работать (правка по Codex P2, ревью #76).
-            var activeGenomeBefore = activeBeforePurge is null
+            activeGenomeBefore = activeBeforePurge is null
                 ? null
                 : _aiOrchestrator.FindGenomeForProfile(activeBeforePurge);
 
-            deleted = await _aiOrchestrator.PurgeWeakEvolutionsCoreAsync().ConfigureAwait(false);
+            // Сбой очистки (например, каталог настроек стал доступен только для чтения) ловим ЗДЕСЬ:
+            // иначе исключение вылетало бы мимо обработчика ниже, асинхронная RelayCommand падала бы
+            // без сообщения в журнале, а интерфейс оставался бы не восстановленным
+            // (Codex P2, ревью #76).
+            try
+            {
+                deleted = await _aiOrchestrator.PurgeWeakEvolutionsCoreAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                purgeError = ex;
+            }
 
             // Активная стратегия удалена очисткой ⇔ ей соответствовал генотип ДО очистки,
             // и теперь этого генотипа больше нет в реестре (правка по Codex P2, седьмой раунд).
-            activeDeleted = activeGenomeBefore is not null &&
-                _aiRegistry.GetById(activeGenomeBefore.Id) is null;
+            // Проверку выполняем и при сбое очистки: до ошибки она могла успеть удалить активную
+            // эволюцию, и тогда защиту нужно останавливать так же, как при успешной очистке.
+            activeDeleted = ActiveGenomeDeleted();
 
             // Останавливаем защиту ДО перезагрузки профилей, если активную стратегию удалили.
             // Иначе переключение на новый профиль перезапустит защиту, а следующий Stop() убил бы
@@ -1359,8 +1381,18 @@ public partial class MainViewModel
                 await StopOnUiAsync().ConfigureAwait(false);
         }).ConfigureAwait(true);
 
-        AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🗑 Удалено слабых эволюций: {deleted}");
-        Logs.Add($"[ИИ] Очистка слабых эволюций: удалено {deleted}.");
+        if (purgeError is null)
+        {
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] 🗑 Удалено слабых эволюций: {deleted}");
+            Logs.Add($"[ИИ] Очистка слабых эволюций: удалено {deleted}.");
+        }
+        else
+        {
+            // Ошибку очистки сообщаем пользователю и продолжаем: ниже интерфейс восстанавливается
+            // по текущему состоянию реестра, поэтому частично удалённые эволюции видны сразу.
+            AddOrchestratorLog($"[{DateTime.Now:HH:mm:ss}] ❌ Ошибка очистки эволюций: {purgeError.Message}");
+            Logs.Add($"[ИИ] Ошибка очистки эволюций: {purgeError.Message}");
+        }
 
         try
         {

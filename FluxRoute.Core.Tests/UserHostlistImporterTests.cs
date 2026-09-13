@@ -196,4 +196,117 @@ public sealed class UserHostlistImporterTests : IDisposable
 
         Assert.Equal(["ads.example.com", "tracker.example.com"], set.Build());
     }
+
+    /// <summary>
+    /// Сценарий находки: домен помечен в <c>list-general-user.txt</c>, затем пользователь снимает
+    /// пометку. Вклад файла исключений не пересобирается из объединённого набора, поэтому домен
+    /// перестаёт быть исключением и не может переехать в <c>list-exclude-user.txt</c>
+    /// (Codex P2, ревью #76).
+    /// </summary>
+    [Fact]
+    public void ExclusionSet_DomainStopsBeingExclusion_WhenGeneralFileMarkerIsRemoved()
+    {
+        var set = new UserHostlistExclusionSet();
+
+        set.SetGeneralFileExclusions(["ads.example.com"]);
+        Assert.Equal(["ads.example.com"], set.Build());
+
+        // Пользователь удалил строку «!ads.example.com» из файла доменов.
+        set.SetGeneralFileExclusions([]);
+
+        Assert.Empty(set.Build());
+        Assert.Empty(set.ExcludeFileDomains);
+    }
+
+    /// <summary>
+    /// Вклад файла исключений хранится отдельно: сохранение файла доменов (в том числе с новой
+    /// пометкой и с её снятием) его не трогает.
+    /// </summary>
+    [Fact]
+    public void ExclusionSet_RetainsExclusionFileContribution_AcrossGeneralFileSaves()
+    {
+        var set = new UserHostlistExclusionSet();
+        set.SetExcludeFileDomains(["api.example.com"]);
+
+        set.SetGeneralFileExclusions(["ads.example.com"]);
+        Assert.Equal(["api.example.com"], set.ExcludeFileDomains);
+        Assert.Equal(["api.example.com", "ads.example.com"], set.Build());
+
+        set.SetGeneralFileExclusions([]);
+        Assert.Equal(["api.example.com"], set.ExcludeFileDomains);
+        Assert.Equal(["api.example.com"], set.Build());
+    }
+
+    /// <summary>
+    /// Правки вкладки «Домены» → «Исключения» меняют именно вклад <c>list-exclude-user.txt</c>,
+    /// а не объединённый набор.
+    /// </summary>
+    [Fact]
+    public void ExclusionSet_UiEdits_TargetExclusionFileContribution()
+    {
+        var set = new UserHostlistExclusionSet();
+        set.SetGeneralFileExclusions(["ads.example.com"]);
+
+        set.AddExcludeFileDomains(["api.example.com", " CDN.example.com ", "", null!]);
+        set.AddExcludeFileDomains(["API.example.com"]);
+        Assert.Equal(["api.example.com", "CDN.example.com"], set.ExcludeFileDomains);
+
+        Assert.True(set.RemoveExcludeFileDomain("cdn.EXAMPLE.com"));
+        Assert.False(set.RemoveExcludeFileDomain("нет-такого.example.com"));
+        Assert.False(set.RemoveExcludeFileDomain(null));
+        Assert.Equal(["api.example.com"], set.ExcludeFileDomains);
+
+        set.ClearExcludeFileDomains();
+        Assert.Empty(set.ExcludeFileDomains);
+
+        // Пометка файла доменов остаётся: она вклад другого файла.
+        Assert.Equal(["ads.example.com"], set.Build());
+    }
+
+    /// <summary>
+    /// Пересборка набора при сохранении файла доменов (аргумент не передаётся) идёт через
+    /// <see cref="UserHostlistExclusionSet.UpdateExclusions"/>: снятая пометка «!domain» перестаёт
+    /// быть исключением и в <c>list-exclude-user.txt</c> не переезжает, а сохранение файла исключений
+    /// заменяет только свой вклад (Codex P2, ревью #76).
+    /// </summary>
+    [Fact]
+    public void UpdateExclusions_WithoutSavedExcludeFile_KeepsRetainedContribution()
+    {
+        var set = new UserHostlistExclusionSet();
+        set.SetGeneralFileExclusions(["ads.example.com"]);
+
+        Assert.Equal(["ads.example.com"], set.UpdateExclusions());
+
+        set.SetGeneralFileExclusions([]);
+        Assert.Empty(set.UpdateExclusions());
+
+        set.SetGeneralFileExclusions(["tracker.example.com"]);
+        Assert.Equal(["api.example.com", "tracker.example.com"], set.UpdateExclusions(["api.example.com"]));
+        Assert.Equal(["api.example.com"], set.ExcludeFileDomains);
+    }
+
+    /// <summary>
+    /// Перенос настроек прежних версий: там вклад файла исключений и помеченные строки файла доменов
+    /// лежали в одном объединённом списке. Вклад файла исключений восстанавливается вычитанием
+    /// пометок — иначе снятая пометка «воскресла» бы как исключение (Codex P2, ревью #76).
+    /// </summary>
+    [Fact]
+    public void DeriveExcludeFileDomains_SubtractsGeneralFileMarkers()
+    {
+        var derived = UserHostlistImporter.DeriveExcludeFileDomains(
+            ["api.example.com", "Ads.example.com", "tracker.example.com"],
+            ["ads.EXAMPLE.com"]);
+
+        Assert.Equal(["api.example.com", "tracker.example.com"], derived);
+    }
+
+    [Fact]
+    public void DeriveExcludeFileDomains_WithoutMarkers_KeepsWholeSet()
+    {
+        Assert.Equal(
+            ["api.example.com"],
+            UserHostlistImporter.DeriveExcludeFileDomains(["api.example.com"], null));
+
+        Assert.Empty(UserHostlistImporter.DeriveExcludeFileDomains(null, ["ads.example.com"]));
+    }
 }
