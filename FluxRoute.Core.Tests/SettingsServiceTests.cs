@@ -314,4 +314,20 @@ public sealed class SettingsServiceTests : IDisposable
         var svc = CreateService();
         Assert.True(svc.IsPortable);
     }
+
+    [Fact]
+    public void AdminChoice_RoundTrips()
+    {
+        var svc = CreateService();
+        svc.Save(new AppSettings
+        {
+            RememberAdminChoice = true,
+            AdminChoiceContinueWithout = false
+        });
+
+        var loaded = svc.Load();
+
+        Assert.True(loaded.RememberAdminChoice);
+        Assert.False(loaded.AdminChoiceContinueWithout);
+    }
 }

@@ -45,6 +45,7 @@ public partial class MainViewModel : ObservableObject
                 break;
             case HostlistPendingEditsResult.NotPreserved:
                 AddToRecentLogs("⚠️ Правки хостлистов сохранить не удалось — ни в файл, ни в копию");
+                ShowPendingEditsLossWarning();
                 break;
         }
 
@@ -69,6 +70,29 @@ public partial class MainViewModel : ObservableObject
         }
 
         return dispatcher.Invoke(() => Hostlists.SavePendingEdits());
+    }
+
+    /// <summary>
+    /// Блокирующе сообщает о потере буфера перед программным завершением.
+    /// Логи в память уже не успеют увидеть пользователь или редактор — приложение закрывается.
+    /// </summary>
+    private static void ShowPendingEditsLossWarning()
+    {
+        const string title = "⚠️ Правки хостлистов потеряны";
+        const string message =
+            "Не удалось сохранить правки ни в исходный файл, ни в копию восстановления.\n\n" +
+            "Содержимое редактора будет потеряно после закрытия приложения.";
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+            return;
+
+        void ShowDialog() => CustomDialog.Show(title, message, "Понятно", string.Empty, isDanger: true);
+
+        if (dispatcher.CheckAccess())
+            ShowDialog();
+        else
+            dispatcher.Invoke(ShowDialog);
     }
 
     // ── Коллекции ──

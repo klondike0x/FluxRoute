@@ -72,7 +72,7 @@ public partial class App : Application
 
                         Log.Warning("Remembered administrator elevation failed or was cancelled; showing the admin prompt again.");
                         adminSettings.RememberAdminChoice = false;
-                        settingsService.Save(adminSettings);
+                        TrySaveAdminSettings(settingsService, adminSettings);
                     }
                 }
 
@@ -88,7 +88,7 @@ public partial class App : Application
                     {
                         adminSettings.RememberAdminChoice = true;
                         adminSettings.AdminChoiceContinueWithout = prompt.ContinueWithoutAdmin;
-                        settingsService.Save(adminSettings);
+                        TrySaveAdminSettings(settingsService, adminSettings);
                         Log.Information("Admin choice saved: continueWithout={Choice}", prompt.ContinueWithoutAdmin);
                     }
 
@@ -185,6 +185,20 @@ public partial class App : Application
                 MessageBoxImage.Error);
 
             Shutdown(-1);
+        }
+    }
+
+    private static void TrySaveAdminSettings(ISettingsService settingsService, AppSettings settings)
+    {
+        try
+        {
+            settingsService.Save(settings);
+        }
+        catch (Exception ex)
+        {
+            // Выбор режима прав — необязательная настройка. Если старый portable-каталог
+            // недоступен для записи, приложение всё равно должно продолжить запуск.
+            Log.Warning(ex, "Не удалось сохранить выбор режима прав администратора; продолжаем запуск.");
         }
     }
 
