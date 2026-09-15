@@ -101,7 +101,7 @@
                 </Grid.ColumnDefinitions>
                 <Border Width="34" Height="34" CornerRadius="17"
                         Background="#132B28" BorderBrush="#245249" BorderThickness="1">
-                    <TextBlock x:Name="StatusIcon" Text="↻" FontSize="18" Foreground="#5BD6C1"
+                    <TextBlock x:Name="StatusIcon" Text="↻" FontFamily="Segoe UI Symbol" FontSize="18" Foreground="#5BD6C1"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">

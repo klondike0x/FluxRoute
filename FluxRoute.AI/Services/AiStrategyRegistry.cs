@@ -189,7 +189,19 @@ public sealed class AiStrategyRegistry
     }
 
     public void RecordBanditSuccess(Guid genomeId, string networkHash)
+        => RecordBanditOutcome(genomeId, networkHash, 1.0);
+
+    /// <summary>
+    /// Записывает исход с весом успеха: alpha += w, beta += 1 − w. Обычный успех — w = 1,
+    /// то есть поведение прежнего <see cref="RecordBanditSuccess"/>. Взвешенная запись нужна
+    /// импорту полного скана: если все рабочие профили пишутся одинаковым успехом, 76% и 85%
+    /// дают ровно одно и то же Beta(2,1), выбор между ними решает порядок перечисления в
+    /// реестре, и следующий цикл ИИ может сразу вернуться на слабую стратегию (Codex P2, ревью #76).
+    /// </summary>
+    public void RecordBanditOutcome(Guid genomeId, string networkHash, double successWeight)
     {
+        var w = Math.Clamp(successWeight, 0.0, 1.0);
+
         lock (_gate)
         {
             var e = _model.Bandit.FirstOrDefault(b => b.GenomeId == genomeId && b.NetworkHash == networkHash);
@@ -199,7 +211,8 @@ public sealed class AiStrategyRegistry
                 _model.Bandit.Add(e);
             }
 
-            e.Alpha += 1;
+            e.Alpha += w;
+            e.Beta += 1 - w;
         }
     }
 

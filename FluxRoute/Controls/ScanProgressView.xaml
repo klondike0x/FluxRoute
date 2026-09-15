@@ -38,7 +38,7 @@
                 CornerRadius="8" Padding="10,9" Margin="0,0,0,10">
             <StackPanel>
                 <Grid Margin="0,0,0,5">
-                    <TextBlock Text="{Binding ScanStatusText}" FontFamily="Segoe UI" FontSize="12"
+                    <TextBlock Text="{Binding ScanStatusText}" FontFamily="Segoe UI Symbol" FontSize="12"
                                Foreground="#C8D4EC" />
                     <TextBlock Text="{Binding ScanProgressValue, StringFormat={}{0:0}%}"
                                HorizontalAlignment="Right" FontFamily="Segoe UI" FontSize="12"
@@ -67,7 +67,7 @@
                     </ProgressBar.Template>
                 </ProgressBar>
                 <Grid Margin="0,6,0,0">
-                    <TextBlock Text="{Binding ScanTimeRemaining}" FontFamily="Segoe UI" FontSize="11"
+                    <TextBlock Text="{Binding ScanTimeRemaining}" FontFamily="Segoe UI Symbol" FontSize="11"
                                Foreground="#66758E" />
                     <TextBlock Text="{Binding ScanElapsed}" HorizontalAlignment="Right"
                                FontFamily="Segoe UI" FontSize="11" Foreground="#66758E" />

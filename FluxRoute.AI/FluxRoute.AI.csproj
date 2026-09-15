@@ -14,4 +14,10 @@
     <ProjectReference Include="..\FluxRoute.Core\FluxRoute.Core.csproj" />
   </ItemGroup>
 
+  <!-- Тестам нужен доступ к отслеживаемому генотипу ИИ, чтобы проверять согласование
+       состояния после внешней смены профиля (ревью #97, P1). -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="FluxRoute.Core.Tests" />
+  </ItemGroup>
+
 </Project>

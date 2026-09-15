@@ -1,5 +1,7 @@
+using System.Windows;
 using FluxRoute.Services;
 using FluxRoute.ViewModels;
+using FluxRoute.Views;
 using WpfUserControl = System.Windows.Controls.UserControl;
 
 namespace FluxRoute.Views.Tabs;
@@ -13,6 +15,23 @@ public partial class HostlistsPage : WpfUserControl
     public HostlistsPage()
     {
         InitializeComponent();
+        DataContextChanged += OnDataContextChanged;
+    }
+
+    private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is HostlistsViewModel vm)
+            vm.UnsavedChangesPrompt = PromptUnsavedChanges;
+    }
+
+    private static HostlistUnsavedChangesDecision PromptUnsavedChanges()
+    {
+        return CustomDialog.ShowUnsavedChanges() switch
+        {
+            CustomDialogChoice.Confirm => HostlistUnsavedChangesDecision.Save,
+            CustomDialogChoice.Alternate => HostlistUnsavedChangesDecision.Discard,
+            _ => HostlistUnsavedChangesDecision.Stay
+        };
     }
 
     /// <summary>
@@ -21,7 +40,10 @@ public partial class HostlistsPage : WpfUserControl
     public void Refresh()
     {
         if (DataContext is HostlistsViewModel vm)
+        {
+            vm.UnsavedChangesPrompt = PromptUnsavedChanges;
             vm.LoadHostlistFiles();
+        }
     }
 
     private void TabHelpButton_Click(object sender, System.Windows.RoutedEventArgs e)

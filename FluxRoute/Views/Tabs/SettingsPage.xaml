@@ -116,6 +116,10 @@
                                 <CheckBox Content="Использовать планировщик для автозапуска"
                                           IsChecked="{Binding TaskSchedulerAutoStart}"
                                           Margin="0,4" />
+                                <CheckBox Content="Запоминать выбор прав администратора"
+                                          IsChecked="{Binding RememberAdminChoice}"
+                                          ToolTip="Снимите галочку, чтобы при следующем запуске выбрать режим заново."
+                                          Margin="0,4" />
                                 <CheckBox Content="Высокий приоритет автозагрузки"
                                           IsChecked="{Binding HighPriorityStartupEnabled}"
                                           Margin="0,4" />

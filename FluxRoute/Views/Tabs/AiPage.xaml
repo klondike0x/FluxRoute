@@ -45,9 +45,9 @@
                 <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Val}" Text="{Binding AiProbeCountText}" />
             </Grid>
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                <Button Content="⚗ Эволюция сейчас" Style="{StaticResource AccentBtn}"
+                <Button Content="⚗ Эволюция сейчас" FontFamily="Segoe UI Symbol" Style="{StaticResource AccentBtn}"
                     Margin="0,0,10,0" Command="{Binding RunAiEvolutionCommand}" />
-                <Button Content="↺ Сброс модели" Style="{StaticResource TermBtn}"
+                <Button Content="↺ Сброс модели" FontFamily="Segoe UI Symbol" Style="{StaticResource TermBtn}"
                     Margin="0,0,10,0" Command="{Binding ResetAiModelCommand}" />
                 <Button Content="📁 ai-evolved" Style="{StaticResource TermBtn}"
                     Margin="0,0,10,0" Command="{Binding OpenAiEvolvedFolderCommand}" />

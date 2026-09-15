@@ -217,9 +217,11 @@
                        FontFamily="Segoe UI" Foreground="#7E89A8" FontSize="13"
                        TextWrapping="Wrap" Margin="0,0,0,20"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="CancelBtn" Content="Отмена" Click="Cancel_Click"
+                <Button x:Name="AlternateBtn" Content="Не сохранять" Click="Alternate_Click"
                         Style="{StaticResource DialogCancelBtn}"/>
-                <Button x:Name="ConfirmBtn" Content="Да" Click="Confirm_Click"
+                <Button x:Name="CancelBtn" Content="Остаться" Click="Cancel_Click"
+                        Style="{StaticResource DialogCancelBtn}"/>
+                <Button x:Name="ConfirmBtn" Content="Сохранить" Click="Confirm_Click"
                         Style="{StaticResource AccentConfirmBtn}"/>
             </StackPanel>
         </StackPanel>

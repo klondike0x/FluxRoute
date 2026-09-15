@@ -457,6 +457,43 @@ public class AppUpdaterService : IAppUpdaterService
                         timeout /t 1 /nobreak > nul
                         goto waitloop
                     )
+                    echo [FluxRoute Updater] Завершаем дочерние процессы перед установкой...
+                    taskkill /IM winws.exe /F > nul 2>&1
+                    taskkill /IM winws2.exe /F > nul 2>&1
+                    taskkill /IM WinDivert.exe /F > nul 2>&1
+                    net stop WinDivert > nul 2>&1
+                    echo [FluxRoute Updater] Ожидаем освобождения winws.exe, winws2.exe и WinDivert...
+                    set /a wait_winws_count=0
+                    :wait_winws_after_installer
+                    set "winws_running="
+                    tasklist /FI "IMAGENAME eq winws.exe" | find /I "winws.exe" > nul
+                    if not errorlevel 1 set "winws_running=1"
+                    tasklist /FI "IMAGENAME eq winws2.exe" | find /I "winws2.exe" > nul
+                    if not errorlevel 1 set "winws_running=1"
+                    if not defined winws_running goto wait_windivert_after_installer
+                    set /a wait_winws_count+=1
+                    if %wait_winws_count% GEQ 30 goto update_abort_after_installer
+                    timeout /t 1 /nobreak > nul
+                    goto wait_winws_after_installer
+
+                    :wait_windivert_after_installer
+                    set /a wait_windivert_count=0
+                    :wait_windivert_state_installer
+                    sc query "WinDivert" > nul 2>&1
+                    if errorlevel 1060 goto windivert_ready_after_installer
+                    sc query "WinDivert" | findstr /I /C:"STOPPED" > nul
+                    if not errorlevel 1 goto windivert_ready_after_installer
+                    set /a wait_windivert_count+=1
+                    if %wait_windivert_count% GEQ 30 goto update_abort_after_installer
+                    timeout /t 1 /nobreak > nul
+                    goto wait_windivert_state_installer
+
+                    :update_abort_after_installer
+                    echo [FluxRoute Updater] Не удалось полностью остановить winws.exe, winws2.exe или WinDivert. Обновление отменено.
+                    del /F /Q "{tempInstaller}" > nul 2>&1
+                    start "" "{installerExePath}"
+                    exit /b 1
+                    :windivert_ready_after_installer
                     echo [FluxRoute Updater] Устанавливаем v{update.Version} через installer...
                     start "" /wait "{tempInstaller}" /SILENT /NORESTART /CLOSEAPPLICATIONS
                     if errorlevel 1 exit /b 1
@@ -469,13 +506,7 @@ public class AppUpdaterService : IAppUpdaterService
                 await File.WriteAllTextAsync(batPath, installerBat, System.Text.Encoding.UTF8, ct);
                 onProgress("🚀 Запускаем installer с правами администратора...");
 
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = batPath,
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    UseShellExecute = true,
-                    Verb = "runas"
-                });
+                Process.Start(UpdateElevationPolicy.CreateBatLaunch(batPath, needsElevation: true));
 
                 return (true, null);
             }
@@ -509,6 +540,47 @@ public class AppUpdaterService : IAppUpdaterService
                     timeout /t 1 /nobreak > nul
                     goto waitloop
                 )
+                echo [FluxRoute Updater] Завершаем дочерние процессы...
+                taskkill /IM winws.exe /F > nul 2>&1
+                taskkill /IM winws2.exe /F > nul 2>&1
+                taskkill /IM WinDivert.exe /F > nul 2>&1
+                net stop WinDivert > nul 2>&1
+                echo [FluxRoute Updater] Ожидаем освобождения winws.exe, winws2.exe и WinDivert...
+                set /a wait_winws_count=0
+                :wait_winws_after_update
+                set "winws_running="
+                tasklist /FI "IMAGENAME eq winws.exe" | find /I "winws.exe" > nul
+                if not errorlevel 1 set "winws_running=1"
+                tasklist /FI "IMAGENAME eq winws2.exe" | find /I "winws2.exe" > nul
+                if not errorlevel 1 set "winws_running=1"
+                if not defined winws_running goto wait_windivert_after_update
+                set /a wait_winws_count+=1
+                if %wait_winws_count% GEQ 30 goto update_abort_after_update
+                timeout /t 1 /nobreak > nul
+                goto wait_winws_after_update
+
+                :wait_windivert_after_update
+                set /a wait_windivert_count=0
+                :wait_windivert_state
+                sc query "WinDivert" > nul 2>&1
+                if errorlevel 1060 goto windivert_ready_after_update
+                sc query "WinDivert" | findstr /I /C:"STOPPED" > nul
+                if not errorlevel 1 goto windivert_ready_after_update
+                set /a wait_windivert_count+=1
+                if %wait_windivert_count% GEQ 30 goto update_abort_after_update
+                timeout /t 1 /nobreak > nul
+                goto wait_windivert_state
+
+                :update_abort_after_update
+                echo [FluxRoute Updater] Не удалось полностью остановить winws.exe, winws2.exe или WinDivert. Обновление отменено.
+                del /F /Q "{tempZip}" > nul 2>&1
+                rd /S /Q "{tempDir}" > nul 2>&1
+                start "" "{newExePath}"
+                rem Окно updater скрыто, поэтому об отказе сообщаем отдельной консолью:
+                rem иначе UI уже отрапортовал успех, а пользователь просто видит прежнюю версию.
+                start "" cmd /c "echo [FluxRoute Updater] Обновление не установлено: защита не остановилась (winws/WinDivert). Запущена прежняя версия. & timeout /t 25 /nobreak > nul"
+                exit /b 1
+                :windivert_ready_after_update
                 echo [FluxRoute Updater] Устанавливаем v{update.Version}...
                 xcopy /E /Y /I "{extractedSourceDir}\*" "{exeDir}\"
                 if errorlevel 1 (
@@ -516,10 +588,6 @@ public class AppUpdaterService : IAppUpdaterService
                     pause
                     exit /b 1
                 )
-                echo [FluxRoute Updater] Завершаем дочерние процессы...
-                taskkill /IM winws.exe /F > nul 2>&1
-                taskkill /IM WinDivert.exe /F > nul 2>&1
-                net stop WinDivert > nul 2>&1
                 echo [FluxRoute Updater] Очищаем временные файлы...
                 del /F /Q "{tempZip}" > nul 2>&1
                 rd /S /Q "{tempDir}" > nul 2>&1
@@ -529,22 +597,73 @@ public class AppUpdaterService : IAppUpdaterService
                 """;
 
             await File.WriteAllTextAsync(batPath, bat, System.Text.Encoding.UTF8, ct);
-            onProgress("🚀 Запускаем установщик...");
 
-            // ── 4. Запускаем bat через ShellExecute ───────────────────────
-            var psi = new ProcessStartInfo
+            // ── 4. Снимаем защиту и запускаем bat через ShellExecute ───────
+            // Сначала пробуем остановить движки и службу драйвера без повышения прав: обычно защиту
+            // поднимало само приложение, и замена проходит без запроса UAC. Если winws остался или
+            // жива kernel-служба WinDivert (у неё нет своего процесса — проверка только по именам
+            // процессов её не видела), BAT без прав не сможет их снять, дойдёт до ветки отмены и
+            // молча запустит прежнюю версию, хотя UI уже отрапортовал успех (Codex P1, ревью #76).
+            UpdateElevationPolicy.StopEnginesBestEffort();
+            var launch = UpdateElevationPolicy.PreparePortableLaunch(
+                batPath,
+                UpdateElevationPolicy.IsProcessElevated,
+                UpdateElevationPolicy.IsProtectionRunning);
+
+            onProgress(string.Equals(launch.Verb, "runas", StringComparison.Ordinal)
+                ? "🔐 Защита запущена с правами администратора — запрашиваем права для её остановки..."
+                : "🚀 Запускаем установщик...");
+
+            try
             {
-                FileName        = batPath,
-                WindowStyle     = ProcessWindowStyle.Hidden,
-                UseShellExecute = true
-            };
-            Process.Start(psi);
+                Process.Start(launch);
+            }
+            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+            {
+                // ERROR_CANCELLED — пользователь отказался от UAC. Ничего не заменено, поэтому
+                // возвращаем честный отказ: UI не должен рапортовать об успешном обновлении.
+                TryDeleteArtifacts(batPath, tempZip, tempDir);
+                return (false, "Обновление отменено: для остановки защиты требуются права администратора. "
+                             + "Остановите защиту и повторите обновление.");
+            }
 
             return (true, null);
         }
         catch (Exception ex)
         {
             return (false, $"Ошибка обновления: {ex.Message}");
+        }
+    }
+
+    /// <summary>Удаляет временные файлы обновления, если запуск BAT не состоялся.</summary>
+    private static void TryDeleteArtifacts(string batPath, string tempZip, string tempDir)
+    {
+        try
+        {
+            if (File.Exists(batPath))
+                File.Delete(batPath);
+        }
+        catch
+        {
+            // Временный BAT удалится при следующей уборке — срывом обновления это не является.
+        }
+
+        try
+        {
+            if (File.Exists(tempZip))
+                File.Delete(tempZip);
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+        catch
+        {
         }
     }
 }
