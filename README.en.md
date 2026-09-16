@@ -26,7 +26,7 @@
     <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&style=for-the-badge" alt=".NET 10" /></a>
     <a href="https://github.com/klondike0x/FluxRoute/releases"><img src="https://img.shields.io/github/downloads/klondike0x/FluxRoute/total?logo=github&label=downloads&style=for-the-badge" alt="Downloads" /></a>
     <a href="https://github.com/klondike0x/FluxRoute/releases"><img src="https://img.shields.io/github/v/release/klondike0x/FluxRoute?include_prereleases&sort=semver&logo=github&label=version&style=for-the-badge" alt="Version" /></a>
-    <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge" alt="License" /></a>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPLv3--or--later-blue.svg?style=for-the-badge" alt="License" /></a>
 </p>
 
 </div>
@@ -34,29 +34,30 @@
 ---
 
 > [!IMPORTANT]
-> **This is the original FluxRoute Desktop repository.**
+> **This is the official FluxRoute Desktop repository.**
 >
-> All derivative projects (forks) are based on this code. GitHub automatically marks them with `forked from klondike0x/FluxRoute`.
+> Forks are permitted under GPL-3.0-or-later, but they are not official FluxRoute builds and may contain their own changes.
 
 > [!CAUTION]
-> ### ⚠️ Beware: Unauthorized Copies
+> ### ⚠️ Beware: Unofficial Copies
 >
 > **The only official source of FluxRoute is [this repository](https://github.com/klondike0x/FluxRoute).**
 >
-> If you downloaded the program from elsewhere, be cautious. Unauthorized copies may contain:
-> - ❌ Outdated code (missing security fixes)
-> - ❌ Malicious modifications or hidden telemetry
-> - ❌ GPL-3.0 license violations (removed attribution)
-> - ❌ Unstable or untested versions
+> If you downloaded the program from elsewhere, be cautious. Unofficial builds may contain:
+> - ⚠️ Outdated code without current fixes
+> - ⚠️ Unverified changes or additional telemetry
+> - ⚠️ GPL-3.0-or-later violations, such as removed attribution
+> - ⚠️ Unstable or unverified versions
 >
 > **How to protect yourself:**
 > - ✅ Always check the source: `github.com/klondike0x/FluxRoute`
-> - ✅ Only download from official releases with the green `Verified` badge
-> - ✅ If you encounter a fork without clear attribution — report it via [GitHub DMCA](https://github.com/contact/report-abuse)
+> - ✅ Download files only from the official [releases](https://github.com/klondike0x/FluxRoute/releases)
+> - ✅ Use the SHA-256 manifest and GPG signature published with the release to check integrity
+> - ✅ If a copy removes attribution, impersonates the official project, or contains suspicious changes — report it to the project maintainers
 >
-> The original FluxRoute **collects no telemetry** and **contains no malicious code**.
+> The official FluxRoute build contains no intentional user telemetry. This statement does not cover third-party builds.
 
-**FluxRoute Desktop** is a modern GUI wrapper for managing [`Flowseal/zapret-discord-youtube`](https://github.com/Flowseal/zapret-discord-youtube) profiles with a unique **AI orchestrator** powered by Thompson Sampling and genetic strategy evolution.
+**FluxRoute Desktop** is a modern GUI wrapper for managing [`Flowseal/zapret-discord-youtube`](https://github.com/Flowseal/zapret-discord-youtube) profiles with a **self-learning AI orchestrator** powered by Thompson Sampling and genetic strategy evolution.
 
 Launch, update, and switch profiles from a single window — no manual BAT-file editing required.
 
@@ -73,6 +74,7 @@ Launch, update, and switch profiles from a single window — no manual BAT-file 
 - [Mods](#-mods)
 - [Interface](#-interface)
 - [Troubleshooting](#-troubleshooting)
+- [Known Limitations](#-known-limitations)
 - [WinDivert and Antivirus](#-windivert-and-antivirus)
 - [Security](#-security)
 - [Ecosystem](#-ecosystem)
@@ -122,17 +124,17 @@ Launch, update, and switch profiles from a single window — no manual BAT-file 
 | 🔒 **GitHub Actions** | Transparent CI/CD builds — every release compiled automatically from source |
 | ✅ **SHA-256 verification** | Release hashes logged for integrity checks |
 | ✍️ **GPG-signed releases** | The SHA-256 manifest is signed with a dedicated release key |
-| 🔐 **Immutable Releases** | Published assets and the Git tag cannot be changed or replaced |
+| 🔐 **Immutable Releases** | The workflow refuses to publish a release with an existing tag |
 | 🧾 **Build provenance** | GitHub attestation links artifacts to the workflow and commit |
 | 🔄 **Atomic updates** | Staging → backup → rollback on errors (no broken installations) |
-| 👮 **Admin rights check** | UAC elevation prompt on launch + clear error messages |
+| 👮 **Privilege handling** | UAC prompt when network protection needs elevation + clear error messages |
 
 ### 🔧 Diagnostics
 
 | Feature | Description |
 |---------|-------------|
 | 📊 **Extended diagnostics** | Checks WinDivert, BFE, TCP timestamps, VPN, AdGuard, DNS, ISP |
-| 💾 **Diagnostic bundle** | ZIP export with all logs, settings, and system info for debugging |
+| 💾 **Diagnostic bundle** | ZIP export with logs, settings, and system info for debugging; review its contents before sharing |
 | 📋 **Real-time logs** | Logs tab with filtering, export, and history |
 | 🌐 **Availability checks** | Tests YouTube, Discord, Google, Twitch, Instagram, Telegram, and more |
 
@@ -142,14 +144,14 @@ Launch, update, and switch profiles from a single window — no manual BAT-file 
 |---------|-------------|
 | 📦 **Portable** | Runs from any folder, no installation required |
 | 🧪 **Unit tests** | Coverage for bandit, evolver, parser, fingerprint |
-| 📖 **Open source** | GPL-3.0 — anyone can inspect what the app does |
+| 📖 **Open source** | GPL-3.0-or-later — anyone can inspect what the app does |
 | 🚫 **No telemetry** | FluxRoute does not collect user data |
 
 ---
 
 ## 🆚 How FluxRoute Compares to Other GUIs
 
-FluxRoute is the **only** GUI with a full-featured AI subsystem:
+FluxRoute is a GUI with a full-featured AI subsystem focused on automatic strategy selection and evolution:
 
 | Category | FluxRoute | Zapret-Hub | Zapret-GUI | Zapret2 GUI | ZapretControl |
 |---|:---:|:---:|:---:|:---:|:---:|
@@ -169,7 +171,7 @@ FluxRoute is the **only** GUI with a full-featured AI subsystem:
 
 > **Legend:** ✅ = fully implemented · ⚠️ = partial / with limitations · ❌ = not available
 
-> **Key Difference:** FluxRoute is the only project where AI **automatically selects and evolves** strategies for your network using Thompson Sampling and genetic algorithms. The build process is fully transparent via GitHub Actions — anyone can verify exactly what goes into each release.
+> **Key Difference:** FluxRoute automatically selects and evolves strategies for your network using Thompson Sampling and genetic algorithms. This table reflects the projects' stated capabilities when this README was last updated; check their current repositories before choosing a tool.
 
 ---
 
@@ -179,16 +181,16 @@ FluxRoute is the **only** GUI with a full-featured AI subsystem:
 
 Full documentation: [📚 open documentation](docs/index.md).
 - **Windows 10/11 x64**
-- **Administrator privileges** (for `winws.exe` and WinDivert)
+- **Administrator privileges** may be required for `winws.exe` and WinDivert; the GUI itself can start without elevation
 
-> **Fast path for most users:** download the latest release, install or extract it, run FluxRoute.exe as Administrator, and complete OnBoard. Choose the services to check and click “Configure and continue” — FluxRoute will scan strategies and start the best one.
+> **Fast path for most users:** download the latest official release, install or extract it to a writable folder, and run FluxRoute.exe. If network protection needs elevation, the app will request UAC. Then complete Onboarding and choose the services to check.
 
 ### Installation
 
 1. Download the latest release: [**Releases**](https://github.com/klondike0x/FluxRoute/releases)
 2. For the portable version, extract the ZIP to any folder (e.g., `C:\FluxRoute\`) or run the installer.
-3. Run `FluxRoute.exe` **as Administrator**.
-4. If `engine/` is missing, wait for the automatic Flowseal download and restart FluxRoute.
+3. Run `FluxRoute.exe` normally. If WinDivert or `winws.exe` needs elevation, approve the UAC prompt.
+4. If `engine/` is missing, wait for the automatic Flowseal download and restart FluxRoute. An internet connection is required.
 5. In OnBoard, choose what to check: YouTube, Discord, or both services.
 6. Click **“Configure and continue”** to scan strategies, or **“Continue without checking”** to open the app without the initial scan.
 
@@ -320,6 +322,8 @@ Auto-Tune is available on the **Service** tab → **Find optimal settings**. Res
 
 FluxRoute supports user mods — external scripts and configuration files that can be enabled or disabled from the **Mods** tab.
 
+Mods can run `.bat`, `.exe`, `.ps1`, and `.py` files with the current user's privileges. Install mods only from trusted sources and inspect their contents before activating them.
+
 See [docs/mods.en.md](docs/mods.en.md) for the complete guide to `manifest.json`, scripts, dependencies, and the developer API.
 
 ---
@@ -348,10 +352,12 @@ See [docs/mods.en.md](docs/mods.en.md) for the complete guide to `manifest.json`
 > [!IMPORTANT]
 > For any issues, try:
 >
-> 1. Run as **Administrator**
+> 1. Check the logs on the **Logs** tab
 > 2. Update `engine/` on the **Updates** tab
 > 3. Run **Scan all profiles** on the **Orchestrator** tab
-> 4. Enable **Auto-Tune** on the **Service** tab
+> 4. Run extended diagnostics
+>
+> If the error involves `winws.exe` or WinDivert, approve the UAC prompt.
 
 ### ❌ Profile does not work (0% score)
 
@@ -372,6 +378,15 @@ taskkill /PID <number> /F
 
 ---
 
+## ⚠️ Known Limitations
+
+- When changing the DoH provider, FluxRoute may occasionally require applying the settings again or restarting the app. See [issue #90](https://github.com/klondike0x/FluxRoute/issues/90).
+- Starting network protection through `winws.exe` and WinDivert may require administrator privileges. The GUI itself can run without elevation.
+- Diagnostic bundles may contain settings, logs, and system information. Review the archive and remove sensitive data before sharing it with developers.
+- Mods can run `.bat`, `.exe`, `.ps1`, and `.py` files with the current user's privileges. Install mods only from trusted sources.
+
+---
+
 ## ⚠️ WinDivert and Antivirus
 
 > [!WARNING]
@@ -381,17 +396,19 @@ taskkill /PID <number> /F
 
 **What to do:**
 
-- Add the FluxRoute folder to your **antivirus exclusions**
-- Disable **PUA** (Potentially Unwanted Application) detection
-- In Kaspersky: uncheck *"Detect legal applications that attackers often use"*
+- First verify that FluxRoute came from the official repository and that the release hash and signature match.
+- Do not disable your antivirus completely or exclude unverified builds.
+- If an antivirus blocks a verified official file, exclude only the FluxRoute folder and only while troubleshooting.
+- If you are unsure, save the detection name and include it with the logs when contacting the project maintainers.
 
 ---
 
 ## 🔒 Security
 
 - ✅ **GitHub Actions** — all releases are built automatically and transparently
-- ✅ **SHA-256 hashes** — every download is verified in the logs
-- ✅ **GPG signatures and immutable releases** — published files cannot be silently replaced
+- ✅ **SHA-256 hashes** — every release publishes a `SHA256SUMS.txt` manifest
+- ✅ **GPG signatures** — the SHA-256 manifest is signed with a dedicated release key
+- ✅ **Immutable releases** — the workflow refuses to replace an already published release
 - ✅ **Build provenance** — artifacts are linked to a specific workflow and commit
 - ✅ **Open source** — anyone can audit what the app does
 - ✅ **No telemetry** — FluxRoute does not collect user data
@@ -399,7 +416,7 @@ taskkill /PID <number> /F
 - ✅ **Atomic updates** — staging → backup → rollback on errors
 
 > [!TIP]
-> App updates always come only from the official `klondike0x/FluxRoute` repository — the URL is hardcoded in `AppUpdaterService`. This ensures that even fork users eventually receive the original version.
+> Official FluxRoute builds receive updates from the `klondike0x/FluxRoute` repository; the source URL is configured in `AppUpdaterService`. Forks should configure their own update endpoint so their users are not redirected to original builds.
 >
 > The update package is selected automatically: installer installations receive the new installer, while Portable installations are updated through the portable ZIP. User settings are preserved.
 
@@ -422,14 +439,15 @@ FluxRoute leverages the following project ecosystem:
 ### Requirements
 
 - .NET 10 SDK
-- Visual Studio 2022/2026 or JetBrains Rider
+- Visual Studio 2022 or newer with the **.NET Desktop Development** workload, or JetBrains Rider
 
 ### Building from Source
 
 ```bash
 git clone https://github.com/klondike0x/FluxRoute.git
 cd FluxRoute
-dotnet build
+dotnet build FluxRoute.slnx
+dotnet test FluxRoute.slnx
 dotnet run --project FluxRoute
 ```
 
@@ -450,7 +468,7 @@ FluxRoute/
 
 1. Fork the repository
 2. Create a branch: `git checkout -b feature/my-feature`
-3. Commit: `git commit -m "feat: add my feature"`
+3. Follow the commit rules in [AGENTS/11-GIT-COMMITS.md](AGENTS/11-GIT-COMMITS.md)
 4. Push: `git push origin feature/my-feature`
 5. Open a **Pull Request**
 
@@ -458,27 +476,26 @@ FluxRoute/
 
 ## ⚖️ Copyright and Terms of Use
 
-> [!CAUTION]
-> ### 📜 MUST READ — especially for fork authors
+> [!NOTE]
+> ### 📜 For users and fork authors
 >
-> Use of this project means acceptance of the **GPL-3.0** license terms.
-> Violation of the license terms automatically terminates your rights (§8 GPL-3.0).
+> FluxRoute is distributed under **GPL-3.0-or-later**. The license allows you to use, study, modify, and redistribute the project when its conditions are followed.
 
 <details>
-<summary><b>🔍 Expand — GPL-3.0 terms + Section 7 Additional Terms</b></summary>
+<summary><b>🔍 Expand — key GPL-3.0-or-later terms</b></summary>
 <br/>
 
-This software is distributed under the **GPL-3.0** license.
+This software is distributed under the **GNU General Public License v3.0 or later**.
 
 - **GUI, AI orchestrator, and automation code (FluxRoute):** © 2026 [klondike0x](https://github.com/klondike0x)
 - **Third‑party components:** [bol-van/zapret](https://github.com/bol-van/zapret), [basil00/WinDivert](https://github.com/basil00/WinDivert), [Flowseal](https://github.com/Flowseal)
 
-### 🔴 Mandatory GPL-3.0 Requirements
+### Main obligations when distributing modifications
 
-Any author of a fork or modification **must comply** with:
+If you distribute a modified version of FluxRoute, you must follow the GPL-3.0-or-later terms, including:
 
-#### 1. Author attribution (GPL-3.0 §4, §5a)
-At the **top of the README** you must include the following block:
+#### 1. Preserve attribution and modification notices
+Do not remove existing copyright, license, or provenance notices. For a modified version, state that it is based on FluxRoute and describe the significant changes.
 
 ```markdown
 > **Original project:** [klondike0x/FluxRoute](https://github.com/klondike0x/FluxRoute)
@@ -487,27 +504,23 @@ At the **top of the README** you must include the following block:
 > Changes made by [author] in [year].
 ```
 
-#### 2. Preserve the license (GPL-3.0 §4, §6)
-The fork must be distributed under the same GPL-3.0 license, keeping the full license text.
+#### 2. Preserve the license and source code
+When distributing binaries, provide the corresponding source code or a valid written offer for it as required by GPL-3.0-or-later. Keep the license text and licensing notices.
 
-#### 3. Disclaimer of trademarks (GPL-3.0 §7e)
-The name **"FluxRoute"** and the logo are identifiers of the original project.
-- ✅ Permitted: "Fork of FluxRoute" / "Based on FluxRoute"
-- ❌ Not permitted: "FluxRoute AI" / "FluxRoute Pro" / using the original logo
+#### 3. Distinguish a fork from the official version
+GPL permits forks. Questions about using the name, logo, and presentation are separate trademark matters and should not mislead users about where a build comes from. Clearly identify a modified distribution as a fork.
 
 ### 💡 Recommendations (not license requirements)
 
-- **Versioning:** Following SemVer is recommended (do not inflate version numbers)
-- **Privacy:** FluxRoute does not collect user data. Following this principle is encouraged
-- **Transparency:** Do not mislead users about the origin of the code
+- **Versioning:** follow SemVer and clearly distinguish fork versions from official releases
+- **Privacy:** the official FluxRoute build contains no intentional user telemetry
+- **Transparency:** do not mislead users about the origin of the code
 
-### ⚖️ Legal consequences of violations
+### ⚖️ If the license terms are violated
 
-If GPL-3.0 terms are violated:
-- 🔴 **Rights are automatically terminated** (§8 GPL-3.0)
-- 🔴 A **DMCA Takedown** will be filed with GitHub Trust & Safety
-- 🔴 If the code appears on other platforms, an official notice will be sent to their administration
-- 🔴 The repository will be removed
+If the license terms are violated, distribution rights may terminate under §8 of GPL-3.0-or-later. The license provides ways to restore rights after the violation is cured in the cases specified by the license.
+
+Questions involving removed attribution, impersonation of the official project, or suspicious binaries are handled separately and require concrete evidence.
 
 ### 🤝 Open to collaboration
 
@@ -528,7 +541,7 @@ For third‑party attributions, see the [NOTICE](NOTICE) file.
 
 ## 🙏 Acknowledgments
 
-FluxRoute was inspired by and partially built upon the UX and product design decisions of the following projects:
+FluxRoute was inspired by the UX and product decisions of the following projects. These acknowledgments do not mean that third-party authors are co-authors of FluxRoute code.
 
 ### [Zapret Hub](https://github.com/goshkow/Zapret-Hub) by goshkow
 
@@ -551,7 +564,7 @@ Special thanks to **goshkow** for openness to collaboration and consultations.
 
 ## 📜 License
 
-This project is distributed under the **GNU General Public License v3.0**.
+This project is distributed under the **GNU General Public License v3.0 or later**.
 
 See the [LICENSE](LICENSE) file for details.
 
