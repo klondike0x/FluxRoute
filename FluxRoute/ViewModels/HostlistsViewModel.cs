@@ -5,6 +5,29 @@ using System.IO;
 
 namespace FluxRoute.ViewModels;
 
+public enum HostlistUnsavedChangesDecision
+{
+    Save,
+    Discard,
+    Stay
+}
+
+/// <summary>Итог сохранения незаписанных правок хостлистов при программном завершении приложения.</summary>
+public enum HostlistPendingEditsResult
+{
+    /// <summary>Несохранённых правок не было — сохранять нечего.</summary>
+    NothingToSave,
+
+    /// <summary>Правки записаны в сам хостлист.</summary>
+    SavedInPlace,
+
+    /// <summary>Записать хостлист не удалось, но содержимое уцелело в каталоге восстановления.</summary>
+    PreservedToRecovery,
+
+    /// <summary>Записать не удалось и копию сохранить тоже: правки остались только в памяти.</summary>
+    NotPreserved
+}
+
 /// <summary>
 /// ViewModel вкладки Хостлисты.
 /// v1.7.0: UI-Redesign
@@ -13,12 +36,37 @@ public partial class HostlistsViewModel : ObservableObject
 {
     private readonly Func<string> _getEngineDir;
     private readonly Action<string> _addLog;
+    private readonly Action<string, string>? _onSaved;
+    private readonly Func<string> _getRecoveryDir;
+    private HostlistFileItem? _activeFile;
 
-    public HostlistsViewModel(Func<string> getEngineDir, Action<string> addLog)
+    /// <summary>
+    /// UI callback для выбора действия при уходе с вкладки с несохранёнными изменениями.
+    /// </summary>
+    public Func<HostlistUnsavedChangesDecision>? UnsavedChangesPrompt { get; set; }
+
+    public HostlistsViewModel(
+        Func<string> getEngineDir,
+        Action<string> addLog,
+        Action<string, string>? onSaved = null,
+        Func<string>? getRecoveryDir = null)
     {
         _getEngineDir = getEngineDir;
         _addLog = addLog;
+        _onSaved = onSaved;
+        _getRecoveryDir = getRecoveryDir ?? DefaultRecoveryDir;
     }
+
+    /// <summary>
+    /// Каталог для копий несохранённых правок. Путь самого хостлиста может быть недоступен для записи
+    /// (системный <c>hosts</c> при работе без прав администратора), поэтому копию кладём в каталог
+    /// данных пользователя — он доступен всегда, копия переживёт завершение приложения
+    /// (Codex P2, ревью pullrequestreview-5191837234).
+    /// </summary>
+    private static string DefaultRecoveryDir() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "FluxRoute",
+        "recovery");
 
     public ObservableCollection<HostlistFileItem> Files { get; } = new();
 
@@ -30,10 +78,83 @@ public partial class HostlistsViewModel : ObservableObject
 
     private string _originalContent = string.Empty;
 
+    partial void OnSelectedFileChanging(HostlistFileItem? value)
+    {
+        if (_isRestoringSelection
+            || value is null
+            || _activeFile is null
+            || ReferenceEquals(value, _activeFile)
+            || !HasChanges)
+            return;
+
+        switch (UnsavedChangesPrompt?.Invoke() ?? HostlistUnsavedChangesDecision.Stay)
+        {
+            case HostlistUnsavedChangesDecision.Save:
+                if (!TrySave())
+                    _restoreSelection = true;
+                break;
+            case HostlistUnsavedChangesDecision.Discard:
+                CancelEdit();
+                break;
+            case HostlistUnsavedChangesDecision.Stay:
+                _restoreSelection = true;
+                break;
+        }
+    }
+
     partial void OnSelectedFileChanged(HostlistFileItem? value)
     {
-        if (value is null) return;
+        if (_isRestoringSelection)
+        {
+            _isRestoringSelection = false;
+            return;
+        }
+
+        if (_restoreSelection)
+        {
+            _restoreSelection = false;
+            _isRestoringSelection = true;
+            SelectedFile = _activeFile;
+            _isRestoringSelection = false;
+            return;
+        }
+
+        if (value is null)
+            return;
+
+        _activeFile = value;
         LoadFileContent(value);
+    }
+
+    private bool _restoreSelection;
+    private bool _isRestoringSelection;
+
+    /// <summary>
+    /// Проверяет, можно ли покинуть вкладку хостлистов.
+    /// </summary>
+    public bool TryLeave()
+    {
+        if (!HasChanges)
+            return true;
+
+        return (UnsavedChangesPrompt?.Invoke() ?? HostlistUnsavedChangesDecision.Stay) switch
+        {
+            HostlistUnsavedChangesDecision.Save => SaveAndConfirm(),
+            HostlistUnsavedChangesDecision.Discard => DiscardAndConfirm(),
+            _ => false
+        };
+    }
+
+    private bool SaveAndConfirm()
+    {
+        Save();
+        return !HasChanges;
+    }
+
+    private bool DiscardAndConfirm()
+    {
+        CancelEdit();
+        return !HasChanges;
     }
 
     partial void OnEditorContentChanged(string value)
@@ -128,24 +249,162 @@ public partial class HostlistsViewModel : ObservableObject
     [RelayCommand]
     private void Save()
     {
-        if (SelectedFile is null) return;
+        TrySave();
+    }
+
+    /// <summary>
+    /// Сохраняет незаписанные правки редактора перед программным завершением приложения (обновление,
+    /// подтверждённый выход из трея). Спрашивать здесь неуместно: обновление уже установлено, а
+    /// апдейтер ждёт завершения процесса перед заменой файлов, поэтому завершение обязательно. Но и
+    /// молча терять буфер редактора нельзя — путь обновления завершает приложение в обход
+    /// подтверждения закрытия, где единственная проверка <see cref="TryLeave"/> и живёт
+    /// (Codex P2, ревью pullrequestreview-5191769205).
+    ///
+    /// Если записать хостлист не удалось (файл занят, каталог доступен только для чтения или это
+    /// системный hosts без прав администратора), содержимое кладётся в каталог восстановления —
+    /// недоступным может оказаться и каталог самого файла, поэтому копия идёт в данные пользователя.
+    /// Результат различает эти случаи: вызывающий обязан сообщить пользователю, уцелели ли правки
+    /// (Codex P2, ревью pullrequestreview-5191807645 и pullrequestreview-5191837234).
+    /// </summary>
+    public HostlistPendingEditsResult SavePendingEdits()
+    {
+        if (!HasChanges)
+            return HostlistPendingEditsResult.NothingToSave;
+
+        if (TrySave() && !HasChanges)
+            return HostlistPendingEditsResult.SavedInPlace;
+
+        return PreservePendingEditsToRecoveryDir()
+            ? HostlistPendingEditsResult.PreservedToRecovery
+            : HostlistPendingEditsResult.NotPreserved;
+    }
+
+    /// <summary>
+    /// Кладёт несохранённый буфер в каталог восстановления (<c>&lt;хостлист&gt;.&lt;время&gt;.unsaved</c>):
+    /// при программном завершении содержимое редактора иначе пропало бы совсем. Строки-комментарии в
+    /// начале объясняют происхождение записи, дальше содержимое переносится как есть, поэтому файл
+    /// можно вернуть на место хостлиста (Codex P2, ревью pullrequestreview-5191807645).
+    /// Возвращает true, если копия действительно записана.
+    /// </summary>
+    private bool PreservePendingEditsToRecoveryDir()
+    {
+        var file = SelectedFile ?? _activeFile;
+        if (file is null)
+            return false;
+
         try
         {
-            var dir = Path.GetDirectoryName(SelectedFile.FullPath);
-            if (!string.IsNullOrEmpty(dir))
-                Directory.CreateDirectory(dir);
+            var content = IsUserHostlist(file.FileName)
+                ? NormalizeUserHostlistContent(EditorContent)
+                : EditorContent;
 
-            File.WriteAllText(SelectedFile.FullPath, EditorContent);
-            _originalContent = EditorContent;
-            HasChanges = false;
-            SelectedFile.Exists = true;
-            StatusText = $"Сохранено: {SelectedFile.FileName}";
-            _addLog($"[Хостлисты] Сохранён файл: {SelectedFile.FileName}");
+            var recoveryDir = _getRecoveryDir();
+            Directory.CreateDirectory(recoveryDir);
+
+            var recoveryPath = Path.Combine(
+                recoveryDir,
+                $"{SanitizeFileName(file.FileName)}.{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.unsaved");
+
+            File.WriteAllText(
+                recoveryPath,
+                $"# FluxRoute: несохранённые правки от {DateTime.Now:yyyy-MM-dd HH:mm:ss}{Environment.NewLine}"
+                + $"# Исходный файл: {file.FileName} ({file.FullPath}){Environment.NewLine}"
+                + content);
+
+            StatusText = $"Правки не записаны, копия: {Path.GetFileName(recoveryPath)}";
+            _addLog($"[Хостлисты] Не удалось записать {file.FileName}; правки сохранены в {recoveryPath}");
+            return true;
         }
         catch (Exception ex)
         {
             StatusText = $"Ошибка сохранения: {ex.Message}";
+            _addLog($"[Хостлисты] Не удалось сохранить правки {file.FileName} и копию в каталоге восстановления: {ex.Message}");
+            return false;
         }
+    }
+
+    private static string SanitizeFileName(string fileName)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        return new string(fileName.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray());
+    }
+
+    private bool TrySave()
+    {
+        var file = SelectedFile ?? _activeFile;
+        if (file is null) return false;
+        try
+        {
+            var dir = Path.GetDirectoryName(file.FullPath);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+
+            var contentToSave = IsUserHostlist(file.FileName)
+                ? NormalizeUserHostlistContent(EditorContent)
+                : EditorContent;
+
+            File.WriteAllText(file.FullPath, contentToSave);
+            _onSaved?.Invoke(file.FileName, contentToSave);
+            _originalContent = contentToSave;
+            EditorContent = contentToSave;
+            HasChanges = false;
+            file.Exists = true;
+            StatusText = $"Сохранено: {file.FileName}";
+            _addLog($"[Хостлисты] Сохранён файл: {file.FileName}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Ошибка сохранения: {ex.Message}";
+            return false;
+        }
+    }
+
+    private static bool IsUserHostlist(string fileName) =>
+        fileName.Equals("list-general-user.txt", StringComparison.OrdinalIgnoreCase)
+        || fileName.Equals("list-exclude-user.txt", StringComparison.OrdinalIgnoreCase);
+
+    private static string NormalizeUserHostlistContent(string content)
+    {
+        if (string.IsNullOrEmpty(content))
+            return content;
+
+        return string.Join(
+            Environment.NewLine,
+            content
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Replace('\r', '\n')
+                .Split('\n')
+                .Select(NormalizeHostlistLine));
+    }
+    private static string NormalizeHostlistLine(string line)
+    {
+        var trimmed = line.Trim();
+        if (trimmed.Length == 0
+            || trimmed.StartsWith("#", StringComparison.Ordinal)
+            || trimmed.StartsWith(";", StringComparison.Ordinal))
+            return line;
+
+        var marker = trimmed.StartsWith("!", StringComparison.Ordinal) ? "!" : string.Empty;
+        var value = marker.Length > 0 ? trimmed[1..].Trim() : trimmed;
+
+        if (value.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            value = value[8..];
+        else if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            value = value[7..];
+
+        if (value.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+            value = value[4..];
+
+        var separatorIndex = value.IndexOfAny(new[] { '/', '?', '#' });
+        if (separatorIndex >= 0)
+            value = value[..separatorIndex];
+
+        var portSeparatorIndex = value.IndexOf(':');
+        if (portSeparatorIndex > 0)
+            value = value[..portSeparatorIndex];
+
+        return marker + value;
     }
 
     /// <summary>
@@ -154,10 +413,11 @@ public partial class HostlistsViewModel : ObservableObject
     [RelayCommand]
     private void CancelEdit()
     {
-        if (SelectedFile is null) return;
+        var file = SelectedFile ?? _activeFile;
+        if (file is null) return;
         EditorContent = _originalContent;
         HasChanges = false;
-        StatusText = $"Изменения отменены: {SelectedFile.FileName}";
+        StatusText = $"Изменения отменены: {file.FileName}";
     }
 
     /// <summary>

@@ -61,6 +61,64 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.True(loaded.AutoUpdateEnabled);
     }
 
+    /// <summary>
+    /// Вклад <c>list-exclude-user.txt</c> сохраняется отдельно от объединённого набора исключений:
+    /// из объединения его не восстановить без потери снятых пометок «!domain» файла доменов
+    /// (Codex P2, ревью #76).
+    /// </summary>
+    [Fact]
+    public void SaveAndLoad_KeepsExcludeFileDomainsSeparateFromMergedExclusions()
+    {
+        var svc = CreateService();
+        svc.Save(new AppSettings
+        {
+            CustomExcludeDomains = ["api.example.com", "ads.example.com"],
+            CustomExcludeFileDomains = ["api.example.com"]
+        });
+
+        var loaded = svc.Load();
+
+        Assert.Equal(["api.example.com", "ads.example.com"], loaded.CustomExcludeDomains);
+        Assert.Equal(["api.example.com"], loaded.CustomExcludeFileDomains);
+    }
+
+    /// <summary>
+    /// Настройки прежних версий не содержат отдельного поля, и после загрузки оно остаётся null:
+    /// только так его можно отличить от сохранённого пустого вклада, который разбирать повторно
+    /// нельзя (Codex P2, ревью pullrequestreview-5191366024).
+    /// </summary>
+    [Fact]
+    public void Load_WhenExcludeFileDomainsAbsent_StaysNull()
+    {
+        var svc = CreateService();
+        svc.Save(new AppSettings { CustomExcludeDomains = ["ads.example.com"] });
+
+        var loaded = svc.Load();
+
+        Assert.Null(loaded.CustomExcludeFileDomains);
+    }
+
+    /// <summary>
+    /// Пустой вклад — это сохранённое значение, а не отсутствие поля: загрузка обязана вернуть пустой
+    /// список, иначе вклад выводился бы заново из объединённого набора и домен из снятой пометки
+    /// возвращался бы в набор исключений (Codex P2, ревью pullrequestreview-5191366024).
+    /// </summary>
+    [Fact]
+    public void SaveAndLoad_EmptyExcludeFileDomains_StaysEmpty()
+    {
+        var svc = CreateService();
+        svc.Save(new AppSettings
+        {
+            CustomExcludeDomains = ["ads.example.com"],
+            CustomExcludeFileDomains = []
+        });
+
+        var loaded = svc.Load();
+
+        Assert.NotNull(loaded.CustomExcludeFileDomains);
+        Assert.Empty(loaded.CustomExcludeFileDomains);
+    }
+
     [Fact]
     public void Load_WhenPrimaryCorrupt_FallsBackToBackup()
     {
@@ -255,5 +313,21 @@ public sealed class SettingsServiceTests : IDisposable
     {
         var svc = CreateService();
         Assert.True(svc.IsPortable);
+    }
+
+    [Fact]
+    public void AdminChoice_RoundTrips()
+    {
+        var svc = CreateService();
+        svc.Save(new AppSettings
+        {
+            RememberAdminChoice = true,
+            AdminChoiceContinueWithout = false
+        });
+
+        var loaded = svc.Load();
+
+        Assert.True(loaded.RememberAdminChoice);
+        Assert.False(loaded.AdminChoiceContinueWithout);
     }
 }

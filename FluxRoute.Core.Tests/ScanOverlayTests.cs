@@ -34,6 +34,29 @@ public sealed class ScanOverlayTests : IDisposable
         try { Directory.Delete(_tempDir, recursive: true); } catch { }
     }
 
+    [Fact]
+    public void RestoreRankedProfiles_EqualScores_PrefersPersistedProfile()
+    {
+        var connectivityMock = new Mock<IConnectivityChecker>();
+        var orchestrator = new OrchestratorService(
+            getProfiles: () => _profiles,
+            getActiveProfile: () => _profiles.First(),
+            switchProfile: _ => Task.CompletedTask,
+            getTargetsPath: () => Path.Combine(_tempDir, "targets.txt"),
+            notifyScoreUpdate: (_, _) => Task.CompletedTask,
+            connectivity: connectivityMock.Object);
+
+        orchestrator.RestoreRankedProfiles(
+        [
+            (_profiles[0], 100),
+            (_profiles[1], 100)
+        ],
+        preferredProfileFileName: _profiles[1].FileName);
+
+        Assert.Same(_profiles[1], orchestrator.BestRankedProfile);
+        Assert.Equal(100, orchestrator.BestRankedScore);
+    }
+
     // ── Прогресс-репорт при сканировании ──
 
     [Fact]

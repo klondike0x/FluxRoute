@@ -11,6 +11,17 @@ public sealed class NetworkChangeWatcher : IDisposable
 
     private Timer? _debounceTimer;
     private NetworkFingerprint? _lastEmitted;
+    private int _generation;
+
+    /// <summary>
+    /// Номер изменения сети: увеличивается на КАЖДЫЙ полученный от системы сигнал о смене сети — сразу,
+    /// ДО дебаунса. Именно до: разрыв, при котором сеть ушла и вернулась к прежнему отпечатку внутри
+    /// окна дебаунса, не переживает дебаунс (отпечатки на концах совпадают, события нет), и счётчик,
+    /// увеличиваемый только по итогу дебаунса, такую смену пропускал бы. Длинному скану этого достаточно:
+    /// сравнивая счётчик на концах, он отбрасывает замеры, сделанные во время недоступной или другой
+    /// сети (Codex P2, ревью pullrequestreview-5191837234 и pullrequestreview-5191875744).
+    /// </summary>
+    public int Generation => Volatile.Read(ref _generation);
 
     public event EventHandler<(NetworkFingerprint OldFp, NetworkFingerprint NewFp)>? NetworkChanged;
 
@@ -22,9 +33,20 @@ public sealed class NetworkChangeWatcher : IDisposable
         _lastEmitted = _fingerprints.Capture();
     }
 
-    private void OnNetworkChange(object? sender, EventArgs e) => ScheduleEmit();
+    private void OnNetworkChange(object? sender, EventArgs e) => RegisterNetworkChangeSignal();
 
-    private void OnNetworkAvailability(object? sender, NetworkAvailabilityEventArgs e) => ScheduleEmit();
+    private void OnNetworkAvailability(object? sender, NetworkAvailabilityEventArgs e) => RegisterNetworkChangeSignal();
+
+    /// <summary>
+    /// Регистрирует сигнал о смене сети: счётчик увеличивается сразу, а не по итогу дебаунса, — иначе
+    /// внутриоконный разрыв с возвратом к прежнему отпечатку стирался бы вместе с дебаунсом
+    /// (Codex P2, ревью pullrequestreview-5191875744). Дальше отпечаток пересчитывается с дебаунсом.
+    /// </summary>
+    internal void RegisterNetworkChangeSignal()
+    {
+        Interlocked.Increment(ref _generation);
+        ScheduleEmit();
+    }
 
     private void ScheduleEmit()
     {

@@ -64,7 +64,7 @@ public partial class MainViewModel
     partial void OnTgProxyAutoStartOnAppLaunchChanged(bool value) => SaveSettings();
 
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
-    private string tgProxyDcIps = "2:149.154.167.220\n4:149.154.167.220";
+    private string tgProxyDcIps = "4:149.154.167.220";
     partial void OnTgProxyDcIpsChanged(string value) => SaveSettings();
 
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]

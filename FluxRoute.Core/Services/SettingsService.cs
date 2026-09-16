@@ -51,6 +51,19 @@ public sealed class AppSettings
     /// Список доменов для исключения из проверки.
     /// </summary>
     public List<string> CustomExcludeDomains { get; set; } = new();
+
+    /// <summary>
+    /// Вклад <c>list-exclude-user.txt</c> (вкладка «Домены» → «Исключения»), хранимый ОТДЕЛЬНО от
+    /// <see cref="CustomExcludeDomains"/>: тот содержит объединение — вклад файла исключений плюс
+    /// помеченные строки «!domain» файла доменов. Без раздельного хранения снятая в файле доменов
+    /// пометка возвращалась бы из объединённой копии и переезжала в <c>list-exclude-user.txt</c>
+    /// (Codex P2, ревью #76).
+    ///
+    /// <c>null</c> означает настройки прежних версий: поля ещё не было, и вклад нужно вывести из
+    /// объединённого набора. Пустой список — это НАСТОЯЩИЙ (пустой) вклад, поэтому нормализация его
+    /// не подменяет (Codex P2, ревью pullrequestreview-5191366024).
+    /// </summary>
+    public List<string>? CustomExcludeFileDomains { get; set; }
     // ═══════════════════════════════════════════
 
     // Рейтинг стратегий
@@ -200,18 +213,21 @@ public interface ISettingsService
 }
 
 /// <summary>
-/// Portable-first settings storage.
+/// Hybrid settings storage.
 ///
-/// FluxRoute is currently distributed as a portable app, so settings intentionally stay
-/// next to FluxRoute.exe. This service hardens the existing behavior without changing
-/// the storage location: atomic save, backup, corrupt-file quarantine and defensive
+/// Portable builds keep settings next to FluxRoute.exe. Installed builds live under
+/// Program Files, so their writable state is stored in the user's LocalAppData folder;
+/// settings from the old installed location remain readable for migration.
+/// The service also provides atomic save, backup, corrupt-file quarantine and defensive
 /// normalization of nullable collections/nested settings.
 /// </summary>
 public sealed class SettingsService : ISettingsService
 {
     private const string SettingsFileName = "fluxroute-settings.json";
+    private const string UserDataDirectoryName = "FluxRoute";
 
     private static readonly Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+    private readonly string? _legacySettingsPath;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -222,10 +238,17 @@ public sealed class SettingsService : ISettingsService
     public SettingsService()
     {
         var appDirectory = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory);
+        var installed = IsUnderProgramFiles(appDirectory);
+        var settingsDirectory = installed
+            ? GetUserSettingsDirectory(appDirectory)
+            : appDirectory;
 
-        SettingsPath = Path.Combine(appDirectory, SettingsFileName);
+        SettingsPath = Path.Combine(settingsDirectory, SettingsFileName);
         BackupPath = SettingsPath + ".bak";
-        IsPortable = true;
+        IsPortable = !installed;
+        _legacySettingsPath = installed
+            ? Path.Combine(appDirectory, SettingsFileName)
+            : null;
     }
 
     /// <summary>Конструктор для юнит-тестов: позволяет задать произвольную директорию.</summary>
@@ -235,6 +258,7 @@ public sealed class SettingsService : ISettingsService
         SettingsPath = Path.Combine(directory, SettingsFileName);
         BackupPath = SettingsPath + ".bak";
         IsPortable = true;
+        _legacySettingsPath = null;
     }
 
     public string SettingsPath { get; }
@@ -254,7 +278,52 @@ public sealed class SettingsService : ISettingsService
             return Normalize(backupSettings);
         }
 
+        // Ранние установочные версии писали настройки рядом с exe в Program Files.
+        // Читаем их как fallback, но не пытаемся обновлять защищённый каталог.
+        if (_legacySettingsPath is not null)
+        {
+            if (TryLoad(_legacySettingsPath, out var legacySettings))
+            {
+                Trace.TraceInformation($"FluxRoute settings loaded from legacy path '{_legacySettingsPath}'.");
+                return Normalize(legacySettings);
+            }
+
+            if (TryLoad(_legacySettingsPath + ".bak", out var legacyBackupSettings))
+            {
+                Trace.TraceWarning($"FluxRoute settings loaded from legacy backup '{_legacySettingsPath}.bak'.");
+                return Normalize(legacyBackupSettings);
+            }
+        }
+
         return new AppSettings();
+    }
+
+    private static string GetUserSettingsDirectory(string appDirectory)
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return string.IsNullOrWhiteSpace(localAppData)
+            ? appDirectory
+            : Path.Combine(localAppData, UserDataDirectoryName);
+    }
+
+    private static bool IsUnderProgramFiles(string path)
+    {
+        return IsUnderDirectory(path, Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles))
+            || IsUnderDirectory(path, Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86));
+    }
+
+    private static bool IsUnderDirectory(string path, string directory)
+    {
+        if (string.IsNullOrWhiteSpace(directory))
+            return false;
+
+        var normalizedPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+        var normalizedDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory));
+
+        return normalizedPath.Equals(normalizedDirectory, StringComparison.OrdinalIgnoreCase)
+            || normalizedPath.StartsWith(
+                normalizedDirectory + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase);
     }
 
     public void Save(AppSettings settings)
@@ -375,6 +444,9 @@ public sealed class SettingsService : ISettingsService
         settings.UserSites ??= new List<string>();
         settings.CustomTargetDomains ??= new List<string>();
         settings.CustomExcludeDomains ??= new List<string>();
+        // CustomExcludeFileDomains намеренно НЕ инициализируем: null отличает настройки прежних
+        // версий (поля ещё не было) от сохранённого пустого вклада, который надо сохранить как есть
+        // (Codex P2, ревью pullrequestreview-5191366024).
         settings.Presets ??= new List<ConfigPreset>();
         settings.FallbackMirrors ??= new Dictionary<string, string>();
 

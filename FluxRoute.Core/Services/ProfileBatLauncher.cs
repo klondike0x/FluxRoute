@@ -99,7 +99,7 @@ public static class ProfileBatLauncher
                 }
 
                 var userExcludePath = Path.Combine(engineDir, "lists", "list-exclude-user.txt");
-                if (File.Exists(userExcludePath) && HasRealDomains(userExcludePath))
+                if (File.Exists(userExcludePath) && HasRealDomains(userExcludePath, markedLinesAreExclusions: true))
                 {
                     bool hasExclude = args.Any(a => a.Contains("list-exclude-user", StringComparison.OrdinalIgnoreCase));
                     if (!hasExclude)
@@ -382,13 +382,23 @@ public static class ProfileBatLauncher
 
     /// <summary>
     /// Проверяет, содержит ли файл реальные домены (не только комментарии и пустые строки).
+    /// <paramref name="markedLinesAreExclusions"/> — для <c>list-exclude-user.txt</c>: там строка
+    /// «!domain» тоже исключение (та же семантика в <see cref="UserHostlistImporter.Classify"/>), и
+    /// редактор/синхронизация её сохраняют. Без учёта таких строк файл из одних пометок считался бы
+    /// пустым, <c>--hostlist-exclude</c> не попадал бы в аргументы, и единственное исключение
+    /// пользователя молча игнорировалось бы. В файле доменов помеченные строки — вклад другого
+    /// набора, поэтому там они по-прежнему игнорируются (Codex P2, ревью pullrequestreview-5191690237).
     /// </summary>
-    private static bool HasRealDomains(string path)
+    private static bool HasRealDomains(string path, bool markedLinesAreExclusions = false)
     {
         try
         {
             return File.ReadLines(path)
-                .Any(line => !string.IsNullOrWhiteSpace(line) && !line.TrimStart().StartsWith('#'));
+                .Select(line => line.TrimStart())
+                .Any(line => !string.IsNullOrWhiteSpace(line)
+                             && !line.StartsWith('#')
+                             && !line.StartsWith(';')
+                             && (markedLinesAreExclusions || !line.StartsWith('!')));
         }
         catch
         {

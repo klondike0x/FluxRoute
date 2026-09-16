@@ -14,7 +14,7 @@
             MouseLeftButtonDown="Window_MouseLeftButtonDown">
         <StackPanel Margin="24,20">
             <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                <TextBlock Text="♥" FontSize="16" Foreground="#F85149" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock Text="♥" FontFamily="Segoe UI Symbol" FontSize="16" Foreground="#F85149" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <TextBlock Text="Поддержать автора" FontFamily="Segoe UI" FontSize="16"
                            FontWeight="SemiBold" Foreground="#C8D4EC" VerticalAlignment="Center"/>
             </StackPanel>

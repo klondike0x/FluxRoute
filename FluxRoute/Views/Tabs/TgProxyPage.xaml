@@ -71,6 +71,7 @@
                             <Button Command="{Binding ToggleTgProxyCommand}" IsEnabled="{Binding TgProxyInstalled}" Margin="0,0,8,6">
                                 <Button.Style>
                                     <Style TargetType="Button" BasedOn="{StaticResource ActionBtnGreen}">
+                                        <Setter Property="FontFamily" Value="Segoe UI Symbol" />
                                         <Setter Property="Content" Value="▶ Запустить прокси" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding TgProxyRunning}" Value="True">
@@ -126,7 +127,7 @@
                             </Grid.ColumnDefinitions>
                             <TextBox Text="{Binding TgProxySecret, UpdateSourceTrigger=PropertyChanged}" Height="32" FontFamily="Consolas" />
                             <Button Grid.Column="2" Height="32" Width="38" Padding="0" Style="{StaticResource ActionBtnAccent}"
-                                    Command="{Binding GenerateTgProxySecretCommand}" Content="↻" FontSize="15" ToolTip="Сгенерировать новый secret" />
+                                    Command="{Binding GenerateTgProxySecretCommand}" Content="↻" FontFamily="Segoe UI Symbol" FontSize="15" ToolTip="Сгенерировать новый secret" />
                         </Grid>
                     </StackPanel>
                 </Border>
